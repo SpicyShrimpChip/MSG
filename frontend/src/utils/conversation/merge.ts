@@ -20,6 +20,8 @@ export interface MergedImport {
     message: string;
     manifest?: ClaudeManifest;
   }[];
+  // 오류는 아니지만 알려 줄 것 (회색 안내): 대화 없는 파일을 건너뜀, 잘린 zip 등
+  notices: { fileName: string; message: string }[];
 }
 
 // 같은 서비스의 같은 대화 id면 같은 대화로 본다
@@ -58,5 +60,5 @@ export function mergeParseResults(files: FileParseResult[]): MergedImport {
   const conversations = [...byKey.values()].sort((a, b) =>
     (b.createdAt ?? '').localeCompare(a.createdAt ?? ''),
   );
-  return { conversations, skippedCount, duplicateCount, errors };
+  return { conversations, skippedCount, duplicateCount, errors, notices: [] };
 }
