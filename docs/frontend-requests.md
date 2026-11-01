@@ -3,7 +3,7 @@
 프론트(변지환)가 지금까지 만든 화면 기준으로, 백엔드(김주미)가 알아야 할 내용을 모은 문서다.
 API는 **제안**이다. 확정은 백엔드 API 문서(Swagger)에서 하고, 바뀌면 이 문서와 프론트 목업을 같이 고친다.
 
-최종 수정: 2026-11-01 (대화 가져오기 저장 API 확정: 가져오기 작업·요청 단위 저장·긴 메시지 나누기)
+최종 수정: 2026-11-01 (학습 분석 1차 API: 여러 모델 개념 분석·비교, 학습 피드백)
 
 ## 0. 백엔드 시작 순서 (프론트 완성을 기다리지 않고 바로 시작)
 
@@ -265,6 +265,57 @@ ConversationSummary  = { id, courseId, source, title, createdAt: string | null, 
 - 과목을 지우면 그 과목에 가져온 대화도 지운다(과목 삭제 확인 문구에 적었다).
 - 남은 것: 저장한 대화 분석(개념 분류 → 숙련도 → 대시보드), 분석 상태 알림, 가져온 대화 목록·삭제 화면. 동의 철회 때 대화 삭제는 5-2에서 구현했다(위 "인증·마이페이지").
 
+### 학습 분석 (여러 AI 모델 비교) — 1차 구현됨 (11/1, 확정: Swagger `학습 분석`). 화면 연결 전
+
+GPT·Claude·Gemini가 과목 하나의 가져온 대화를 **같은 기준으로 따로** 분석하고, 서버 코드가 개념(= 과목 키워드)마다 의견을 비교한다. 숙련도 점수는 아직 만들지 않는다. 학습 대시보드(`/api/analysis/dashboard`)는 그대로 목업이다.
+
+| 메서드 | 경로 | 요청 본문 | 응답 `data` |
+| --- | --- | --- | --- |
+| GET | `/api/analysis/providers` | - | `ProviderStatus[]` (모델별 설정 여부, 키는 안 줌) |
+| POST | `/api/analysis/courses/{courseId}/runs` | - | `AnalysisRun` (201). 모델을 기다리므로 수십 초 걸릴 수 있다 |
+| GET | `/api/analysis/courses/{courseId}/runs/latest` | - | `AnalysisRun` (가장 최근에 끝난 분석, 없으면 404) |
+| GET | `/api/analysis/runs/{runId}` | - | `AnalysisRun` |
+| GET | `/api/analysis/courses/{courseId}/feedback` | - | `ConceptFeedback[]` |
+| PUT | `/api/analysis/courses/{courseId}/feedback` | `{ concept, feedback, comment?, analysisRunId? }` | `ConceptFeedback` (있으면 바꾼다) |
+| DELETE | `/api/analysis/feedback/{id}` | - | 없음 (피드백 취소) |
+
+```ts
+ProviderStatus = { provider: "gpt" | "claude" | "gemini", model: string | null, configured: boolean }
+UnderstandingStatus = "understood" | "partial" | "not_understood" | "insufficient_evidence" // 이해·부분 이해·이해 부족·판단 근거 부족
+AnalysisRun = {
+  id, courseId, status: "running" | "completed" | "partial" | "failed", promptVersion, createdAt, completedAt,
+  input: { conversationCount, messageCount, truncatedMessageCount },
+  models: { provider, model, status: "succeeded" | "failed" | "invalid_output" | "not_configured",
+            message: string | null /* 실패·미설정 이유 */, judgedConceptCount, droppedEvidenceCount }[],
+  concepts: {                       // studyOrder 순서로 온다
+    concept: string,
+    comparison: { outcome: "unanimous" | "majority" | "disagreement" | "single_model" | "no_result",
+                  status: UnderstandingStatus | null, judgedCount, agreeCount, calledCount },
+    judgments: { provider, model, status: UnderstandingStatus, reportedStatus: UnderstandingStatus,
+                 adjustedReason: string | null, aiReason, aiNeedsCheck, aiRecommendedActivity,
+                 evidence: { messageId, conversationId, conversationTitle, role: "user" | "assistant",
+                             kind: "user_explanation" | "user_solution" | "user_question" | "ai_explanation",
+                             aiNote, excerpt /* 메시지 앞 120자 */ }[] }[],
+    feedback: ConceptFeedback | null,
+    studyOrder: number,             // 추천 학습 순서 (코드 규칙)
+    recommendConfirmQuiz: boolean   // "이미 알아요"를 남겨 확인 퀴즈를 권함 (퀴즈는 다음 단계)
+  }[]
+}
+ConceptFeedback = { id, courseId, concept, feedback: "already_know" | "want_to_study", comment: string | null,
+                    analysisRunId: number | null, updatedAt, nextAction: "confirm_quiz" | "prioritize_study" }
+```
+
+화면에 보여 줄 때 지킬 것:
+- **모델 비교는 정확도·숙련도가 아니다.** "정확도 67%·100%"처럼 보여 주지 말고 "3개 모델 중 2개가 '부분 이해'" 같은 개수로 보여 주기. 실패·미설정 모델이 있으면 `judgedCount`/`calledCount`로 실제 판단한 모델 수를 보여 주기.
+- `outcome`: `unanimous`(판단한 모델 모두 같음. 3개면 전원 일치), `majority`(3개 중 2개 = 다수 의견), `disagreement`(모두 다름, `status` 없음), `single_model`(판단한 모델이 하나라 비교 못 함), `no_result`(판단한 모델 없음).
+- `insufficient_evidence`(판단 근거 부족)는 `not_understood`(이해 부족)와 다르다. 같은 색·문구로 묶지 않기.
+- `ai`로 시작하는 필드만 AI가 쓴 글(보라색 "AI" 표시). 상태 비교·개수·순서는 코드가 정한 값.
+- `reportedStatus`와 `status`가 다르면 `adjustedReason`(예: 사용자가 쓴 메시지 근거가 없어 판단 근거 부족으로 봤어요)을 함께 보여 주기.
+- 모델이 `not_configured`면 "연결 안 됨"으로 보여 주기(연결된 척하지 않는다). 지금 키가 하나도 없으면 분석 시작이 503이다.
+- **피드백은 AI 판단을 바꾸지 않는다.** `already_know` → 확인 퀴즈 권함(`recommendConfirmQuiz`), `want_to_study` → 추천 순서 맨 앞. 피드백을 남겨도 `comparison`·`judgments`는 그대로다. 같은 개념에 다시 PUT하면 바뀌고, DELETE하면 취소된다. 메모(`comment`)는 200자까지.
+- 오류: 미동의 403, 남의 과목·분석 404, 과목 키워드 없음·분석할 대화 없음 400, 이미 분석 중 409, 24시간에 10번 넘음 429, 설정된 모델 없음 503, 분석 중 동의 철회·대화 삭제 409.
+- 개념은 과목 키워드다. 키워드가 없는 과목은 분석할 수 없다(과목 화면에서 키워드를 넣도록 안내).
+
 ### 퀴즈 — 목업 (제안)
 
 화면: `/quizzes`(목록), `/quizzes/{id}`(풀기), `/quizzes/{id}/result`(결과). 퀴즈는 올린 자료로 만든다(자료 → 요약·퀴즈 생성 API는 이 표에 아직 없고, 자료 처리 방식이 정해지면 따로 제안). 올린 본인만 볼 수 있다.
@@ -434,6 +485,12 @@ layout = {
 - 대화 가져오기 요청 형식이 바뀌었다(위 "대화 가져오기"): 요청에 `importId`·`requestIndex`·`requestCount`, 메시지에 `continued` 추가, 성공 응답은 `{ importedCount, importCompleted }`, 개인정보가 남은 대화는 422 + `data.rejected`.
 - 프론트에서 고친 곳: `types/conversation.ts`, `utils/conversation/send.ts`(작업 번호 붙이기, 20,000자 넘는 메시지 나누기, 제목 500자 자르기), `send.test.ts`, `pages/analysis/components/import/SendStep.tsx`(작업 id, 422 목록 표시 — 성공 화면에 있던 "저장하지 않은 대화" 목록을 실패 쪽으로 옮김), `mocks/conversations.ts`(422 흉내), `api/request.ts`(`ApiError.data`), `api/conversations.api.ts`(주석), `pages/courses/CoursePage.tsx`(과목 삭제 확인 문구에 가져온 대화 추가).
 - 공통: `BusinessException`에 `data`를 담을 수 있게 했고, DB UNIQUE 제약 위반은 409로 응답하며 값은 로그에 남기지 않는다.
+
+## 5-5. 학습 분석 1차 백엔드 (11/1)
+
+- 마이그레이션 **`V5__create_learning_analysis.sql`** 을 썼다. **다음은 `V6`부터**다.
+- 위 "학습 분석 (여러 AI 모델 비교)" API를 추가했다. 프론트 코드는 바꾸지 않았다(학습 대시보드·퀴즈 화면은 목업 그대로). 화면을 붙일 때 `types/analysis.ts`에 위 타입을 추가하면 된다.
+- 동의를 철회하면 대화와 함께 분석 결과도 지운다. 대화 한 건을 지우면 그 대화를 쓴 분석도 지운다. 학습 피드백은 사용자가 쓴 기록이라 남긴다.
 
 ## 6. 이 문서 고치는 법
 
