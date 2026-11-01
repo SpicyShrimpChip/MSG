@@ -23,6 +23,7 @@
 | `V1__init_schema.sql` | `users`, `refresh_token`, `notice` | 회원, 로그인 세션, 공지사항(본문 `content`는 글자만 저장, 수정 시각 `updated_at`, 작성한 관리자 `author_id`는 탈퇴하면 NULL). MySQL 시절의 V1~V3을 PostgreSQL 문법으로 합쳐 다시 시작했다 |
 | `V2__create_course.sql` | `course`, `course_keyword` | 내 과목과 키워드(입력 순서 `sort_order`) |
 | `V3__create_material.sql` | `material`, `file_deletion_task` | 올린 자료의 정보(파일 내용은 저장소), 지우지 못한 저장소 파일의 재시도 목록 |
+| `V4__create_conversation.sql` | `conversation_import`, `conversation_import_request`, `conversation`, `conversation_part`, `conversation_message` | 가져온 AI 대화. 가져오기 작업과 받은 요청 번호(재전송 중복 방지), 대화·조각·메시지. 프론트가 가린 글만 저장한다 |
 | `db/vector/V0_1__enable_pgvector.sql` | (확장) | pgvector `vector` 확장. H2에는 없어 local·prod·`pgTest`에서만 읽는다. 버전을 `0.1`로 둬서 항상 `V1`보다 먼저 돈다 |
 | `db/seed/R__sample_notices.sql` | (데이터) | 로컬 샘플 공지 3건. **운영(prod) 프로필은 이 폴더를 읽지 않는다** |
 
@@ -253,11 +254,29 @@ domain/
 | --- | --- | --- | --- |
 | 자료 삭제 (구현됨) | `material` 삭제 → 나중에 붙을 `material_chunk`·퀴즈·근거는 FK ON DELETE CASCADE로 연쇄 삭제 → 숙련도 재계산(숙련도 단계) | `deleteByMaterial(materialId)` (벡터 단계) | 원본 파일: `file_deletion_task`로 커밋 뒤 삭제 |
 | 과목 삭제 (구현됨) | 그 과목의 `material`을 앱이 먼저 지우고(파일 삭제 작업을 남기려고) `course` 삭제. 과목 없는 자료·다른 과목 자료는 남는다. FK CASCADE는 마지막 안전장치 | 자료마다 위와 같음 | 그 과목 자료의 원본 파일 |
-| AI 대화 분석 동의 철회 | 대화·대화에서 나온 근거 삭제 → 숙련도 재계산 | 해당 없음(대화는 임베딩하지 않는 안) | - |
+| 과목 삭제 → 가져온 대화 (구현됨) | 그 과목의 `conversation`을 FK `ON DELETE CASCADE`로 삭제(조각·메시지도 연쇄). 파일이 없어 앱이 따로 지우지 않는다 | 해당 없음 | - |
+| 대화 삭제 (구현됨, `DELETE /api/conversations/{id}`) | `conversation` 삭제 → 조각·메시지 연쇄. 나중에 붙을 근거도 FK CASCADE로 | 해당 없음 | - |
+| AI 대화 분석 동의 철회 (미구현, 5-2) | 대화·대화에서 나온 근거 삭제 → 숙련도 재계산 | 해당 없음(대화는 임베딩하지 않는 안) | - |
 | 탈퇴 (미구현) | `users` 삭제 → 모든 자식 행 `ON DELETE CASCADE` | `deleteByUser(userId)` | **CASCADE는 저장소 파일을 지우지 못한다.** 탈퇴 처리 코드가 같은 트랜잭션에서 그 사용자 자료의 `storage_key`를 `deleteAfterCommit`으로 넘기거나 `materials/{user_id}/` 폴더 삭제 작업을 남겨야 한다 |
 
 - 벡터 DB·파일 삭제는 DB 트랜잭션 밖이라 실패할 수 있다. 파일은 **구현됨**: `FileCleanupService.deleteAfterCommit`이 같은 트랜잭션에 `file_deletion_task`를 남기고 커밋 뒤 지운다. 롤백되면 작업 행도 사라져 파일이 그대로 남고(DB가 가리키는 파일이 먼저 사라지지 않음), 삭제에 실패하면 작업 행이 남아 다시 시도한다. 벡터 삭제도 같은 작업 목록에 붙이면 된다.
 - 올리기는 반대 순서다: 검사 → 파일 저장 → DB 행 저장. DB 저장이나 커밋이 실패하면 방금 저장한 파일을 지우고(트랜잭션 동기화 `afterCompletion`), 그것도 실패하면 `file_deletion_task`로 넘긴다.
+
+### 가져온 AI 대화 (11/1 구현)
+
+| 테이블 | 내용 |
+| --- | --- |
+| `conversation_import` | 가져오기 작업. 프론트가 "보내기"마다 만든 UUID(`client_import_id`)와 전체 요청 수. 요청을 모두 받으면 `COMPLETED` |
+| `conversation_import_request` | 받은 요청 번호. 같은 번호를 다시 받으면 저장하지 않고 같은 결과를 돌려준다 |
+| `conversation` | 대화 하나. `UNIQUE(user_id, source, client_id)`라 같은 대화는 한 번만 저장한다(다른 과목으로 다시 보내도 처음 과목 유지). `import_id`는 이 대화를 마지막으로 보낸 작업 |
+| `conversation_part` | 받은 조각 번호(조각 없이 온 대화는 1번). 조각이 순서와 상관없이 여러 요청으로 와도 이어 붙인다 |
+| `conversation_message` | 메시지. 순서는 `(part_index, seq)`. 20,000자가 넘는 메시지는 프론트가 나눠 보내고 `continued`로 이어짐을 표시한다 |
+
+- **분석에 쓰는 조건:** 대화의 `import_id` 작업이 `COMPLETED`이고 조각을 모두 받은 대화(`ConversationRepository.findAnalyzable`). 일부 요청만 성공한 작업의 대화는 지우지 않고 남기되 분석에서 뺀다.
+- 끝나지 않은 작업의 대화를 새 작업에서 다시 보내면 그 대화를 새 작업으로 옮긴다(새 작업이 끝나면 분석 대상).
+- 이미 다 받은 대화를 다르게 나눠 다시 보내면 중복으로 보고 건너뛴다. 다 받지 못한 대화를 다르게 나눠 보내면 422로 거절한다.
+- 한도: 요청 2MB(`app.conversation-import.max-request-size`, 본문을 읽기 전에 `Content-Length`로 확인), 요청당 대화 50개, 메시지당 20,000자, 제목 500자. 대화당 메시지 수는 제한하지 않는다(분석 비용 기준 한도는 LLM 단계에서 정한다).
+- TODO(미결): 끝나지 않고 버려진 작업과 그 대화를 언제 정리할지, 이미 가져온 대화가 외부 서비스에서 길어졌을 때(같은 id, 메시지 추가) 새 메시지를 받을지.
 
 ### 업로드 원본 보관 (11/1 결정, 일부 미결)
 

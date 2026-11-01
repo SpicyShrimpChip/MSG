@@ -3,7 +3,7 @@ import { mockImportConversations } from '@/mocks';
 import { USE_MOCK } from './axios';
 import { request } from './request';
 
-// TODO: 백엔드 API가 준비되면 경로·필드명을 주미의 API 문서와 맞춘다 (제안: docs/frontend-requests.md "대화 가져오기")
+// 확정: Swagger `대화 가져오기`. 개인정보가 남은 대화가 있으면 422이고, ApiError.data에 ConversationImportRejection이 있다
 export function importConversations(
   input: ConversationImport,
 ): Promise<ConversationImportResult> {

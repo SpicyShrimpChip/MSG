@@ -35,7 +35,7 @@
 - 해결: 유리 CSS를 `components` 레이어에 두어 Tailwind 유틸 클래스가 이기게 했다.
 - 다음에는: 직접 쓰는 공통 CSS는 `@layer components`에 둔다.
 
-## axios 기본 헤더가 JSON이면 FormData 업로드에서 파일이 빠진다 (2026-11-01, PR 전)
+## axios 기본 헤더가 JSON이면 FormData 업로드에서 파일이 빠진다 (2026-11-01, #94)
 
 - 상황: 자료 올리기(`uploadMaterial`)를 실제 백엔드에 연결했더니 415 "지원하지 않는 요청 형식이에요."가 왔다.
 - 원인: `api/axios.ts`의 기본 헤더가 `Content-Type: application/json`이다. axios 1.x는 이 헤더가 있으면 FormData를 JSON 글자로 바꿔 보낸다(`lib/defaults/index.js`).

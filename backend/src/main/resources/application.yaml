@@ -45,6 +45,11 @@ app:
     # 지우지 못한 파일(file_deletion_task)을 다시 지우는 간격
     cleanup-retry-interval: 10m
 
+  # AI 대화 가져오기 요청 한 번의 최대 크기. 프론트는 1MB(MAX_REQUEST_BYTES, nginx 기본 한도) 안으로 나눠 보내고,
+  # 메시지 하나는 20,000자, 제목은 500자로 맞춰 보낸다 (frontend/src/utils/conversation/send.ts)
+  conversation-import:
+    max-request-size: 2MB
+
   # Vite 프록시를 거쳐도 브라우저의 Origin(개발 서버 주소)이 그대로 오므로 개발 서버 주소를 허용해야 한다.
   # 5173이 이미 쓰이고 있으면 Vite가 5174로 띄운다. 운영은 application-prod.yaml에서 환경변수로만 받는다
   cors:

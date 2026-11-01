@@ -1,10 +1,10 @@
 import { useMutation } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { CircleCheck, Info, TriangleAlert } from 'lucide-react';
-import { importConversations } from '@/api';
+import { ApiError, importConversations } from '@/api';
 import { Button, Card, ErrorText, Notice } from '@/components';
 import { useCourses } from '@/hooks';
-import type { RejectedConversation } from '@/types';
+import type { ConversationImportRejection } from '@/types';
 import {
   buildImportRequests,
   partCountOf,
@@ -18,37 +18,87 @@ interface SendStepProps {
   onRestart: () => void;
 }
 
-interface SendSummary {
-  // 저장된 대화 수 (나눠 보낸 조각은 원래 대화 하나로 센다)
-  importedCount: number;
-  // 저장하지 않은 대화. 조각 하나라도 거절되면 그 대화를 한 번만 보여 준다
-  rejected: { id: string; title: string; reason: string }[];
+// 저장하지 않은 대화 (조각 하나라도 거절되면 그 대화를 한 번만 보여 준다)
+interface RejectedItem {
+  id: string;
+  title: string;
+  reason: string;
 }
 
-// 과목별 요청을 차례로 보내고 결과를 합친다 (한 요청이 실패하면 거기서 멈추고 오류를 보여 준다)
-async function sendAll(items: ConversationToSend[]): Promise<SendSummary> {
-  const rejected: RejectedConversation[] = [];
-  for (const request of buildImportRequests(items)) {
-    const result = await importConversations(request);
-    rejected.push(...result.rejected);
-  }
+// 서버가 개인정보가 남은 대화 때문에 요청 하나를 통째로 저장하지 않았을 때 (422)
+class ConversationRejectedError extends Error {
+  rejected: RejectedItem[];
 
+  constructor(message: string, rejected: RejectedItem[]) {
+    super(message);
+    this.name = 'ConversationRejectedError';
+    this.rejected = rejected;
+  }
+}
+
+function isRejection(data: unknown): data is ConversationImportRejection {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    Array.isArray((data as ConversationImportRejection).rejected)
+  );
+}
+
+function toRejectedItems(
+  items: ConversationToSend[],
+  rejection: ConversationImportRejection,
+): RejectedItem[] {
   const byId = new Map(
     items.map(({ conversation }) => [conversation.id, conversation]),
   );
-  const summary: SendSummary['rejected'] = [];
-  for (const { clientId, reason } of rejected) {
+  const result: RejectedItem[] = [];
+  for (const { clientId, reason } of rejection.rejected) {
     // 조각의 clientId는 "<원래 id>#<번호>"
     const id = byId.has(clientId) ? clientId : clientId.replace(/#\d+$/, '');
-    if (summary.some((item) => item.id === id)) continue;
-    summary.push({ id, title: byId.get(id)?.title ?? clientId, reason });
+    if (result.some((item) => item.id === id)) continue;
+    result.push({ id, title: byId.get(id)?.title ?? clientId, reason });
   }
-  return { importedCount: items.length - summary.length, rejected: summary };
+  return result;
+}
+
+// 요청을 차례로 보낸다. 한 요청이 실패하면 거기서 멈춘다.
+// 같은 importId로 다시 보내면 서버가 이미 받은 요청은 다시 저장하지 않으므로 처음부터 다시 보내도 된다
+async function sendAll({
+  items,
+  importId,
+}: {
+  items: ConversationToSend[];
+  importId: string;
+}): Promise<number> {
+  for (const request of buildImportRequests(items, importId)) {
+    try {
+      await importConversations(request);
+    } catch (error) {
+      if (
+        error instanceof ApiError &&
+        error.status === 422 &&
+        isRejection(error.data)
+      ) {
+        throw new ConversationRejectedError(
+          error.message,
+          toRejectedItems(items, error.data),
+        );
+      }
+      throw error;
+    }
+  }
+  return items.length;
 }
 
 function SendStep({ items, onBack, onRestart }: SendStepProps) {
   const { data: courses } = useCourses();
+  // 보내기 한 번 = 가져오기 작업 하나. 고른 대화가 바뀌면 이 화면이 새로 열려 새 id를 만든다
+  const [importId] = useState(() => crypto.randomUUID());
   const mutation = useMutation({ mutationFn: sendAll });
+  const rejected =
+    mutation.error instanceof ConversationRejectedError
+      ? mutation.error.rejected
+      : [];
 
   const countByCourse = courses
     .map((course) => ({
@@ -69,7 +119,7 @@ function SendStep({ items, onBack, onRestart }: SendStepProps) {
   );
 
   if (mutation.isSuccess) {
-    const { importedCount, rejected } = mutation.data;
+    const importedCount = mutation.data;
     return (
       <Card
         as="section"
@@ -92,26 +142,6 @@ function SendStep({ items, onBack, onRestart }: SendStepProps) {
             </p>
           </div>
         </div>
-
-        {rejected.length > 0 && (
-          <div
-            role="alert"
-            className="flex flex-col gap-2 rounded-xl border border-line-strong bg-surface-muted p-4"
-          >
-            <p className="flex items-center gap-2 font-bold text-heading">
-              <TriangleAlert size={18} aria-hidden="true" />
-              대화 {rejected.length}개는 저장하지 않았어요
-            </p>
-            <ul className="flex flex-col gap-1 text-body text-ink-soft">
-              {rejected.map(({ id, title, reason }) => (
-                <li key={id}>
-                  <span className="font-medium text-heading">{title}</span>:{' '}
-                  {reason}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
 
         <div className="flex flex-wrap justify-between gap-3">
           <Button variant="secondary" onClick={onRestart}>
@@ -174,6 +204,31 @@ function SendStep({ items, onBack, onRestart }: SendStepProps) {
 
       <ErrorText error={mutation.error} />
 
+      {rejected.length > 0 && (
+        <div
+          role="alert"
+          className="flex flex-col gap-2 rounded-xl border border-line-strong bg-surface-muted p-4"
+        >
+          <p className="flex items-center gap-2 font-bold text-heading">
+            <TriangleAlert size={18} aria-hidden="true" />
+            대화 {rejected.length}개 때문에 보내지 못했어요
+          </p>
+          <ul className="flex flex-col gap-1 text-body text-ink-soft">
+            {rejected.map(({ id, title, reason }) => (
+              <li key={id}>
+                <span className="font-medium text-heading">{title}</span>:{' '}
+                {reason}
+              </li>
+            ))}
+          </ul>
+          <p className="text-caption text-ink-muted">
+            이전으로 돌아가 이 대화를 빼거나 가린 내용을 고친 뒤 다시 보내
+            주세요. 먼저 보낸 대화는 저장돼 있지만, 모두 보내기 전에는 분석에
+            쓰지 않아요.
+          </p>
+        </div>
+      )}
+
       <div className="flex flex-wrap justify-between gap-3">
         <Button
           variant="secondary"
@@ -183,7 +238,7 @@ function SendStep({ items, onBack, onRestart }: SendStepProps) {
           이전
         </Button>
         <Button
-          onClick={() => mutation.mutate(items)}
+          onClick={() => mutation.mutate({ items, importId })}
           disabled={mutation.isPending || items.length === 0}
         >
           {mutation.isPending

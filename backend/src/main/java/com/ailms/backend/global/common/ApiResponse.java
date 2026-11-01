@@ -17,4 +17,9 @@ public record ApiResponse<T>(boolean success, String message, T data) {
 	public static ApiResponse<Void> error(String message) {
 		return new ApiResponse<>(false, message, null);
 	}
+
+	// 실패했지만 무엇이 잘못됐는지 목록 등을 함께 알려야 할 때
+	public static <T> ApiResponse<T> error(String message, T data) {
+		return new ApiResponse<>(false, message, data);
+	}
 }
