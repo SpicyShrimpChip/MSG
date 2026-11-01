@@ -1,6 +1,6 @@
 # 백엔드 설계 — DB·인증·확장 구조
 
-최종 수정: 2026-10-25 (회원가입·로그인 구현)
+최종 수정: 2026-11-01 (내 과목·학습자료 올리기 구현)
 
 이 문서는 백엔드가 지금 만든 것과, 앞으로 만들 기능이 붙을 자리를 정리한다.
 **지금 만든 것**과 **설계만 한 것(아직 테이블·코드 없음)**을 구분해서 읽는다. 설계 부분은 기능을 만들 때 바뀔 수 있다.
@@ -11,7 +11,7 @@
 | --- | --- | --- |
 | **PostgreSQL** (`ai_lms`) | 사용 중 | 회원·인증 세션, 과목, 학습 기록, 숙련도·근거, 커리큘럼, 업로드 파일 메타데이터, 자료 조각(Chunk) 원문, AI 생성 결과 메타데이터, 대시보드 배치. **소유권(누구 데이터인지)의 기준** |
 | **벡터 검색** (pgvector) | 확장만 설치(`db/vector`). 임베딩 테이블은 챗봇 검색 구현 때 추가 | 자료 조각 임베딩, 유사도 검색용 인덱스. 같은 PostgreSQL 안에 두므로 `user_id` 조건을 SQL로 함께 건다 |
-| **파일 저장소** (`global/storage`) | 미구현 | 업로드 원본(보관 여부 미결), AI가 만든 이미지·영상 파일. 로컬 / S3 구현을 인터페이스로 분리 |
+| **파일 저장소** (`global/storage`) | `FileStorage` 인터페이스 + `LocalFileStorage`(로컬 폴더, `app.storage.local.root`) 구현. S3는 미결 | 업로드 원본(자료·과목을 지울 때까지 보관), 나중에 AI가 만든 이미지·영상 파일 |
 
 - 벡터 DB는 **검색 인덱스일 뿐 원본이 아니다.** 임베딩은 자료 조각 원문에서 언제든 다시 만들 수 있어야 한다.
 - 로컬 테스트는 H2(PostgreSQL 모드)도 지원한다. 두 DB에서 모두 돌도록 DB 전용 문법(JSON 타입, 전용 함수)은 쓰지 않는다. H2에 없는 pgvector 확장은 `db/vector/` 마이그레이션으로 분리해 local·prod에서만 적용한다.
@@ -21,6 +21,8 @@
 | 마이그레이션 | 테이블 | 내용 |
 | --- | --- | --- |
 | `V1__init_schema.sql` | `users`, `refresh_token`, `notice` | 회원, 로그인 세션, 공지사항(본문 `content`는 글자만 저장, 수정 시각 `updated_at`, 작성한 관리자 `author_id`는 탈퇴하면 NULL). MySQL 시절의 V1~V3을 PostgreSQL 문법으로 합쳐 다시 시작했다 |
+| `V2__create_course.sql` | `course`, `course_keyword` | 내 과목과 키워드(입력 순서 `sort_order`) |
+| `V3__create_material.sql` | `material`, `file_deletion_task` | 올린 자료의 정보(파일 내용은 저장소), 지우지 못한 저장소 파일의 재시도 목록 |
 | `db/vector/V0_1__enable_pgvector.sql` | (확장) | pgvector `vector` 확장. H2에는 없어 local·prod·`pgTest`에서만 읽는다. 버전을 `0.1`로 둬서 항상 `V1`보다 먼저 돈다 |
 | `db/seed/R__sample_notices.sql` | (데이터) | 로컬 샘플 공지 3건. **운영(prod) 프로필은 이 폴더를 읽지 않는다** |
 
@@ -58,9 +60,36 @@
 | `expires_at` | DATETIME(6) | |
 | `revoked_at` | DATETIME(6) NULL | 회전·로그아웃·재사용 감지로 폐기된 시각 |
 
+### `course`, `course_keyword`
+
+| 컬럼 | 타입 | 설명 |
+| --- | --- | --- |
+| `course.user_id` | BIGINT FK → `users.id` **ON DELETE CASCADE** | 소유자 |
+| `course.name` / `name_key` | VARCHAR(40) / VARCHAR(80) | 이름과 중복 검사용 소문자 이름 |
+| `course.semester` | VARCHAR(20) | `2026-1`·`2026-summer`·`2026-2`·`2026-winter` |
+| UNIQUE `(user_id, semester, name_key)` | | 같은 사용자·학기에 대소문자만 다른 이름도 막는다 (앱 검사 + DB 제약) |
+| `course_keyword` | `(course_id, sort_order)` PK, `keyword` VARCHAR(20) | `course_id` → `course.id` ON DELETE CASCADE |
+
+### `material`
+
+| 컬럼 | 타입 | 설명 |
+| --- | --- | --- |
+| `user_id` | BIGINT FK → `users.id` **ON DELETE CASCADE** | 소유자. 조회는 항상 `user_id` 조건을 함께 건다 |
+| `course_id` | BIGINT NULL FK → `course.id` **ON DELETE CASCADE** | 과목 없이 올린 자료는 NULL. 과목을 지우면 자료도 지운다 |
+| `title` | VARCHAR(60) | |
+| `original_file_name` | VARCHAR(255) | 화면 표시용 파일 이름(경로 부분을 떼고 NFC로 정리). 저장 위치에 쓰지 않는다 |
+| `file_format` / `content_type` | VARCHAR(10) / VARCHAR(100) | 서버가 내용을 확인한 형식(PDF·PPTX·TXT·MD)과 그 MIME. 브라우저가 보낸 값은 저장하지 않는다 |
+| `file_size` | BIGINT | 바이트 |
+| `storage_key` | VARCHAR(200) NULL **UNIQUE** | 저장소 위치 `materials/{user_id}/{UUID}.{확장자}`. 원본만 지우는 보관 정책을 위해 NULL 허용 |
+| `status` | VARCHAR(20) | `UPLOADED`(저장 완료·AI 분석 전) / `PROCESSING` / `READY` / `FAILED`. API는 소문자 |
+
+### `file_deletion_task`
+
+지워야 할 저장소 파일(`storage_key`), 시도 횟수, 마지막 시도 시각. 자료 행을 지우는 트랜잭션에서 함께 만들고, 커밋 뒤 파일을 지우면 행도 지운다. 실패하면 남아서 `app.storage.cleanup-retry-interval`(10분)마다 다시 지운다.
+
 ## 3. ERD
 
-지금 있는 테이블은 `users`, `refresh_token`, `notice`(관계 없음이라 그림에서 뺌)뿐이고, 나머지는 모두 설계안이다.
+지금 있는 테이블은 `users`, `refresh_token`, `notice`(관계 없음이라 그림에서 뺌), `course`, `course_keyword`, `material`, `file_deletion_task`(관계 없음)이고, 나머지는 모두 설계안이다.
 
 ```mermaid
 erDiagram
@@ -112,7 +141,7 @@ erDiagram
         bigint course_id FK
         varchar title
         varchar mime_type
-        varchar storage_key "원본 보관 여부 미결"
+        varchar storage_key "원본 위치 (자료·과목 삭제 때까지 보관)"
         varchar status
     }
     material_chunk {
@@ -155,9 +184,9 @@ erDiagram
 | 필요한 데이터 | 테이블 | 메모 |
 | --- | --- | --- |
 | 사용자 정보 | `users` | 구현됨 |
-| 과목·수강 | `course`, `course_keyword` | 프론트 `/courses` API 3번 문서 |
+| 과목·수강 | `course`, `course_keyword` | 구현됨 |
 | 학습 기록 | `conversation`·`conversation_message`, `quiz_submission`·`quiz_answer`, `chat_message` | 모두 `user_id` 보유 |
-| 업로드 자료 | `material`, `material_chunk` | 원본 보관 여부·지원 형식 미결 |
+| 업로드 자료 | `material`(구현됨), `material_chunk` | 형식 PDF·PPTX·TXT·MD, 20MB. 조각·임베딩은 AI 단계 |
 | 개념별 숙련도 | `concept`, `concept_mastery` | 점수는 코드로 계산, `formula_version`으로 산식 변경 추적 (산식 미결) |
 | AI 분석 결과·근거 | `evidence`, `ai_generation`(type=explanation) | 근거는 코드, 설명 문장은 AI. 필드를 섞지 않는다 |
 | 맞춤 커리큘럼 | `curriculum`, `curriculum_step` | 순서·이유는 AI, 근거 숫자는 코드 |
@@ -222,11 +251,19 @@ domain/
 
 | 사건 | DB 행 | 벡터 | 파일 |
 | --- | --- | --- | --- |
-| 자료 삭제 | `material` 삭제 → `material_chunk`, 그 자료로 만든 퀴즈·근거 연쇄 삭제 → 숙련도 재계산 | `deleteByMaterial(materialId)` | 원본·생성 파일 삭제 |
+| 자료 삭제 (구현됨) | `material` 삭제 → 나중에 붙을 `material_chunk`·퀴즈·근거는 FK ON DELETE CASCADE로 연쇄 삭제 → 숙련도 재계산(숙련도 단계) | `deleteByMaterial(materialId)` (벡터 단계) | 원본 파일: `file_deletion_task`로 커밋 뒤 삭제 |
+| 과목 삭제 (구현됨) | 그 과목의 `material`을 앱이 먼저 지우고(파일 삭제 작업을 남기려고) `course` 삭제. 과목 없는 자료·다른 과목 자료는 남는다. FK CASCADE는 마지막 안전장치 | 자료마다 위와 같음 | 그 과목 자료의 원본 파일 |
 | AI 대화 분석 동의 철회 | 대화·대화에서 나온 근거 삭제 → 숙련도 재계산 | 해당 없음(대화는 임베딩하지 않는 안) | - |
-| 탈퇴 | `users` 삭제 → 모든 자식 행 `ON DELETE CASCADE` | `deleteByUser(userId)` | 사용자 폴더 삭제 |
+| 탈퇴 (미구현) | `users` 삭제 → 모든 자식 행 `ON DELETE CASCADE` | `deleteByUser(userId)` | **CASCADE는 저장소 파일을 지우지 못한다.** 탈퇴 처리 코드가 같은 트랜잭션에서 그 사용자 자료의 `storage_key`를 `deleteAfterCommit`으로 넘기거나 `materials/{user_id}/` 폴더 삭제 작업을 남겨야 한다 |
 
-- 벡터 DB·파일 삭제는 DB 트랜잭션 밖이라 실패할 수 있다. DB에 "지울 것" 작업 행을 같은 트랜잭션으로 남기고(outbox) 재시도하는 방식을 제안한다.
+- 벡터 DB·파일 삭제는 DB 트랜잭션 밖이라 실패할 수 있다. 파일은 **구현됨**: `FileCleanupService.deleteAfterCommit`이 같은 트랜잭션에 `file_deletion_task`를 남기고 커밋 뒤 지운다. 롤백되면 작업 행도 사라져 파일이 그대로 남고(DB가 가리키는 파일이 먼저 사라지지 않음), 삭제에 실패하면 작업 행이 남아 다시 시도한다. 벡터 삭제도 같은 작업 목록에 붙이면 된다.
+- 올리기는 반대 순서다: 검사 → 파일 저장 → DB 행 저장. DB 저장이나 커밋이 실패하면 방금 저장한 파일을 지우고(트랜잭션 동기화 `afterCompletion`), 그것도 실패하면 `file_deletion_task`로 넘긴다.
+
+### 업로드 원본 보관 (11/1 결정, 일부 미결)
+
+- 원본은 AI 분석(글 뽑기·요약·퀴즈)에 다시 쓰므로 **올린 직후 지우지 않고, 자료나 그 과목을 지울 때까지 보관한다.** 다른 사용자와 공유하지 않는다.
+- 저장 위치는 `app.storage.local.root`(환경변수 `STORAGE_LOCAL_ROOT`, 기본 `backend/uploads`, `.gitignore`에 있음). 운영은 서버를 다시 배포해도 지워지지 않는 위치로 지정한다.
+- **TODO(미결):** 원본의 장기 보관 기간과 자동 삭제(예: 글 뽑기·분석이 끝난 뒤 N일 지나면 원본만 지우고 `storage_key`를 NULL로), 운영 저장소(AWS S3 등). 정해지면 개인정보 처리방침(`PrivacyPage.tsx` 4번)도 같은 PR에서 고친다.
 
 ## 7. AI 분석·RAG와의 연결
 
@@ -263,7 +300,7 @@ cd ..
 
 ```sql
 \c ai_lms
-\dt                                                     -- flyway_schema_history, notice, refresh_token, users
+\dt                                                     -- course, course_keyword, file_deletion_task, flyway_schema_history, material, notice, refresh_token, users
 SELECT version, description, success, installed_on FROM flyway_schema_history ORDER BY installed_rank;
 \d users                                                -- uk_users_email UNIQUE
 SELECT extname, extversion FROM pg_extension;            -- vector

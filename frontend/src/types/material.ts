@@ -1,7 +1,7 @@
-// 자료 올리기 응답 (POST /api/materials)
+// 자료 올리기 응답 (POST /api/materials). courseId: 과목 없이 올린 자료는 null
 export interface Material {
   id: number;
-  courseId: number;
+  courseId: number | null;
   title: string;
 }
 
@@ -12,13 +12,14 @@ export interface MaterialUploadInput {
   file: File;
 }
 
-// processing: 올린 뒤 AI가 요약·개념·퀴즈를 만드는 중 / ready: 완료 / failed: 글을 뽑지 못함 등
-export type MaterialStatus = 'processing' | 'ready' | 'failed';
+// uploaded: 파일 저장 완료, AI 분석 전 / processing: 글 뽑기·AI 분석 중 / ready: 완료 / failed: 글을 뽑지 못함 등
+export type MaterialStatus = 'uploaded' | 'processing' | 'ready' | 'failed';
 
 // 내 학습자료 목록 한 줄 (GET /api/materials)
 export interface MaterialSummary {
   id: number;
-  courseId: number;
+  // 과목 없이 올린 자료는 null (과목을 지우면 그 과목의 자료도 함께 지워진다)
+  courseId: number | null;
   title: string;
   fileName: string;
   createdAt: string; // ISO 문자열

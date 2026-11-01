@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { BookMarked } from 'lucide-react';
-import { COURSES_QUERY_KEY, deleteCourse } from '@/api';
+import { COURSES_QUERY_KEY, MATERIALS_QUERY_KEY, deleteCourse } from '@/api';
 import { useCourses } from '@/hooks';
 import {
   AsyncBoundary,
@@ -21,10 +21,14 @@ function CourseManager() {
   const [editing, setEditing] = useState<Course | null>(null);
   const [deleting, setDeleting] = useState<Course | null>(null);
 
+  // 과목을 지우면 그 과목의 자료도 함께 지워지므로 자료 목록도 새로 받는다
   const removal = useMutation({
     mutationFn: deleteCourse,
     onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: COURSES_QUERY_KEY }),
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: COURSES_QUERY_KEY }),
+        queryClient.invalidateQueries({ queryKey: MATERIALS_QUERY_KEY }),
+      ]),
   });
 
   const confirmDelete = () => {
@@ -81,7 +85,7 @@ function CourseManager() {
       <ConfirmDialog
         open={deleting !== null}
         title={`'${deleting?.name ?? ''}' 과목을 삭제할까요?`}
-        description="삭제한 과목은 되돌릴 수 없어요."
+        description="이 과목에 올린 학습자료와 원본 파일도 함께 삭제돼요. 삭제한 과목과 자료는 되돌릴 수 없어요."
         confirmLabel="삭제하기"
         onConfirm={confirmDelete}
         onCancel={() => setDeleting(null)}

@@ -2,6 +2,7 @@ import { useParams } from 'react-router-dom';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import {
   BookOpen,
+  FileCheck,
   ListChecks,
   LoaderCircle,
   Sparkles,
@@ -23,8 +24,17 @@ import type { MaterialDetail } from '@/types';
 import { formatDate } from '@/utils';
 import QuizCard from '@/pages/quizzes/components/QuizCard';
 
-// 요약·개념·퀴즈를 아직 만들고 있거나 만들지 못한 자료는 탭마다 같은 안내를 보여 준다
+// 요약·개념·퀴즈를 아직 만들지 않았거나(분석 전·분석 중) 만들지 못한 자료는 탭마다 같은 안내를 보여 준다
 function NotReady({ status }: { status: MaterialDetail['status'] }) {
+  if (status === 'uploaded') {
+    return (
+      <EmptyState
+        icon={<FileCheck size={24} aria-hidden="true" />}
+        title="파일을 올렸어요. 아직 AI 분석 전이에요"
+        description="요약, 핵심 개념, 퀴즈를 만드는 기능은 준비 중이에요. 올린 파일은 지우기 전까지 보관해요."
+      />
+    );
+  }
   if (status === 'failed') {
     return (
       <EmptyState
@@ -105,10 +115,15 @@ function ConceptsTab({ material }: { material: MaterialDetail }) {
   );
 }
 
+// 분석이 끝난 자료만 퀴즈 목록을 불러온다
 function QuizTab({ material }: { material: MaterialDetail }) {
-  const { data: quizzes } = useQuizzes();
   if (material.status !== 'ready') return <NotReady status={material.status} />;
-  const mine = quizzes.filter((quiz) => quiz.materialId === material.id);
+  return <MaterialQuizzes materialId={material.id} />;
+}
+
+function MaterialQuizzes({ materialId }: { materialId: number }) {
+  const { data: quizzes } = useQuizzes();
+  const mine = quizzes.filter((quiz) => quiz.materialId === materialId);
   if (mine.length === 0) {
     return (
       <EmptyState
@@ -145,7 +160,7 @@ function MaterialDetailContent({ materialId }: { materialId: number }) {
             {material.title}
           </h2>
           <p className="flex flex-wrap gap-x-3 gap-y-1 text-caption text-ink-muted">
-            <span>{course?.name ?? '과목을 지운 자료'}</span>
+            <span>{course?.name ?? '과목에 연결하지 않은 자료'}</span>
             <span>{material.fileName}</span>
             {date && <span>{date}</span>}
           </p>

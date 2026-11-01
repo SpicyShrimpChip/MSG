@@ -27,7 +27,8 @@ interface MaterialGroup {
   materials: MaterialSummary[];
 }
 
-// 내 과목 순서대로 묶는다. 과목을 지운 자료는 맨 뒤에 따로 모은다
+// 내 과목 순서대로 묶는다. 과목 없이 올린 자료는 맨 뒤에 따로 모은다
+// (과목을 지우면 그 과목의 자료도 서버에서 함께 지워진다)
 function groupByCourse(
   materials: MaterialSummary[],
   courses: Course[],
@@ -45,7 +46,7 @@ function groupByCourse(
   if (orphaned.length > 0) {
     groups.push({
       key: 'orphaned',
-      title: '과목을 지운 자료',
+      title: '과목에 연결하지 않은 자료',
       materials: orphaned,
     });
   }
@@ -53,6 +54,9 @@ function groupByCourse(
 }
 
 function StatusChip({ status }: { status: MaterialSummary['status'] }) {
+  if (status === 'uploaded') {
+    return <span className="text-caption">AI 분석 전</span>;
+  }
   if (status === 'processing') {
     return (
       <Chip tone="primary" className="gap-1.5">

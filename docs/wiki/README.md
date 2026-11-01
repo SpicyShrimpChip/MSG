@@ -37,6 +37,7 @@
 - 굴절 유리를 넓게 걸면 스크롤이 느려진다
 - `width: auto`는 전환되지 않는다
 - 직접 쓴 CSS는 `components` 레이어에 둬야 Tailwind 클래스가 이긴다
+- axios 기본 헤더가 JSON이면 FormData 업로드에서 파일이 빠진다
 
 ### [tooling.md](tooling.md): CI·Git·배포
 
@@ -49,6 +50,7 @@
 - Claude는 강제 푸시가 막혀 있다
 - GitHub Actions 대기열이 길 때
 - Vercel 환경변수가 빠지면 화면이 `/api`를 실제로 부른다
+- 빌드 폴더에 `파일 2.sql` 같은 복사본이 생기면 테스트가 깨진다
 
 ### [process.md](process.md): 문서·진행 방식
 

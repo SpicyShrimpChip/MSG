@@ -27,7 +27,24 @@ spring:
   flyway:
     locations: classpath:db/migration,classpath:db/seed
 
+  # 학습자료 올리기 한도. 파일 한 개 20MB(Material.MAX_FILE_SIZE와 같은 값), 요청 전체는 제목 등 글자 칸을 더한 여유를 둔다.
+  # 한도를 넘으면 서버가 끝까지 받지 않고 413으로 끊는다
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 21MB
+
 app:
+  # 업로드 원본 저장소. 원본은 AI 분석에 다시 쓰므로 자료나 과목을 지울 때까지 보관한다
+  # TODO(미결): 원본의 장기 보관 기간·자동 삭제 정책, AWS S3 등 운영 저장소는 정해지지 않았다 (docs/backend-design.md)
+  storage:
+    type: local
+    local:
+      # 상대 경로는 서버를 실행한 폴더 기준(./gradlew bootRun이면 backend/uploads). 이 폴더는 .gitignore에 있다
+      root: ${STORAGE_LOCAL_ROOT:uploads}
+    # 지우지 못한 파일(file_deletion_task)을 다시 지우는 간격
+    cleanup-retry-interval: 10m
+
   # Vite 프록시를 거쳐도 브라우저의 Origin(개발 서버 주소)이 그대로 오므로 개발 서버 주소를 허용해야 한다.
   # 5173이 이미 쓰이고 있으면 Vite가 5174로 띄운다. 운영은 application-prod.yaml에서 환경변수로만 받는다
   cors:
