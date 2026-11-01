@@ -77,11 +77,11 @@ flowchart TD
 | --- | --- | --- |
 | 회원가입, 로그인 | 동작 | 가입, 로그인, 로그인 유지, 로그아웃, 내 정보 조회 |
 | 공지사항 | 동작 | 목록 API 연결 |
-| AI 대화 가져오기 | 목업 데이터 | ChatGPT, Claude 내보내기 zip을 브라우저에서 읽고 공부한 대화 고르기, 개인정보 가리기, 대화 미리 보기, 긴 대화 나눠 보내기까지. 서버 저장 API는 준비 중 |
+| AI 대화 가져오기 | 목업 데이터 | ChatGPT, Claude 내보내기 zip(3GB가 넘거나 끝이 잘린 파일 포함)을 브라우저에서 읽고 공부한 대화 고르기, 개인정보 가리기, 가린 곳 확인, 대화 미리 보기, 긴 대화 나눠 보내기까지. 서버 저장 API는 구현됐고 화면 연결은 점검 전 |
 | 학습 대시보드 | 목업 데이터 | 개념별 숙련도, 판단 근거, 추천 순서, 배치 JSON 검증 |
 | 내 과목 | 목업 데이터 | 과목과 키워드 등록, 수정, 삭제 |
 | 학습 자료 업로드 | 목업 데이터 | 과목 선택, 이용 권한 확인, 파일 형식과 크기 검사 |
-| AI 분석 (LLM 호출) | 예정 | 개념 분류에서 점수 계산, 대시보드 연결까지 |
+| AI 분석 (LLM 호출) | 로직 구현 | GPT, Claude, Gemini가 같은 기준으로 따로 판단하고 개념별로 의견을 비교하는 코드와 피드백 API까지 구현. API 키가 없어 실제 모델 호출은 아직 하지 않았고, 대시보드 연결과 점수 계산은 남음 |
 | 자료 요약, 퀴즈, 커리큘럼 | 예정 | 화면 자리만 있음 |
 | 자료 기반 챗봇 | 예정 | |
 | AI 요약 영상 | 준비 중 | |
@@ -90,7 +90,7 @@ flowchart TD
 
 [![Frontend CI](https://github.com/SpicyShrimpChip/lms/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/SpicyShrimpChip/lms/actions/workflows/frontend-ci.yml) [![Backend CI](https://github.com/SpicyShrimpChip/lms/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/SpicyShrimpChip/lms/actions/workflows/backend-ci.yml)
 
-프론트 테스트 135개, 백엔드 테스트 75개가 해당 코드가 바뀐 PR마다 GitHub Actions에서 실행됩니다. 백엔드는 H2와 실제 PostgreSQL 16(pgvector) 두 환경에서 같은 테스트를 돌립니다.
+프론트 테스트 160개, 백엔드 테스트 179개(`@Test` 기준)가 해당 코드가 바뀐 PR마다 GitHub Actions에서 실행됩니다. 백엔드는 H2와 실제 PostgreSQL 16(pgvector) 두 환경에서 같은 테스트를 돌립니다.
 
 ## 설계 원칙
 
