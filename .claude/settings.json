@@ -34,5 +34,18 @@
       "Bash(vercel deploy *)",
       "Bash(vercel env pull *)"
     ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/branch-allowlist.sh\""
+          }
+        ]
+      }
+    ]
   }
 }
