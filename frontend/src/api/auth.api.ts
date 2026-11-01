@@ -37,7 +37,7 @@ export function getMe(): Promise<User> {
 }
 
 // AI 대화 분석 동의를 바꾼다. 철회(false)하면 서버가 가져온 대화와 그로부터 계산한 분석 결과를 함께 지운다
-// TODO: 백엔드 API가 준비되면 경로·필드명을 맞춘다 (제안: docs/frontend-requests.md "인증·마이페이지")
+// 확정: Swagger `회원` PATCH /api/users/me/consents. 바뀐 내 정보를 돌려준다
 export function updateAiConsent(aiAnalysis: boolean): Promise<User> {
   return request<User>({
     method: 'PATCH',

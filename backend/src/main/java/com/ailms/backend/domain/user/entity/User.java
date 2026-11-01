@@ -70,4 +70,14 @@ public class User {
 		user.updatedAt = now;
 		return user;
 	}
+
+	// AI 대화 분석 동의를 바꾼다. 동의 시각은 마지막으로 동의한 시각이고, 철회하면 비운다
+	public void changeAiAnalysisConsent(boolean consent, LocalDateTime now) {
+		if (aiAnalysisConsent == consent) {
+			return;
+		}
+		aiAnalysisConsent = consent;
+		aiAnalysisConsentedAt = consent ? now : null;
+		updatedAt = now;
+	}
 }

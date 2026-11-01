@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
-import { AsyncBoundary, SubPage } from '@/components';
+import { Link } from 'react-router-dom';
+import { Info } from 'lucide-react';
+import { AsyncBoundary, Notice, SubPage } from '@/components';
 import { useMe, useSavedMaskWords } from '@/hooks';
 import {
   conversationKey,
@@ -75,6 +77,20 @@ function ConversationImportPage() {
       description="ChatGPT, Claude와 공부한 대화를 가져와 개념별로 분석해요"
     >
       <ImportSteps current={step} />
+
+      {/* 서버는 동의하지 않은 사용자의 대화를 받지 않는다(403). 보내기 전에 미리 알려 준다 */}
+      {me && !me.aiAnalysisConsent && (
+        <Notice icon={Info}>
+          <p>
+            AI 대화 분석에 동의해야 대화를 보낼 수 있어요. 파일 읽기와 개인정보
+            가리기는 지금도 해 볼 수 있고, 동의는{' '}
+            <Link to="/mypage" className="text-primary underline">
+              마이페이지
+            </Link>
+            에서 할 수 있어요.
+          </p>
+        </Notice>
+      )}
 
       {step === 0 && (
         <FileStep
