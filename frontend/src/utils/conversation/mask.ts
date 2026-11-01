@@ -234,12 +234,23 @@ export interface MaskedSpot {
   // 가린 결과 글에서 표시 앞뒤 글 (줄바꿈은 한 칸으로)
   before: string;
   after: string;
+  // 이 가린 표시가 그 글(제목 또는 메시지) 안의 가린 표시(`[IP]` 등) 중 몇 번째인지, 0부터.
+  // 사용자가 직접 쓴 `[IP]` 같은 글자도 세므로 화면의 글자 순서와 맞는다
+  labelIndex: number;
 }
 
 // 앞뒤로 보여 줄 글자 수
 const SPOT_CONTEXT_LENGTH = 20;
 
 const oneLine = (text: string) => text.replace(/\s+/g, ' ');
+
+// 가린 결과 글 안의 대체 표시(`[이메일]` 등)를 모두 찾는 정규식
+const LABEL_PATTERN = new RegExp(
+  Object.values(MASK_LABELS).map(escapeRegExp).join('|'),
+  'g',
+);
+
+const countLabels = (text: string) => text.match(LABEL_PATTERN)?.length ?? 0;
 
 // 대화의 제목과 모든 메시지에서 가린 곳을 순서대로 모은다 (메시지 위치와 상관없이 전부)
 export function collectMaskedSpots(
@@ -267,6 +278,7 @@ export function collectMaskedSpots(
         after: oneLine(
           masked.slice(match.end, match.end + SPOT_CONTEXT_LENGTH),
         ).trimEnd(),
+        labelIndex: countLabels(masked.slice(0, match.start)),
       });
     }
   });

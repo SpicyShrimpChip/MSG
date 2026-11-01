@@ -3,7 +3,13 @@ import { ArrowDown, ArrowUp } from 'lucide-react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn, type ConversationMessage, type ConversationSource } from '@/utils';
-import { MARK_CLASS, markPattern, remarkMarks, splitMarks } from './marks';
+import {
+  MARK_CLASS,
+  findMaskLabelRange,
+  markPattern,
+  remarkMarks,
+  splitMarks,
+} from './marks';
 import { MARKDOWN_COMPONENTS } from './markdownComponents';
 
 // 가져온 대화를 채팅창처럼 보여 준다 (2단계 대화 보기, 3단계 가린 내용 확인에서 같이 쓴다).
@@ -15,6 +21,15 @@ const SOURCE_NAME: Record<ConversationSource, string> = {
   chatgpt: 'ChatGPT',
   claude: 'Claude',
 };
+
+// 가린 곳 목록에서 고른 가린 표시 하나를 진하게 칠하는 CSS Custom Highlight 이름 (index.css의 ::highlight)
+const FOCUS_HIGHLIGHT = 'mask-focus';
+
+// "동작 줄이기"를 켠 기기에서는 부드럽게 스크롤하지 않는다
+const scrollBehavior = (): ScrollBehavior =>
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ? 'auto'
+    : 'smooth';
 
 // 처음 보여 줄 메시지 수와 "더 보기"로 늘리는 수
 const PAGE_SIZE = 30;
@@ -35,12 +50,19 @@ function PlainText({ text, pattern }: { text: string; pattern: RegExp }) {
   return <>{parts}</>;
 }
 
+interface FocusTarget {
+  index: number;
+  nonce: number;
+  markIndex?: number;
+}
+
 interface ConversationViewProps {
   source: ConversationSource;
   // 가린 뒤의 메시지
   messages: ConversationMessage[];
-  // 이 메시지로 이동해 표시한다. 같은 메시지로 다시 가려면 nonce를 바꾼다
-  focus?: { index: number; nonce: number } | null;
+  // 이 메시지로 이동해 표시한다. 같은 메시지로 다시 가려면 nonce를 바꾼다.
+  // markIndex가 있으면 그 메시지 안의 가린 표시 중 그 번째 하나를 진하게 칠하고 그 자리로 스크롤한다
+  focus?: FocusTarget | null;
   // 형광펜으로 칠할 단어(찾은 키워드·검색어). 있으면 "키워드 나온 메시지" 이전·다음 이동을 보여 준다
   keywords?: string[];
 }
@@ -86,7 +108,7 @@ function ConversationView({
     () => (cursor < 0 ? null : { index: hits[cursor], nonce: nav.count }),
     [cursor, hits, nav.count],
   );
-  const focus = ownFocus ?? focusProp ?? null;
+  const focus: FocusTarget | null = ownFocus ?? focusProp ?? null;
 
   // 연달아 눌러도 한 칸씩 움직이도록 이전 값을 보고 정한다
   const move = (step: 1 | -1) =>
@@ -110,11 +132,34 @@ function ConversationView({
     const container = containerRef.current;
     const item = itemRefs.current.get(focus.index);
     if (!container || !item) return;
+    const behavior = scrollBehavior();
+    const range =
+      focus.markIndex === undefined
+        ? null
+        : findMaskLabelRange(item, focus.markIndex);
+    // 가린 표시 하나를 짚으면 그 자리를 가운데로, 아니면 메시지 맨 위로
+    const box = container.getBoundingClientRect();
+    const spot = range?.getBoundingClientRect();
     container.scrollTo({
-      top: item.offsetTop - container.offsetTop - 12,
-      behavior: 'smooth',
+      top: spot
+        ? container.scrollTop +
+          spot.top -
+          box.top -
+          (box.height - spot.height) / 2
+        : item.offsetTop - container.offsetTop - 12,
+      behavior,
     });
+    // 목록에서 눌렀을 때 대화 상자 자체가 화면 밖이면 같이 보이게 한다
+    container.scrollIntoView({ block: 'nearest', behavior });
     item.focus({ preventScroll: true });
+
+    // 지원하지 않는 브라우저에서는 메시지 테두리만 보인다
+    const highlights = typeof CSS === 'undefined' ? undefined : CSS.highlights;
+    if (range && highlights)
+      highlights.set(FOCUS_HIGHLIGHT, new Highlight(range));
+    return () => {
+      highlights?.delete(FOCUS_HIGHLIGHT);
+    };
   }, [focus]);
 
   const sourceName = SOURCE_NAME[source];

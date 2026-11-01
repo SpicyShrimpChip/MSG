@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ChevronDown, Eye, EyeOff, Lock } from 'lucide-react';
 import { Button, Card, Chip } from '@/components';
+import { cn } from '@/utils/cn';
 import {
   MASK_LABELS,
   collectMaskedSpots,
@@ -8,6 +9,7 @@ import {
   maskConversation,
   type MaskKind,
   type MaskOptions,
+  type MaskedSpot,
   type ParsedConversation,
 } from '@/utils';
 import ConversationView from './ConversationView';
@@ -43,9 +45,33 @@ function MaskPreview({ id, original, masked, options }: MaskPreviewProps) {
     [original, options],
   );
   const [showOriginal, setShowOriginal] = useState(false);
-  const [focus, setFocus] = useState<{ index: number; nonce: number } | null>(
-    null,
+  // "보기"로 고른 줄 하나. 가리는 규칙이 바뀌어 목록이 다시 만들어지면 고른 줄은 풀린다
+  const [selected, setSelected] = useState<{
+    spots: MaskedSpot[];
+    index: number;
+    nonce: number;
+  } | null>(null);
+  const selectedIndex = selected?.spots === spots ? selected.index : null;
+  const selectedSpot = selectedIndex === null ? null : spots[selectedIndex];
+  const focus = useMemo(
+    () =>
+      selected && selectedSpot && selectedSpot.messageIndex >= 0
+        ? {
+            index: selectedSpot.messageIndex,
+            nonce: selected.nonce,
+            markIndex: selectedSpot.labelIndex,
+          }
+        : null,
+    [selected, selectedSpot],
   );
+
+  // 같은 줄을 다시 누르면 풀고, 다른 줄을 누르면 앞 줄은 풀린다
+  const toggleSpot = (index: number) =>
+    setSelected((prev) =>
+      prev?.spots === spots && prev.index === index
+        ? null
+        : { spots, index, nonce: (prev?.nonce ?? 0) + 1 },
+    );
 
   return (
     <div id={id} className="mt-3 flex flex-col gap-3">
@@ -73,13 +99,23 @@ function MaskPreview({ id, original, masked, options }: MaskPreviewProps) {
                 // 가린 곳 순서는 바뀌지 않는다
                 // eslint-disable-next-line react-x/no-array-index-key
                 key={i}
-                className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)_auto] items-center gap-3 py-2 text-caption"
+                className={cn(
+                  'grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)_auto] items-center gap-3 py-2 text-caption',
+                  selectedIndex === i &&
+                    '-mx-2 rounded-lg bg-surface-raised px-2',
+                )}
               >
                 <span
                   className="truncate font-mono text-heading"
-                  aria-label={showOriginal ? undefined : '숨긴 원래 글자'}
+                  aria-label={
+                    showOriginal || selectedIndex === i
+                      ? undefined
+                      : '숨긴 원래 글자'
+                  }
                 >
-                  {showOriginal ? spot.original : '••••••••'}
+                  {showOriginal || selectedIndex === i
+                    ? spot.original
+                    : '••••••••'}
                 </span>
                 <span className="truncate text-ink-soft">
                   {spot.messageIndex < 0 && '제목: '}
@@ -89,19 +125,15 @@ function MaskPreview({ id, original, masked, options }: MaskPreviewProps) {
                   </mark>
                   {withoutMarkdown(spot.after)}
                 </span>
-                {spot.messageIndex >= 0 ? (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setFocus({ index: spot.messageIndex, nonce: i })
-                    }
-                    className="font-medium text-primary"
-                  >
-                    보기
-                  </button>
-                ) : (
-                  <span />
-                )}
+                <button
+                  type="button"
+                  aria-pressed={selectedIndex === i}
+                  aria-label={`${MASK_LABELS[spot.kind]} 보기`}
+                  onClick={() => toggleSpot(i)}
+                  className="font-medium text-primary"
+                >
+                  보기
+                </button>
               </li>
             ))}
           </ul>

@@ -196,6 +196,24 @@ describe('collectMaskedSpots', () => {
     ]);
   });
 
+  it('가린 표시가 글 안에서 몇 번째인지(사용자가 쓴 [IP] 글자도 센다) 알려 준다', () => {
+    const spots = collectMaskedSpots({
+      ...conversation,
+      messages: [
+        {
+          role: 'user',
+          text: '표시는 [IP]로 써요. 010-1234-5678 그리고 me@example.com',
+        },
+      ],
+    });
+    // 글 안의 표시는 [IP](직접 쓴 것), [전화번호], [이메일] 순서
+    expect(
+      spots
+        .filter((spot) => spot.messageIndex === 0)
+        .map((spot) => spot.labelIndex),
+    ).toEqual([1, 2]);
+  });
+
   it('가린 곳이 없으면 빈 목록', () => {
     expect(
       collectMaskedSpots({ ...conversation, title: '정리', messages: [] }),
