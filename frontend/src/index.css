@@ -154,6 +154,12 @@
   --color-input-border: #6b7891;
 }
 
+/* 가린 곳 목록에서 "보기"로 고른 가린 표시 하나 (ConversationView). 파란 가린 표시·보라 말풍선 위에서도 보이게 가장 진한 글자색을 바탕으로 쓴다 */
+::highlight(mask-focus) {
+  background-color: var(--color-heading);
+  color: var(--color-surface);
+}
+
 @layer base {
   :root {
     color-scheme: light;

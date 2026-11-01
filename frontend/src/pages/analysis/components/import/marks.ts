@@ -34,6 +34,26 @@ export function splitMarks(
     );
 }
 
+// 화면에 그려진 글 안에서 가린 표시(`[IP]` 등)의 index번째 자리를 찾는다 (코드 블록 안도 센다).
+// 가린 표시가 글 조각 하나에 통째로 들어 있어서 조각마다 찾아 순서대로 센다
+export function findMaskLabelRange(root: Node, index: number): Range | null {
+  const labels = new RegExp([...MASK_SET].map(escapeRegExp).join('|'), 'g');
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let count = 0;
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    for (const found of (node.nodeValue ?? '').matchAll(labels)) {
+      if (count === index) {
+        const range = document.createRange();
+        range.setStart(node, found.index);
+        range.setEnd(node, found.index + found[0].length);
+        return range;
+      }
+      count += 1;
+    }
+  }
+  return null;
+}
+
 // 마크다운 트리에서 쓰는 만큼만 적은 모양
 interface MdNode {
   type: string;

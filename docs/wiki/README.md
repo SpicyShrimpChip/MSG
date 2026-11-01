@@ -39,6 +39,7 @@
 - 직접 쓴 CSS는 `components` 레이어에 둬야 Tailwind 클래스가 이긴다
 - axios 기본 헤더가 JSON이면 FormData 업로드에서 파일이 빠진다
 - zip 로컬 헤더의 크기 칸이 0xFFFFFFFF면 ZIP64 확장 필드를 읽는다
+- 코드 블록 안의 글자는 마크다운 플러그인으로 못 칠한다: CSS Custom Highlight로 짚는다
 
 ### [tooling.md](tooling.md): CI·Git·배포
 

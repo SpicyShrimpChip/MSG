@@ -48,3 +48,10 @@
 - 원인: Claude 내보내기 zip은 4.8MB짜리 파일도 로컬 헤더 크기 칸을 `0xFFFFFFFF`로 두고 실제 크기를 ZIP64 확장 필드(id 1)에 적는다. 로컬 헤더의 확장 필드에는 원본·압축 크기가 둘 다 들어 있다(목차와 달리 칸별로 건너뛰지 않는다).
 - 해결: 헤더 칸이 `0xFFFFFFFF`이면 확장 필드에서 원본 → 압축 크기 순으로 읽는다(`zipReader.ts`).
 - 다음에는: zip 형식을 직접 읽을 때는 작은 파일도 ZIP64일 수 있다고 보고, 가짜 zip 테스트에 ZIP64 확장 헤더를 꼭 넣는다. 크기가 데이터 뒤에 적히는 방식(data descriptor)은 아직 지원하지 않는다.
+
+## 코드 블록 안의 글자는 마크다운 플러그인으로 못 칠한다: CSS Custom Highlight로 짚는다 (2026-11-02)
+
+- 상황: 가린 곳 목록의 "보기"로 본문의 가린 표시 하나를 진하게 칠하려는데, `[IP]`가 코드 블록 안에 있으면 칠해지지 않았다.
+- 원인: `remarkMarks`는 코드 노드(`code`·`inlineCode`)를 건너뛰어서 코드 안의 가린 표시는 그냥 글자다. 네트워크 공부 대화는 IP 예시가 코드 블록에 자주 나온다.
+- 해결: 그려진 DOM에서 가린 표시의 n번째 글자 자리를 `Range`로 찾아(`findMaskLabelRange`) `CSS.highlights`로 칠한다(요소를 바꾸지 않아서 코드 블록 안도 된다). n은 `collectMaskedSpots`의 `labelIndex`(사용자가 직접 쓴 `[IP]`도 센다). 지원하지 않는 브라우저는 메시지 테두리만 보인다.
+- 다음에는: `::highlight(...)`는 빌드 때 "not recognized as a valid pseudo-element" 경고가 한 번 나오지만 결과 CSS에는 그대로 들어간다(`dist`에서 확인).
