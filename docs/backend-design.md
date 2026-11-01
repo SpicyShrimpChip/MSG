@@ -23,6 +23,7 @@
 | `V1__init_schema.sql` | `users`, `refresh_token`, `notice` | 회원, 로그인 세션, 공지사항(본문 `content`는 글자만 저장, 수정 시각 `updated_at`, 작성한 관리자 `author_id`는 탈퇴하면 NULL). MySQL 시절의 V1~V3을 PostgreSQL 문법으로 합쳐 다시 시작했다 |
 | `V2__create_course.sql` | `course`, `course_keyword` | 내 과목과 키워드(입력 순서 `sort_order`) |
 | `V3__create_material.sql` | `material`, `file_deletion_task` | 올린 자료의 정보(파일 내용은 저장소), 지우지 못한 저장소 파일의 재시도 목록 |
+| `V5__create_learning_analysis.sql` | `analysis_run`, `analysis_run_conversation`, `analysis_model_result`, `analysis_concept_judgment`, `analysis_judgment_evidence`, `analysis_concept_consensus`, `concept_feedback` | 학습 대화 개념 분석(모델별 결과 원본·검증한 판단·근거 메시지·개념별 비교)과 학습 모드 피드백. 아래 "학습 대화 개념 분석" |
 | `V4__create_conversation.sql` | `conversation_import`, `conversation_import_request`, `conversation`, `conversation_part`, `conversation_message` | 가져온 AI 대화. 가져오기 작업과 받은 요청 번호(재전송 중복 방지), 대화·조각·메시지. 프론트가 가린 글만 저장한다 |
 | `db/vector/V0_1__enable_pgvector.sql` | (확장) | pgvector `vector` 확장. H2에는 없어 local·prod·`pgTest`에서만 읽는다. 버전을 `0.1`로 둬서 항상 `V1`보다 먼저 돈다 |
 | `db/seed/R__sample_notices.sql` | (데이터) | 로컬 샘플 공지 3건. **운영(prod) 프로필은 이 폴더를 읽지 않는다** |
@@ -256,7 +257,8 @@ domain/
 | 과목 삭제 (구현됨) | 그 과목의 `material`을 앱이 먼저 지우고(파일 삭제 작업을 남기려고) `course` 삭제. 과목 없는 자료·다른 과목 자료는 남는다. FK CASCADE는 마지막 안전장치 | 자료마다 위와 같음 | 그 과목 자료의 원본 파일 |
 | 과목 삭제 → 가져온 대화 (구현됨) | 그 과목의 `conversation`을 FK `ON DELETE CASCADE`로 삭제(조각·메시지도 연쇄). 파일이 없어 앱이 따로 지우지 않는다 | 해당 없음 | - |
 | 대화 삭제 (구현됨, `DELETE /api/conversations/{id}`) | `conversation` 삭제 → 조각·메시지 연쇄. 나중에 붙을 근거도 FK CASCADE로 | 해당 없음 | - |
-| AI 대화 분석 동의 철회 (구현됨, `PATCH /api/users/me/consents`) | 그 사용자의 `conversation`(조각·메시지 연쇄)과 `conversation_import`(받은 요청 연쇄)를 동의 변경과 같은 트랜잭션에서 삭제. 과목·자료는 남는다. 사용자 행을 잠가 같은 사용자의 대화 가져오기와 차례로 처리한다. 근거 삭제 → 숙련도 재계산은 분석 기능을 만들 때 추가 | 해당 없음(대화는 임베딩하지 않는 안) | - |
+| 대화 한 건 삭제 → 분석 (구현됨) | 그 대화를 쓴 `analysis_run` 전체를 앱이 먼저 삭제(`AnalysisCleanup`, 모델이 쓴 이유에 대화 내용이 담길 수 있어서). 모델 결과·판단·근거·비교는 연쇄 삭제, 피드백의 `analysis_run_id`는 NULL | 해당 없음 | - |
+| AI 대화 분석 동의 철회 (구현됨, `PATCH /api/users/me/consents`) | 그 사용자의 `conversation`(조각·메시지 연쇄)과 `conversation_import`(받은 요청 연쇄)를 동의 변경과 같은 트랜잭션에서 삭제. 과목·자료는 남는다. 그 사용자의 `analysis_run`도 모두 삭제(모델 결과·판단·근거·비교 연쇄). 학습 피드백(`concept_feedback`)은 사용자가 쓴 기록이라 남긴다(미결: 철회 때 함께 지울지). 사용자 행을 잠가 같은 사용자의 대화 가져오기·분석과 차례로 처리한다. 숙련도 재계산은 숙련도를 만들 때 추가 | 해당 없음(대화는 임베딩하지 않는 안) | - |
 | 탈퇴 (미구현) | `users` 삭제 → 모든 자식 행 `ON DELETE CASCADE` | `deleteByUser(userId)` | **CASCADE는 저장소 파일을 지우지 못한다.** 탈퇴 처리 코드가 같은 트랜잭션에서 그 사용자 자료의 `storage_key`를 `deleteAfterCommit`으로 넘기거나 `materials/{user_id}/` 폴더 삭제 작업을 남겨야 한다 |
 
 - 벡터 DB·파일 삭제는 DB 트랜잭션 밖이라 실패할 수 있다. 파일은 **구현됨**: `FileCleanupService.deleteAfterCommit`이 같은 트랜잭션에 `file_deletion_task`를 남기고 커밋 뒤 지운다. 롤백되면 작업 행도 사라져 파일이 그대로 남고(DB가 가리키는 파일이 먼저 사라지지 않음), 삭제에 실패하면 작업 행이 남아 다시 시도한다. 벡터 삭제도 같은 작업 목록에 붙이면 된다.
@@ -278,6 +280,43 @@ domain/
 - 한도: 요청 2MB(`app.conversation-import.max-request-size`, 본문을 읽기 전에 `Content-Length`로 확인), 요청당 대화 50개, 메시지당 20,000자, 제목 500자. 대화당 메시지 수는 제한하지 않는다(분석 비용 기준 한도는 LLM 단계에서 정한다).
 - TODO(미결): 끝나지 않고 버려진 작업과 그 대화를 언제 정리할지, 이미 가져온 대화가 외부 서비스에서 길어졌을 때(같은 id, 메시지 추가) 새 메시지를 받을지.
 
+### 학습 대화 개념 분석 (11/1, 1차 구현)
+
+흐름(`AnalysisService`):
+1. **준비 (트랜잭션):** 사용자 행을 잠그고 동의·과목 소유·키워드·진행 중 분석·24시간 횟수(`app.analysis.daily-run-limit`)를 확인한다. `findAnalyzableInCourse`(동의 + 가져오기 완료 + 조각 모두 받음)로 대화를 읽고, `AnalysisInputBuilder`가 보낼 글을 만든 뒤 `analysis_run`(RUNNING)과 쓴 대화를 저장하고 커밋한다.
+2. **모델 호출 (트랜잭션 밖):** 설정된 모델마다 같은 지시문(`AnalysisPrompt`, `prompt_version`)을 동시에 보낸다. 다른 모델의 판단은 넣지 않는다. 시간 초과·429·5xx는 `app.llm.max-retries`만큼 다시 부른다.
+3. **저장 (트랜잭션):** 다시 사용자 행을 잠그고 동의를 확인한다. 그 사이 철회하거나 쓴 대화를 지웠으면 결과를 버리고 409. 모델마다 `analysis_model_result`(원본 `raw_output`, 토큰 수, 시도 횟수, 걸린 시간)를 남기고, 검증한 판단·근거와 개념별 비교를 저장한다.
+
+보내는 글 줄이기: 과목 키워드가 들어간 메시지와 앞뒤 `context-window`개만, 메시지 하나는 `max-message-chars`까지, 전체는 `max-input-chars`까지(최근 대화부터). 대화는 가져올 때 이미 가린 글이다. TODO: 같은 메시지 안에 섞인 사생활 이야기는 걸러지지 않는다.
+
+검증(`ModelOutputParser`): 개념은 과목 키워드만, 상태는 4가지만, 근거 메시지는 이번에 보낸 것이고 `user_*` 근거는 사용자 메시지·`ai_explanation`은 AI 메시지여야 한다(아니면 버리고 `dropped_evidence_count`). 이해·부분 이해·이해 부족인데 사용자가 쓴 근거가 없으면 비교에는 판단 근거 부족으로 쓰고(`status`, `adjusted_reason`) 모델이 보고한 값은 `reported_status`에 남긴다. 근거 부족을 이해 부족으로 바꾸지 않는다.
+
+비교(`ConsensusCalculator`): 판단한 모델 수(`judged_count`)와 같은 판단 수(`agree_count`)로 `UNANIMOUS`/`MAJORITY`/`DISAGREEMENT`/`SINGLE_MODEL`/`NO_RESULT`. 실패·형식 오류·미설정 모델과 개념을 빠뜨린 모델은 판단한 수에 넣지 않는다. 정확도·숙련도가 아니다.
+
+학습 피드백(`concept_feedback`): 과목·개념마다 하나(UNIQUE). PUT으로 남기거나 바꾸고 DELETE로 취소. AI 결과·숙련도는 바꾸지 않고, 추천 순서(`studyOrder`: 더 공부할래요 → 이해 부족 → 부분 이해 → 의견 불일치 → 근거 부족 → 이해)와 확인 퀴즈 권유만 바뀐다.
+
+AI 모델 설정: 키·모델 이름은 환경변수(`OPENAI_API_KEY`·`OPENAI_MODEL`, `ANTHROPIC_API_KEY`·`ANTHROPIC_MODEL`, `GEMINI_API_KEY`·`GEMINI_MODEL`)로만. 하나라도 없으면 미설정(호출하지 않음).
+
+TODO(미결):
+- **외부 AI로 대화를 보내기 전에 개인정보처리방침에 제공사·국가(국외 이전)·학습 미사용 여부를 적어야 한다(`PrivacyPage.tsx` TODO).** 실제 사용자 데이터로 키를 켜기 전에 처리한다.
+- 쓸 모델 이름, 모델별 비용 한도·월 예산, 분석을 비동기로 돌릴지(지금은 요청 안에서 기다림, 최대 약 2분).
+- 숙련도 점수 산식(대화 비교 결과 + 퀴즈·시험 결과의 가중치).
+
+### 퀴즈·시험 모드 (다음 단계 설계안)
+
+| 구분 | 학습용 확인 퀴즈 | 모의시험 |
+| --- | --- | --- |
+| 목적 | 개념 이해 확인, "이미 알아요" 검증 근거 | 실제 시험처럼 풀고 개념별 점수 |
+| 문항 | 객관식·단답형 위주, 개념 1개에 1~3문항 | 단답형·주관식·서술형, 문항마다 관련 개념(여러 개 가능)과 배점 |
+| 채점 | 객관식·단답형은 코드(정답 목록·정규화 비교), 부분 점수 저장 | 단답형은 코드, 주관식·서술형은 채점 기준(rubric) 항목별로 모델이 판단하고 코드가 점수를 합산. 모델 채점은 근거 문장을 함께 저장 |
+| 사용자 피드백 버튼 | 있음 (학습 모드) | **없음.** 답안과 채점 기준으로만 결과를 낸다 |
+| 결과 반영 | 개념별 정오·부분 점수 → 추천 순서 갱신, 피드백 검증 근거 | 개념별 획득 점수/가능 점수, 오답 유형, 부족한 개념 추천. AI 대화 비교보다 우선하는 근거로 쓴다 |
+| 근거 부족 | 개념별 문항 수가 적으면(예: 가능 점수가 기준 미만) "근거 부족"으로 두고 숙련도를 단정하지 않는다 | 같음 |
+
+표(안): `quiz`(type: PRACTICE/EXAM, course_id, material_id NULL, source_run_id NULL), `quiz_question`(type: CHOICE/SHORT/ESSAY, 배점, 정답·채점 기준), `quiz_question_concept`(문항-개념, 배점 비율), `quiz_submission`(mode, 제출 시각), `quiz_answer`(답안, 점수, 채점 방식 CODE/MODEL, 오답 유형, 모델 채점 근거), `concept_score`(제출별 개념 획득/가능 점수). 숙련도(`concept_mastery`)는 이 결과와 대화 비교 결과를 받아 코드로 계산한다(산식 미결).
+
+API(안): `POST /api/quizzes/practice`(개념으로 확인 퀴즈 만들기), `POST /api/exams`(과목 모의시험 만들기), `POST /api/quizzes/{id}/submissions`(제출·채점), `GET /api/quizzes/{id}/submissions/latest`. 지금 프론트 퀴즈 타입은 객관식만 있어(`types/quiz.ts`) 단답·서술형을 붙일 때 같은 PR에서 타입을 바꾼다.
+
 ### 업로드 원본 보관 (11/1 결정, 일부 미결)
 
 - 원본은 AI 분석(글 뽑기·요약·퀴즈)에 다시 쓰므로 **올린 직후 지우지 않고, 자료나 그 과목을 지울 때까지 보관한다.** 다른 사용자와 공유하지 않는다.
@@ -287,7 +326,7 @@ domain/
 ## 7. AI 분석·RAG와의 연결
 
 - **숙련도:** `evidence`(대화 분류 신호·퀴즈 정오) → 점수 계산 클래스(가중치 설정값, 산식 미결) → `concept_mastery`. LLM은 `evidence`와 점수를 받아 설명만 쓴다(`aiExplanation`).
-- **다중 모델:** 같은 입력을 여러 `LlmClient` 구현에 보내 각 결과를 `ai_model_judgment`에 저장하고, 통합 규칙(코드)이 최종 결과를 만든다. 모델 수·제공사는 미결이라 설정으로 고른다.
+- **다중 모델 (1차 구현):** 같은 입력을 GPT·Claude·Gemini `LlmClient`에 따로 보내 각 결과를 `analysis_model_result`·`analysis_concept_judgment`에 저장하고, 비교 규칙(코드)이 `analysis_concept_consensus`를 만든다(설계안의 `ai_model_judgment` 대신). 위 "학습 대화 개념 분석" 참고.
 - **RAG 질의응답:** 6번 흐름으로 근거 조각을 찾고, 답변과 함께 `chat_citation`에 근거를 남겨 화면에 출처를 보여 준다.
 - **맞춤 설명서·이미지·영상:** 약점 개념 → 관련 조각 검색 → 생성 요청 → `ai_generation`에 상태·모델·결과 위치 저장. 파일은 `global/storage`.
 - 모든 AI 호출은 로그인 사용자의 `user_id` 범위 데이터만 입력으로 쓴다.

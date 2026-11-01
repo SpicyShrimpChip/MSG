@@ -60,7 +60,7 @@ Swagger UI: `/swagger-ui/index.html` — 프론트와 API를 맞출 때 이 문�
 ## DB 마이그레이션 (Flyway)
 
 - 테이블 구조는 Flyway(`src/main/resources/db/migration`)로만 바꾼다. Hibernate는 `ddl-auto: validate`라 엔티티와 표가 맞는지 검사만 한다.
-- **머지된 `V*.sql`은 고치지 않고 새 번호를 추가한다.** 지금은 `V1__init_schema.sql`, `V2__create_course.sql`, `V3__create_material.sql`, `V4__create_conversation.sql`이고 다음은 `V5`다. 새 번호는 팀원과 겹치지 않게 미리 말한다. 10/31에 `V1`부터 다시 쓴 것은 운영 DB가 없어서 가능했던 예외이고, 운영 DB가 생기면 하지 않는다(`docs/wiki/backend.md`).
+- **머지된 `V*.sql`은 고치지 않고 새 번호를 추가한다.** 지금은 `V1__init_schema.sql`, `V2__create_course.sql`, `V3__create_material.sql`, `V4__create_conversation.sql`, `V5__create_learning_analysis.sql`이고 다음은 `V6`다. 새 번호는 팀원과 겹치지 않게 미리 말한다. 10/31에 `V1`부터 다시 쓴 것은 운영 DB가 없어서 가능했던 예외이고, 운영 DB가 생기면 하지 않는다(`docs/wiki/backend.md`).
 - 버전 번호는 `db/migration`과 `db/vector`가 **함께** 쓴다. 같은 번호를 두 폴더에 쓰지 않는다. pgvector 확장(`db/vector/V0_1`)은 H2에 없어 local·prod·`pgTest`에서만 읽고, 번호를 `0.1`로 둬서 항상 `V1`보다 먼저 돈다.
 - 샘플 데이터는 `db/seed/R__*.sql`(반복 실행)이고 운영 프로필은 읽지 않는다.
 - 앱 계정(`ai_lms_app`)은 데이터 읽기·쓰기만 하고, 표 만들기·변경은 마이그레이션 계정(`ai_lms_migrator`)만 한다.
@@ -74,7 +74,9 @@ Swagger UI: `/swagger-ui/index.html` — 프론트와 API를 맞출 때 이 문�
 
 ## 미결 사항 처리 방법
 
-- **LLM:** 제공사·모델 수가 미정이므로 `global/llm`에 인터페이스를 두고 구현체를 설정으로 고른다. 여러 모델이 독립 판단 → 결과 비교·통합하는 구조로 확장할 수 있게 설계한다. 키가 없을 때는 mock 구현체로 동작하게 한다.
+- **LLM:** `global/llm`의 `LlmClient`를 제공사마다 구현했다(`OpenAiClient`·`AnthropicClient`·`GeminiClient`, 11/1). 키와 모델 이름은 환경변수(`OPENAI_API_KEY`·`OPENAI_MODEL`, `ANTHROPIC_API_KEY`·`ANTHROPIC_MODEL`, `GEMINI_API_KEY`·`GEMINI_MODEL`)로만 받고 기본 모델 이름은 두지 않는다. **둘 중 하나라도 없으면 그 모델은 "미설정"으로 표시하고 부르지 않는다. 키가 없을 때 가짜 결과를 만들지 않는다.** 가짜 모델(`FakeLlmClients`)은 테스트 코드에만 있고, 통합 테스트는 키를 비워 실제 제공사를 부르지 않는다(`TestLlm`).
+- **학습 대화 분석 (`domain/analysis`):** 설정된 모델마다 같은 지시문(`AnalysisPrompt`, 바꾸면 `VERSION`을 올림)으로 따로 부르고, 다른 모델의 판단은 넣지 않는다. 모델 답변은 원본(`raw_output`)을 그대로 두고, `ModelOutputParser`가 개념 목록·상태·근거 메시지(보낸 메시지인지, 말한 사람이 맞는지)를 검증한다. 개념별 비교(`ConsensusCalculator`)는 정확도·숙련도가 아니다. 근거 부족을 이해 부족으로 바꾸지 않는다. 모델을 기다리는 동안 DB 트랜잭션을 잡지 않는다.
+- **학습 피드백:** 사용자 의견(`concept_feedback`)은 AI 결과와 따로 두고 AI 판단·숙련도를 바꾸지 않는다. 추천 순서만 코드 규칙으로 바꾼다.
 - **숙련도 점수:** 대화 분류 결과(이해 못 함 / 재설명 요청 / 스스로 활용)와 퀴즈 정답률을 받아 점수를 계산하는 클래스를 분리하고, 가중치는 설정값으로 둔다. LLM이 점수를 직접 매기지 않는다. 계산 로직에는 단위 테스트를 작성한다.
 - **DB:** PostgreSQL 16 + pgvector(확정, MySQL에서 이주). 기본 프로필·`./gradlew test`는 H2(PostgreSQL 모드), 실제 DB 테스트는 `./gradlew pgTest`(`ai_lms_test`). H2에서도 돌도록 마이그레이션에는 특정 DB 전용 문법을 쓰지 않고, `CREATE EXTENSION vector`처럼 PostgreSQL 전용인 것은 `db/vector/`에 둔다(local·prod에서만 적용). 로컬 DB는 `backend/db/docker-compose.yml` + `setup-local-postgres.sh`.
 - **배치 JSON:** LLM이 출력한 화면 배치 JSON은 서버에서도 허용 컴포넌트 목록 기준으로 1차 검증한 뒤 프론트에 전달한다.
@@ -84,4 +86,4 @@ Swagger UI: `/swagger-ui/index.html` — 프론트와 API를 맞출 때 이 문�
 - 프론트에서 마스킹이 끝난 대화만 받는다. 그래도 서버에서 한 번 더 개인정보 패턴을 검사한다(`PersonalInfoDetector`, 규칙은 프론트 `mask.ts`와 같게 유지).
 - 요청 하나는 전부 저장하거나 전부 거절(422 + `data.rejected`)한다. 가져오기 작업(`conversation_import`)의 요청을 모두 받아야 완료이고, **분석은 `ConversationRepository.findAnalyzable`로 완료된 대화만 읽는다**(지금 동의한 사용자만).
 - 대화 본문을 로그·예외 메시지에 남기지 않는다. 긴 글에 쓰는 정규식은 시작 위치마다 끝까지 읽지 않게 쓴다(`docs/wiki/backend.md`).
-- 사용자가 AI 대화 분석 동의를 철회하면 가져온 대화와 그로부터 계산된 분석 결과를 함께 삭제한다(`UserService.changeAiAnalysisConsent` → `ConversationService.deleteAllOfUser`). 분석 결과 표를 새로 만들면 이 삭제에 추가한다.
+- 사용자가 AI 대화 분석 동의를 철회하면 가져온 대화와 그로부터 계산된 분석 결과를 함께 삭제한다(`UserService.changeAiAnalysisConsent` → `ConversationService.deleteAllOfUser` → `AnalysisCleanup`). 대화 한 건을 지우면 그 대화를 쓴 분석 전체를 지운다. 분석 결과 표를 새로 만들면 `analysis_run`에 외래 키(CASCADE)로 달거나 이 삭제에 추가한다.

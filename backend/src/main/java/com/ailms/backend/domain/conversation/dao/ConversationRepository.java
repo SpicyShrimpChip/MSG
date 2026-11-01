@@ -31,6 +31,13 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
 			+ " and c.receivedPartCount >= c.partCount order by c.id")
 	List<Conversation> findAnalyzable(Long userId);
 
+	// findAnalyzable과 같은 조건으로 과목 하나의 대화만
+	@Query("select c from Conversation c, ConversationImport i, User u where i.id = c.importId and u.id = c.userId"
+			+ " and c.userId = :userId and c.courseId = :courseId and u.aiAnalysisConsent = true"
+			+ " and i.status = com.ailms.backend.domain.conversation.entity.ConversationImportStatus.COMPLETED"
+			+ " and c.receivedPartCount >= c.partCount order by c.id")
+	List<Conversation> findAnalyzableInCourse(Long userId, Long courseId);
+
 	// 조각·메시지는 conversation 외래 키(ON DELETE CASCADE)로 DB가 함께 지운다
 	@Modifying(flushAutomatically = true, clearAutomatically = true)
 	@Query("delete from Conversation c where c.userId = :userId")

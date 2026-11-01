@@ -1,5 +1,6 @@
 package com.ailms.backend.domain.conversation.application;
 
+import com.ailms.backend.domain.analysis.application.AnalysisCleanup;
 import com.ailms.backend.domain.conversation.dao.ConversationImportRepository;
 import com.ailms.backend.domain.conversation.dao.ConversationMessageRepository;
 import com.ailms.backend.domain.conversation.dao.ConversationPartRepository;
@@ -78,6 +79,7 @@ public class ConversationService {
 	private final CourseRepository courseRepository;
 	private final UserRepository userRepository;
 	private final PersonalInfoDetector personalInfoDetector;
+	private final AnalysisCleanup analysisCleanup;
 	private final Clock clock;
 
 	// 요청 안의 대화(조각) 하나를 저장 단위로 정리한 것. 조각 없이 온 대화는 1/1 조각이다
@@ -100,20 +102,23 @@ public class ConversationService {
 				.toList();
 	}
 
-	// 메시지·조각은 conversation을 외래 키(ON DELETE CASCADE)로 가지므로 함께 지워진다
+	// 메시지·조각은 conversation을 외래 키(ON DELETE CASCADE)로 가지므로 함께 지워진다.
+	// 이 대화를 쓴 학습 분석도 함께 지운다 (AnalysisCleanup)
 	@Transactional
 	public void delete(Long userId, Long id) {
 		Conversation conversation = conversationRepository.findByIdAndUserId(id, userId)
 				.orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE));
+		analysisCleanup.deleteRunsUsingConversation(conversation.getId());
 		conversationRepository.delete(conversation);
 	}
 
 	/**
-	 * 사용자가 가져온 대화와 가져오기 기록을 모두 지운다 (AI 대화 분석 동의 철회).
+	 * 사용자가 가져온 대화와 가져오기 기록, 그 대화로 만든 학습 분석을 모두 지운다 (AI 대화 분석 동의 철회).
 	 * 동의 변경과 같은 트랜잭션에서만 부른다 (철회가 롤백되면 대화도 그대로 남는다).
 	 */
 	@Transactional(propagation = Propagation.MANDATORY)
 	public void deleteAllOfUser(Long userId) {
+		analysisCleanup.deleteAllOfUser(userId);
 		conversationRepository.deleteAllByUserId(userId);
 		importRepository.deleteAllByUserId(userId);
 	}
