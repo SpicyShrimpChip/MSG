@@ -68,7 +68,7 @@
 - 해결: `./gradlew clean test`로 빌드 폴더를 지우고 다시 만든다. 소스·`git status`에는 영향이 없다.
 - 다음에는: 같은 오류가 나면 `find backend/build -name "* 2*"`로 확인한다. 자주 생기면 레포를 동기화하지 않는 폴더로 옮긴다.
 
-## `bootRun`이 MySQL 드라이버를 찾으며 뜨지 않는다 (2026-11-01, PR 전)
+## `bootRun`이 MySQL 드라이버를 찾으며 뜨지 않는다 (2026-11-01, #96)
 
 - 상황: 기본 프로필(H2)로 `./gradlew bootRun`을 했는데 `Failed to load driver class com.mysql.cj.jdbc.Driver`로 멈췄다.
 - 원인: `application.yaml`은 `backend/.env`(커밋 안 됨)를 읽어 DB 접속 값을 덮는다. MySQL 시절의 접속 값이 로컬 `.env`(또는 셸 환경변수)에 남아 있던 것으로 보인다(`.env`는 열어 보지 않았다). `./gradlew test`는 영향을 받지 않았다.
