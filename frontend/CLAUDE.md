@@ -102,7 +102,7 @@ src/
 
 화면은 `pages/analysis/ConversationImportPage.tsx`(4단계: 파일 고르기 → 공부한 대화 고르기 → 가린 내용 확인 → 보내기), 단계별 부품은 `pages/analysis/components/import/`. 읽은 대화는 이 화면의 메모리에만 두고 서버·브라우저 저장소에 남기지 않는다.
 
-- **파일 읽기:** 내보낸 zip을 압축 풀지 않고 받는다. `utils/conversation/archive.ts`(fflate)가 zip 목차를 보고 대화 기록 파일만 브라우저 안에서 푼다(이미지·로그인 기록 등은 풀지 않음). 압축을 푼 `conversations.json`도 받는다. 여러 파일을 고르면 `merge.ts`가 같은 대화를 하나로 합친다
+- **파일 읽기:** 내보낸 zip을 압축 풀지 않고 받는다. `utils/conversation/archive.ts`가 zip을 `Blob.slice`로 필요한 부분만 읽는다(3GB zip도 통째로 메모리에 올리지 않는다). `zipReader.ts`가 끝의 중앙 목차(ZIP64 포함)를 읽어 대화 기록 파일(`conversations*.json`)만 꺼내 풀고(fflate는 deflate 해제만, CRC 확인, 푼 크기 합계 상한 300MB), 목차가 없는 잘린 zip은 앞에서부터 로컬 헤더를 따라가며 건지고 "파일이 잘려 있어요" 안내를 낸다. 잘린 ChatGPT zip(3.5GB, 대화 527개)을 2026-11-02에 이 방식으로 읽는 것까지 확인했다. 크기를 데이터 뒤에 적는 zip(data descriptor)은 아직 못 읽는다. 대화 없이 알려진 파일(`user.json`, `conversation_asset_file_names.json` 등)은 이름으로 알아보고 조용히 건너뛴다(회색 안내 `MergedImport.notices`). 압축을 푼 `conversations.json`도 받는다. 여러 파일을 고르면 `merge.ts`가 같은 대화를 하나로 합친다
 - **서비스별 구조:** `utils/conversation/sources/`(`chatgpt.ts`, `claude.ts`)에 서비스마다 파일을 알아보고 읽는 방법을 둔다. 새 서비스는 `sources/index.ts` 목록에 추가한다(Gemini는 2단계 후보). Claude는 2026-10-31, ChatGPT는 2026-11-01 실제 내보내기 파일로 확인했다. ChatGPT 답변의 출처·위젯 표시(`\ue200종류\ue202인자\ue201`)는 파서가 지우고 이름·링크 글자만 남긴다. 공식 형식 문서가 없으니 형식이 바뀌면 실제 파일로 다시 확인한다
 - **Claude 목록 파일:** Claude 내보내기는 먼저 "다운로드 목록 파일"(`manifest-....json`, 대화 없음)을 준다. `manifest.ts`가 알아보고 안의 zip 링크만 보여 준다. 링크를 우리 서버가 대신 열지 않는다(claude.ai 로그인이 필요하고 원본이 서버로 오면 안 된다)
 - **고르기:** `assign.ts`가 내 과목 키워드로 공부한 대화를 과목별로 나누고, `search.ts`가 본문 검색·정렬을 한다(모두 브라우저 안)

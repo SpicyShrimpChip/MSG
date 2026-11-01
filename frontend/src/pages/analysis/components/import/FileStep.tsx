@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CircleAlert, Download, FileText, Lock } from 'lucide-react';
+import { CircleAlert, Download, FileText, Info, Lock } from 'lucide-react';
 import { Button, Card, FileDropZone, Notice } from '@/components';
 import type { ClaudeManifest, MergedImport } from '@/utils';
 import { readExportFiles } from './readExportFiles';
@@ -161,6 +161,18 @@ function FileStep({ imported, onLoaded, onNext }: FileStepProps) {
             </div>
           ),
         )}
+        {imported?.notices.map((notice) => (
+          <Notice
+            key={`${notice.fileName}:${notice.message}`}
+            icon={Info}
+            size="caption"
+          >
+            <div className="flex min-w-0 flex-col gap-1">
+              <FileName name={notice.fileName} />
+              <p>{notice.message}</p>
+            </div>
+          </Notice>
+        ))}
         {count > 0 && (
           <div className="flex flex-col gap-1 rounded-xl bg-primary-soft p-4">
             <p className="font-bold text-heading">대화 {count}개를 읽었어요.</p>

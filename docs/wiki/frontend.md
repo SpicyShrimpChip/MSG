@@ -41,3 +41,10 @@
 - 원인: `api/axios.ts`의 기본 헤더가 `Content-Type: application/json`이다. axios 1.x는 이 헤더가 있으면 FormData를 JSON 글자로 바꿔 보낸다(`lib/defaults/index.js`).
 - 해결: 업로드 요청에만 `headers: { 'Content-Type': 'multipart/form-data' }`를 준다. 브라우저에서는 axios가 이 값을 지우고 브라우저가 boundary를 붙인 헤더를 만든다. 큰 파일이라 `timeout`도 따로 늘린다.
 - 다음에는: 파일을 보내는 API를 새로 만들 때 같은 설정을 쓴다. 목업 모드에서는 요청을 보내지 않아 드러나지 않는다.
+
+## zip 로컬 헤더의 크기 칸이 0xFFFFFFFF면 ZIP64 확장 필드를 읽는다 (2026-11-01)
+
+- 상황: 큰 내보내기 zip을 `Blob.slice`로 읽는 리더를 직접 만들다가, 목차 없이 앞에서부터 읽는 길에서 크기가 전부 4,294,967,295로 나왔다.
+- 원인: Claude 내보내기 zip은 4.8MB짜리 파일도 로컬 헤더 크기 칸을 `0xFFFFFFFF`로 두고 실제 크기를 ZIP64 확장 필드(id 1)에 적는다. 로컬 헤더의 확장 필드에는 원본·압축 크기가 둘 다 들어 있다(목차와 달리 칸별로 건너뛰지 않는다).
+- 해결: 헤더 칸이 `0xFFFFFFFF`이면 확장 필드에서 원본 → 압축 크기 순으로 읽는다(`zipReader.ts`).
+- 다음에는: zip 형식을 직접 읽을 때는 작은 파일도 ZIP64일 수 있다고 보고, 가짜 zip 테스트에 ZIP64 확장 헤더를 꼭 넣는다. 크기가 데이터 뒤에 적히는 방식(data descriptor)은 아직 지원하지 않는다.
