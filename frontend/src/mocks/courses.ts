@@ -1,6 +1,7 @@
 import type { Course, CourseInput } from '@/types';
 import { ApiError } from '@/api/request';
 import { mockDelay } from './delay';
+import { removeMockMaterialsOfCourse } from './materials';
 
 // 목업 전용 저장소. 새로고침해도 등록한 과목이 남도록 브라우저에 저장한다 (실제 데이터는 서버에 저장)
 const STORAGE_KEY = 'ai-lms-mock-courses';
@@ -71,7 +72,9 @@ export function mockUpdateCourse(
   return mockDelay(updated);
 }
 
+// 서버처럼 그 과목의 자료도 함께 지운다
 export function mockDeleteCourse(id: number): Promise<void> {
   setAll(getAll().filter((course) => course.id !== id));
+  removeMockMaterialsOfCourse(id);
   return mockDelay(undefined);
 }

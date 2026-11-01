@@ -136,7 +136,7 @@ export function mockGetMaterial(id: number): Promise<MaterialDetail> {
   return mockDelay(material);
 }
 
-// 목업은 파일 내용을 읽지 않는다. 실제 서비스에서는 서버가 글을 뽑아 AI로 요약·개념·퀴즈를 만든다
+// 목업은 파일 내용을 읽지 않는다. 서버처럼 올린 자료는 AI 분석 전(uploaded) 상태로 남는다
 export function mockUploadMaterial(
   input: MaterialUploadInput,
 ): Promise<Material> {
@@ -147,7 +147,7 @@ export function mockUploadMaterial(
     title: input.title,
     fileName: input.file.name,
     createdAt: new Date().toISOString(),
-    status: 'processing',
+    status: 'uploaded',
     quizCount: 0,
     aiSummary: null,
     concepts: [],
@@ -157,6 +157,11 @@ export function mockUploadMaterial(
     { id: material.id, courseId: material.courseId, title: material.title },
     800,
   );
+}
+
+// 과목을 지우면 그 과목의 자료도 함께 지운다 (서버와 같은 규칙, mockDeleteCourse가 부른다)
+export function removeMockMaterialsOfCourse(courseId: number) {
+  setAll(getAll().filter((item) => item.courseId !== courseId));
 }
 
 export function mockDeleteMaterial(id: number): Promise<void> {

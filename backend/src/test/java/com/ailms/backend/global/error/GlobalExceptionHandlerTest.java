@@ -4,6 +4,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -20,7 +21,10 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartFile;
 
 // 전역 예외 처리가 상황별로 상태 코드와 사용자용 문구를 맞게 돌려주는지 확인한다
 class GlobalExceptionHandlerTest {
@@ -69,6 +73,27 @@ class GlobalExceptionHandlerTest {
 				.andExpect(content().string(not(containsString("내부 비밀 정보"))));
 	}
 
+	@Test
+	void 업로드_크기_한도를_넘으면_413을_돌려준다() throws Exception {
+		mockMvc.perform(get("/test/too-large"))
+				.andExpect(status().isPayloadTooLarge())
+				.andExpect(jsonPath("$.message").value("파일이 너무 커요. 올릴 수 있는 크기를 확인해 주세요."));
+	}
+
+	@Test
+	void 파일_칸이_빠진_multipart_요청은_400을_돌려준다() throws Exception {
+		mockMvc.perform(multipart("/test/upload").param("title", "제목"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("올릴 파일을 골라 주세요."));
+	}
+
+	@Test
+	void 파일_올리기에_JSON을_보내면_415를_돌려준다() throws Exception {
+		mockMvc.perform(post("/test/upload").contentType(MediaType.APPLICATION_JSON).content("{}"))
+				.andExpect(status().isUnsupportedMediaType())
+				.andExpect(jsonPath("$.message").value("지원하지 않는 요청 형식이에요."));
+	}
+
 	record TestRequest(@NotBlank(message = "이름을 입력해 주세요.") String name) {
 	}
 
@@ -82,6 +107,15 @@ class GlobalExceptionHandlerTest {
 
 		@PostMapping("/test/validation")
 		void validation(@Valid @RequestBody TestRequest request) {
+		}
+
+		@GetMapping("/test/too-large")
+		void tooLarge() {
+			throw new MaxUploadSizeExceededException(20L * 1024 * 1024);
+		}
+
+		@PostMapping(path = "/test/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+		void upload(@RequestPart MultipartFile file) {
 		}
 
 		@GetMapping("/test/unexpected")

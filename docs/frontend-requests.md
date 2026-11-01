@@ -124,16 +124,16 @@ NoticeDetail = { id: number, title: string, content: string, createdAt: string, 
 - 작성자는 요청 본문이 아니라 토큰의 사용자로 정해 `author_id`에 저장하고, 응답에는 내보내지 않는다. 작성한 관리자가 탈퇴해도 공지는 남는다.
 - 일반 사용자는 403, 로그인하지 않으면 401.
 
-### 내 과목 — 목업
+### 내 과목 — 구현됨 (11/1, 확정: Swagger `내 과목`)
 
 화면: `/courses` (학습자료 > 내 과목). 등록한 키워드는 AI 대화 가져오기에서 공부한 대화를 고를 때, 자료 올리기에서 과목을 고를 때 쓴다.
 
 | 메서드 | 경로                | 요청 본문     | 응답 `data`                       |
 | ------ | ------------------- | ------------- | --------------------------------- |
-| GET    | `/api/courses`      | -             | `Course[]` (로그인한 사용자 것만) |
-| POST   | `/api/courses`      | `CourseInput` | `Course`                          |
-| PATCH  | `/api/courses/{id}` | `CourseInput` | `Course`                          |
-| DELETE | `/api/courses/{id}` | -             | 없음                              |
+| GET    | `/api/courses`      | -             | `Course[]` (로그인한 사용자 것만, 등록 순) |
+| POST   | `/api/courses`      | `CourseInput` | `Course` (201)                    |
+| PATCH  | `/api/courses/{id}` | `CourseInput` | `Course` (보낸 값으로 모두 바꿈)  |
+| DELETE | `/api/courses/{id}` | -             | 없음. **그 과목의 학습자료와 원본 파일도 함께 지운다** |
 
 ```ts
 Course      = { id: number, name: string, semester: string, keywords: string[] }
@@ -141,48 +141,45 @@ CourseInput = { name: string, semester: string, keywords: string[] } // id 없�
 semester    = "2026-1" | "2026-summer" | "2026-2" | "2026-winter"
 ```
 
-서버에서도 검사해 주기 (프론트 검사는 브라우저에서 우회할 수 있다):
+서버 검사 (프론트 `CourseForm`·`utils/keywords.ts`와 같은 규칙):
 
-- 이름 1~40자, 키워드 최대 20개·각 20자
-- 같은 사용자·같은 학기·같은 이름 과목은 거절 (409 + 사용자용 `message`)
-- 다른 사용자의 과목은 조회·수정·삭제 불가
+- 앞뒤 공백을 지우고 안쪽 공백은 한 칸으로 줄인 뒤 검사한다. 이름 1~40자, 키워드 최대 20개·각 20자, 대소문자만 다른 키워드는 하나로 친다.
+- 같은 사용자·같은 학기·같은 이름(대소문자 무시) 과목은 409 "이 학기에 같은 이름의 과목이 이미 있어요."
+- 다른 사용자의 과목은 조회되지 않고, 수정·삭제는 404(존재 여부를 알리지 않음).
 
-### 자료 — 올리기·목록·상세·삭제 목업 (제안)
+### 자료 — 구현됨 (11/1, 확정: Swagger `학습자료`). 요약·개념·퀴즈는 AI 기능 단계에서
 
-화면: `/materials/upload` (학습자료 > 자료 올리기). 과목은 내 과목에서 고르고, 저작권 고지 확인 체크를 해야 올릴 수 있다.
+화면: `/materials/upload`(올리기), `/materials`(목록, 과목별로 묶음), `/materials/{id}`(상세: 요약 / 핵심 개념 / 퀴즈 탭). 올린 본인만 볼 수 있다.
 
-| 메서드 | 경로             | 요청 본문                                          | 응답 `data`                                       |
-| ------ | ---------------- | -------------------------------------------------- | ------------------------------------------------- |
-| POST   | `/api/materials` | `multipart/form-data`: `courseId`, `title`, `file` | `{ id: number, courseId: number, title: string }` |
-
-서버에서도 검사해 주기: 지원 형식·최대 크기(프론트는 임시로 PDF·TXT·MD, 20MB), 제목 1~60자, 본인 과목인지. 형식·크기가 정해지면 알려 주기 (프론트 `constants/materials.ts` 한 곳만 고치면 된다).
-
-화면: `/materials`(목록, 과목별로 묶음), `/materials/{id}`(상세: 요약 / 핵심 개념 / 퀴즈 탭). 올린 본인만 볼 수 있다.
-
-| 메서드 | 경로                  | 요청 본문 | 응답 `data`         |
-| ------ | --------------------- | --------- | ------------------- |
-| GET    | `/api/materials`      | -         | `MaterialSummary[]` |
-| GET    | `/api/materials/{id}` | -         | `MaterialDetail`    |
-| DELETE | `/api/materials/{id}` | -         | 없음                |
+| 메서드 | 경로                  | 요청 본문                                          | 응답 `data`                                       |
+| ------ | --------------------- | -------------------------------------------------- | ------------------------------------------------- |
+| POST   | `/api/materials`      | `multipart/form-data`: `courseId`(선택), `title`, `file` | `Material` (201) |
+| GET    | `/api/materials`      | -                                                  | `MaterialSummary[]` (최신순)                      |
+| GET    | `/api/materials/{id}` | -                                                  | `MaterialDetail`                                  |
+| DELETE | `/api/materials/{id}` | -                                                  | 없음 (자료 정보와 원본 파일을 함께 지운다)        |
 
 ```ts
+Material = { id: number, courseId: number | null, title: string }
 MaterialSummary = {
-  id: number, courseId: number, title: string,
-  fileName: string,                       // 올린 파일 이름 (원본 보관 여부와 별개로 이름은 보여 준다)
-  createdAt: string,                      // ISO
-  status: "processing" | "ready" | "failed", // 올린 뒤 AI가 요약·개념·퀴즈를 만드는 중 / 완료 / 글을 못 뽑음
-  quizCount: number
+  id: number, courseId: number | null,   // 과목 없이 올린 자료는 null
+  title: string,
+  fileName: string,                       // 올린 파일 이름 (경로 부분을 뗀 값)
+  createdAt: string,                      // ISO, 예: "2026-11-01T12:28:20.081677"
+  status: "uploaded" | "processing" | "ready" | "failed",
+  quizCount: number                       // 퀴즈 기능 전이라 지금은 0
 }
 MaterialDetail = MaterialSummary & {
-  aiSummary: string | null,               // AI가 쓴 요약 (보라색 AI 표시). 만드는 중이면 null
-  concepts: { conceptId: string, name: string, aiDescription: string | null }[]
-  // conceptId는 학습 대시보드 ConceptMastery.conceptId와 같은 값으로 맞춰 주기 (자료 상세 → 학습 분석 연결)
+  aiSummary: string | null,               // AI 분석 전이면 null
+  concepts: { conceptId: string, name: string, aiDescription: string | null }[] // 분석 전이면 []
 }
 ```
 
-- 올리기 응답 뒤 처리가 오래 걸리면 `status: "processing"`으로 두고, 끝나면 `ready`로 바꿔 주기. 프론트는 목록·상세에서 "요약 만드는 중"을 보여 준다.
-- 삭제 범위: 자료, 그 자료로 만든 요약·개념·퀴즈, 퀴즈 결과에서 나온 근거(`evidence`). 점수는 남은 근거로 다시 계산한다(동의 철회와 같은 규칙).
-- 목업(`mocks/materials.ts`)은 시연 과목 샘플 자료 3개로 시작하고, 올린 자료는 `processing` 상태로 남는다(파일 내용을 읽지 않음).
+- **상태:** `uploaded` = 파일 저장 완료·AI 분석 전(지금은 올린 자료가 모두 이 상태), `processing` = 글 뽑기·AI 분석을 실제로 하는 중, `ready` = 완료, `failed` = 처리 실패. 프론트는 `uploaded`에 "AI 분석 전"을 보여 주고 "요약 만드는 중"은 `processing`에만 쓴다.
+- **형식·크기:** PDF·PPTX·TXT·MD, 파일 하나 20MB. 서버는 확장자와 함께 **파일 내용**을 확인한다(PDF 머리글·끝 표시, PPTX는 ZIP 안의 PowerPoint 필수 항목 — 다른 ZIP·Word·매크로 포함 PPTM 거절, TXT·MD는 UTF-8 글자 파일). 브라우저가 보낸 `Content-Type`은 믿지 않는다. HWP·HWPX는 2단계 후보.
+- **오류:** 형식 400 "PDF, PPTX, TXT, Markdown 파일만 올릴 수 있어요." / 내용이 형식과 다름 400 / 빈 파일 400 / 20MB 초과 413 / 파일 칸 없음 400 "올릴 파일을 골라 주세요." / 남의 과목·없는 과목 404 / multipart가 아님 415 / 저장 실패 500 "파일을 저장하지 못했어요. 잠시 뒤 다시 시도해 주세요."
+- **프론트 요청 설정:** axios 기본 헤더(`application/json`)가 남아 있으면 axios가 FormData를 JSON 글자로 바꿔 파일이 빠진다(415). `uploadMaterial`은 `Content-Type: multipart/form-data`(브라우저가 boundary를 붙여 다시 만든다)와 업로드 전용 timeout 120초를 쓴다.
+- **삭제 범위:** 자료를 지우면 자료 정보와 원본 파일, 나중에 생길 그 자료의 요약·개념·퀴즈·근거(`material` 외래 키 ON DELETE CASCADE)를 지운다. 점수는 남은 근거로 다시 계산한다(동의 철회와 같은 규칙, 숙련도 기능 때). **과목을 지우면 그 과목의 자료도 모두 같은 방식으로 지운다.** 과목에 연결하지 않은 자료는 남는다.
+- 목업(`mocks/materials.ts`)은 시연 과목 샘플 자료 3개(`ready`)로 시작하고, 올린 자료는 `uploaded`로 남는다. 목업에서도 과목을 지우면 그 과목의 자료가 함께 지워진다.
 
 ### 인증·마이페이지 — 가입·로그인·갱신·로그아웃·내 정보 구현됨 (확정: Swagger `인증`, `회원`)
 
@@ -396,7 +393,7 @@ layout = {
 ## 5. 정해 주면 프론트가 맞출 것
 
 - **인증 방식:** 요청·응답 제안은 위 3번 "인증·마이페이지"에 있다. 다른 방식으로 정하면 알려 주기. 배포 때 같은 출처(rewrite)라 쿠키 설정이 단순해진다.
-- **자료 올리기:** 지원 형식(프론트 안: PDF·PPTX·HWP·HWPX), 최대 크기, 원본 보관 여부(루트 `CLAUDE.md` 미결 사항). 텍스트 추출 후보는 PDF·PPTX는 Apache Tika 또는 PDFBox, HWP·HWPX는 hwplib·hwpxlib.
+- **자료 올리기:** 형식(PDF·PPTX·TXT·MD)·크기(20MB)·원본 보관(자료·과목을 지울 때까지)은 11/1에 정했다(위 3번 "자료"). 남은 것: HWP·HWPX 추가 시점, 원본의 장기 보관 기간·자동 삭제(루트 `CLAUDE.md` 미결 사항). 텍스트 추출 후보는 PDF·PPTX는 Apache Tika 또는 PDFBox, HWP·HWPX는 hwplib·hwpxlib.
 - **비밀번호 규칙:** 서버도 프론트와 같은 4조건(8자 이상, 영문, 숫자, 특수문자 포함)으로 검사한다(`PasswordPolicy`). 추가로 BCrypt 한도 때문에 72바이트를 넘으면 거절한다(프론트에는 표시 조건이 없고 서버 `message`로 안내). 거절 사유는 어긴 첫 번째 규칙을 `message`로 준다.
 - **배포:** 백엔드 주소가 정해지면 Vercel rewrite 대상만 바꾸면 된다.
 - **개인정보처리방침(`/privacy`, 초안):** 서버가 실제로 하는 처리(저장 항목, 보관·삭제, 토큰, 로그에 남기는 것, LLM·호스팅 서비스)를 기준으로 썼다(`frontend/src/pages/privacy/PrivacyPage.tsx`). 서버 동작이 이 문서와 달라지거나 LLM 제공사·호스팅·자료 원본 보관이 정해지면 알려 주기. 같은 PR에서 처리방침도 고친다.
@@ -429,6 +426,11 @@ layout = {
 - DB를 PostgreSQL로 옮기면서(#78) 문법만 고쳐 둔 `V1`~`V3`을 **`V1__init_schema.sql` 하나로 합쳤다**(`users`, `refresh_token`, `notice`). 운영 DB가 없어서 가능한 예외였다. pgvector 확장은 `db/vector/V0_1`이라 항상 먼저 돈다.
 - **다음 마이그레이션은 `V2`부터**다. 번호가 겹치지 않게 미리 말하기.
 - **각자 로컬 DB를 새로 만들어야 한다.** 옛 `V1`~`V3`이 적용된 DB는 파일 내용이 달라 Flyway 오류가 난다. `docs/setup.md`의 "처음부터 다시 하고 싶을 때"대로 컨테이너와 볼륨을 지우고 다시 만든다.
+
+## 5-3. 내 과목·학습자료 백엔드 (11/1)
+
+- 마이그레이션 **`V2__create_course.sql`(course, course_keyword), `V3__create_material.sql`(material, file_deletion_task)** 을 썼다. **다음은 `V4`부터**다.
+- 프론트에서 API 연동에 꼭 필요한 부분만 고쳤다(화면 구성·디자인은 그대로): `api/materials.api.ts`(업로드 헤더·timeout), `types/material.ts`(`uploaded` 상태, `courseId: number | null`), `constants/materials.ts`(PPTX 추가), `pages/materials/MaterialListPage.tsx`·`MaterialDetailPage.tsx`(`uploaded` 안내 문구, "과목을 지운 자료" → "과목에 연결하지 않은 자료", 분석 전 자료는 퀴즈 목록을 부르지 않음), `pages/courses/CoursePage.tsx`(삭제 확인 문구, 삭제 뒤 자료 목록도 새로 받기), `mocks/courses.ts`·`mocks/materials.ts`(과목 삭제 때 자료도 삭제, 올린 자료는 `uploaded`), `pages/privacy/PrivacyPage.tsx`(원본 보관 문구).
 
 ## 6. 이 문서 고치는 법
 
