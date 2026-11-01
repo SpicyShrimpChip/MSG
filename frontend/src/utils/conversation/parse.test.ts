@@ -3,8 +3,7 @@ import { filterByKeywords } from './filter';
 import { parseConversationExport } from './parse';
 
 // 실제 내보내기 파일이 아니라 알려진 구조를 흉내 낸 가짜 데이터다.
-// Claude는 2026-10-31 실제 내보내기 파일로 확인한 구조를 따른다(실제 기록은 레포에 넣지 않는다)
-// TODO: ChatGPT도 실제 내보내기 파일을 받으면 같은 검사를 돌려 보기
+// Claude는 2026-10-31, ChatGPT는 2026-11-01 실제 내보내기 파일로 확인한 구조를 따른다(실제 기록은 레포에 넣지 않는다)
 
 function chatGptFile() {
   return JSON.stringify([
@@ -122,6 +121,51 @@ function claudeFile() {
   ]);
 }
 
+// ChatGPT 대화 하나: 메시지를 순서대로 한 가지로 잇는다
+function chatGptConversation(id: string, messages: object[]) {
+  const mapping: Record<string, object> = {
+    root: { parent: null, children: ['n0'], message: null },
+  };
+  messages.forEach((message, index) => {
+    mapping[`n${index}`] = {
+      parent: index === 0 ? 'root' : `n${index - 1}`,
+      children: index === messages.length - 1 ? [] : [`n${index + 1}`],
+      message,
+    };
+  });
+  return {
+    conversation_id: id,
+    title: id,
+    create_time: 1760000000,
+    current_node: `n${messages.length - 1}`,
+    mapping,
+  };
+}
+
+function gptMessage(
+  role: string,
+  parts: unknown[],
+  extra: { contentType?: string; attachments?: object[] } = {},
+) {
+  return {
+    author: { role },
+    content: { content_type: extra.contentType ?? 'text', parts },
+    metadata: extra.attachments ? { attachments: extra.attachments } : {},
+  };
+}
+
+function gptTexts(messages: object[]) {
+  const result = parseConversationExport(
+    'conversations-000.json',
+    JSON.stringify([chatGptConversation('gpt', messages)]),
+  );
+  if (!result.ok) throw new Error(result.message);
+  return result.conversations[0].messages.map((m) => [m.role, m.text]);
+}
+
+// ChatGPT 답변 속 인용·위젯 표시: 종류인자
+const mark = (kind: string, ...args: string[]) => `${kind}${args.join('')}`;
+
 function claudeConversation(uuid: string, chatMessages: object[]) {
   return {
     uuid,
@@ -150,6 +194,119 @@ describe('parseConversationExport', () => {
       ['assistant', '소인수분해가 어려운 점을 이용해요'],
       ['user', '[이미지]\n이 그림은 뭐예요?'],
       ['assistant', '공개키 암호 그림이에요'],
+    ]);
+  });
+
+  it('ChatGPT 답변의 출처·위젯 표시는 지우고 이름·링크 글자는 남긴다', () => {
+    const answer = [
+      `RSA는 소인수분해가 어렵다는 점을 써요 ${mark('cite', 'turn0search1', 'turn0search3')}.`,
+      `${mark('entity', JSON.stringify(['people', '론 리베스트', '암호학자']))}가 만들었어요.`,
+      `자세한 건 ${mark('url', 'RSA 위키', 'https://example.com/rsa')}를 보세요 ${mark('filecite', 'turn1file0', 'L1-L9')}`,
+      `${mark('link_title', '표준 문서', 'turn2search0')} 참고`,
+      `${mark('genui', '{"type":"chart"}')}`,
+      `${mark('image_group', '{"query":["rsa"]}')}끝${mark('message_reaction', '👍')}`,
+      // 짝이 맞지 않고 남은 표시 문자
+      '남은 표시',
+    ].join('\n');
+
+    expect(
+      gptTexts([
+        gptMessage('user', [`RSA가 뭐예요? ${mark('cite', 'turn0search1')}`]),
+        gptMessage('assistant', [answer]),
+      ]),
+    ).toEqual([
+      // 사용자가 쓴 글은 건드리지 않는다
+      ['user', `RSA가 뭐예요? ${mark('cite', 'turn0search1')}`],
+      [
+        'assistant',
+        [
+          'RSA는 소인수분해가 어렵다는 점을 써요.',
+          '론 리베스트가 만들었어요.',
+          '자세한 건 RSA 위키를 보세요',
+          '표준 문서 참고',
+          '',
+          '끝',
+          '남은 표시',
+        ].join('\n'),
+      ],
+    ]);
+  });
+
+  it('ChatGPT 첨부는 이미지와 문서를 나눠 표시하고 이미지를 두 번 붙이지 않는다', () => {
+    const image = { id: 'f1', name: 'board.png', mime_type: 'image/png' };
+    const pdf = {
+      id: 'f2',
+      name: '강의노트.pdf',
+      mime_type: 'application/pdf',
+    };
+    // 길게 붙여 넣은 글도 첨부가 되고, 내보내기에는 내용이 없다
+    const paste = {
+      id: 'f3',
+      name: 'Pasted text.txt',
+      mime_type: 'text/plain',
+      is_big_paste: true,
+    };
+    const pointer = { content_type: 'image_asset_pointer' };
+
+    expect(
+      gptTexts([
+        gptMessage('user', [pointer, '칠판 사진이에요'], {
+          contentType: 'multimodal_text',
+          attachments: [image],
+        }),
+        gptMessage('user', ['노트 요약해 주세요'], { attachments: [pdf] }),
+        gptMessage('user', ['이거 봐 주세요'], { attachments: [paste] }),
+        gptMessage('user', [pointer, '둘 다'], {
+          contentType: 'multimodal_text',
+          attachments: [image, pdf],
+        }),
+        // 이미지 조각 없이 이미지 첨부만 있는 경우
+        gptMessage('user', ['사진만 첨부'], { attachments: [image] }),
+        // 종류가 비어 있는 첨부는 문서로 본다
+        gptMessage('user', ['모르는 파일'], {
+          attachments: [{ id: 'f4', name: 'x', mime_type: '' }],
+        }),
+      ]).map(([, text]) => text),
+    ).toEqual([
+      '[이미지]\n칠판 사진이에요',
+      '노트 요약해 주세요\n[첨부 파일]',
+      '이거 봐 주세요\n[첨부 파일]',
+      '[이미지]\n둘 다\n[첨부 파일]',
+      '사진만 첨부\n[이미지]',
+      '모르는 파일\n[첨부 파일]',
+    ]);
+  });
+
+  it('ChatGPT 생각 과정·맞춤 지침·화면에 안 보이는 메시지는 가져오지 않는다', () => {
+    expect(
+      gptTexts([
+        // 맞춤 지침(자기소개가 들어 있다)
+        {
+          author: { role: 'user' },
+          content: {
+            content_type: 'user_editable_context',
+            user_profile: '저는 OO대 학생이에요',
+          },
+        },
+        gptMessage('user', ['교착 상태가 뭐예요?']),
+        {
+          author: { role: 'assistant' },
+          content: { content_type: 'thoughts', thoughts: [] },
+        },
+        {
+          author: { role: 'assistant' },
+          content: { content_type: 'reasoning_recap', content: '생각함' },
+        },
+        {
+          author: { role: 'assistant' },
+          content: { content_type: 'text', parts: ['숨은 메시지'] },
+          metadata: { is_visually_hidden_from_conversation: true },
+        },
+        gptMessage('assistant', ['서로 자원을 기다리는 상태예요.']),
+      ]),
+    ).toEqual([
+      ['user', '교착 상태가 뭐예요?'],
+      ['assistant', '서로 자원을 기다리는 상태예요.'],
     ]);
   });
 

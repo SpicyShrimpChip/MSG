@@ -1,6 +1,0 @@
-# feat/chatgpt-import: ChatGPT 대화 가져오기 파서 다듬기. Claude는 아래 파일만 고친다(.claude/hooks/branch-allowlist.sh)
-# 머지 전에 이 파일을 지운다
-frontend/src/utils/conversation/sources/chatgpt.ts
-frontend/src/utils/conversation/parse.test.ts
-frontend/CLAUDE.md
-.claude/branch-allowlists/feat__chatgpt-import

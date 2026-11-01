@@ -103,7 +103,7 @@ src/
 화면은 `pages/analysis/ConversationImportPage.tsx`(4단계: 파일 고르기 → 공부한 대화 고르기 → 가린 내용 확인 → 보내기), 단계별 부품은 `pages/analysis/components/import/`. 읽은 대화는 이 화면의 메모리에만 두고 서버·브라우저 저장소에 남기지 않는다.
 
 - **파일 읽기:** 내보낸 zip을 압축 풀지 않고 받는다. `utils/conversation/archive.ts`(fflate)가 zip 목차를 보고 대화 기록 파일만 브라우저 안에서 푼다(이미지·로그인 기록 등은 풀지 않음). 압축을 푼 `conversations.json`도 받는다. 여러 파일을 고르면 `merge.ts`가 같은 대화를 하나로 합친다
-- **서비스별 구조:** `utils/conversation/sources/`(`chatgpt.ts`, `claude.ts`)에 서비스마다 파일을 알아보고 읽는 방법을 둔다. 새 서비스는 `sources/index.ts` 목록에 추가한다(Gemini는 2단계 후보). Claude는 2026-10-31 실제 내보내기 파일로, ChatGPT는 아직 가짜 데이터로만 확인했다
+- **서비스별 구조:** `utils/conversation/sources/`(`chatgpt.ts`, `claude.ts`)에 서비스마다 파일을 알아보고 읽는 방법을 둔다. 새 서비스는 `sources/index.ts` 목록에 추가한다(Gemini는 2단계 후보). Claude는 2026-10-31, ChatGPT는 2026-11-01 실제 내보내기 파일로 확인했다. ChatGPT 답변의 출처·위젯 표시(`\ue200종류\ue202인자\ue201`)는 파서가 지우고 이름·링크 글자만 남긴다. 공식 형식 문서가 없으니 형식이 바뀌면 실제 파일로 다시 확인한다
 - **Claude 목록 파일:** Claude 내보내기는 먼저 "다운로드 목록 파일"(`manifest-....json`, 대화 없음)을 준다. `manifest.ts`가 알아보고 안의 zip 링크만 보여 준다. 링크를 우리 서버가 대신 열지 않는다(claude.ai 로그인이 필요하고 원본이 서버로 오면 안 된다)
 - **고르기:** `assign.ts`가 내 과목 키워드로 공부한 대화를 과목별로 나누고, `search.ts`가 본문 검색·정렬을 한다(모두 브라우저 안)
 - **가리기:** `mask.ts`가 정규식(이메일·전화번호·주민번호·카드번호·키·IP)과 내 이름(`[이름]`), 사용자가 넣은 단어(`[가린 단어]`)를 가린다. 3단계에서 가린 곳 목록과 원래 글자(이 화면에서만)를 보여 준다
