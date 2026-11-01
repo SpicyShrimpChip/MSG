@@ -37,6 +37,7 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -107,9 +108,20 @@ public class ConversationService {
 		conversationRepository.delete(conversation);
 	}
 
+	/**
+	 * 사용자가 가져온 대화와 가져오기 기록을 모두 지운다 (AI 대화 분석 동의 철회).
+	 * 동의 변경과 같은 트랜잭션에서만 부른다 (철회가 롤백되면 대화도 그대로 남는다).
+	 */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void deleteAllOfUser(Long userId) {
+		conversationRepository.deleteAllByUserId(userId);
+		importRepository.deleteAllByUserId(userId);
+	}
+
 	@Transactional
 	public ConversationImportResponse importConversations(Long userId, ConversationImportRequest request) {
-		User user = userRepository.findById(userId)
+		// 사용자 행을 잠가 같은 사용자의 동의 철회와 차례로 처리한다 (UserRepository.findByIdForUpdate)
+		User user = userRepository.findByIdForUpdate(userId)
 				.orElseThrow(() -> new BusinessException(HttpStatus.UNAUTHORIZED, "로그인이 필요해요. 다시 로그인해 주세요."));
 		if (!user.isAiAnalysisConsent()) {
 			throw new BusinessException(HttpStatus.FORBIDDEN, CONSENT_REQUIRED_MESSAGE);

@@ -256,7 +256,7 @@ domain/
 | 과목 삭제 (구현됨) | 그 과목의 `material`을 앱이 먼저 지우고(파일 삭제 작업을 남기려고) `course` 삭제. 과목 없는 자료·다른 과목 자료는 남는다. FK CASCADE는 마지막 안전장치 | 자료마다 위와 같음 | 그 과목 자료의 원본 파일 |
 | 과목 삭제 → 가져온 대화 (구현됨) | 그 과목의 `conversation`을 FK `ON DELETE CASCADE`로 삭제(조각·메시지도 연쇄). 파일이 없어 앱이 따로 지우지 않는다 | 해당 없음 | - |
 | 대화 삭제 (구현됨, `DELETE /api/conversations/{id}`) | `conversation` 삭제 → 조각·메시지 연쇄. 나중에 붙을 근거도 FK CASCADE로 | 해당 없음 | - |
-| AI 대화 분석 동의 철회 (미구현, 5-2) | 대화·대화에서 나온 근거 삭제 → 숙련도 재계산 | 해당 없음(대화는 임베딩하지 않는 안) | - |
+| AI 대화 분석 동의 철회 (구현됨, `PATCH /api/users/me/consents`) | 그 사용자의 `conversation`(조각·메시지 연쇄)과 `conversation_import`(받은 요청 연쇄)를 동의 변경과 같은 트랜잭션에서 삭제. 과목·자료는 남는다. 사용자 행을 잠가 같은 사용자의 대화 가져오기와 차례로 처리한다. 근거 삭제 → 숙련도 재계산은 분석 기능을 만들 때 추가 | 해당 없음(대화는 임베딩하지 않는 안) | - |
 | 탈퇴 (미구현) | `users` 삭제 → 모든 자식 행 `ON DELETE CASCADE` | `deleteByUser(userId)` | **CASCADE는 저장소 파일을 지우지 못한다.** 탈퇴 처리 코드가 같은 트랜잭션에서 그 사용자 자료의 `storage_key`를 `deleteAfterCommit`으로 넘기거나 `materials/{user_id}/` 폴더 삭제 작업을 남겨야 한다 |
 
 - 벡터 DB·파일 삭제는 DB 트랜잭션 밖이라 실패할 수 있다. 파일은 **구현됨**: `FileCleanupService.deleteAfterCommit`이 같은 트랜잭션에 `file_deletion_task`를 남기고 커밋 뒤 지운다. 롤백되면 작업 행도 사라져 파일이 그대로 남고(DB가 가리키는 파일이 먼저 사라지지 않음), 삭제에 실패하면 작업 행이 남아 다시 시도한다. 벡터 삭제도 같은 작업 목록에 붙이면 된다.
@@ -272,7 +272,7 @@ domain/
 | `conversation_part` | 받은 조각 번호(조각 없이 온 대화는 1번). 조각이 순서와 상관없이 여러 요청으로 와도 이어 붙인다 |
 | `conversation_message` | 메시지. 순서는 `(part_index, seq)`. 20,000자가 넘는 메시지는 프론트가 나눠 보내고 `continued`로 이어짐을 표시한다 |
 
-- **분석에 쓰는 조건:** 대화의 `import_id` 작업이 `COMPLETED`이고 조각을 모두 받은 대화(`ConversationRepository.findAnalyzable`). 일부 요청만 성공한 작업의 대화는 지우지 않고 남기되 분석에서 뺀다.
+- **분석에 쓰는 조건:** 사용자가 지금 AI 대화 분석에 동의했고, 대화의 `import_id` 작업이 `COMPLETED`이고, 조각을 모두 받은 대화(`ConversationRepository.findAnalyzable`). 일부 요청만 성공한 작업의 대화는 지우지 않고 남기되 분석에서 뺀다.
 - 끝나지 않은 작업의 대화를 새 작업에서 다시 보내면 그 대화를 새 작업으로 옮긴다(새 작업이 끝나면 분석 대상).
 - 이미 다 받은 대화를 다르게 나눠 다시 보내면 중복으로 보고 건너뛴다. 다 받지 못한 대화를 다르게 나눠 보내면 422로 거절한다.
 - 한도: 요청 2MB(`app.conversation-import.max-request-size`, 본문을 읽기 전에 `Content-Length`로 확인), 요청당 대화 50개, 메시지당 20,000자, 제목 500자. 대화당 메시지 수는 제한하지 않는다(분석 비용 기준 한도는 LLM 단계에서 정한다).
