@@ -2,14 +2,17 @@ import { isAxiosError, type AxiosRequestConfig } from 'axios';
 import type { ApiResponse } from '@/types';
 import { api } from './axios';
 
-// 화면에 그대로 보여 줄 수 있는 문구를 담은 API 오류
+// 화면에 그대로 보여 줄 수 있는 문구를 담은 API 오류.
+// data: 실패 응답에 실린 data (예: 대화 가져오기 422의 저장하지 않은 대화 목록). 대부분은 없다
 export class ApiError extends Error {
   status?: number;
+  data?: unknown;
 
-  constructor(message: string, status?: number) {
+  constructor(message: string, status?: number, data?: unknown) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.data = data;
   }
 }
 
@@ -36,6 +39,7 @@ export function toApiError(error: unknown): ApiError {
     return new ApiError(
       error.response.data?.message || DEFAULT_ERROR_MESSAGE,
       error.response.status,
+      error.response.data?.data ?? undefined,
     );
   }
   return new ApiError(DEFAULT_ERROR_MESSAGE);

@@ -85,7 +85,7 @@ function CourseManager() {
       <ConfirmDialog
         open={deleting !== null}
         title={`'${deleting?.name ?? ''}' 과목을 삭제할까요?`}
-        description="이 과목에 올린 학습자료와 원본 파일도 함께 삭제돼요. 삭제한 과목과 자료는 되돌릴 수 없어요."
+        description="이 과목에 올린 학습자료와 원본 파일, 가져온 AI 대화도 함께 삭제돼요. 삭제한 과목과 자료, 대화는 되돌릴 수 없어요."
         confirmLabel="삭제하기"
         onConfirm={confirmDelete}
         onCancel={() => setDeleting(null)}

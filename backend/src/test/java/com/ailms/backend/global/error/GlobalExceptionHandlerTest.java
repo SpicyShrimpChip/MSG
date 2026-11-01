@@ -12,8 +12,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -45,6 +48,22 @@ class GlobalExceptionHandlerTest {
 				.andExpect(jsonPath("$.success").value(false))
 				.andExpect(jsonPath("$.message").value("이 학기에 같은 이름의 과목이 이미 있어요."))
 				.andExpect(jsonPath("$.data").value(nullValue()));
+	}
+
+	@Test
+	void 업무_오류에_목록을_담으면_data로_함께_돌려준다() throws Exception {
+		mockMvc.perform(get("/test/business-with-data"))
+				.andExpect(status().isUnprocessableEntity())
+				.andExpect(jsonPath("$.success").value(false))
+				.andExpect(jsonPath("$.data.rejected[0]").value("c-1"));
+	}
+
+	@Test
+	void DB_제약_위반은_저장하려던_값을_빼고_409를_돌려준다() throws Exception {
+		mockMvc.perform(get("/test/data-integrity"))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.message").value(GlobalExceptionHandler.CONFLICT_MESSAGE))
+				.andExpect(content().string(not(containsString("비밀 대화 본문"))));
 	}
 
 	@Test
@@ -103,6 +122,17 @@ class GlobalExceptionHandlerTest {
 		@GetMapping("/test/business")
 		void business() {
 			throw new BusinessException(HttpStatus.CONFLICT, "이 학기에 같은 이름의 과목이 이미 있어요.");
+		}
+
+		@GetMapping("/test/business-with-data")
+		void businessWithData() {
+			throw new BusinessException(HttpStatus.UNPROCESSABLE_ENTITY, "저장하지 않았어요.",
+					Map.of("rejected", List.of("c-1")));
+		}
+
+		@GetMapping("/test/data-integrity")
+		void dataIntegrity() {
+			throw new DataIntegrityViolationException("duplicate key: 비밀 대화 본문");
 		}
 
 		@PostMapping("/test/validation")

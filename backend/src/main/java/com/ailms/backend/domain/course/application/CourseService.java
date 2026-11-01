@@ -70,6 +70,7 @@ public class CourseService {
 	/**
 	 * 과목과 그 과목의 학습자료(DB 행과 원본 파일)를 함께 지운다. 과목에 연결하지 않은 자료와 다른 과목의 자료는 그대로다.
 	 * 한 트랜잭션이라 중간에 실패하면 아무것도 지워지지 않고, 파일은 커밋된 뒤에 지운다 (MaterialService 참고).
+	 * 그 과목에 가져온 AI 대화는 저장소 파일이 없어 DB 외래 키(ON DELETE CASCADE)로 함께 지워진다.
 	 */
 	@Transactional
 	public void delete(Long userId, Long id) {

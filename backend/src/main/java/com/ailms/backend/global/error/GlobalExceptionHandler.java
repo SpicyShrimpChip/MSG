@@ -3,6 +3,7 @@ package com.ailms.backend.global.error;
 import com.ailms.backend.global.common.ApiResponse;
 import com.ailms.backend.global.security.ApiErrorResponder;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -39,10 +40,19 @@ public class GlobalExceptionHandler {
 	static final String UNSUPPORTED_MEDIA_TYPE_MESSAGE = "지원하지 않는 요청 형식이에요.";
 	static final String FILE_TOO_LARGE_MESSAGE = "파일이 너무 커요. 올릴 수 있는 크기를 확인해 주세요.";
 	static final String MISSING_FILE_MESSAGE = "올릴 파일을 골라 주세요.";
+	static final String CONFLICT_MESSAGE = "다른 요청과 겹쳐 저장하지 못했어요. 잠시 뒤 다시 시도해 주세요.";
 
 	@ExceptionHandler(BusinessException.class)
-	public ResponseEntity<ApiResponse<Void>> handleBusiness(BusinessException e) {
-		return respond(e.getStatus(), e.getMessage());
+	public ResponseEntity<ApiResponse<Object>> handleBusiness(BusinessException e) {
+		return ResponseEntity.status(e.getStatus()).body(ApiResponse.error(e.getMessage(), e.getData()));
+	}
+
+	// 동시에 들어온 두 요청이 같은 행을 만들려다 UNIQUE 제약에 걸렸을 때.
+	// 예외 메시지에 저장하려던 값(대화 본문 등)이 들어 있을 수 있어 로그에 남기지 않는다
+	@ExceptionHandler(DataIntegrityViolationException.class)
+	public ResponseEntity<ApiResponse<Void>> handleDataIntegrity(DataIntegrityViolationException e) {
+		log.warn("DB 제약 위반으로 요청을 거절했다 ({})", e.getClass().getSimpleName());
+		return respond(HttpStatus.CONFLICT, CONFLICT_MESSAGE);
 	}
 
 	// @Valid 요청 본문·폼 검증 실패: DTO에 적은 검증 문구 중 첫 번째를 보여 준다

@@ -3,7 +3,7 @@
 프론트(변지환)가 지금까지 만든 화면 기준으로, 백엔드(김주미)가 알아야 할 내용을 모은 문서다.
 API는 **제안**이다. 확정은 백엔드 API 문서(Swagger)에서 하고, 바뀌면 이 문서와 프론트 목업을 같이 고친다.
 
-최종 수정: 2026-10-27 (자료 목록·상세·삭제 제안 추가, 대화 가져오기 안내가 자료 절에 잘못 들어간 것 바로잡음)
+최종 수정: 2026-11-01 (대화 가져오기 저장 API 확정: 가져오기 작업·요청 단위 저장·긴 메시지 나누기)
 
 ## 0. 백엔드 시작 순서 (프론트 완성을 기다리지 않고 바로 시작)
 
@@ -181,7 +181,7 @@ MaterialDetail = MaterialSummary & {
 - **삭제 범위:** 자료를 지우면 자료 정보와 원본 파일, 나중에 생길 그 자료의 요약·개념·퀴즈·근거(`material` 외래 키 ON DELETE CASCADE)를 지운다. 점수는 남은 근거로 다시 계산한다(동의 철회와 같은 규칙, 숙련도 기능 때). **과목을 지우면 그 과목의 자료도 모두 같은 방식으로 지운다.** 과목에 연결하지 않은 자료는 남는다.
 - 목업(`mocks/materials.ts`)은 시연 과목 샘플 자료 3개(`ready`)로 시작하고, 올린 자료는 `uploaded`로 남는다. 목업에서도 과목을 지우면 그 과목의 자료가 함께 지워진다.
 
-### 인증·마이페이지 — 가입·로그인·갱신·로그아웃·내 정보 구현됨 (확정: Swagger `인증`, `회원`)
+### 인증·마이페이지 — 가입·로그인·갱신·로그아웃·내 정보·AI 분석 동의 변경 구현됨 (확정: Swagger `인증`, `회원`)
 
 화면: `/login`, `/signup`, 마이페이지(내 정보 표시까지 연결. AI 대화 분석 동의 철회·다시 동의, 탈퇴 화면은 아래 제안 API로 만들어 둠). 방식은 JWT access token(메모리) + HttpOnly 쿠키 refresh token. 자세한 흐름은 `docs/backend-design.md` 5번.
 
@@ -192,7 +192,7 @@ MaterialDetail = MaterialSummary & {
 | POST   | `/api/auth/refresh`      | - (refresh 쿠키)          | `{ accessToken: string }` + 새 refresh 쿠키          | 구현됨 |
 | POST   | `/api/auth/logout`       | - (refresh 쿠키)          | 없음 (세션 폐기, 쿠키 삭제)                          | 구현됨 |
 | GET    | `/api/users/me`          | -                         | `User`                                               | 구현됨 |
-| PATCH  | `/api/users/me/consents` | `{ aiAnalysis: boolean }` | `User`                                               | 제안   |
+| PATCH  | `/api/users/me/consents` | `{ aiAnalysis: boolean }` | `User`                                               | 구현됨 |
 | DELETE | `/api/users/me`          | -                         | 없음 (탈퇴: 내 모든 데이터 삭제)                     | 제안   |
 
 ```ts
@@ -214,60 +214,56 @@ User = { id: number, email: string, name: string, aiAnalysisConsent: boolean, ro
 - 이메일은 중복이면 409 + `message`("이미 가입된 이메일이에요."). 비밀번호 규칙은 5번 참고(서버도 같은 4조건, 추가로 72바이트 이하). 비밀번호는 BCrypt로 해시하고 로그에 남기지 않는다.
 - 로그인 실패 `message`는 이메일이 틀렸는지 비밀번호가 틀렸는지 구분하지 않는다("이메일 또는 비밀번호를 확인해 주세요."). 같은 이메일·같은 곳에서 15분에 5번 틀리면 429("로그인 시도가 너무 많아요. N분 뒤 다시 시도해 주세요.").
 - **`/api/auth/login`, `/refresh`, `/logout`은 `X-Requested-With: XMLHttpRequest` 헤더가 있어야 한다**(CSRF 방어, 없으면 403). 프론트 Axios 인스턴스가 모든 요청에 붙인다.
-- **동의 철회(`aiAnalysis: false`)하면 가져온 대화와 그로부터 계산된 분석 결과를 함께 삭제한다.** 삭제 범위는 아래 대화 가져오기와 같다. 프론트는 철회 전에 확인 창으로 "되돌릴 수 없어요"를 보여 준다.
+- **동의 철회(`aiAnalysis: false`)하면 가져온 대화와 그로부터 계산된 분석 결과를 함께 삭제한다.** 삭제 범위는 아래 대화 가져오기와 같다. 프론트는 철회 전에 확인 창으로 "되돌릴 수 없어요"를 보여 준다. (11/1 구현: 대화·조각·메시지·가져오기 기록을 동의 변경과 같은 트랜잭션에서 지운다. 분석 결과 표는 아직 없어 분석 기능을 만들 때 함께 지운다. 과목·학습자료는 남는다. 철회한 뒤에는 다시 동의하기 전까지 대화 가져오기가 403이고, 분석은 동의한 사용자의 대화만 읽는다.)
 - **탈퇴(`DELETE /api/users/me`)는 내 모든 데이터를 지운다:** 계정, 과목, 자료와 그로부터 만든 요약·개념·퀴즈, 퀴즈 결과, 가져온 대화, 분석 결과(근거·점수·배치). refresh 토큰도 모두 폐기하고 쿠키를 지운다. 프론트는 확인 창을 거친 뒤 부르고, 성공하면 화면 데이터를 비우고 첫 화면으로 간다.
-- 동의를 다시 켜는 것(`aiAnalysis: true`)도 같은 API로 받는다. 동의 시각을 새로 기록한다.
-- **동의 철회·탈퇴 API는 프론트 연결이 끝났다(10/31, 지금은 404).** 마이페이지 버튼이 위 경로를 그대로 부른다. 성공하면 프론트가 이 브라우저에 저장한 "가릴 단어"도 함께 지운다. 만들면 알려 주기(실제 서버로 다시 확인한다).
+- 동의를 다시 켜는 것(`aiAnalysis: true`)도 같은 API로 받는다. 동의 시각을 새로 기록한다(이미 같은 값이면 바꾸지 않는다). `aiAnalysis`가 없으면 400. 바꾸는 대상은 항상 토큰의 사용자 본인이다.
+- **동의 변경은 서버까지 연결됐다(11/1). 탈퇴 API는 아직 없다(404).** 마이페이지 버튼이 위 경로를 그대로 부른다. 동의를 철회하면 프론트가 이 브라우저에 저장한 "가릴 단어"도 함께 지운다. 동의하지 않은 사용자에게는 대화 가져오기 화면 위에 마이페이지 안내를 보여 준다.
 - **관리자 역할(10/27, 백엔드 반영):** `User.role`은 `USER`/`ADMIN`. 가입은 항상 `USER`이고 관리자는 DB에서 직접 지정한다. `/api/admin/**`는 관리자만 열리고(일반 사용자 403, 로그인 안 하면 401), 역할은 요청마다 DB에서 읽는다. `GET /api/users/me`와 로그인 응답의 `User`에 `role`을 넣었다(10/27). 화면에서 관리자 메뉴를 보일지 정하는 데만 쓰고, 권한은 서버가 매번 확인한다.
 - 토큰이 만료돼 401이 오면 프론트가 `/api/auth/refresh`를 한 번 부르고 원래 요청을 다시 보낸다(`api/axios.ts`). 갱신에도 실패하면 로그아웃 상태가 되고 로그인 가드가 로그인 화면으로 보낸다.
 - 로그인이 필요한 화면은 `router/RequireAuth.tsx` 아래에 둔다. **`VITE_USE_MOCK=true`(팀 기본값)에서는 가드를 건너뛰어** 백엔드 없이 화면을 개발할 수 있다.
 
-### 대화 가져오기 — 목업 (제안)
+### 대화 가져오기 — 저장 구현됨 (11/1, 확정: Swagger `대화 가져오기`). 분석은 AI 단계에서
 
 화면: `/analysis/import` (학습분석 > AI 대화 가져오기). 프론트가 하는 일(모두 브라우저 안): ChatGPT·Claude 내보내기 zip 읽기 → 내 과목 키워드로 공부한 대화를 과목별로 나누기 → 개인정보 가리기 → **사용자가 체크한 대화만** 서버로 전송. 서버가 받는 것은 아래 `ImportedConversation`뿐이다.
 
 - 원본 파일과 이미지·첨부 내용은 서버로 가지 않는다(대신 `[이미지]`, `[첨부 파일]` 표시만 남는다).
 - 사용자가 직접 넣은 "가릴 단어"(학교·회사 등) 목록도 서버로 보내지 않는다. 가린 결과(`[가린 단어]`)만 간다. 목록은 브라우저(localStorage)에만 계정별로 저장한다(10/31, #90). 그래서 이 목록을 위한 API는 필요 없다.
 
-| 메서드 | 경로                      | 요청 본문            | 응답 `data`                                                   |
-| ------ | ------------------------- | -------------------- | ------------------------------------------------------------- |
-| POST   | `/api/conversations`      | `ConversationImport` | `{ importedCount: number, rejected: RejectedConversation[] }` |
-| GET    | `/api/conversations`      | -                    | `ConversationSummary[]` (내 것만)                             |
-| DELETE | `/api/conversations/{id}` | -                    | 없음                                                          |
+| 메서드 | 경로                      | 요청 본문            | 응답 `data`                                                        |
+| ------ | ------------------------- | -------------------- | ------------------------------------------------------------------ |
+| POST   | `/api/conversations`      | `ConversationImport` | 201 `{ importedCount, importCompleted }` / 422 `{ rejected: RejectedConversation[] }` |
+| GET    | `/api/conversations`      | -                    | `ConversationSummary[]` (내 것만, 최근에 가져온 순)                |
+| DELETE | `/api/conversations/{id}` | -                    | 없음                                                               |
 
 ```ts
-ConversationImport = { courseId: number, conversations: ImportedConversation[] }
+ConversationImport = {
+  importId: string,                  // 보내기를 한 번 누를 때 만든 UUID. 나눠 보내는 모든 요청에 같은 값
+  requestIndex: number,              // 이 요청의 번호 (1부터)
+  requestCount: number,              // 전체 요청 수
+  courseId: number,
+  conversations: ImportedConversation[]   // 1~50개
+}
 ImportedConversation = {
-  clientId: string,                  // 프론트가 붙인 대화 id (파일 안의 id). 같은 대화를 다시 보내면 중복 저장하지 않는다
+  clientId: string,                  // 파일 안의 대화 id. 같은 대화를 다시 보내면 중복 저장하지 않는다
   source: "chatgpt" | "claude",
-  title: string,
+  title: string,                     // 500자까지 (프론트가 잘라 보낸다)
   createdAt?: string,                // ISO 문자열
-  messages: { role: "user" | "assistant", text: string }[],
-  part?: { parentClientId: string, index: number, count: number }  // 나눠 보낸 조각일 때만 (아래 "긴 대화 나눠 보내기")
+  messages: { role: "user" | "assistant", text: string, continued?: boolean }[],  // text는 20,000자까지
+  part?: { parentClientId: string, index: number, count: number }  // 나눠 보낸 조각일 때만
 }
 RejectedConversation = { clientId: string, reason: string }  // reason은 사용자에게 보여 줄 문구
-ConversationSummary  = { id: number, courseId: number, source: string, title: string, createdAt: string | null, messageCount: number }
+ConversationSummary  = { id, courseId, source, title, createdAt: string | null, importedAt: string, messageCount: number, analysisReady: boolean }
 ```
 
-- 프론트는 **과목마다 요청을 따로** 보내고, 한 과목에 대화가 50개를 넘거나 요청이 1MB를 넘으면 나눠 차례로 보낸다(`utils/conversation/send.ts`). 한 요청이 실패하면 거기서 멈추고 `message`를 보여 준다. 크기 제한이 정해지면 알려 주기.
-- 목업(`mocks/conversations.ts`)은 개인정보 패턴이 남은 대화를 `rejected`로 돌려주는 서버 동작을 흉내 낸다.
-- **긴 대화 나눠 보내기(10/31 추가):** 프론트는 요청 한 번이 **1MB**(임시값, nginx 기본 한도에 맞춤)를 넘지 않게 대화를 묶어 보낸다. 대화 하나가 혼자 이 크기를 넘으면 메시지를 앞에서부터 차례로 담아 조각 여러 개로 보낸다(메시지는 버리지 않는다). 실제 Claude 내보내기에서 메시지 수백~수천 개짜리 대화가 있었고, 채팅 하나에 계속 이어 쓰는 사용자도 많을 것이라 버리지 않기로 했다.
-  - 조각의 `clientId`는 `<원래 id>#1`, `<원래 id>#2`처럼 서로 다르고, `part`에 원래 id(`parentClientId`)와 순서(`index`, 1부터)·전체 수(`count`)가 들어 있다. `title`·`createdAt`은 조각 모두 원래 대화 값 그대로다.
-  - 서버는 `parentClientId`가 같은 조각을 `index` 순서로 **한 대화에 이어 붙여** 저장해 주기. 조각은 같은 요청에 오지 않을 수도 있다.
-  - 거절(`rejected`)은 조각 `clientId`로 돌려주면 된다. 프론트는 조각 하나라도 거절되면 그 대화를 "저장하지 않았어요"로 보여 준다. 남은 조각을 어떻게 할지(지울지)는 저장 방식과 함께 정해 주기.
-  - 중복 저장 판단: 조각이 없는 대화는 지금처럼 `clientId`, 조각은 `parentClientId` + `index`.
-- **요청 크기 한도 정해 주기(주미):** 지금 스프링(내장 톰캣)은 JSON 본문 크기를 막지 않는다(2MB 기본값은 폼 전송에만 걸린다). 서버가 받을 최대 크기를 정해 필터 등에서 `Content-Length`로 확인하고, 넘으면 413 + `message`로 돌려주기. 배포 때 nginx·Vercel rewrite를 거치면 그쪽 한도(nginx 기본 1MB, Vercel 한도는 확인 필요)도 같이 맞춰야 한다. 정해지면 알려 주면 프론트 `MAX_REQUEST_BYTES`(`utils/conversation/send.ts`)를 맞춘다.
-  - 아래 "크기 제한"의 대화당 메시지 500개·메시지당 20,000자는 전송 크기가 아니라 **분석 비용**(LLM에 넣을 양) 기준으로 따로 정하기. 프론트는 전송을 크기로만 나누고, 개수 제한은 서버가 정하면 그때 맞춘다.
-
-서버에서도 검사해 주기:
-
-- **개인정보 패턴을 한 번 더 검사한다.** 프론트는 이메일·전화번호·주민등록번호·카드번호·키·토큰·IP를 `[이메일]`, `[전화번호]`, `[주민등록번호]`, `[카드번호]`, `[키·토큰]`, `[IP]`처럼 가려서 보낸다. 서버는 이 패턴이 **그대로 남아 있는 대화는 저장하지 않고 `rejected`에 담아** 돌려준다(서버가 몰래 고쳐 저장하지 않는다). 내 이름과 사용자가 넣은 단어는 `[이름]`, `[가린 단어]`로 가린다(서버는 원래 단어를 모르므로 검사할 수 없다). 대체 표시(`[이메일]`, `[이름]` 등)는 개인정보가 아니므로 통과시킨다.
-- 로그인한 사용자 소유의 `courseId`인지, `source` 값이 허용 목록인지, 역할 값이 `user`/`assistant`인지.
-- 크기 제한: 한 번에 대화 50개, 대화당 메시지 500개, 메시지당 20,000자를 임시 제안값으로 둔다. 서버가 정해도 되고, 정해지면 알려 주기(프론트가 보내기 전에 같은 기준으로 안내한다).
-- 서버 로그에 대화 본문을 남기지 않는다.
-- AI 대화 분석 동의(`User.aiAnalysisConsent`)가 꺼져 있으면 403 + `message`("AI 대화 분석에 동의해야 대화를 가져올 수 있어요.").
-- 대화를 저장한 뒤 분석(개념 분류 → 숙련도 계산 → 대시보드 반영)을 서버가 시작한다. 분석이 오래 걸리면 상태를 알려 줄 방법(예: `GET /api/analysis/status`)은 백엔드가 정해서 알려 주기.
-- 대화 한 건 삭제(`DELETE`)와 동의 철회 때 삭제 범위: 저장된 대화, 그 대화에서 나온 개념 분류·근거(`evidence`), 그 근거로 계산한 점수. 점수는 남은 근거로 다시 계산한다.
+- **요청은 전부 저장하거나 전부 거절한다.** 개인정보 패턴이 남은 대화가 하나라도 있으면 그 요청은 아무것도 저장하지 않고 422와 `data.rejected`를 돌려준다(서버가 몰래 고쳐 저장하지 않는다). 프론트는 거기서 멈추고 그 대화를 보여 준다(`SendStep`).
+- **가져오기 작업:** 서버는 `requestCount`개 요청을 모두 받아야 작업을 끝난 것(`importCompleted: true`)으로 본다. 앞서 성공한 요청의 대화는 지우지 않지만, 작업이 끝나기 전에는 분석에 쓰지 않는다(`analysisReady: false`). 같은 `importId`·`requestIndex`를 다시 보내면 저장하지 않고 같은 결과를 돌려주므로, 다시 보내기는 처음부터 다시 보내면 된다. 같은 `importId`인데 `requestCount`가 다르면 400.
+- **중복:** 같은 대화(`source` + `clientId`, 조각은 `parentClientId` + `index`)는 한 번만 저장한다. 다른 과목으로 다시 보내도 처음 과목을 유지한다. 끝나지 않은 작업에만 있던 대화를 새 작업에서 다시 보내면 새 작업으로 옮겨져 새 작업이 끝날 때 분석 대상이 된다.
+- **긴 대화:** 프론트는 요청 한 번이 **1MB**(nginx 기본 한도)를 넘지 않게 묶고, 대화 하나가 이 크기를 넘으면 메시지 단위 조각으로 나눈다. 조각은 순서와 상관없이 여러 요청으로 와도 한 대화로 이어 붙인다. 이미 다 받은 대화를 다르게 나눠 보내면 중복으로 건너뛰고, 다 받지 못한 대화를 다르게 나눠 보내면 422다.
+- **긴 메시지:** 20,000자가 넘는 메시지는 프론트가 같은 역할의 메시지 여러 개로 나누고 마지막이 아닌 조각에 `continued: true`를 붙인다. 서버는 이어진 글로 저장하고 개인정보 검사도 이어 붙인 글로 한다. 글자 수는 UTF-16 단위(JS `length`, Java `String.length()`)다.
+- **한도:** 요청 2MB(넘으면 413, 크기를 밝히지 않은 요청은 411), 요청당 대화 50개, 메시지당 20,000자, 제목 500자. 대화당 메시지 수는 제한하지 않는다(분석 비용 기준 한도는 LLM 단계에서 정한다).
+- 서버도 검사하는 것: AI 대화 분석에 동의하지 않았으면 403("AI 대화 분석에 동의해야 대화를 가져올 수 있어요."), 내 과목이 아니면 404, `source`·`role` 허용 목록, 같은 대화가 한 요청에 두 번이면 400. 개인정보 재검사 규칙은 프론트 `mask.ts`와 같다(이름·사용자가 넣은 단어는 서버가 원래 단어를 몰라 검사하지 않는다). 서버 로그에 대화 본문을 남기지 않는다.
+- 과목을 지우면 그 과목에 가져온 대화도 지운다(과목 삭제 확인 문구에 적었다).
+- 남은 것: 저장한 대화 분석(개념 분류 → 숙련도 → 대시보드), 분석 상태 알림, 가져온 대화 목록·삭제 화면. 동의 철회 때 대화 삭제는 5-2에서 구현했다(위 "인증·마이페이지").
 
 ### 퀴즈 — 목업 (제안)
 
@@ -431,6 +427,13 @@ layout = {
 
 - 마이그레이션 **`V2__create_course.sql`(course, course_keyword), `V3__create_material.sql`(material, file_deletion_task)** 을 썼다. **다음은 `V4`부터**다.
 - 프론트에서 API 연동에 꼭 필요한 부분만 고쳤다(화면 구성·디자인은 그대로): `api/materials.api.ts`(업로드 헤더·timeout), `types/material.ts`(`uploaded` 상태, `courseId: number | null`), `constants/materials.ts`(PPTX 추가), `pages/materials/MaterialListPage.tsx`·`MaterialDetailPage.tsx`(`uploaded` 안내 문구, "과목을 지운 자료" → "과목에 연결하지 않은 자료", 분석 전 자료는 퀴즈 목록을 부르지 않음), `pages/courses/CoursePage.tsx`(삭제 확인 문구, 삭제 뒤 자료 목록도 새로 받기), `mocks/courses.ts`·`mocks/materials.ts`(과목 삭제 때 자료도 삭제, 올린 자료는 `uploaded`), `pages/privacy/PrivacyPage.tsx`(원본 보관 문구).
+
+## 5-4. AI 대화 저장 백엔드 (11/1)
+
+- 마이그레이션 **`V4__create_conversation.sql`** 을 썼다. **다음은 `V5`부터**다.
+- 대화 가져오기 요청 형식이 바뀌었다(위 "대화 가져오기"): 요청에 `importId`·`requestIndex`·`requestCount`, 메시지에 `continued` 추가, 성공 응답은 `{ importedCount, importCompleted }`, 개인정보가 남은 대화는 422 + `data.rejected`.
+- 프론트에서 고친 곳: `types/conversation.ts`, `utils/conversation/send.ts`(작업 번호 붙이기, 20,000자 넘는 메시지 나누기, 제목 500자 자르기), `send.test.ts`, `pages/analysis/components/import/SendStep.tsx`(작업 id, 422 목록 표시 — 성공 화면에 있던 "저장하지 않은 대화" 목록을 실패 쪽으로 옮김), `mocks/conversations.ts`(422 흉내), `api/request.ts`(`ApiError.data`), `api/conversations.api.ts`(주석), `pages/courses/CoursePage.tsx`(과목 삭제 확인 문구에 가져온 대화 추가).
+- 공통: `BusinessException`에 `data`를 담을 수 있게 했고, DB UNIQUE 제약 위반은 409로 응답하며 값은 로그에 남기지 않는다.
 
 ## 6. 이 문서 고치는 법
 

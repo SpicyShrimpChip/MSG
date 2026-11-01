@@ -61,9 +61,16 @@
 - 해결: Vercel 환경변수에 `VITE_USE_MOCK`(Production·Preview 모두)과 `HUSKY=0`(배포 서버에는 `.git`이 없다)을 넣는다.
 - 다음에는: `VITE_`로 시작하는 값은 빌드 결과에 그대로 들어가 누구나 볼 수 있으므로 비밀값을 넣지 않는다. 자세한 설정은 `docs/deploy.md`.
 
-## 빌드 폴더에 `파일 2.sql` 같은 복사본이 생기면 테스트가 깨진다 (2026-11-01, PR 전)
+## 빌드 폴더에 `파일 2.sql` 같은 복사본이 생기면 테스트가 깨진다 (2026-11-01, #94)
 
 - 상황: Desktop 아래 폴더에서 `./gradlew test`를 했더니 `Found more than one migration with version 2`, `AuthApiTest 2 (wrong name)`로 실패했다.
 - 원인: `backend/build`(그리고 `frontend/dist`)에 이름 끝에 ` 2`가 붙은 복사본이 생겼다. 소스 폴더에는 없었다. 폴더 동기화(iCloud 등)가 만든 것으로 보이며 원인은 확인하지 못했다.
 - 해결: `./gradlew clean test`로 빌드 폴더를 지우고 다시 만든다. 소스·`git status`에는 영향이 없다.
 - 다음에는: 같은 오류가 나면 `find backend/build -name "* 2*"`로 확인한다. 자주 생기면 레포를 동기화하지 않는 폴더로 옮긴다.
+
+## `bootRun`이 MySQL 드라이버를 찾으며 뜨지 않는다 (2026-11-01, PR 전)
+
+- 상황: 기본 프로필(H2)로 `./gradlew bootRun`을 했는데 `Failed to load driver class com.mysql.cj.jdbc.Driver`로 멈췄다.
+- 원인: `application.yaml`은 `backend/.env`(커밋 안 됨)를 읽어 DB 접속 값을 덮는다. MySQL 시절의 접속 값이 로컬 `.env`(또는 셸 환경변수)에 남아 있던 것으로 보인다(`.env`는 열어 보지 않았다). `./gradlew test`는 영향을 받지 않았다.
+- 해결: `.env`를 `backend/.env.example`(PostgreSQL)에 맞춰 다시 만든다. 잠깐 H2로만 띄울 때는 `SPRING_DATASOURCE_URL`·`SPRING_DATASOURCE_USERNAME`·`SPRING_DATASOURCE_PASSWORD`·`SPRING_DATASOURCE_DRIVER_CLASS_NAME` 환경변수로 덮는다(환경변수가 `.env`보다 우선).
+- 다음에는: DB를 바꾸는 PR 뒤에는 각자 `.env`도 `.env.example`과 비교한다.

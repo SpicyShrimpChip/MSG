@@ -60,7 +60,7 @@ Swagger UI: `/swagger-ui/index.html` — 프론트와 API를 맞출 때 이 문�
 ## DB 마이그레이션 (Flyway)
 
 - 테이블 구조는 Flyway(`src/main/resources/db/migration`)로만 바꾼다. Hibernate는 `ddl-auto: validate`라 엔티티와 표가 맞는지 검사만 한다.
-- **머지된 `V*.sql`은 고치지 않고 새 번호를 추가한다.** 지금은 `V1__init_schema.sql`, `V2__create_course.sql`, `V3__create_material.sql`이고 다음은 `V4`다. 새 번호는 팀원과 겹치지 않게 미리 말한다. 10/31에 `V1`부터 다시 쓴 것은 운영 DB가 없어서 가능했던 예외이고, 운영 DB가 생기면 하지 않는다(`docs/wiki/backend.md`).
+- **머지된 `V*.sql`은 고치지 않고 새 번호를 추가한다.** 지금은 `V1__init_schema.sql`, `V2__create_course.sql`, `V3__create_material.sql`, `V4__create_conversation.sql`이고 다음은 `V5`다. 새 번호는 팀원과 겹치지 않게 미리 말한다. 10/31에 `V1`부터 다시 쓴 것은 운영 DB가 없어서 가능했던 예외이고, 운영 DB가 생기면 하지 않는다(`docs/wiki/backend.md`).
 - 버전 번호는 `db/migration`과 `db/vector`가 **함께** 쓴다. 같은 번호를 두 폴더에 쓰지 않는다. pgvector 확장(`db/vector/V0_1`)은 H2에 없어 local·prod·`pgTest`에서만 읽고, 번호를 `0.1`로 둬서 항상 `V1`보다 먼저 돈다.
 - 샘플 데이터는 `db/seed/R__*.sql`(반복 실행)이고 운영 프로필은 읽지 않는다.
 - 앱 계정(`ai_lms_app`)은 데이터 읽기·쓰기만 하고, 표 만들기·변경은 마이그레이션 계정(`ai_lms_migrator`)만 한다.
@@ -81,5 +81,7 @@ Swagger UI: `/swagger-ui/index.html` — 프론트와 API를 맞출 때 이 문�
 
 ## 대화 가져오기 API
 
-- 프론트에서 마스킹이 끝난 대화만 받는다. 그래도 서버에서 한 번 더 개인정보 패턴을 검사한다.
-- 사용자가 AI 대화 분석 동의를 철회하면 가져온 대화와 그로부터 계산된 분석 결과를 함께 삭제한다.
+- 프론트에서 마스킹이 끝난 대화만 받는다. 그래도 서버에서 한 번 더 개인정보 패턴을 검사한다(`PersonalInfoDetector`, 규칙은 프론트 `mask.ts`와 같게 유지).
+- 요청 하나는 전부 저장하거나 전부 거절(422 + `data.rejected`)한다. 가져오기 작업(`conversation_import`)의 요청을 모두 받아야 완료이고, **분석은 `ConversationRepository.findAnalyzable`로 완료된 대화만 읽는다**(지금 동의한 사용자만).
+- 대화 본문을 로그·예외 메시지에 남기지 않는다. 긴 글에 쓰는 정규식은 시작 위치마다 끝까지 읽지 않게 쓴다(`docs/wiki/backend.md`).
+- 사용자가 AI 대화 분석 동의를 철회하면 가져온 대화와 그로부터 계산된 분석 결과를 함께 삭제한다(`UserService.changeAiAnalysisConsent` → `ConversationService.deleteAllOfUser`). 분석 결과 표를 새로 만들면 이 삭제에 추가한다.
