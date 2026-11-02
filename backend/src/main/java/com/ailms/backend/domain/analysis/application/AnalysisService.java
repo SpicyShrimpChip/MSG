@@ -61,7 +61,7 @@ public class AnalysisService {
 	static final String NO_KEYWORDS_MESSAGE = "과목에 키워드를 먼저 넣어 주세요. 키워드가 분석할 개념이 돼요.";
 	static final String NO_CONVERSATIONS_MESSAGE = "이 과목에 분석할 AI 대화가 없어요. 대화를 먼저 가져와 주세요.";
 	static final String NO_MATCHING_MESSAGES = "과목 키워드가 들어간 대화가 없어 분석할 수 없어요.";
-	static final String NO_MODEL_MESSAGE = "AI 모델이 아직 설정되지 않아 분석할 수 없어요.";
+	static final String NO_MODEL_MESSAGE = "연결된 AI 모델이 없어 지금은 분석할 수 없어요.";
 	static final String ALREADY_RUNNING_MESSAGE = "이미 분석하고 있어요. 끝난 뒤 다시 시도해 주세요.";
 	static final String CHANGED_MESSAGE = "분석하는 동안 대화나 AI 대화 분석 동의가 바뀌어 결과를 저장하지 않았어요.";
 

@@ -101,7 +101,7 @@ class AnalysisApiTest {
 	void 설정된_모델이_없으면_503이고_분석_기록을_만들지_않는다() throws Exception {
 		run(token, courseId)
 				.andExpect(status().isServiceUnavailable())
-				.andExpect(jsonPath("$.message").value("AI 모델이 아직 설정되지 않아 분석할 수 없어요."));
+				.andExpect(jsonPath("$.message").value("연결된 AI 모델이 없어 지금은 분석할 수 없어요."));
 		assertThat(count("analysis_run")).isZero();
 	}
 

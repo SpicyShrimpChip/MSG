@@ -184,7 +184,7 @@ public class AnalysisQueryService {
 			return null;
 		}
 		if (result.getStatus() == ModelResultStatus.NOT_CONFIGURED) {
-			return "API 키나 모델 이름이 설정되지 않아 부르지 않았어요.";
+			return "이 모델은 연결되지 않아 부르지 않았어요.";
 		}
 		if (result.getStatus() == ModelResultStatus.INVALID_OUTPUT) {
 			return "약속한 형식으로 답하지 않아 결과에서 뺐어요.";
