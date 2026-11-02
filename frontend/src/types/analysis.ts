@@ -71,6 +71,14 @@ export interface ConceptFeedback {
   nextAction: 'confirm_quiz' | 'prioritize_study';
 }
 
+// 피드백 저장 요청 본문. comment는 200자까지
+export interface ConceptFeedbackInput {
+  concept: string;
+  feedback: ConceptFeedbackType;
+  comment?: string;
+  analysisRunId?: number;
+}
+
 export interface ConceptResult {
   // 개념 = 과목 키워드
   concept: string;

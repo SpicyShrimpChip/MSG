@@ -1,5 +1,5 @@
 import type { ConceptResult } from '@/types';
-import { cn, describeComparison } from '@/utils';
+import { FEEDBACK_LABEL, cn, describeComparison } from '@/utils';
 import Panel from './Panel';
 import { ComparisonBadge } from './UnderstandingBadge';
 
@@ -24,7 +24,7 @@ function ConceptTablePanel({
       layoutReason={layoutReason}
     >
       <div className="overflow-x-auto">
-        <table className="w-full min-w-110 border-collapse text-body">
+        <table className="w-full min-w-130 border-collapse text-body">
           <thead>
             <tr className="bg-surface-muted text-caption text-ink-soft">
               <th scope="col" className="px-3 py-2.5 text-left font-bold">
@@ -35,6 +35,9 @@ function ConceptTablePanel({
               </th>
               <th scope="col" className="px-3 py-2.5 text-left font-bold">
                 판단한 모델
+              </th>
+              <th scope="col" className="px-3 py-2.5 text-left font-bold">
+                내 선택
               </th>
             </tr>
           </thead>
@@ -67,6 +70,13 @@ function ConceptTablePanel({
                   </td>
                   <td className="px-3 py-3 text-caption text-ink-soft">
                     {describeComparison(item.comparison)}
+                  </td>
+                  <td className="px-3 py-3 text-caption font-bold text-primary">
+                    {item.feedback ? (
+                      FEEDBACK_LABEL[item.feedback.feedback]
+                    ) : (
+                      <span className="font-normal text-ink-muted">-</span>
+                    )}
                   </td>
                 </tr>
               );
