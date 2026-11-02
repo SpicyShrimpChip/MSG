@@ -2,6 +2,7 @@ import type {
   AnalysisProvider,
   AnalysisRun,
   ConceptComparison,
+  ConceptFeedbackType,
   ConceptResult,
   UnderstandingStatus,
 } from '@/types';
@@ -48,3 +49,8 @@ export function countJudgingModels(run: AnalysisRun) {
 export function sortByStudyOrder(concepts: ConceptResult[]): ConceptResult[] {
   return [...concepts].sort((a, b) => a.studyOrder - b.studyOrder);
 }
+
+export const FEEDBACK_LABEL: Record<ConceptFeedbackType, string> = {
+  already_know: '이미 알아요',
+  want_to_study: '더 공부할래요',
+};

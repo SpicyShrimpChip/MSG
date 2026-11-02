@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { AiNote } from '@/components';
 import type {
   ConceptJudgment,
@@ -17,6 +18,8 @@ interface ConceptDetailPanelProps {
   concept: ConceptResult | null;
   models: ModelRun[];
   layoutReason?: string | null;
+  // 판단 아래에 붙일 내용 (내 생각 남기기)
+  children?: ReactNode;
 }
 
 const EVIDENCE_KIND_LABEL: Record<JudgmentEvidence['kind'], string> = {
@@ -91,6 +94,7 @@ function ConceptDetailPanel({
   concept,
   models,
   layoutReason,
+  children,
 }: ConceptDetailPanelProps) {
   if (!concept) {
     return (
@@ -129,6 +133,7 @@ function ConceptDetailPanel({
           </li>
         ))}
       </ul>
+      {children}
     </Panel>
   );
 }

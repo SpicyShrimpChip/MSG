@@ -1,4 +1,4 @@
-import { AiBadge } from '@/components';
+import { AiBadge, Chip } from '@/components';
 import type { ConceptResult } from '@/types';
 import Panel from './Panel';
 import { ComparisonBadge } from './UnderstandingBadge';
@@ -22,15 +22,17 @@ function RecommendationPanel({
   concepts,
   layoutReason,
 }: RecommendationPanelProps) {
-  // 이미 이해한 개념은 순서에서 뺀다
+  // 이미 이해한 개념은 순서에서 뺀다. 단, 내가 "더 공부할래요"를 고른 개념은 남긴다
   const items = concepts.filter(
-    (item) => item.comparison.status !== 'understood',
+    (item) =>
+      item.comparison.status !== 'understood' ||
+      item.feedback?.feedback === 'want_to_study',
   );
 
   return (
     <Panel
       title="추천 학습 순서"
-      description="순서는 정해진 규칙으로 정해요. 이해 부족, 의견이 갈린 개념, 근거 부족 순이에요."
+      description="순서는 정해진 규칙으로 정해요. 내가 더 공부하겠다고 고른 개념, 이해 부족, 의견이 갈린 개념, 근거 부족 순이에요."
       layoutReason={layoutReason}
     >
       {items.length === 0 ? (
@@ -62,6 +64,9 @@ function RecommendationPanel({
                       outcome={item.comparison.outcome}
                       status={item.comparison.status}
                     />
+                    {item.feedback?.feedback === 'want_to_study' && (
+                      <Chip>내가 고름</Chip>
+                    )}
                   </div>
                   {activity ? (
                     <p className="flex flex-wrap items-center gap-1.5 text-caption text-ai">

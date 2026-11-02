@@ -312,7 +312,7 @@ ConceptFeedback = { id, courseId, concept, feedback: "already_know" | "want_to_s
 - `ai`로 시작하는 필드만 AI가 쓴 글(보라색 "AI" 표시). 상태 비교·개수·순서는 코드가 정한 값.
 - `reportedStatus`와 `status`가 다르면 `adjustedReason`(예: 사용자가 쓴 메시지 근거가 없어 판단 근거 부족으로 봤어요)을 함께 보여 주기.
 - 모델이 `not_configured`면 "연결 안 됨"으로 보여 주기(연결된 척하지 않는다). 지금 키가 하나도 없으면 분석 시작이 503이다.
-- **피드백은 AI 판단을 바꾸지 않는다.** `already_know` → 확인 퀴즈 권함(`recommendConfirmQuiz`), `want_to_study` → 추천 순서 맨 앞. 피드백을 남겨도 `comparison`·`judgments`는 그대로다. 같은 개념에 다시 PUT하면 바뀌고, DELETE하면 취소된다. 메모(`comment`)는 200자까지.
+- **피드백은 AI 판단을 바꾸지 않는다.** `already_know` → 확인 퀴즈 권함(`recommendConfirmQuiz`), `want_to_study` → 추천 순서 맨 앞. 피드백을 남겨도 `comparison`·`judgments`는 그대로다. 같은 개념에 다시 PUT하면 바뀌고, DELETE하면 취소된다. 메모(`comment`)는 200자까지. **11/2 프론트 연결함:** 학습 대시보드 모델별 판단 아래 "이 판단, 내 생각과 맞나요?"(이미 알아요 / 더 공부할래요 / 선택 취소). 저장·취소 뒤 `runs/latest`를 다시 불러 순서를 받는다. 메모 입력 칸은 아직 없다.
 - 오류: 미동의 403, 남의 과목·분석 404, 과목 키워드 없음·분석할 대화 없음 400, 이미 분석 중 409, 24시간에 10번 넘음 429, 설정된 모델 없음 503, 분석 중 동의 철회·대화 삭제 409.
 - 개념은 과목 키워드다. 키워드가 없는 과목은 분석할 수 없다(과목 화면에서 키워드를 넣도록 안내).
 

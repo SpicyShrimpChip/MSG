@@ -8,6 +8,7 @@ import { ChartColumn, Download, LoaderCircle, Sparkles } from 'lucide-react';
 import * as m from 'motion/react-m';
 import {
   ANALYSIS_QUERY_KEY,
+  analysisLatestKey,
   getLatestAnalysis,
   getProviders,
   startAnalysis,
@@ -30,17 +31,18 @@ import {
 } from '@/utils';
 import AnalysisSummaryPanel from './components/AnalysisSummaryPanel';
 import ConceptDetailPanel from './components/ConceptDetailPanel';
+import ConceptFeedbackBox from './components/ConceptFeedbackBox';
 import ConceptTablePanel from './components/ConceptTablePanel';
 import LayoutSummary from './components/LayoutSummary';
 import ModelStatusPanel from './components/ModelStatusPanel';
 import RecommendationPanel from './components/RecommendationPanel';
 
-const latestKey = (courseId: number) =>
-  [...ANALYSIS_QUERY_KEY, 'latest', courseId] as const;
-
 // 분석 결과를 배치대로 그린다. 배치 JSON은 검증을 통과할 때만 쓰고, 아니면 기본 배치
 function AnalysisResult({ run }: { run: AnalysisRun }) {
-  const [selected, setSelected] = useState<string | null>(null);
+  // 처음엔 추천 순서 첫 개념을 자세히 보여 준다. 피드백으로 순서가 바뀌어도 보던 개념은 그대로 둔다
+  const [selected, setSelected] = useState<string | null>(
+    () => sortByStudyOrder(run.concepts)[0]?.concept ?? null,
+  );
   // AI 배치 대신 기본 배치로 보기 (사용자가 고른 경우)
   const [usingDefault, setUsingDefault] = useState(false);
 
@@ -53,7 +55,6 @@ function AnalysisResult({ run }: { run: AnalysisRun }) {
     () => sortByStudyOrder(run.concepts),
     [run.concepts],
   );
-  // 처음엔 추천 순서 첫 개념을 자세히 보여 준다
   const current =
     concepts.find((item) => item.concept === selected) ?? concepts[0] ?? null;
 
@@ -80,7 +81,15 @@ function AnalysisResult({ run }: { run: AnalysisRun }) {
             concept={current}
             models={run.models}
             layoutReason={reason}
-          />
+          >
+            {current && (
+              <ConceptFeedbackBox
+                courseId={run.courseId}
+                runId={run.id}
+                concept={current}
+              />
+            )}
+          </ConceptDetailPanel>
         );
       case 'models':
         return <ModelStatusPanel models={run.models} layoutReason={reason} />;
@@ -120,7 +129,7 @@ function AnalysisResult({ run }: { run: AnalysisRun }) {
 function CourseAnalysis({ course }: { course: Course }) {
   const queryClient = useQueryClient();
   const { data: run } = useSuspenseQuery({
-    queryKey: latestKey(course.id),
+    queryKey: analysisLatestKey(course.id),
     queryFn: () => getLatestAnalysis(course.id),
   });
   const { data: providers } = useSuspenseQuery({
@@ -129,7 +138,8 @@ function CourseAnalysis({ course }: { course: Course }) {
   });
   const mutation = useMutation({
     mutationFn: () => startAnalysis(course.id),
-    onSuccess: (next) => queryClient.setQueryData(latestKey(course.id), next),
+    onSuccess: (next) =>
+      queryClient.setQueryData(analysisLatestKey(course.id), next),
   });
 
   const configured = providers.filter((item) => item.configured).length;

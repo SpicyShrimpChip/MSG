@@ -1,5 +1,7 @@
 import type {
   AnalysisRun,
+  ConceptFeedback,
+  ConceptFeedbackInput,
   ConceptJudgment,
   JudgmentEvidence,
   ProviderStatus,
@@ -309,6 +311,28 @@ const RUN: AnalysisRun = {
 
 // 과목별 최근 분석 (목업에서는 분석을 시작하면 여기에 남는다, 새로고침하면 처음으로)
 const latest = new Map<number, AnalysisRun>([[1, RUN]]);
+// 내가 남긴 피드백 (과목 id → 개념 → 피드백)
+const feedbacks = new Map<number, Map<string, ConceptFeedback>>();
+
+// 서버처럼 읽을 때마다 피드백을 붙이고 순서를 다시 매긴다: "더 공부할래요"가 맨 앞, 나머지는 원래 순서.
+// AI 판단(comparison·judgments)은 바꾸지 않는다
+function withFeedback(run: AnalysisRun): AnalysisRun {
+  const mine = feedbacks.get(run.courseId);
+  const concepts = run.concepts
+    .map((item) => ({ ...item, feedback: mine?.get(item.concept) ?? null }))
+    .sort(
+      (a, b) =>
+        Number(b.feedback?.feedback === 'want_to_study') -
+          Number(a.feedback?.feedback === 'want_to_study') ||
+        a.studyOrder - b.studyOrder,
+    )
+    .map((item, index) => ({
+      ...item,
+      studyOrder: index + 1,
+      recommendConfirmQuiz: item.feedback?.feedback === 'already_know',
+    }));
+  return { ...run, concepts };
+}
 
 export function mockGetProviders(): Promise<ProviderStatus[]> {
   return mockDelay(PROVIDERS);
@@ -317,7 +341,38 @@ export function mockGetProviders(): Promise<ProviderStatus[]> {
 export function mockGetLatestAnalysis(
   courseId: number,
 ): Promise<AnalysisRun | null> {
-  return mockDelay(latest.get(courseId) ?? null);
+  const run = latest.get(courseId);
+  return mockDelay(run ? withFeedback(run) : null);
+}
+
+export function mockSaveConceptFeedback(
+  courseId: number,
+  input: ConceptFeedbackInput,
+): Promise<ConceptFeedback> {
+  const mine = feedbacks.get(courseId) ?? new Map<string, ConceptFeedback>();
+  const saved: ConceptFeedback = {
+    id: mine.get(input.concept)?.id ?? Date.now(),
+    courseId,
+    concept: input.concept,
+    feedback: input.feedback,
+    comment: input.comment ?? null,
+    analysisRunId: input.analysisRunId ?? null,
+    updatedAt: new Date().toISOString(),
+    nextAction:
+      input.feedback === 'already_know' ? 'confirm_quiz' : 'prioritize_study',
+  };
+  mine.set(input.concept, saved);
+  feedbacks.set(courseId, mine);
+  return mockDelay(saved);
+}
+
+export function mockDeleteConceptFeedback(id: number): Promise<void> {
+  for (const mine of feedbacks.values()) {
+    for (const [concept, item] of mine) {
+      if (item.id === id) mine.delete(concept);
+    }
+  }
+  return mockDelay(undefined);
 }
 
 // 목업은 정보보호개론 예시를 그 과목 결과처럼 돌려준다
@@ -330,5 +385,5 @@ export function mockStartAnalysis(courseId: number): Promise<AnalysisRun> {
     completedAt: new Date().toISOString(),
   };
   latest.set(courseId, run);
-  return mockDelay(run, 1500);
+  return mockDelay(withFeedback(run), 1500);
 }
