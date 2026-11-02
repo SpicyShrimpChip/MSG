@@ -136,6 +136,12 @@ export const router = createBrowserRouter([
         lazy: lazyPage(() => import('@/pages/privacy/PrivacyPage')),
       },
 
+      // 대화 내보내기 도움말: 가입 전에도 미리 신청해 둘 수 있게 로그인 없이 연다
+      {
+        path: 'analysis/import/help/:service',
+        lazy: lazyPage(() => import('@/pages/analysis/ExportHelpPage')),
+      },
+
       // 계정·기타
       {
         path: 'login',

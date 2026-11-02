@@ -1,5 +1,13 @@
 import { useState } from 'react';
-import { CircleAlert, Download, FileText, Info, Lock } from 'lucide-react';
+import {
+  ChevronRight,
+  CircleAlert,
+  Download,
+  FileText,
+  Info,
+  Lock,
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Button, Card, FileDropZone, Notice } from '@/components';
 import type { ClaudeManifest, MergedImport } from '@/utils';
 import { readExportFiles } from './readExportFiles';
@@ -131,6 +139,18 @@ function FileStep({ imported, onLoaded, onNext }: FileStepProps) {
         description="ChatGPT, Claude에서 받은 zip을 압축 풀지 않고 올려도 돼요. 압축을 푼 conversations.json도 괜찮아요."
         onFiles={(files) => void handleFiles(files)}
       />
+
+      {/* ChatGPT 도움말은 준비 완료 메일을 확인한 뒤 추가한다 */}
+      <p className="-mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-body text-ink-soft">
+        파일 받는 방법이 궁금하다면
+        <Link
+          to="/analysis/import/help/claude"
+          className="inline-flex items-center gap-0.5 font-bold text-primary hover:underline"
+        >
+          Claude 내보내기 도움말
+          <ChevronRight size={16} aria-hidden="true" />
+        </Link>
+      </p>
 
       <div aria-live="polite" className="flex flex-col gap-3">
         {imported?.errors.map((error) =>
