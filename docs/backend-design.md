@@ -1,6 +1,6 @@
 # 백엔드 설계 — DB·인증·확장 구조
 
-최종 수정: 2026-11-01 (내 과목·학습자료 올리기 구현)
+최종 수정: 2026-11-02 (퀴즈 풀기·채점 구현, 문서 점검)
 
 이 문서는 백엔드가 지금 만든 것과, 앞으로 만들 기능이 붙을 자리를 정리한다.
 **지금 만든 것**과 **설계만 한 것(아직 테이블·코드 없음)**을 구분해서 읽는다. 설계 부분은 기능을 만들 때 바뀔 수 있다.
@@ -23,13 +23,13 @@
 | `V1__init_schema.sql` | `users`, `refresh_token`, `notice` | 회원, 로그인 세션, 공지사항(본문 `content`는 글자만 저장, 수정 시각 `updated_at`, 작성한 관리자 `author_id`는 탈퇴하면 NULL). MySQL 시절의 V1~V3을 PostgreSQL 문법으로 합쳐 다시 시작했다 |
 | `V2__create_course.sql` | `course`, `course_keyword` | 내 과목과 키워드(입력 순서 `sort_order`) |
 | `V3__create_material.sql` | `material`, `file_deletion_task` | 올린 자료의 정보(파일 내용은 저장소), 지우지 못한 저장소 파일의 재시도 목록 |
-| `V5__create_learning_analysis.sql` | `analysis_run`, `analysis_run_conversation`, `analysis_model_result`, `analysis_concept_judgment`, `analysis_judgment_evidence`, `analysis_concept_consensus`, `concept_feedback` | 학습 대화 개념 분석(모델별 결과 원본·검증한 판단·근거 메시지·개념별 비교)과 학습 모드 피드백. 아래 "학습 대화 개념 분석" |
 | `V4__create_conversation.sql` | `conversation_import`, `conversation_import_request`, `conversation`, `conversation_part`, `conversation_message` | 가져온 AI 대화. 가져오기 작업과 받은 요청 번호(재전송 중복 방지), 대화·조각·메시지. 프론트가 가린 글만 저장한다 |
+| `V5__create_learning_analysis.sql` | `analysis_run`, `analysis_run_conversation`, `analysis_model_result`, `analysis_concept_judgment`, `analysis_judgment_evidence`, `analysis_concept_consensus`, `concept_feedback` | 학습 대화 개념 분석(모델별 결과 원본·검증한 판단·근거 메시지·개념별 비교)과 학습 모드 피드백. 아래 "학습 대화 개념 분석" |
 | `V6__create_quiz.sql` | `quiz`, `quiz_question`, `quiz_choice`, `quiz_question_concept`, `quiz_submission`, `quiz_answer` | 객관식 퀴즈와 제출 기록(문제별 채점 결과). 아래 "퀴즈·시험 모드" |
 | `db/vector/V0_1__enable_pgvector.sql` | (확장) | pgvector `vector` 확장. H2에는 없어 local·prod·`pgTest`에서만 읽는다. 버전을 `0.1`로 둬서 항상 `V1`보다 먼저 돈다 |
 | `db/seed/R__sample_notices.sql` | (데이터) | 로컬 샘플 공지 3건. **운영(prod) 프로필은 이 폴더를 읽지 않는다** |
 
-- 테이블 구조는 Flyway 마이그레이션 파일로만 바꾼다. 이미 적용된 `V*` 파일은 고치지 않고 새 번호(`V2__...`)를 추가한다.
+- 테이블 구조는 Flyway 마이그레이션 파일로만 바꾼다. 이미 적용된 `V*` 파일은 고치지 않고 새 번호를 추가한다(지금 다음은 `V7`).
 - Hibernate는 `ddl-auto: validate`로 엔티티와 테이블이 맞는지 검사만 한다.
 
 ### `notice`
@@ -48,9 +48,9 @@
 | `name` | VARCHAR(30) | |
 | `role` | VARCHAR(20) | `USER` 또는 `ADMIN`. 가입하면 항상 `USER`, 관리자는 이 값을 DB에서 직접 `ADMIN`으로 바꿔 지정한다(역할 변경 API 없음) |
 | `ai_analysis_consent` | BOOLEAN | AI 대화 분석 동의(선택) |
-| `ai_analysis_consented_at` | DATETIME(6) NULL | 동의 시각 |
-| `terms_agreed_at`, `privacy_agreed_at` | DATETIME(6) | 필수 동의 시각 |
-| `created_at`, `updated_at` | DATETIME(6) | |
+| `ai_analysis_consented_at` | TIMESTAMP(6) NULL | 동의 시각 |
+| `terms_agreed_at`, `privacy_agreed_at` | TIMESTAMP(6) | 필수 동의 시각 |
+| `created_at`, `updated_at` | TIMESTAMP(6) | |
 
 ### `refresh_token`
 
@@ -60,8 +60,8 @@
 | `user_id` | BIGINT FK → `users.id` **ON DELETE CASCADE** | 탈퇴하면 세션도 삭제 |
 | `session_id` | VARCHAR(36) | 로그인 한 번 = 세션 하나. 회전된 토큰은 같은 값 |
 | `token_hash` | VARCHAR(64) **UNIQUE** | 토큰 원문의 SHA-256 (원문 저장 안 함) |
-| `expires_at` | DATETIME(6) | |
-| `revoked_at` | DATETIME(6) NULL | 회전·로그아웃·재사용 감지로 폐기된 시각 |
+| `expires_at` | TIMESTAMP(6) | |
+| `revoked_at` | TIMESTAMP(6) NULL | 회전·로그아웃·재사용 감지로 폐기된 시각 |
 
 ### `course`, `course_keyword`
 
@@ -92,7 +92,7 @@
 
 ## 3. ERD
 
-지금 있는 테이블은 `users`, `refresh_token`, `notice`(관계 없음이라 그림에서 뺌), `course`, `course_keyword`, `material`, `file_deletion_task`(관계 없음)이고, 나머지는 모두 설계안이다.
+처음 설계한 전체 그림이다. 지금 있는 테이블은 2번 표(`users`·`refresh_token`·`notice`·`course`·`course_keyword`·`material`·`file_deletion_task`, 대화 `conversation*`, 학습 분석 `analysis_*`·`concept_feedback`, 퀴즈 `quiz*`)이고, 그림의 나머지(`material_chunk`, `concept`, `evidence`, `concept_mastery`, `curriculum*`, `ai_generation`, `ai_model_judgment`, `chat_*`, `dashboard_layout`)는 설계안이다. 여러 모델 판단은 `ai_model_judgment` 대신 `analysis_*` 표로 만들었다(6번 "학습 대화 개념 분석").
 
 ```mermaid
 erDiagram
@@ -188,13 +188,13 @@ erDiagram
 | --- | --- | --- |
 | 사용자 정보 | `users` | 구현됨 |
 | 과목·수강 | `course`, `course_keyword` | 구현됨 |
-| 학습 기록 | `conversation`·`conversation_message`, `quiz_submission`·`quiz_answer`, `chat_message` | 모두 `user_id` 보유 |
+| 학습 기록 | `conversation`·`conversation_message`(구현됨), `quiz_submission`·`quiz_answer`(구현됨), `chat_message` | 모두 `user_id` 보유 |
 | 업로드 자료 | `material`(구현됨), `material_chunk` | 형식 PDF·PPTX·TXT·MD, 20MB. 조각·임베딩은 AI 단계 |
 | 개념별 숙련도 | `concept`, `concept_mastery` | 점수는 코드로 계산, `formula_version`으로 산식 변경 추적 (산식 미결) |
 | AI 분석 결과·근거 | `evidence`, `ai_generation`(type=explanation) | 근거는 코드, 설명 문장은 AI. 필드를 섞지 않는다 |
 | 맞춤 커리큘럼 | `curriculum`, `curriculum_step` | 순서·이유는 AI, 근거 숫자는 코드 |
 | AI 생성 학습자료·이미지·영상 | `ai_generation` | 파일은 `global/storage`, 테이블에는 메타데이터와 저장 키만 |
-| 다중 모델 독립 판단·통합 | `ai_model_judgment` | GPT·Gemini·Claude 각각의 판단을 저장하고 통합 결과는 `ai_generation`에. **핵심 차별점이라 구조를 남겨 둔다** |
+| 다중 모델 독립 판단·통합 | `analysis_model_result`·`analysis_concept_judgment`·`analysis_concept_consensus`(구현됨) | GPT·Gemini·Claude 각각의 판단과 개념별 비교를 저장한다. **핵심 차별점이라 구조를 남겨 둔다** |
 | 자료 기반 질의응답 | `chat_session`, `chat_message`, `chat_citation` | 답변 근거 조각을 기록 |
 | 대시보드 배치 | `dashboard_layout` | `frontend-requests.md` 4번의 저장 제안 그대로 |
 
@@ -361,7 +361,7 @@ cd ..
 
 ```sql
 \c ai_lms
-\dt                                                     -- course, course_keyword, file_deletion_task, flyway_schema_history, material, notice, refresh_token, users
+\dt                                                     -- users, refresh_token, notice, course*, material, file_deletion_task, conversation*, analysis_*, concept_feedback, quiz*, flyway_schema_history
 SELECT version, description, success, installed_on FROM flyway_schema_history ORDER BY installed_rank;
 \d users                                                -- uk_users_email UNIQUE
 SELECT extname, extversion FROM pg_extension;            -- vector

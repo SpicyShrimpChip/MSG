@@ -102,7 +102,7 @@ DB 안을 보려면 `docker exec -it db-postgres-1 psql -U ai_lms_migrator ai_lm
 - **계정과 비밀번호는 짝이에요.** `ai_lms_app`은 `DB_PASSWORD`, `ai_lms_migrator`는 `DB_MIGRATION_PASSWORD`예요. 보기만 할 거면 표를 바꿀 수 없는 `ai_lms_app`이 안전해요.
 - 비밀번호는 각자 컴퓨터에만 저장되고 레포에는 안 올라가요.
 - 확장에는 Copilot AI 기능도 있어요. 실제 사용자 데이터가 든 DB에는 AI 기능을 쓰지 않아요.
-- 표 구조를 바꾸는 SQL은 여기서 직접 치지 말고 마이그레이션 파일(`V2__...sql`)로 만들어요. 직접 친 SQL은 그 컴퓨터의 DB에만 반영돼요.
+- 표 구조를 바꾸는 SQL은 여기서 직접 치지 말고 마이그레이션 파일(`V7__...sql`처럼 다음 번호, `backend/CLAUDE.md` 참고)로 만들어요. 직접 친 SQL은 그 컴퓨터의 DB에만 반영돼요.
 
 ## 처음부터 다시 하고 싶을 때
 
@@ -134,6 +134,7 @@ mv backend/.env ~/lms-env.bak     # 스크립트는 .env가 이미 있으면 덮
 | 테스트가 `_test로 끝나는 DB` 오류로 멈춤 | 일부러 막은 거예요. 테스트는 회원 행을 지우니 `ai_lms_test`에서만 돌아요. `TEST_DB_URL` 환경변수를 설정했다면 이름이 `_test`로 끝나는 DB를 가리키는지 확인해요 |
 | 마이그레이션 오류(`checksum`, 이미 적용됨) | 옛 DB에 남은 기록과 파일이 달라요. DB를 새로 만들어요 |
 | Windows에서 `.sh`가 안 돌아요 | PowerShell이 아니라 **Git Bash**에서 실행해요 |
+| PowerShell에서 `./gradlew`가 안 돌아요 | PowerShell에서는 `.\gradlew.bat bootRun`처럼 써요. Git Bash에서는 `./gradlew` 그대로 돼요 |
 
 ## 그다음 읽을 것
 
