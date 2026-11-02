@@ -115,16 +115,15 @@ function ConceptsTab({ material }: { material: MaterialDetail }) {
   );
 }
 
-// 분석이 끝난 자료만 퀴즈 목록을 불러온다
+// 퀴즈는 자료 분석과 따로 저장될 수 있어서(분석 전 자료에 붙인 퀴즈 등) 상태와 관계없이 이 자료의 퀴즈를 먼저 찾는다.
+// 퀴즈가 없을 때만 분석 상태 안내를 보여 준다
 function QuizTab({ material }: { material: MaterialDetail }) {
-  if (material.status !== 'ready') return <NotReady status={material.status} />;
-  return <MaterialQuizzes materialId={material.id} />;
-}
-
-function MaterialQuizzes({ materialId }: { materialId: number }) {
   const { data: quizzes } = useQuizzes();
-  const mine = quizzes.filter((quiz) => quiz.materialId === materialId);
+  const mine = quizzes.filter((quiz) => quiz.materialId === material.id);
   if (mine.length === 0) {
+    if (material.status !== 'ready') {
+      return <NotReady status={material.status} />;
+    }
     return (
       <EmptyState
         icon={<ListChecks size={24} aria-hidden="true" />}
