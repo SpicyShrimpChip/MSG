@@ -27,7 +27,7 @@ export interface MaterialSummary {
   quizCount: number;
 }
 
-// 자료에서 뽑은 핵심 개념. conceptId는 학습 대시보드 ConceptMastery.conceptId와 같은 값
+// 자료에서 뽑은 핵심 개념. conceptId는 퀴즈 개념(QuizConcept.conceptId)과 같은 규칙의 값
 export interface MaterialConcept {
   conceptId: string;
   name: string;

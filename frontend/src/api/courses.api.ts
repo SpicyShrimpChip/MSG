@@ -11,7 +11,7 @@ import { request } from './request';
 // React Query에서 내 과목 목록을 담는 키. 과목을 추가·수정·삭제하면 이 키를 새로 고친다
 export const COURSES_QUERY_KEY = ['courses'] as const;
 
-// TODO: 백엔드 API가 준비되면 경로·필드명을 주미의 API 문서와 맞춘다 (제안: /api/courses)
+// 확정: Swagger `과목` /api/courses
 export function getCourses(): Promise<Course[]> {
   if (USE_MOCK) return mockGetCourses();
   return request<Course[]>({ method: 'GET', url: '/courses' });

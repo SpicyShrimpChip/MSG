@@ -18,7 +18,7 @@ interface MockQuiz extends Omit<Quiz, 'questions'> {
   questions: MockQuestion[];
 }
 
-// 개념 이름은 대시보드 목업(mocks/dashboard.ts)과 같게 맞춘다
+// 개념 id·이름은 자료 목업(mocks/materials.ts)과 같게 맞춘다
 const CONCEPT_NAMES: Record<string, string> = {
   'public-key': '공개키 암호',
   'digital-signature': '전자서명',

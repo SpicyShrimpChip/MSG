@@ -29,7 +29,7 @@ public class UserService {
 	}
 
 	/**
-	 * AI 대화 분석 동의를 바꾼다. 철회하면 가져온 대화와 가져오기 기록을 같은 트랜잭션에서 지운다
+	 * AI 대화 분석 동의를 바꾼다. 철회하면 가져온 대화·가져오기 기록·학습 분석 결과를 같은 트랜잭션에서 지운다
 	 * (개인정보처리방침의 보유 기간 "동의를 철회하거나 탈퇴할 때까지", docs/frontend-requests.md "인증·마이페이지").
 	 * 사용자 행을 잠가 같은 사용자의 대화 가져오기와 차례로 처리한다.
 	 */
@@ -40,7 +40,8 @@ public class UserService {
 		user.changeAiAnalysisConsent(consent, LocalDateTime.now(clock));
 		if (!consent) {
 			// 이미 철회한 상태에서 다시 철회해도 남은 대화가 없도록 매번 지운다
-			// TODO: 대화 분석(개념 분류·근거·숙련도)을 만들면 그 결과도 여기서 지우고 숙련도를 다시 계산한다
+			// 그 대화로 만든 학습 분석 결과도 deleteAllOfUser가 AnalysisCleanup으로 함께 지운다
+			// TODO: 숙련도 계산이 생기면 철회 뒤 다시 계산한다
 			conversationService.deleteAllOfUser(userId);
 		}
 		return UserResponse.from(user);

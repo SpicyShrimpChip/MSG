@@ -6,7 +6,7 @@ import { removeMockMaterialsOfCourse } from './materials';
 // 목업 전용 저장소. 새로고침해도 등록한 과목이 남도록 브라우저에 저장한다 (실제 데이터는 서버에 저장)
 const STORAGE_KEY = 'ai-lms-mock-courses';
 
-// 처음 열었을 때 보여 줄 시연 과목 (mocks/dashboard.ts·materials.ts의 courseId 1·2와 같다).
+// 처음 열었을 때 보여 줄 시연 과목 (mocks/analysis.ts·materials.ts의 courseId 1·2와 같다).
 // 한 번이라도 과목을 바꾸면 저장된 목록을 쓴다
 const SAMPLE: Course[] = [
   {

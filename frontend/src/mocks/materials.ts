@@ -11,7 +11,7 @@ import { mockDelay } from './delay';
 const STORAGE_KEY = 'ai-lms-mock-materials';
 
 // 시연 과목(정보보호개론 1, 운영체제 2)에 맞춘 샘플. 요약은 직접 쓴 정리 노트를 가정한 예시이고
-// 강의자료·시험 문제 원문은 넣지 않는다. conceptId는 mocks/dashboard.ts와 같은 값
+// 강의자료·시험 문제 원문은 넣지 않는다. conceptId는 mocks/quizzes.ts와 같은 값
 const SAMPLE: MaterialDetail[] = [
   {
     id: 1,

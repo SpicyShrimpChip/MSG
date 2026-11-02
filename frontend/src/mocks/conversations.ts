@@ -3,7 +3,7 @@ import type { ConversationImport, ConversationImportResult } from '@/types';
 import { maskText } from '@/utils/conversation/mask';
 import { mockDelay } from './delay';
 
-// 서버가 할 개인정보 재검사를 흉내 낸다: 가리지 않은 개인정보가 남은 대화가 하나라도 있으면
+// 서버(PersonalInfoDetector)가 하는 개인정보 재검사를 흉내 낸다: 가리지 않은 개인정보가 남은 대화가 하나라도 있으면
 // 요청 전체를 저장하지 않고 422와 그 대화 목록을 돌려준다
 export async function mockImportConversations(
   input: ConversationImport,

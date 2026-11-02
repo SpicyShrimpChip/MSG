@@ -4,7 +4,7 @@ export interface PasswordRule {
   test: (password: string) => boolean;
 }
 
-// TODO(미결): 비밀번호 4가지 조건은 백엔드(주미)와 맞춰 확정한다. 서버에서도 같은 규칙으로 검사해야 한다
+// 비밀번호 4가지 조건. 백엔드 PasswordPolicy와 같은 규칙이라 바꾸면 두 곳을 함께 고친다 (서버는 72바이트 상한도 검사한다)
 export const PASSWORD_RULES: PasswordRule[] = [
   { id: 'length', label: '8자 이상', test: (pw) => pw.length >= 8 },
   { id: 'letter', label: '영문 포함', test: (pw) => /[A-Za-z]/.test(pw) },
