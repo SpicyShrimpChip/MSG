@@ -97,9 +97,7 @@ function MaterialCard({
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-ink-muted">
           <span className="truncate">{material.fileName}</span>
           {date && <span>{date}</span>}
-          {material.status === 'ready' && (
-            <span>퀴즈 {material.quizCount}개</span>
-          )}
+          {material.quizCount > 0 && <span>퀴즈 {material.quizCount}개</span>}
           <StatusChip status={material.status} />
         </p>
       </div>

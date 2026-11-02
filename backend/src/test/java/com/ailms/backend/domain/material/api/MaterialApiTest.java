@@ -15,6 +15,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.ailms.backend.domain.auth.dao.RefreshTokenRepository;
 import com.ailms.backend.domain.course.application.CourseService;
 import com.ailms.backend.domain.material.application.MaterialService;
+import com.ailms.backend.domain.quiz.dao.QuizRepository;
+import com.ailms.backend.domain.quiz.entity.Quiz;
 import com.ailms.backend.domain.user.dao.UserRepository;
 import com.ailms.backend.global.storage.FileCleanupService;
 import com.ailms.backend.global.storage.FileStorage;
@@ -30,6 +32,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -82,6 +85,8 @@ class MaterialApiTest {
 	private PlatformTransactionManager transactionManager;
 	@Autowired
 	private MutableClock clock;
+	@Autowired
+	private QuizRepository quizRepository;
 
 	private String token;
 	private String otherToken;
@@ -304,6 +309,31 @@ class MaterialApiTest {
 				.andExpect(jsonPath("$.data[0].quizCount").value(0))
 				.andExpect(jsonPath("$.data[0].aiSummary").doesNotExist())
 				.andExpect(jsonPath("$.data[0].storageKey").doesNotExist());
+	}
+
+	@Test
+	void 퀴즈_수는_분석_전_자료도_그_자료에_연결된_내_퀴즈만_센다() throws Exception {
+		long noteId = uploadedId(upload(token, courseId, "퀴즈 있는 노트", pdf("a.pdf")));
+		long emptyId = uploadedId(upload(token, courseId, "퀴즈 없는 노트", pdf("b.pdf")));
+		long myUserId = userRepository.findByEmail("me@example.com").orElseThrow().getId();
+		long otherUserId = userRepository.findByEmail("other@example.com").orElseThrow().getId();
+		LocalDateTime now = LocalDateTime.now();
+		quizRepository.save(Quiz.create(myUserId, courseId, noteId, "퀴즈 1", now));
+		quizRepository.save(Quiz.create(myUserId, courseId, noteId, "퀴즈 2", now));
+		// 자료 없이 만든 퀴즈와 남의 퀴즈는 세지 않는다 (남의 퀴즈가 내 자료 id를 가리키는 일은 없지만 소유자 조건도 확인)
+		quizRepository.save(Quiz.create(myUserId, courseId, null, "과목 퀴즈", now));
+		long otherCourseId = createCourse(otherToken, "남의 과목");
+		quizRepository.save(Quiz.create(otherUserId, otherCourseId, noteId, "남의 퀴즈", now));
+
+		mockMvc.perform(get("/api/materials").header(HttpHeaders.AUTHORIZATION, bearer(token)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data[?(@.id == " + noteId + ")].quizCount", contains(2)))
+				.andExpect(jsonPath("$.data[?(@.id == " + emptyId + ")].quizCount", contains(0)))
+				.andExpect(jsonPath("$.data[?(@.id == " + noteId + ")].status", contains("uploaded")));
+
+		mockMvc.perform(get("/api/materials/" + noteId).header(HttpHeaders.AUTHORIZATION, bearer(token)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.quizCount").value(2));
 	}
 
 	@Test

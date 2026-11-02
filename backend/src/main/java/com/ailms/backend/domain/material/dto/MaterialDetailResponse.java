@@ -20,8 +20,8 @@ public record MaterialDetailResponse(
 		@Schema(description = "AI가 쓴 요약. 분석 전이면 null") String aiSummary,
 		@Schema(description = "자료에서 뽑은 핵심 개념. 분석 전이면 빈 목록") List<ConceptResponse> concepts) {
 
-	public static MaterialDetailResponse from(Material material) {
-		MaterialSummaryResponse summary = MaterialSummaryResponse.from(material);
+	public static MaterialDetailResponse from(Material material, int quizCount) {
+		MaterialSummaryResponse summary = MaterialSummaryResponse.from(material, quizCount);
 		return new MaterialDetailResponse(summary.id(), summary.courseId(), summary.title(), summary.fileName(),
 				summary.createdAt(), summary.status(), summary.quizCount(), null, List.of());
 	}

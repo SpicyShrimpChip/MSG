@@ -7,6 +7,8 @@ import com.ailms.backend.domain.material.dto.MaterialDetailResponse;
 import com.ailms.backend.domain.material.dto.MaterialSummaryResponse;
 import com.ailms.backend.domain.material.dto.MaterialUploadResponse;
 import com.ailms.backend.domain.material.entity.Material;
+import com.ailms.backend.domain.quiz.dao.QuizRepository;
+import com.ailms.backend.domain.quiz.dao.QuizRepository.MaterialQuizCount;
 import com.ailms.backend.global.error.BusinessException;
 import com.ailms.backend.global.storage.FileCleanupService;
 import com.ailms.backend.global.storage.FileStorage;
@@ -20,8 +22,10 @@ import java.nio.file.StandardCopyOption;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -53,19 +57,25 @@ public class MaterialService {
 
 	private final MaterialRepository materialRepository;
 	private final CourseRepository courseRepository;
+	private final QuizRepository quizRepository;
 	private final MaterialFileInspector fileInspector;
 	private final FileStorage fileStorage;
 	private final FileCleanupService fileCleanupService;
 	private final Clock clock;
 
 	public List<MaterialSummaryResponse> getMaterials(Long userId) {
+		Map<Long, Long> quizCounts = quizRepository.countByMaterialOfUser(userId).stream()
+				.collect(Collectors.toMap(MaterialQuizCount::getMaterialId, MaterialQuizCount::getQuizCount));
 		return materialRepository.findAllByUserIdOrderByCreatedAtDescIdDesc(userId).stream()
-				.map(MaterialSummaryResponse::from)
+				.map(material -> MaterialSummaryResponse.from(material,
+						quizCounts.getOrDefault(material.getId(), 0L).intValue()))
 				.toList();
 	}
 
 	public MaterialDetailResponse getMaterial(Long userId, Long id) {
-		return MaterialDetailResponse.from(find(userId, id));
+		Material material = find(userId, id);
+		return MaterialDetailResponse.from(material,
+				(int) quizRepository.countByUserIdAndMaterialId(userId, material.getId()));
 	}
 
 	/**
