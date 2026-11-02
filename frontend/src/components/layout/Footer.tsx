@@ -6,7 +6,7 @@ function Footer() {
       <div className="mx-auto flex max-w-page flex-wrap justify-between gap-4 px-6 py-8 text-sm text-heading">
         <div className="flex flex-col gap-1.5">
           <span className="font-bold">ai-lms</span>
-          <span>© 2026 [SSC]</span>
+          <span>© 2026 Team SSC</span>
         </div>
         <nav aria-label="하단 메뉴" className="flex gap-5">
           <Link to="/about" className="hover:underline">
