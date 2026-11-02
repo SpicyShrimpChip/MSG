@@ -68,3 +68,4 @@
 - MySQL에서 PostgreSQL로 옮길 때 H2 테스트를 지키는 법
 - 긴 글에 쓰는 정규식이 1MB 요청 하나를 몇 분 동안 붙잡는다
 - `@Enumerated(STRING)` 열로 정렬하면 enum 순서가 아니라 글자 순이다
+- 머지 전 마이그레이션을 고치면 `pgTest`가 Flyway 검증 오류로 모두 실패한다
