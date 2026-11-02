@@ -4,7 +4,18 @@
 </div>
 -->
 
-<img src="docs/images/banner.svg" alt="학습 대시보드의 한 장면: 개념별 숙련도 막대와 AI가 쓴 설명" width="100%">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/banner-dark.svg">
+  <img src="docs/images/banner-light.svg" alt="ai-lms 학습 대시보드의 한 장면: 개념마다 GPT, Claude, Gemini가 따로 내린 판단과 같은 판단 수, AI가 쓴 설명" width="100%">
+</picture>
+
+<div align="center">
+
+![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black) ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?style=flat-square&logo=typescript&logoColor=white) ![Vite](https://img.shields.io/badge/Vite-8-646CFF?style=flat-square&logo=vite&logoColor=white) ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white) ![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.5-6DB33F?style=flat-square&logo=springboot&logoColor=white) ![Java](https://img.shields.io/badge/Java-17-ED8B00?style=flat-square&logo=openjdk&logoColor=white) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat-square&logo=postgresql&logoColor=white) ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-CI-2088FF?style=flat-square&logo=githubactions&logoColor=white) ![Claude](https://img.shields.io/badge/Claude-Code-D97757?style=flat-square&logo=claude&logoColor=white)
+
+**[화면 둘러보기 (예시 데이터)](https://lms-seven-tawny.vercel.app/)** · **[진행 현황](#진행-현황)** · **[로컬 실행](#로컬-실행)**
+
+</div>
 
 학습 자료와 ChatGPT, Claude에서 나눈 공부 대화를 분석해 개념별 강점과 보완할 점을 보여 주고,
 요약, 퀴즈, 커리큘럼으로 다음에 공부할 순서를 계속 다시 짜 주는 개인 맞춤형 LMS입니다.
@@ -38,29 +49,12 @@
 
 ## AI는 이렇게 씁니다
 
-파란 칸은 코드가 계산하는 단계, 보라 칸은 AI가 맡는 단계입니다. 서비스 화면에서도 같은 색으로 구분합니다.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/flow-dark.svg">
+  <img src="docs/images/flow-light.svg" alt="동작 순서 5단계: 내 컴퓨터에서 대화 파일을 읽고 개인정보를 가린다, 고른 대화만 서버로 보낸다, GPT·Claude·Gemini가 서로의 답을 보지 않고 따로 판단한다, 코드가 같은 판단 수와 근거 메시지를 확인한다, 대시보드에서 개념별 판단과 근거를 보고 내 의견을 남긴다" width="100%">
+</picture>
 
-```mermaid
-flowchart TD
-    A[대화 내보내기 파일] --> B[브라우저에서 파싱, 키워드 필터, 개인정보 마스킹]
-    B --> C[사용자가 고른 대화만 전송]
-    C --> D[LLM: 개념 분류<br/>이해 못 함, 재설명 요청, 스스로 활용]
-    D --> E[코드: 숙련도 점수 계산<br/>대화 분류 + 퀴즈 정답률]
-    E --> F[LLM: 판단 근거 설명]
-    E --> G[LLM: 화면 배치 JSON 제안]
-    G --> H[코드: 스키마 검증<br/>실패하면 기본 배치]
-    F --> I[학습 대시보드]
-    H --> I
-
-    classDef browser fill:#f9f6ee,stroke:#d3c9b4,color:#0d1b57
-    classDef code fill:#e8effc,stroke:#3168d2,color:#0d1b57
-    classDef ai fill:#fbf4fe,stroke:#86198f,color:#86198f
-    classDef screen fill:#0f2163,stroke:#0f2163,color:#ffffff
-    class A,B,C browser
-    class E,H code
-    class D,F,G ai
-    class I screen
-```
+서비스 화면에서도 같은 색으로 구분합니다. 회색은 내 브라우저, 파랑은 코드가 계산하는 단계, 보라는 AI가 맡는 단계입니다.
 
 | LLM이 하는 일 | LLM이 하지 않는 일 |
 | --- | --- |
@@ -75,22 +69,23 @@ flowchart TD
 
 | 기능 | 상태 | 내용 |
 | --- | --- | --- |
-| 회원가입, 로그인 | 동작 | 가입, 로그인, 로그인 유지, 로그아웃, 내 정보 조회 |
-| 공지사항 | 동작 | 목록 API 연결 |
-| AI 대화 가져오기 | 목업 데이터 | ChatGPT, Claude 내보내기 zip(3GB가 넘거나 끝이 잘린 파일 포함)을 브라우저에서 읽고 공부한 대화 고르기, 개인정보 가리기, 가린 곳 확인, 대화 미리 보기, 긴 대화 나눠 보내기까지. 서버 저장 API는 구현됐고 화면 연결은 점검 전 |
-| 학습 대시보드 | 목업 데이터 | 개념별 숙련도, 판단 근거, 추천 순서, 배치 JSON 검증 |
-| 내 과목 | 목업 데이터 | 과목과 키워드 등록, 수정, 삭제 |
-| 학습 자료 업로드 | 목업 데이터 | 과목 선택, 이용 권한 확인, 파일 형식과 크기 검사 |
-| AI 분석 (LLM 호출) | 로직 구현 | GPT, Claude, Gemini가 같은 기준으로 따로 판단하고 개념별로 의견을 비교하는 코드와 피드백 API까지 구현. API 키가 없어 실제 모델 호출은 아직 하지 않았고, 대시보드 연결과 점수 계산은 남음 |
-| 자료 요약, 퀴즈, 커리큘럼 | 예정 | 화면 자리만 있음 |
+| 회원가입, 로그인 | 동작 | 가입, 로그인, 로그인 유지, 로그아웃, 내 정보 조회, AI 대화 분석 동의 변경 |
+| 공지사항 | 동작 | 목록·상세, 관리자 공지 작성·수정·삭제 |
+| 내 과목 | 동작 | 과목과 키워드 등록, 수정, 삭제 |
+| 학습 자료 | API 연결 | 목록은 실제 서버로 확인. 상세·삭제·올리기(과목 선택, 이용 권한 확인, 파일 형식·크기·내용 검사)는 API까지 연결했고 실제 서버 점검 전 |
+| AI 대화 가져오기 | 동작 | ChatGPT, Claude 내보내기 zip(3GB가 넘거나 끝이 잘린 파일 포함)을 브라우저에서 읽고 공부한 대화 고르기, 개인정보 가리기, 가린 곳 확인, 대화 미리 보기, 긴 대화 나눠 보내기, 서버 저장과 개인정보 재검사 |
+| 퀴즈 | 동작 | 객관식 퀴즈 목록·풀기·제출·서버 채점·최근 결과. 퀴즈 만들기(AI 생성)는 예정 |
+| 학습 대시보드 | API 연결 | 학습 분석 API로 개념별 판단, 모델별 판단과 근거, 모델 연결 상태, 추천 순서, "이 판단, 내 생각과 맞나요?" 피드백. 배치 JSON 검증은 목업 배치로만 확인 |
+| AI 분석 (LLM 호출) | 로직 구현 | GPT, Claude, Gemini가 같은 기준으로 따로 판단하고 개념별로 의견을 비교하는 코드와 피드백 API까지 구현. API 키가 없어 실제 모델 호출은 아직 하지 않았고, 점수 계산(산식 미정)은 남음 |
+| 자료 요약, 커리큘럼 | 예정 | 화면 자리만 있음 |
 | 자료 기반 챗봇 | 예정 | |
 | AI 요약 영상 | 준비 중 | |
 
-동작은 실제 API로 동작, 로직 구현은 핵심 로직과 테스트까지 완료, 목업 데이터는 화면은 완성됐고 데이터만 가짜라는 뜻입니다.
+동작은 실제 API로 동작, API 연결은 화면이 실제 API를 부르지만 일부 흐름은 아직 실제 서버나 실제 AI 모델로 확인하지 못했다는 뜻, 로직 구현은 핵심 로직과 테스트까지 완료라는 뜻입니다. 배포 주소는 백엔드가 아직 없어 모든 화면을 예시 데이터로 보여 줍니다.
 
 [![Frontend CI](https://github.com/SpicyShrimpChip/lms/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/SpicyShrimpChip/lms/actions/workflows/frontend-ci.yml) [![Backend CI](https://github.com/SpicyShrimpChip/lms/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/SpicyShrimpChip/lms/actions/workflows/backend-ci.yml)
 
-프론트 테스트 160개, 백엔드 테스트 179개(`@Test` 기준)가 해당 코드가 바뀐 PR마다 GitHub Actions에서 실행됩니다. 백엔드는 H2와 실제 PostgreSQL 16(pgvector) 두 환경에서 같은 테스트를 돌립니다.
+프론트 테스트 161개, 백엔드 테스트 183개(`@Test` 기준)가 해당 코드가 바뀐 PR마다 GitHub Actions에서 실행됩니다. 백엔드는 H2와 실제 PostgreSQL 16(pgvector) 두 환경에서 같은 테스트를 돌립니다.
 
 ## 설계 원칙
 
@@ -102,13 +97,11 @@ flowchart TD
 
 ## 기술 스택
 
-![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black) ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?style=flat-square&logo=typescript&logoColor=white) ![Vite](https://img.shields.io/badge/Vite-8-646CFF?style=flat-square&logo=vite&logoColor=white) ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white) ![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.5-6DB33F?style=flat-square&logo=springboot&logoColor=white) ![Java](https://img.shields.io/badge/Java-17-ED8B00?style=flat-square&logo=openjdk&logoColor=white) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat-square&logo=postgresql&logoColor=white) ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-CI-2088FF?style=flat-square&logo=githubactions&logoColor=white) ![Claude](https://img.shields.io/badge/Claude-Code-D97757?style=flat-square&logo=claude&logoColor=white)
-
 | 영역 | 기술 |
 | --- | --- |
 | Frontend | React 19, TypeScript 6, Vite 8, Tailwind CSS 4, React Router 7, TanStack Query 5, Zustand 5, Axios, zod, Motion, Vitest |
 | Backend | Spring Boot 3.5, Java 17, Gradle, Spring Security(JWT), Spring Data JPA, Flyway, PostgreSQL 16 + pgvector, H2(테스트) |
-| LLM | 제공사 미정. 여러 모델의 판단을 비교·통합할 수 있는 구조 |
+| LLM | OpenAI(GPT), Anthropic(Claude), Google(Gemini) 클라이언트. 모델 이름과 호출 한도는 미정이라 환경변수로 둠 |
 | 개발 환경 | GitHub Actions, ESLint, Prettier, Husky + lint-staged, Renovate, Claude Code |
 
 ## 팀
@@ -124,8 +117,8 @@ flowchart TD
 
 ## 다음 계획
 
-- **중간 심사까지:** AI 대화 가져오기 서버 저장 연결, 실제 LLM 1개로 개념 분류, 대시보드를 실제 데이터로 연결
-- **2단계:** 자료 요약·퀴즈·커리큘럼(대화 기록이 적은 사용자의 시작 경로), 자료 기반 챗봇, 여러 모델 판단 통합
+- **중간 심사까지:** 실제 LLM으로 개념 분석을 한 번 돌려 대시보드와 피드백까지 확인, 자료 올리기를 실제 서버로 점검
+- **2단계:** 자료 요약·퀴즈 만들기·커리큘럼(대화 기록이 적은 사용자의 시작 경로), 퀴즈 결과와 대화 분석을 합친 숙련도 점수, 자료 기반 챗봇
 - **이후 후보:** Gemini 대화 가져오기, 이미지 속 글자 마스킹, 약점 변화 추이
 
 ## 폴더 구조

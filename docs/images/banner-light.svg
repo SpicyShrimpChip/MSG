@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-labelledby="title desc">
+<title id="title">ai-lms</title>
+<desc id="desc">AI와 나눈 공부 대화를 GPT·Claude·Gemini가 따로 읽고 개념별로 비교한 학습 대시보드의 한 장면. 점수 대신 모델별 판단과 같은 판단 수, AI가 쓴 설명을 보여 준다.</desc>
+<defs><style>
+.t { font-family: Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', system-ui, sans-serif; }
+.in { opacity: 0; animation: up .6s cubic-bezier(.2,.7,.2,1) forwards; }
+.pop { opacity: 0; transform-box: fill-box; transform-origin: center; animation: pop .45s cubic-bezier(.3,1.5,.5,1) forwards; }
+.type { transform-box: fill-box; transform-origin: left; transform: scaleX(0); animation: type 2.4s steps(34, end) forwards; }
+.caret { opacity: 0; animation: blink 1s step-end infinite; }
+.flow { stroke-dasharray: 6 8; animation: flow 1.2s linear infinite; }
+.pulse { transform-box: fill-box; transform-origin: center; animation: pulse 2.4s ease-in-out infinite; }
+@keyframes up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes pop { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: none; } }
+@keyframes type { to { transform: scaleX(1); } }
+@keyframes blink { 50% { opacity: 1; } }
+@keyframes flow { to { stroke-dashoffset: -28; } }
+@keyframes pulse { 0%,100% { opacity: .55; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .in, .pop, .caret { animation: none; opacity: 1; transform: none; }
+  .type { animation: none; transform: none; }
+  .flow, .pulse { animation: none; }
+}
+</style>
+<radialGradient id="g1" cx="80%" cy="10%" r="60%"><stop offset="0" stop-color="#dbe6ff"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/></radialGradient>
+<radialGradient id="g2" cx="95%" cy="100%" r="45%"><stop offset="0" stop-color="#efe8ff"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/></radialGradient>
+<filter id="sh" x="-10%" y="-10%" width="120%" height="140%"><feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#133b9e" flood-opacity="0.10"/></filter>
+<pattern id="dots" width="22" height="22" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.2" fill="#c9d3e3"/></pattern>
+</defs>
+<rect x=".5" y=".5" width="1199" height="419" rx="20" fill="#ffffff" stroke="#e3e9f3"/>
+<rect x=".5" y=".5" width="1199" height="419" rx="20" fill="url(#dots)" opacity=".5"/>
+<rect x=".5" y=".5" width="1199" height="419" rx="20" fill="url(#g1)"/>
+<rect x=".5" y=".5" width="1199" height="419" rx="20" fill="url(#g2)"/>
+<g class="in" style="animation-delay:0.00s"><rect x="64" y="70" width="168" height="30" rx="15" fill="#eaf1ff"/><circle cx="84" cy="85" r="4" fill="#1d4ed8" class="pulse"/><text x="96" y="90" class="t" font-size="13.5" font-weight="700" fill="#1d4ed8">개인 맞춤형 AI LMS</text></g>
+<text x="62" y="168" class="t in" style="animation-delay:0.10s" font-size="68" font-weight="800" letter-spacing="-1.5" fill="#0f1b33">ai-lms</text>
+<g class="in" style="animation-delay:0.25s"><text x="64" y="214" class="t" font-size="23" font-weight="600" fill="#1e3a8a">AI와 나눈 공부 대화를 세 모델이 따로 읽고</text><text x="64" y="248" class="t" font-size="23" font-weight="600" fill="#1e3a8a">개념별 이해 정도를 근거와 함께 보여 줍니다</text></g>
+<g class="in" style="animation-delay:0.45s"><rect x="64" y="292" width="208" height="32" rx="16" fill="#eaf1ff" stroke="#e3e9f3"/><text x="168.0" y="313" text-anchor="middle" class="t" font-size="13.5" font-weight="700" fill="#1d4ed8">브라우저에서 개인정보 가리기</text></g>
+<g class="in" style="animation-delay:0.57s"><rect x="282" y="292" width="206" height="32" rx="16" fill="#f8f5ff" stroke="#ddd2fb"/><text x="385.0" y="313" text-anchor="middle" class="t" font-size="13.5" font-weight="700" fill="#6d28d9">GPT · Claude · Gemini 비교</text></g>
+<g class="in" style="animation-delay:0.69s"><rect x="64" y="334" width="150" height="32" rx="16" fill="#eaf1ff" stroke="#e3e9f3"/><text x="139.0" y="355" text-anchor="middle" class="t" font-size="13.5" font-weight="700" fill="#1d4ed8">점수는 규칙 코드로</text></g>
+<g class="in" style="animation-delay:0.20s"><rect x="610" y="44" width="540" height="332" rx="16" fill="#ffffff" stroke="#e3e9f3" filter="url(#sh)"/>
+<text x="638" y="84" class="t" font-size="15.5" font-weight="800" fill="#0f1b33">정보보호개론 · 개념별 판단</text>
+<text x="1122" y="84" text-anchor="end" class="t" font-size="12" fill="#5f6b80">대화 12개 분석</text>
+<line x1="634" y1="100" x2="1126" y2="100" stroke="#e3e9f3"/></g>
+<g class="in" style="animation-delay:0.35s"><text x="803" y="124" text-anchor="middle" class="t" font-size="11.5" font-weight="700" fill="#5f6b80">GPT</text><text x="897" y="124" text-anchor="middle" class="t" font-size="11.5" font-weight="700" fill="#5f6b80">Claude</text><text x="991" y="124" text-anchor="middle" class="t" font-size="11.5" font-weight="700" fill="#5f6b80">Gemini</text><text x="1122" y="124" text-anchor="end" class="t" font-size="11.5" font-weight="700" fill="#5f6b80">같은 판단</text></g>
+<text x="638" y="156" class="t in" style="animation-delay:0.55s" font-size="14.5" font-weight="600" fill="#0f1b33">대칭키 암호</text>
+<g class="pop" style="animation-delay:0.63s"><rect x="760" y="138" width="86" height="26" rx="13" fill="#e7f6ec" stroke="#e7f6ec"/><path d="M772 151 l4 4 l7 -8" fill="none" stroke="#15803d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><text x="788" y="155.5" class="t" font-size="12.5" font-weight="700" fill="#15803d">이해</text></g>
+<g class="pop" style="animation-delay:0.71s"><rect x="854" y="138" width="86" height="26" rx="13" fill="#e7f6ec" stroke="#e7f6ec"/><path d="M866 151 l4 4 l7 -8" fill="none" stroke="#15803d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><text x="882" y="155.5" class="t" font-size="12.5" font-weight="700" fill="#15803d">이해</text></g>
+<g class="pop" style="animation-delay:0.79s"><rect x="948" y="138" width="86" height="26" rx="13" fill="#e7f6ec" stroke="#e7f6ec"/><path d="M960 151 l4 4 l7 -8" fill="none" stroke="#15803d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><text x="976" y="155.5" class="t" font-size="12.5" font-weight="700" fill="#15803d">이해</text></g>
+<text x="1122" y="156" text-anchor="end" class="t in" style="animation-delay:0.90s" font-size="12.5" font-weight="700" fill="#45526b">3개 모두 같음</text>
+<line x1="634" y1="172" x2="1126" y2="172" stroke="#e3e9f3" stroke-dasharray="2 4" class="in" style="animation-delay:0.55s"/>
+<text x="638" y="198" class="t in" style="animation-delay:0.83s" font-size="14.5" font-weight="600" fill="#0f1b33">공개키 암호</text>
+<g class="pop" style="animation-delay:0.91s"><rect x="760" y="180" width="86" height="26" rx="13" fill="#eaf1ff" stroke="#eaf1ff"/><circle cx="777" cy="193" r="6" fill="none" stroke="#1d4ed8" stroke-width="1.8"/><path d="M777 187 a6 6 0 0 1 0 12 z" fill="#1d4ed8"/><text x="788" y="197.5" class="t" font-size="12.5" font-weight="700" fill="#1d4ed8">부분</text></g>
+<g class="pop" style="animation-delay:0.99s"><rect x="854" y="180" width="86" height="26" rx="13" fill="#eaf1ff" stroke="#eaf1ff"/><circle cx="871" cy="193" r="6" fill="none" stroke="#1d4ed8" stroke-width="1.8"/><path d="M871 187 a6 6 0 0 1 0 12 z" fill="#1d4ed8"/><text x="882" y="197.5" class="t" font-size="12.5" font-weight="700" fill="#1d4ed8">부분</text></g>
+<g class="pop" style="animation-delay:1.07s"><rect x="948" y="180" width="86" height="26" rx="13" fill="#fdecea" stroke="#fdecea"/><circle cx="965" cy="193" r="6.5" fill="none" stroke="#c0392b" stroke-width="1.8"/><path d="M965 189.5 v4 M965 196.5 v.4" stroke="#c0392b" stroke-width="1.8" stroke-linecap="round"/><text x="976" y="197.5" class="t" font-size="12.5" font-weight="700" fill="#c0392b">부족</text></g>
+<text x="1122" y="198" text-anchor="end" class="t in" style="animation-delay:1.18s" font-size="12.5" font-weight="700" fill="#45526b">3개 중 2개 같음</text>
+<line x1="634" y1="214" x2="1126" y2="214" stroke="#e3e9f3" stroke-dasharray="2 4" class="in" style="animation-delay:0.83s"/>
+<text x="638" y="240" class="t in" style="animation-delay:1.11s" font-size="14.5" font-weight="600" fill="#0f1b33">전자서명</text>
+<g class="pop" style="animation-delay:1.19s"><rect x="760" y="222" width="86" height="26" rx="13" fill="#fdecea" stroke="#fdecea"/><circle cx="777" cy="235" r="6.5" fill="none" stroke="#c0392b" stroke-width="1.8"/><path d="M777 231.5 v4 M777 238.5 v.4" stroke="#c0392b" stroke-width="1.8" stroke-linecap="round"/><text x="788" y="239.5" class="t" font-size="12.5" font-weight="700" fill="#c0392b">부족</text></g>
+<g class="pop" style="animation-delay:1.27s"><rect x="854" y="222" width="86" height="26" rx="13" fill="#fdecea" stroke="#fdecea"/><circle cx="871" cy="235" r="6.5" fill="none" stroke="#c0392b" stroke-width="1.8"/><path d="M871 231.5 v4 M871 238.5 v.4" stroke="#c0392b" stroke-width="1.8" stroke-linecap="round"/><text x="882" y="239.5" class="t" font-size="12.5" font-weight="700" fill="#c0392b">부족</text></g>
+<g class="pop" style="animation-delay:1.35s"><rect x="948" y="222" width="86" height="26" rx="13" fill="#fdecea" stroke="#fdecea"/><circle cx="965" cy="235" r="6.5" fill="none" stroke="#c0392b" stroke-width="1.8"/><path d="M965 231.5 v4 M965 238.5 v.4" stroke="#c0392b" stroke-width="1.8" stroke-linecap="round"/><text x="976" y="239.5" class="t" font-size="12.5" font-weight="700" fill="#c0392b">부족</text></g>
+<text x="1122" y="240" text-anchor="end" class="t in" style="animation-delay:1.46s" font-size="12.5" font-weight="700" fill="#45526b">3개 모두 같음</text>
+<line x1="634" y1="256" x2="1126" y2="256" stroke="#e3e9f3" stroke-dasharray="2 4" class="in" style="animation-delay:1.11s"/>
+<text x="638" y="282" class="t in" style="animation-delay:1.39s" font-size="14.5" font-weight="600" fill="#0f1b33">해시 함수</text>
+<g class="pop" style="animation-delay:1.47s"><rect x="760" y="264" width="86" height="26" rx="13" fill="none" stroke="#c9d3e3" stroke-dasharray="4 3"/><text x="772.5" y="282" class="t" font-size="13" font-weight="800" fill="#5f6b80">?</text><text x="788" y="281.5" class="t" font-size="12.5" font-weight="700" fill="#5f6b80">근거 부족</text></g>
+<g class="pop" style="animation-delay:1.55s"><rect x="854" y="264" width="86" height="26" rx="13" fill="none" stroke="#c9d3e3" stroke-dasharray="4 3"/><text x="866.5" y="282" class="t" font-size="13" font-weight="800" fill="#5f6b80">?</text><text x="882" y="281.5" class="t" font-size="12.5" font-weight="700" fill="#5f6b80">근거 부족</text></g>
+<g class="pop" style="animation-delay:1.63s"><rect x="948" y="264" width="86" height="26" rx="13" fill="none" stroke="#c9d3e3" stroke-dasharray="4 3"/><text x="960.5" y="282" class="t" font-size="13" font-weight="800" fill="#5f6b80">?</text><text x="976" y="281.5" class="t" font-size="12.5" font-weight="700" fill="#5f6b80">근거 부족</text></g>
+<text x="1122" y="282" text-anchor="end" class="t in" style="animation-delay:1.74s" font-size="12.5" font-weight="700" fill="#45526b">3개 모두 같음</text>
+<defs><clipPath id="clip"><rect x="662" y="338" width="440" height="22" class="type" style="animation-delay:2.1s"/></clipPath></defs>
+<g class="in" style="animation-delay:1.80s"><rect x="634" y="310" width="492" height="50" rx="12" fill="#f8f5ff" stroke="#ddd2fb"/>
+<path d="M654 321 l2 5.2 l5.2 2 l-5.2 2 l-2 5.2 l-2 -5.2 l-5.2 -2 l5.2 -2 z" fill="#6d28d9"/>
+<text x="666" y="333" class="t" font-size="11.5" font-weight="800" fill="#6d28d9">AI 설명</text>
+<text x="1110" y="333" text-anchor="end" class="t" font-size="11" fill="#5f6b80">근거 메시지 2개</text></g>
+<text x="662" y="352" class="t" font-size="13.5" fill="#0f1b33" clip-path="url(#clip)">공개키 암호에서 개인키·공개키 역할을 두 번 다시 물어봤어요.</text>
+<rect x="1054" y="340" width="2" height="15" fill="#6d28d9" class="caret" style="animation-delay:4.5s"/>
+</svg>

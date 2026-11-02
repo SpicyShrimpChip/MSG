@@ -42,7 +42,7 @@ Swagger UI: `/swagger-ui/index.html` — 프론트와 API를 맞출 때 이 문�
 ## API 규칙
 
 - **프론트가 기대하는 API·응답 형식·우선순위는 `docs/frontend-requests.md`에 있다. API를 만들기 전에 먼저 읽는다.**
-- 경로: `/api/<기능>` (예: `/api/materials`, `/api/analysis/dashboard`)
+- 경로: `/api/<기능>` (예: `/api/materials`, `/api/analysis/courses/{courseId}/runs`)
 - 응답은 항상 `ApiResponse<T>`: `{ success, message, data }`
 - 요청 DTO는 Bean Validation(`@Valid`, `@NotBlank` 등)으로 검증한다.
 - 오류는 전역 예외 처리에서 일관된 형식과 적절한 HTTP 상태 코드로 반환하고, 스택트레이스나 내부 정보를 노출하지 않는다.
@@ -53,7 +53,7 @@ Swagger UI: `/swagger-ui/index.html` — 프론트와 API를 맞출 때 이 문�
 - 비밀번호는 BCrypt로 해시. 평문 저장·로그 출력 금지.
 - 모든 사용자 데이터 조회·수정은 로그인 사용자 소유인지 확인한다 (다른 사용자 id로 접근 차단).
 - DB 접속 정보, JWT 시크릿, LLM API 키, AWS 키는 `application.yaml`에 환경변수 참조로만 쓴다.
-- CORS 허용 출처는 설정값으로 관리한다 (로컬: `http://localhost:5173`).
+- CORS 허용 출처는 설정값으로 관리한다 (로컬: `http://localhost:5173`·`5174`, 운영: 환경변수 `CORS_ALLOWED_ORIGINS`).
 - 업로드 파일은 확장자·크기와 **파일 내용**(실제 형식)을 검증한다(`MaterialFileInspector`). 브라우저가 보낸 MIME은 믿지 않고, 저장 위치(key)는 서버가 만들며 사용자가 보낸 파일 이름을 쓰지 않는다.
 - DB 행과 저장소 파일을 함께 지울 때는 행 삭제 트랜잭션에서 `FileCleanupService.deleteAfterCommit`으로 삭제 작업을 남긴다(커밋 뒤 파일 삭제, 실패하면 주기 작업이 다시 시도). 파일을 먼저 지우지 않는다.
 
