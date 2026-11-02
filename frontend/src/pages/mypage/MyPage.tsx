@@ -165,6 +165,9 @@ function MaskWordsSection({ me }: { me: User }) {
   );
 }
 
+// TODO: 백엔드 탈퇴 API(DELETE /api/users/me)가 생기면 true로 바꾸고 안내 문구를 지운다
+const ACCOUNT_DELETION_READY = false;
+
 // 탈퇴: 서버가 내 모든 데이터를 지운 뒤 브라우저의 화면 데이터와 저장한 가릴 단어도 비우고 첫 화면으로 간다
 function DeleteAccountSection({ me }: { me: User }) {
   const queryClient = useQueryClient();
@@ -194,11 +197,14 @@ function DeleteAccountSection({ me }: { me: User }) {
         가져온 AI 대화, 분석 결과와 이 브라우저에 저장한 가릴 단어가 모두
         지워져요.
       </p>
+      {!ACCOUNT_DELETION_READY && (
+        <p className="text-body text-ink-soft">탈퇴 기능은 준비 중이에요.</p>
+      )}
       <ErrorText error={mutation.error} />
       <div>
         <Button
           variant="secondary"
-          disabled={mutation.isPending}
+          disabled={!ACCOUNT_DELETION_READY || mutation.isPending}
           onClick={() => setConfirming(true)}
         >
           탈퇴하기
@@ -252,7 +258,7 @@ function MyPage() {
         <EmptyState
           icon={<UserRound size={24} aria-hidden="true" />}
           title="로그인하면 볼 수 있어요"
-          description="AI 대화 분석 동의를 철회하거나, 탈퇴하고 내 데이터를 지울 수 있어요."
+          description="AI 대화 분석 동의를 철회하고 저장된 데이터를 관리할 수 있어요."
           action={{ label: '로그인하기', to: '/login' }}
         />
       )}

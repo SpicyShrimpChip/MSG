@@ -89,8 +89,8 @@ function ConceptsTab({ material }: { material: MaterialDetail }) {
   return (
     <div className="flex flex-col gap-4">
       <p className="text-body text-ink-soft">
-        이 자료에서 다루는 개념 {material.concepts.length}개예요. 퀴즈를 풀면
-        개념별 숙련도에 반영돼요.
+        이 자료에서 다루는 개념 {material.concepts.length}개예요. 퀴즈 결과를
+        개념별 숙련도에 반영하는 기능은 준비 중이에요.
       </p>
       <ul className="grid gap-3 md:grid-cols-2">
         {material.concepts.map((concept) => (
@@ -129,7 +129,7 @@ function MaterialQuizzes({ materialId }: { materialId: number }) {
       <EmptyState
         icon={<ListChecks size={24} aria-hidden="true" />}
         title="이 자료로 만든 퀴즈가 아직 없어요"
-        description="퀴즈를 풀면 결과가 개념별 숙련도에 반영돼요."
+        description="퀴즈 결과를 개념별 숙련도에 반영하는 기능은 준비 중이에요."
         action={{ label: '퀴즈 목록 보기', to: '/quizzes' }}
       />
     );
