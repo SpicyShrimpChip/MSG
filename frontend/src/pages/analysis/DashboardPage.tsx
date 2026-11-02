@@ -154,7 +154,7 @@ function CourseAnalysis({ course }: { course: Course }) {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-body text-ink-soft">
-          연결된 모델 {providers.length}개 중 {configured}개
+          모델 {providers.length}개 중 {configured}개 연결됨
         </p>
         <div className="flex flex-wrap items-center gap-3">
           {run && (
