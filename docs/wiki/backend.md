@@ -50,7 +50,7 @@
 - 해결: 조회는 정렬 없이 하고 Java에서 `Comparator.comparing(엔티티::getProvider)`로 enum 순서대로 정렬한다.
 - 다음에는: 화면 순서가 중요한 enum은 정렬을 Java에서 하거나 순서용 숫자 열을 따로 둔다.
 
-## 머지 전 마이그레이션을 고치면 `pgTest`가 Flyway 검증 오류로 모두 실패한다 (2026-11-02, #PR)
+## 머지 전 마이그레이션을 고치면 `pgTest`가 Flyway 검증 오류로 모두 실패한다 (2026-11-02, #107)
 
 - 상황: 새 `V6`으로 `pgTest`를 한 번 돌린 뒤 같은 파일의 표 이름을 바꾸고 다시 돌리자 모든 통합 테스트가 `FlywayValidateException`으로 멈췄다. H2 `test`는 통과했다.
 - 원인: `ai_lms_test`는 테스트 사이에 지워지지 않아 처음 적용한 `V6`의 체크섬이 `flyway_schema_history`에 남아 있다. H2는 매번 새로 만들어서 문제가 안 보인다.
