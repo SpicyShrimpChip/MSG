@@ -24,7 +24,7 @@ function AnalysisSummaryPanel({
 }: AnalysisSummaryPanelProps) {
   const models = countJudgingModels(run);
   const items = [
-    { label: '읽은 대화', value: `${run.input.conversationCount}개` },
+    { label: '분석한 대화', value: `${run.input.conversationCount}개` },
     { label: '읽은 메시지', value: `${run.input.messageCount}개` },
     { label: '판단한 모델', value: `${models.total}개 중 ${models.judged}개` },
     {
