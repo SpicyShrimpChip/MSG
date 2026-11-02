@@ -38,7 +38,8 @@ function QuizList() {
   return (
     <div className="flex flex-col gap-8">
       <p className="text-body text-ink-soft">
-        퀴즈 {quizzes.length}개 · 채점 결과는 개념별 숙련도의 판단 근거로 쓰여요
+        퀴즈 {quizzes.length}개 · 채점 결과를 개념별 숙련도에 반영하는 기능은
+        준비 중이에요
       </p>
       {groups.map((group) => (
         <section
