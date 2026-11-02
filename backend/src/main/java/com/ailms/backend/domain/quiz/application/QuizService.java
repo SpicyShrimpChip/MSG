@@ -29,7 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 내 퀴즈 풀기와 채점. 사용자 id는 항상 토큰의 값만 받고, 남의 퀴즈는 없는 퀴즈와 같게 404로 응답한다.
  * 풀기 전 응답에는 정답이 없고, 채점은 QuizGrader가 한다. 같은 퀴즈를 여러 번 풀면 제출 기록이 쌓인다.
- * 퀴즈 만들기(AI 생성)는 아직 없다. TODO(미결): 자료로 문제를 만드는 기능은 모델 키·이름이 정해지면 global/llm으로 붙인다.
+ * 퀴즈 만들기(AI 생성)는 아직 없다. TODO: 자료로 문제를 만드는 기능을 global/llm 클라이언트로 붙인다.
  */
 @Service
 @RequiredArgsConstructor

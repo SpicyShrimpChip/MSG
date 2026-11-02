@@ -105,7 +105,7 @@ public class MaterialService {
 		deleteAll(materialRepository.findAllByUserIdAndCourseId(userId, courseId));
 	}
 
-	// 나중에 붙을 AI 결과(요약·개념·퀴즈 등)는 material을 외래 키(ON DELETE CASCADE)로 가지므로 행과 함께 지워진다.
+	// AI 결과(퀴즈는 V6부터, 요약·개념은 나중에)는 material을 외래 키(ON DELETE CASCADE)로 가지므로 행과 함께 지워진다.
 	// AI가 만든 파일이 생기면 그 storage key도 여기서 deleteAfterCommit에 함께 넘긴다
 	private void deleteAll(List<Material> materials) {
 		if (materials.isEmpty()) {

@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 
 /**
  * 올린 학습자료의 정보. 파일 내용은 저장소(FileStorage)의 storageKey 위치에 있다.
- * 나중에 붙을 AI 결과(요약·개념·퀴즈·조각)는 material.id를 외래 키(ON DELETE CASCADE)로 가지는 별도 테이블에 둔다.
+ * AI 결과는 material.id를 외래 키(ON DELETE CASCADE)로 가지는 별도 테이블에 둔다. 퀴즈(V6 quiz)는 이미 이렇게 붙었고, 요약·개념·조각은 나중에 같은 방식으로 붙인다.
  */
 @Entity
 @Table(name = "material")

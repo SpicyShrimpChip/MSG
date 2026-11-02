@@ -47,7 +47,8 @@ export function updateAiConsent(aiAnalysis: boolean): Promise<User> {
 }
 
 // 탈퇴: 서버가 내 모든 데이터를 지운다. 성공하면 브라우저 쪽 세션도 지운다
-// TODO: 백엔드 API가 준비되면 경로를 맞춘다 (제안: docs/frontend-requests.md "인증·마이페이지")
+// TODO: 백엔드 DELETE /api/users/me는 아직 없다(제안: docs/frontend-requests.md "인증·마이페이지").
+// 생기기 전까지 마이페이지 탈퇴 버튼을 막아 둔다(MyPage.tsx ACCOUNT_DELETION_READY)
 export async function deleteAccount(): Promise<void> {
   await request<null>({ method: 'DELETE', url: '/users/me' });
   useAuthStore.getState().clearSession();

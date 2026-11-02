@@ -14,7 +14,7 @@ public record MaterialSummaryResponse(
 		@Schema(allowableValues = {"uploaded", "processing", "ready", "failed"},
 				description = "uploaded: 저장 완료·AI 분석 전 / processing: 분석 중 / ready: 완료 / failed: 처리 실패")
 		String status,
-		@Schema(description = "이 자료로 만든 퀴즈 수. 퀴즈 기능 전이라 지금은 0") int quizCount) {
+		@Schema(description = "이 자료로 만든 퀴즈 수. 아직 세지 않아 항상 0 (TODO: quiz 표에서 센다)") int quizCount) {
 
 	public static MaterialSummaryResponse from(Material material) {
 		return new MaterialSummaryResponse(material.getId(), material.getCourseId(), material.getTitle(),

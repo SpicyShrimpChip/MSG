@@ -47,7 +47,7 @@ export interface QuizResult {
     choiceIndex: number; // 내가 고른 답
     correct: boolean;
     correctChoiceIndex: number; // 제출 뒤에만 알려 준다
-    // 이 문제가 다루는 개념. conceptId는 대시보드 ConceptMastery.conceptId와 같은 값
+    // 이 문제가 다루는 개념. conceptId는 백엔드 concept_key(학습 분석의 개념 키와 같은 규칙: 과목 키워드를 소문자로 맞춘 값)
     concepts: QuizConcept[];
     aiExplanation: string | null;
   }[];

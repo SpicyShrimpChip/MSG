@@ -5,7 +5,7 @@ import type { MasteryLevel } from '@/types';
 import { Dim, MaskSwap, Reveal, SlotItem } from './SceneMotion';
 
 // 스크롤 소개의 오른쪽 장면들 (브라우저 창 틀 안에 들어간다). 모두 화면 소개용 예시라서 끝에 "예시" 표시를 붙인다
-// (실제 사용자 데이터가 아니고, 대화·점수는 mocks/dashboard.ts의 시연 과목에 맞춘 값이다).
+// (실제 사용자 데이터가 아니고, 대화·점수는 mocks/analysis.ts의 시연 과목에 맞춘 값이다).
 // 장면이 들어오면 안의 요소가 차례로 나타난다 (SceneMotion)
 
 function Caption({ delay, children }: { delay: number; children: ReactNode }) {
