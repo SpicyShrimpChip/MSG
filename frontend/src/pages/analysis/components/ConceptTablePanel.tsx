@@ -1,93 +1,72 @@
-import { LevelBadge, ScoreBar } from '@/components';
-import type { ConceptMastery, StudySummary } from '@/types';
+import type { ConceptResult } from '@/types';
+import { cn, describeComparison } from '@/utils';
 import Panel from './Panel';
+import { ComparisonBadge } from './UnderstandingBadge';
 
 interface ConceptTablePanelProps {
-  concepts: ConceptMastery[];
-  summaries: StudySummary[];
+  concepts: ConceptResult[];
+  selected: string | null;
+  onSelect: (concept: string) => void;
   layoutReason?: string | null;
 }
 
-// 개념별 결과를 표 한 장으로 (PDF로 받을 때도 한눈에 보이도록). 점수가 낮은 개념부터
+// 개념마다 모델들의 판단을 한 줄로. 줄을 누르면 옆 영역에 모델별 판단과 근거가 나온다
 function ConceptTablePanel({
   concepts,
-  summaries,
+  selected,
+  onSelect,
   layoutReason,
 }: ConceptTablePanelProps) {
-  const sorted = [...concepts].sort((a, b) => a.score - b.score);
-  const courseName = (courseId: number) =>
-    summaries.find((summary) => summary.courseId === courseId)?.courseName ??
-    '';
-
   return (
     <Panel
-      title="개념별 상세 결과"
-      description="숙련도와 그 판단에 쓴 대화·퀴즈 기록 수예요."
+      title="개념별 판단"
+      description="판단 개수는 정확도가 아니라 몇 개 모델이 같은 판단을 했는지예요."
       layoutReason={layoutReason}
     >
       <div className="overflow-x-auto">
-        <table className="w-full min-w-160 border-collapse text-body">
+        <table className="w-full min-w-110 border-collapse text-body">
           <thead>
-            <tr className="border-t-2 border-heading bg-surface-muted text-caption text-ink-soft">
-              <th scope="col" className="px-3.5 py-3 text-left font-bold">
+            <tr className="bg-surface-muted text-caption text-ink-soft">
+              <th scope="col" className="px-3 py-2.5 text-left font-bold">
                 개념
               </th>
-              <th scope="col" className="px-3.5 py-3 text-left font-bold">
-                과목
+              <th scope="col" className="px-3 py-2.5 text-left font-bold">
+                모델들의 판단
               </th>
-              <th scope="col" className="w-1/3 px-3.5 py-3 text-left font-bold">
-                숙련도
-              </th>
-              <th scope="col" className="px-3.5 py-3 text-right font-bold">
-                대화 기록
-              </th>
-              <th scope="col" className="px-3.5 py-3 text-right font-bold">
-                퀴즈 기록
-              </th>
-              <th scope="col" className="px-3.5 py-3 text-center font-bold">
-                판단
+              <th scope="col" className="px-3 py-2.5 text-left font-bold">
+                판단한 모델
               </th>
             </tr>
           </thead>
           <tbody>
-            {sorted.map((concept) => {
-              const conversationCount = concept.evidence.filter(
-                (item) => item.source === 'conversation',
-              ).length;
-              const quizCount = concept.evidence.length - conversationCount;
+            {concepts.map((item) => {
+              const active = item.concept === selected;
               return (
-                <tr key={concept.conceptId} className="border-b border-line">
-                  <th
-                    scope="row"
-                    className="px-3.5 py-3.5 text-left font-bold text-heading"
-                  >
-                    {concept.name}
+                <tr
+                  key={item.concept}
+                  className={cn(
+                    'border-b border-line last:border-b-0',
+                    active && 'bg-primary-soft',
+                  )}
+                >
+                  <th scope="row" className="p-0 text-left font-bold">
+                    <button
+                      type="button"
+                      onClick={() => onSelect(item.concept)}
+                      aria-pressed={active}
+                      className="w-full px-3 py-3 text-left text-heading hover:text-primary"
+                    >
+                      {item.concept}
+                    </button>
                   </th>
-                  <td className="px-3.5 py-3.5 text-ink-soft">
-                    {courseName(concept.courseId)}
+                  <td className="px-3 py-3">
+                    <ComparisonBadge
+                      outcome={item.comparison.outcome}
+                      status={item.comparison.status}
+                    />
                   </td>
-                  <td className="px-3.5 py-3.5">
-                    <span className="flex items-center gap-3">
-                      <ScoreBar
-                        value={concept.score}
-                        level={concept.level}
-                        className="flex-1"
-                      />
-                      <span className="w-8 text-right font-bold text-heading">
-                        {concept.score}
-                      </span>
-                    </span>
-                  </td>
-                  <td className="px-3.5 py-3.5 text-right">
-                    {conversationCount}건
-                  </td>
-                  <td className="px-3.5 py-3.5 text-right">{quizCount}건</td>
-                  <td className="px-3.5 py-3.5 text-center">
-                    {concept.level === 'normal' ? (
-                      <span className="text-caption text-ink-muted">보통</span>
-                    ) : (
-                      <LevelBadge level={concept.level} />
-                    )}
+                  <td className="px-3 py-3 text-caption text-ink-soft">
+                    {describeComparison(item.comparison)}
                   </td>
                 </tr>
               );

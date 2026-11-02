@@ -265,9 +265,9 @@ ConversationSummary  = { id, courseId, source, title, createdAt: string | null, 
 - 과목을 지우면 그 과목에 가져온 대화도 지운다(과목 삭제 확인 문구에 적었다).
 - 남은 것: 저장한 대화 분석(개념 분류 → 숙련도 → 대시보드), 분석 상태 알림, 가져온 대화 목록·삭제 화면. 동의 철회 때 대화 삭제는 5-2에서 구현했다(위 "인증·마이페이지").
 
-### 학습 분석 (여러 AI 모델 비교) — 1차 구현됨 (11/1, 확정: Swagger `학습 분석`). 화면 연결 전
+### 학습 분석 (여러 AI 모델 비교) — 1차 구현됨 (11/1, 확정: Swagger `학습 분석`). 학습 대시보드에 연결함 (11/2)
 
-GPT·Claude·Gemini가 과목 하나의 가져온 대화를 **같은 기준으로 따로** 분석하고, 서버 코드가 개념(= 과목 키워드)마다 의견을 비교한다. 숙련도 점수는 아직 만들지 않는다. 학습 대시보드(`/api/analysis/dashboard`)는 그대로 목업이다.
+GPT·Claude·Gemini가 과목 하나의 가져온 대화를 **같은 기준으로 따로** 분석하고, 서버 코드가 개념(= 과목 키워드)마다 의견을 비교한다. 숙련도 점수는 아직 만들지 않는다. **학습 대시보드(`/analysis`)는 11/2부터 이 API(`providers`·`runs/latest`·`runs` 시작)로 그린다**(`frontend/src/api/analysis.api.ts`, 타입 `frontend/src/types/analysis.ts`, 목업 `frontend/src/mocks/analysis.ts`). 예전에 제안한 `/api/analysis/dashboard`는 만들지 않아도 된다(아래 "학습 대시보드").
 
 | 메서드 | 경로 | 요청 본문 | 응답 `data` |
 | --- | --- | --- | --- |
@@ -365,65 +365,30 @@ QuizResult  = {
   - AI 설명 문장 — 화면에서 보라색 "AI" 표시를 붙이므로 **코드 계산 값과 필드를 분리**해 주기
 - 대화 전송: 프론트는 사용자가 고른 대화만, 개인정보를 가린 상태로 보낸다. 원본 파일과 이미지는 보내지 않는다(이미지는 `[이미지]` 표시만 남김).
 
-### 학습 대시보드 — 목업
+### 학습 대시보드 — 학습 분석 API로 연결함 (11/2)
 
-화면: `/analysis` (학습분석 > 학습 대시보드). 프론트는 아래 모양의 가짜 데이터로 화면을 만들어 두었다(`frontend/src/types/analysis.ts`, `frontend/src/mocks/dashboard.ts`). 과목별 거르기는 프론트가 하므로 한 번에 다 보내 주면 된다.
+화면: `/analysis` (학습분석 > 학습 대시보드). 과목을 고르면 그 과목의 `runs/latest`를 보여 주고, "분석하기"로 `POST runs`를 부른다. 위 "학습 분석" 절의 응답을 그대로 쓰므로 **예전 제안 `GET /api/analysis/dashboard`(`DashboardData`: 숙련도 점수·강점/보완·과목별 학습량)는 만들지 않아도 된다.**
 
-| 메서드 | 경로                      | 응답 `data`                            |
-| ------ | ------------------------- | -------------------------------------- |
-| GET    | `/api/analysis/dashboard` | `DashboardData` (로그인한 사용자 것만) |
+- 영역은 `summary`(분석 요약) · `conceptTable`(개념별 판단) · `conceptDetail`(모델별 판단·근거) · `models`(모델 연결 상태) · `recommendation`(추천 학습 순서)이다. 숙련도 점수 막대·방사형 그래프·과목별 비중은 **점수 산식이 정해지면** 다시 붙인다(루트 `CLAUDE.md` 미결).
+- 키가 없어 모델이 하나도 연결되지 않으면 "연결된 AI 모델이 없어 지금은 분석할 수 없어요"를 보여 주고 분석 버튼을 막는다. 목업(배포 미리보기)에서는 "예시 데이터예요"를 표시한다.
+- 오류(403·400·409·429·503)는 서버 `message`를 그대로 보여 준다. 화면에 보일 문장이니 사용자에게 다음 행동을 알려 주는 말로 써 주기.
 
-```ts
-DashboardData = {
-  summaries: StudySummary[],        // 과목별 학습량
-  concepts: ConceptMastery[],       // 개념별 숙련도
-  recommendations: Recommendation[] // 과목별 추천 학습 순서
-}
-StudySummary = { courseId, courseName, conversationCount, quizCount, quizCorrectCount }
-ConceptMastery = {
-  conceptId: string, name: string, courseId: number,
-  score: number,                     // 0~100, 코드로 계산 (산식 미결)
-  level: "strength" | "normal" | "weakness",
-  evidence: Evidence[],              // 판단 근거 (코드)
-  aiExplanation: string | null       // AI 설명 (보라색 표시)
-}
-Evidence = {
-  id: string, source: "conversation" | "quiz", date: "2026-10-20",
-  summary: string,                   // 화면에 보여 줄 한 줄 요약
-  signal: "not_understood" | "asked_again" | "applied" | "quiz_correct" | "quiz_wrong"
-}
-Recommendation = { courseId: number, conceptIds: string[], aiReason: string } // 순서와 이유는 AI가 정함
-```
+### 학습 대시보드 동적 배치 — 프론트 준비됨, 서버는 선택
 
-- `ai`로 시작하는 필드만 LLM이 쓴 글이다. 점수·`level`·`evidence`는 코드가 정한다.
-- `evidence.summary`에 대화 원문을 길게 넣지 않는다. 한 줄 요약이면 충분하다.
-- 동적 배치는 아래 `layout` 필드로 받는다.
-
-### 학습 대시보드 동적 배치 — 목업
-
-LLM은 화면 코드를 만들지 않고, 정해진 영역의 순서·크기·이유만 JSON으로 준다. 프론트는 이 JSON을 zod로 검사해서 통과할 때만 그 배치로 보여 주고, 실패하면 기본 배치로 보여 준다(`frontend/src/utils/layout/dashboardLayout.ts`). backend `CLAUDE.md`대로 서버에서도 1차 검증해 주기.
-
-`DashboardData`에 `layout` 필드를 붙인다(없으면 기본 배치):
+LLM은 화면 코드를 만들지 않고, 정해진 영역의 순서·크기·이유만 JSON으로 준다. 프론트는 이 JSON을 zod로 검사해서 통과할 때만 그 배치로 보여 주고, 실패하거나 없으면 기본 배치로 보여 준다(`frontend/src/utils/layout/dashboardLayout.ts`). **지금 백엔드는 배치를 주지 않아 실제 화면은 항상 기본 배치다**(목업에만 예시 배치가 있다). 동적 배치를 살리려면 `AnalysisRun`에 `layout` 필드를 붙이면 된다(없으면 기본 배치, backend `CLAUDE.md`대로 서버에서도 1차 검증):
 
 ```ts
 layout = {
-  generatedAt: "2026-10-25T14:00:00",
   aiSummary: string, // 전체 배치 이유 (AI), 120자까지
   basis: {
     // 배치를 만들 때 AI에게 준 숫자 (코드가 센 값)
-    weaknessCount: number, // 보완 필요 개념 수
-    askedAgainCount: number, // 다시 설명 요청 횟수
+    notUnderstoodCount: number, // 다수 의견이 '이해 부족'인 개념 수
+    disagreementCount: number, // 의견이 갈린 개념 수
     conversationCount: number, // 분석한 대화 수
   },
   items: [
     {
-      component:
-        "summary" |
-        "mastery" |
-        "conceptDetail" |
-        "recommendation" |
-        "courseShare" |
-        "conceptTable", // 10/27 추가: 개념별 상세 결과 표
+      component: "summary" | "conceptTable" | "conceptDetail" | "models" | "recommendation",
       order: number, // 1부터, 겹치지 않게
       size: "wide" | "normal",
       aiReason: string, // 이 위치·크기인 이유 (AI), 80자까지
@@ -432,10 +397,9 @@ layout = {
 };
 ```
 
-- **영역 id에 `conceptTable`(개념별 상세 결과 표)이 10/27에 추가됐다.** 서버 검증의 허용 목록에도 넣어 주기. 배치에서 빠진 영역은 프론트가 기본 순서로 뒤에 붙이므로 모든 영역을 다 넣지 않아도 된다.
+- 배치에서 빠진 영역은 프론트가 기본 순서로 뒤에 붙이므로 모든 영역을 다 넣지 않아도 된다.
 - **AI에게는 코드가 계산한 숫자만 주고 이유를 쓰게 하기.** 프론트는 이유 옆에 `basis` 숫자를 같이 보여 주므로, AI가 숫자를 지어내면 사용자가 바로 알아챈다.
-- **매번 AI를 부르지 않기.** 새 대화·퀴즈 결과가 들어왔을 때만 새로 만들고, 만든 배치를 저장해 두었다가 대시보드 요청 때 같이 보낸다. `basis`도 그때 값을 저장해야 이유와 숫자가 어긋나지 않는다.
-- 저장 방법 제안(백엔드가 정할 부분): 사용자별로 만들 때마다 한 줄씩 쌓는 표 하나. `id`, `user_id`, `layout_json`(위 JSON 전체를 TEXT로, H2와 함께 쓰므로 DB 전용 JSON 타입은 피함), `model`(어떤 모델이 만들었는지), `created_at`. 지난 배치가 남아 있으면 2단계 "약점 변화 추이"에도 쓸 수 있다.
+- **매번 AI를 부르지 않기.** 분석을 새로 할 때 한 번 만들어 그 분석 결과와 함께 저장한다. `basis`도 그때 값을 저장해야 이유와 숫자가 어긋나지 않는다.
 
 ## 5. 정해 주면 프론트가 맞출 것
 
@@ -489,7 +453,7 @@ layout = {
 ## 5-5. 학습 분석 1차 백엔드 (11/1)
 
 - 마이그레이션 **`V5__create_learning_analysis.sql`** 을 썼다. **다음은 `V6`부터**다.
-- 위 "학습 분석 (여러 AI 모델 비교)" API를 추가했다. 프론트 코드는 바꾸지 않았다(학습 대시보드·퀴즈 화면은 목업 그대로). 화면을 붙일 때 `types/analysis.ts`에 위 타입을 추가하면 된다.
+- 위 "학습 분석 (여러 AI 모델 비교)" API를 추가했다. 11/2 프론트가 학습 대시보드를 이 API에 연결했다(위 "학습 대시보드"). 퀴즈 화면은 아직 목업이다.
 - 동의를 철회하면 대화와 함께 분석 결과도 지운다. 대화 한 건을 지우면 그 대화를 쓴 분석도 지운다. 학습 피드백은 사용자가 쓴 기록이라 남긴다.
 
 ## 6. 이 문서 고치는 법

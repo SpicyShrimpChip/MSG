@@ -1,157 +1,270 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { useSuspenseQuery } from '@tanstack/react-query';
-import { ChartColumn, Download, Sparkles } from 'lucide-react';
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from '@tanstack/react-query';
+import { ChartColumn, Download, LoaderCircle, Sparkles } from 'lucide-react';
 import * as m from 'motion/react-m';
-import { getDashboard } from '@/api';
+import {
+  ANALYSIS_QUERY_KEY,
+  getLatestAnalysis,
+  getProviders,
+  startAnalysis,
+  USE_MOCK,
+} from '@/api';
 import { FADE_UP } from '@/constants';
-import { AsyncBoundary, Button, EmptyState, SubPage } from '@/components';
-import type { DashboardComponentId } from '@/types';
+import {
+  AsyncBoundary,
+  Button,
+  EmptyState,
+  SelectInput,
+  SubPage,
+} from '@/components';
+import { useCourses } from '@/hooks';
+import type { AnalysisRun, Course, DashboardComponentId } from '@/types';
 import {
   DEFAULT_LAYOUT,
-  filterDashboard,
   parseDashboardLayout,
-  pickWeakestConcept,
+  sortByStudyOrder,
 } from '@/utils';
+import AnalysisSummaryPanel from './components/AnalysisSummaryPanel';
 import ConceptDetailPanel from './components/ConceptDetailPanel';
-import CourseFilter from './components/CourseFilter';
 import ConceptTablePanel from './components/ConceptTablePanel';
-import CourseSharePanel from './components/CourseSharePanel';
 import LayoutSummary from './components/LayoutSummary';
-import MasteryPanel from './components/MasteryPanel';
+import ModelStatusPanel from './components/ModelStatusPanel';
 import RecommendationPanel from './components/RecommendationPanel';
-import StudySummaryPanel from './components/StudySummaryPanel';
 
-function Dashboard() {
-  const { data } = useSuspenseQuery({
-    queryKey: ['dashboard'],
-    queryFn: getDashboard,
-  });
-  const [courseId, setCourseId] = useState<number | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+const latestKey = (courseId: number) =>
+  [...ANALYSIS_QUERY_KEY, 'latest', courseId] as const;
+
+// 분석 결과를 배치대로 그린다. 배치 JSON은 검증을 통과할 때만 쓰고, 아니면 기본 배치
+function AnalysisResult({ run }: { run: AnalysisRun }) {
+  const [selected, setSelected] = useState<string | null>(null);
   // AI 배치 대신 기본 배치로 보기 (사용자가 고른 경우)
   const [usingDefault, setUsingDefault] = useState(false);
 
-  // LLM이 만든 배치 JSON은 검증을 통과할 때만 쓰고, 아니면 기본 배치. 받아 올 때만 다시 검사한다
   const aiLayout = useMemo(
-    () => parseDashboardLayout(data.layout),
-    [data.layout],
+    () => parseDashboardLayout(run.layout),
+    [run.layout],
   );
   const layout = usingDefault ? DEFAULT_LAYOUT : aiLayout;
-
-  if (data.concepts.length === 0) {
-    return (
-      <EmptyState
-        icon={<ChartColumn size={24} aria-hidden="true" />}
-        title="아직 분석할 학습 기록이 없어요"
-        description="ChatGPT나 Claude와 공부한 대화를 가져오면 개념별 강점과 보완할 점을 보여 드려요."
-        action={{ label: '대화 가져오기', to: '/analysis/import' }}
-      />
-    );
-  }
-
-  const view = filterDashboard(data, courseId);
-  // 고른 개념이 지금 과목에 없으면 가장 약한 개념을 보여 준다
-  const selected =
-    view.concepts.find((item) => item.conceptId === selectedId) ??
-    pickWeakestConcept(view.concepts);
+  const concepts = useMemo(
+    () => sortByStudyOrder(run.concepts),
+    [run.concepts],
+  );
+  // 처음엔 추천 순서 첫 개념을 자세히 보여 준다
+  const current =
+    concepts.find((item) => item.concept === selected) ?? concepts[0] ?? null;
 
   // 영역 id → 화면. 배치 JSON에는 이 id만 올 수 있다
   const renderComponent = (
     id: DashboardComponentId,
     reason: string | null,
-    wide: boolean,
   ): ReactNode => {
     switch (id) {
       case 'summary':
-        return (
-          <StudySummaryPanel summaries={view.summaries} layoutReason={reason} />
-        );
-      case 'mastery':
-        return (
-          <MasteryPanel
-            concepts={view.concepts}
-            selectedId={selected?.conceptId ?? null}
-            onSelect={setSelectedId}
-            layoutReason={reason}
-            wide={wide}
-          />
-        );
-      case 'conceptDetail':
-        return <ConceptDetailPanel concept={selected} layoutReason={reason} />;
-      case 'recommendation':
-        return (
-          <RecommendationPanel
-            recommendations={view.recommendations}
-            concepts={data.concepts}
-            summaries={data.summaries}
-            layoutReason={reason}
-          />
-        );
-      case 'courseShare':
-        // 과목 하나를 고르면 비중은 의미가 없어 숨긴다
-        return courseId === null ? (
-          <CourseSharePanel summaries={data.summaries} layoutReason={reason} />
-        ) : null;
+        return <AnalysisSummaryPanel run={run} layoutReason={reason} />;
       case 'conceptTable':
         return (
           <ConceptTablePanel
-            concepts={view.concepts}
-            summaries={data.summaries}
+            concepts={concepts}
+            selected={current?.concept ?? null}
+            onSelect={setSelected}
             layoutReason={reason}
           />
+        );
+      case 'conceptDetail':
+        return (
+          <ConceptDetailPanel
+            concept={current}
+            models={run.models}
+            layoutReason={reason}
+          />
+        );
+      case 'models':
+        return <ModelStatusPanel models={run.models} layoutReason={reason} />;
+      case 'recommendation':
+        return (
+          <RecommendationPanel concepts={concepts} layoutReason={reason} />
         );
     }
   };
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <CourseFilter
-          summaries={data.summaries}
-          selected={courseId}
-          onSelect={setCourseId}
-        />
-        <div className="flex flex-wrap items-center gap-3">
-          <p className="flex items-center gap-1.5 text-caption text-ai">
-            <Sparkles size={14} aria-hidden="true" />
-            AI 표시가 있는 내용은 AI가 작성했어요
-          </p>
-          {/* 브라우저 인쇄 창에서 "PDF로 저장"을 고르면 이 화면을 PDF로 받을 수 있다 (상단바·버튼은 인쇄에서 빠진다) */}
-          <Button onClick={() => window.print()} className="print:hidden">
-            <Download size={16} aria-hidden="true" />
-            PDF로 받기
-          </Button>
-        </div>
-      </div>
-
       <LayoutSummary
         layout={aiLayout}
         usingDefault={usingDefault}
         onToggleDefault={() => setUsingDefault((value) => !value)}
       />
-
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {layout.items.map((item, index) => {
-          const content = renderComponent(
-            item.component,
-            item.aiReason,
-            item.size === 'wide',
-          );
-          if (!content) return null;
-          return (
-            // 영역이 위에서부터 차례로 나타난다 (과목 탭을 바꿔도 영역은 다시 그려지지 않아 처음에만 보인다)
-            <m.div
-              key={item.component}
-              initial={FADE_UP.initial}
-              animate={FADE_UP.animate}
-              transition={{ ...FADE_UP.transition, delay: index * 0.06 }}
-              className={item.size === 'wide' ? 'lg:col-span-2' : undefined}
-            >
-              {content}
-            </m.div>
-          );
-        })}
+        {layout.items.map((item, index) => (
+          // 영역이 위에서부터 차례로 나타난다
+          <m.div
+            key={item.component}
+            initial={FADE_UP.initial}
+            animate={FADE_UP.animate}
+            transition={{ ...FADE_UP.transition, delay: index * 0.06 }}
+            className={item.size === 'wide' ? 'lg:col-span-2' : undefined}
+          >
+            {renderComponent(item.component, item.aiReason)}
+          </m.div>
+        ))}
       </div>
+    </div>
+  );
+}
+
+// 과목 하나의 최근 분석과 분석 시작
+function CourseAnalysis({ course }: { course: Course }) {
+  const queryClient = useQueryClient();
+  const { data: run } = useSuspenseQuery({
+    queryKey: latestKey(course.id),
+    queryFn: () => getLatestAnalysis(course.id),
+  });
+  const { data: providers } = useSuspenseQuery({
+    queryKey: [...ANALYSIS_QUERY_KEY, 'providers'],
+    queryFn: getProviders,
+  });
+  const mutation = useMutation({
+    mutationFn: () => startAnalysis(course.id),
+    onSuccess: (next) => queryClient.setQueryData(latestKey(course.id), next),
+  });
+
+  const configured = providers.filter((item) => item.configured).length;
+  const blockedReason =
+    course.keywords.length === 0
+      ? '이 과목에 키워드가 없어요. 내 과목에서 키워드를 넣으면 그 개념별로 분석해요.'
+      : configured === 0
+        ? '연결된 AI 모델이 없어 지금은 분석할 수 없어요.'
+        : null;
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-body text-ink-soft">
+          연결된 모델 {providers.length}개 중 {configured}개
+        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          {run && (
+            // 브라우저 인쇄 창에서 "PDF로 저장"을 고르면 이 화면을 PDF로 받을 수 있다 (상단바·버튼은 인쇄에서 빠진다)
+            <Button
+              variant="secondary"
+              onClick={() => window.print()}
+              className="print:hidden"
+            >
+              <Download size={16} aria-hidden="true" />
+              PDF로 받기
+            </Button>
+          )}
+          <Button
+            onClick={() => mutation.mutate()}
+            disabled={mutation.isPending || blockedReason !== null}
+            className="print:hidden"
+          >
+            {mutation.isPending && (
+              <LoaderCircle
+                size={16}
+                className="animate-spin"
+                aria-hidden="true"
+              />
+            )}
+            {mutation.isPending
+              ? '분석 중이에요'
+              : run
+                ? '다시 분석하기'
+                : '분석하기'}
+          </Button>
+        </div>
+      </div>
+
+      {/* 목업(배포 미리보기 등)에서는 실제 판단처럼 보이지 않게 알린다 */}
+      {USE_MOCK && (
+        <p className="rounded-xl bg-surface-muted px-4 py-3 text-body text-ink-soft">
+          예시 데이터예요. 실제 AI 모델이 판단한 결과가 아니에요.
+        </p>
+      )}
+
+      <div aria-live="polite" className="flex flex-col gap-3 empty:hidden">
+        {mutation.isPending && (
+          <p className="rounded-xl bg-primary-soft px-4 py-3 text-body text-heading">
+            모델마다 대화를 따로 읽고 있어요. 길면 2분쯤 걸려요. 이 화면을
+            떠나지 말아 주세요.
+          </p>
+        )}
+        {mutation.isError && (
+          <p
+            role="alert"
+            className="rounded-xl border border-danger px-4 py-3 text-body text-heading"
+          >
+            {mutation.error.message}
+          </p>
+        )}
+        {blockedReason && (
+          <p className="rounded-xl bg-surface-muted px-4 py-3 text-body text-ink-soft">
+            {blockedReason}
+          </p>
+        )}
+      </div>
+
+      {run ? (
+        <AnalysisResult key={run.id} run={run} />
+      ) : (
+        <EmptyState
+          icon={<ChartColumn size={24} aria-hidden="true" />}
+          title="아직 이 과목을 분석하지 않았어요"
+          description="공부한 대화를 가져온 뒤 분석하기를 누르면, 여러 AI 모델이 따로 읽고 개념마다 판단을 비교해 보여 드려요."
+          action={{ label: '대화 가져오기', to: '/analysis/import' }}
+        />
+      )}
+    </div>
+  );
+}
+
+function Dashboard() {
+  const { data: courses } = useCourses();
+  const [courseId, setCourseId] = useState<number | null>(null);
+  const course = courses.find((item) => item.id === courseId) ?? courses[0];
+
+  if (!course) {
+    return (
+      <EmptyState
+        icon={<ChartColumn size={24} aria-hidden="true" />}
+        title="먼저 과목을 만들어 주세요"
+        description="과목과 키워드를 넣으면, 가져온 대화를 그 개념별로 분석해요."
+        action={{ label: '내 과목 만들기', to: '/courses' }}
+      />
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <label className="flex flex-col gap-1.5 text-caption font-bold text-ink-soft">
+          과목
+          <SelectInput
+            value={course.id}
+            onChange={(event) => setCourseId(Number(event.target.value))}
+            className="min-w-56 text-body font-normal"
+          >
+            {courses.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </SelectInput>
+        </label>
+        <p className="flex items-center gap-1.5 text-caption text-ai">
+          <Sparkles size={14} aria-hidden="true" />
+          AI 표시가 있는 내용은 AI가 작성했어요
+        </p>
+      </div>
+
+      {/* 과목을 바꾸면 그 과목의 분석을 새로 불러온다 */}
+      <AsyncBoundary key={course.id}>
+        <CourseAnalysis course={course} />
+      </AsyncBoundary>
     </div>
   );
 }
@@ -160,7 +273,7 @@ function DashboardPage() {
   return (
     <SubPage
       title="학습 대시보드"
-      description="개념별 숙련도와 그렇게 판단한 근거를 함께 보여 드려요"
+      description="가져온 대화를 여러 AI 모델이 따로 읽고, 개념마다 판단과 근거를 비교해 보여 드려요"
     >
       <AsyncBoundary>
         <Dashboard />
