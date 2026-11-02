@@ -11,7 +11,7 @@ import { request } from './request';
 // React Query에서 퀴즈를 담는 키. 한 퀴즈는 [...QUIZZES_QUERY_KEY, id], 최근 결과는 [...QUIZZES_QUERY_KEY, id, 'result']
 export const QUIZZES_QUERY_KEY = ['quizzes'] as const;
 
-// TODO: 백엔드 API가 준비되면 경로·필드명을 주미의 API 문서와 맞춘다 (제안: docs/frontend-requests.md "퀴즈")
+// 백엔드 구현됨 (11/2, Swagger `퀴즈`, docs/frontend-requests.md "퀴즈"). 퀴즈 만들기 API는 아직 없다
 export function getQuizzes(): Promise<QuizSummary[]> {
   if (USE_MOCK) return mockGetQuizzes();
   return request<QuizSummary[]>({ method: 'GET', url: '/quizzes' });

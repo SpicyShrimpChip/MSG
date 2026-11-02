@@ -25,6 +25,7 @@
 | `V3__create_material.sql` | `material`, `file_deletion_task` | 올린 자료의 정보(파일 내용은 저장소), 지우지 못한 저장소 파일의 재시도 목록 |
 | `V5__create_learning_analysis.sql` | `analysis_run`, `analysis_run_conversation`, `analysis_model_result`, `analysis_concept_judgment`, `analysis_judgment_evidence`, `analysis_concept_consensus`, `concept_feedback` | 학습 대화 개념 분석(모델별 결과 원본·검증한 판단·근거 메시지·개념별 비교)과 학습 모드 피드백. 아래 "학습 대화 개념 분석" |
 | `V4__create_conversation.sql` | `conversation_import`, `conversation_import_request`, `conversation`, `conversation_part`, `conversation_message` | 가져온 AI 대화. 가져오기 작업과 받은 요청 번호(재전송 중복 방지), 대화·조각·메시지. 프론트가 가린 글만 저장한다 |
+| `V6__create_quiz.sql` | `quiz`, `quiz_question`, `quiz_choice`, `quiz_question_concept`, `quiz_submission`, `quiz_answer` | 객관식 퀴즈와 제출 기록(문제별 채점 결과). 아래 "퀴즈·시험 모드" |
 | `db/vector/V0_1__enable_pgvector.sql` | (확장) | pgvector `vector` 확장. H2에는 없어 local·prod·`pgTest`에서만 읽는다. 버전을 `0.1`로 둬서 항상 `V1`보다 먼저 돈다 |
 | `db/seed/R__sample_notices.sql` | (데이터) | 로컬 샘플 공지 3건. **운영(prod) 프로필은 이 폴더를 읽지 않는다** |
 
@@ -253,7 +254,7 @@ domain/
 
 | 사건 | DB 행 | 벡터 | 파일 |
 | --- | --- | --- | --- |
-| 자료 삭제 (구현됨) | `material` 삭제 → 나중에 붙을 `material_chunk`·퀴즈·근거는 FK ON DELETE CASCADE로 연쇄 삭제 → 숙련도 재계산(숙련도 단계) | `deleteByMaterial(materialId)` (벡터 단계) | 원본 파일: `file_deletion_task`로 커밋 뒤 삭제 |
+| 자료 삭제 (구현됨) | `material` 삭제 → 그 자료로 만든 `quiz`(문제·제출 기록 포함, 구현됨)와 나중에 붙을 `material_chunk`·근거는 FK ON DELETE CASCADE로 연쇄 삭제 → 숙련도 재계산(숙련도 단계) | `deleteByMaterial(materialId)` (벡터 단계) | 원본 파일: `file_deletion_task`로 커밋 뒤 삭제 |
 | 과목 삭제 (구현됨) | 그 과목의 `material`을 앱이 먼저 지우고(파일 삭제 작업을 남기려고) `course` 삭제. 과목 없는 자료·다른 과목 자료는 남는다. FK CASCADE는 마지막 안전장치 | 자료마다 위와 같음 | 그 과목 자료의 원본 파일 |
 | 과목 삭제 → 가져온 대화 (구현됨) | 그 과목의 `conversation`을 FK `ON DELETE CASCADE`로 삭제(조각·메시지도 연쇄). 파일이 없어 앱이 따로 지우지 않는다 | 해당 없음 | - |
 | 대화 삭제 (구현됨, `DELETE /api/conversations/{id}`) | `conversation` 삭제 → 조각·메시지 연쇄. 나중에 붙을 근거도 FK CASCADE로 | 해당 없음 | - |
@@ -302,7 +303,9 @@ TODO(미결):
 - 쓸 모델 이름, 모델별 비용 한도·월 예산, 분석을 비동기로 돌릴지(지금은 요청 안에서 기다림, 최대 약 2분).
 - 숙련도 점수 산식(대화 비교 결과 + 퀴즈·시험 결과의 가중치).
 
-### 퀴즈·시험 모드 (다음 단계 설계안)
+### 퀴즈·시험 모드 (11/2 객관식 풀기·채점 구현, 나머지는 설계안)
+
+**구현됨 (11/2, `V6`, `domain/quiz`):** 객관식 학습용 퀴즈를 풀고 서버가 채점한다(`QuizGrader`, 정답 번호와 같은지만 본다). 풀기 전 응답(`QuizResponse`)에는 정답·해설 필드가 아예 없다. 다시 풀면 `quiz_submission`이 쌓이고 화면은 가장 최근 것을 쓴다. 회원·과목·자료를 지우면 퀴즈와 제출 기록도 FK CASCADE로 지워진다. 아직 없는 것: 퀴즈 만들기(AI 생성, 모델 키가 정해지면), 단답·서술형·배점, 결과를 대시보드 근거·숙련도에 반영(산식 미결). 그때는 아래 표(안)의 열을 새 마이그레이션으로 더한다.
 
 | 구분 | 학습용 확인 퀴즈 | 모의시험 |
 | --- | --- | --- |
