@@ -1,82 +1,134 @@
-import { ListChecks, MessageSquare } from 'lucide-react';
-import { AiNote, LevelBadge } from '@/components';
-import type { ConceptMastery, Evidence, EvidenceSignal } from '@/types';
+import { AiNote } from '@/components';
+import type {
+  ConceptJudgment,
+  ConceptResult,
+  JudgmentEvidence,
+  ModelRun,
+} from '@/types';
+import {
+  PROVIDER_LABEL,
+  UNDERSTANDING_LABEL,
+  describeComparison,
+} from '@/utils';
 import Panel from './Panel';
+import { UnderstandingBadge } from './UnderstandingBadge';
 
-const SIGNAL_LABEL: Record<EvidenceSignal, string> = {
-  not_understood: '이해하지 못함',
-  asked_again: '다시 설명 요청',
-  applied: '스스로 활용',
-  quiz_correct: '퀴즈 정답',
-  quiz_wrong: '퀴즈 오답',
-};
-
-const SOURCE_META: Record<
-  Evidence['source'],
-  { icon: typeof MessageSquare; label: string }
-> = {
-  conversation: { icon: MessageSquare, label: '대화' },
-  quiz: { icon: ListChecks, label: '퀴즈' },
-};
-
-// 고른 개념의 판단 근거(코드)와 AI 설명(보라색)
 interface ConceptDetailPanelProps {
-  concept: ConceptMastery | null;
+  concept: ConceptResult | null;
+  models: ModelRun[];
   layoutReason?: string | null;
 }
 
+const EVIDENCE_KIND_LABEL: Record<JudgmentEvidence['kind'], string> = {
+  user_explanation: '내 설명',
+  user_solution: '내 풀이',
+  user_question: '내 질문',
+  ai_explanation: 'AI 답변',
+};
+
+function JudgmentCard({ judgment }: { judgment: ConceptJudgment }) {
+  return (
+    <li className="flex flex-col gap-3 rounded-xl border border-line p-4">
+      <div className="flex items-center justify-between gap-2">
+        <p className="font-extrabold text-heading">
+          {PROVIDER_LABEL[judgment.provider]}
+          {judgment.model && (
+            <span className="ml-1.5 text-caption font-medium text-ink-muted">
+              {judgment.model}
+            </span>
+          )}
+        </p>
+        <UnderstandingBadge status={judgment.status} />
+      </div>
+
+      {/* 서버가 근거를 확인하고 판단을 바꾼 경우: 코드가 정한 값이라 AI 상자가 아닌 회색 안내로 */}
+      {judgment.adjustedReason && (
+        <p className="rounded-lg bg-surface-muted px-3 py-2 text-caption text-ink-soft">
+          모델은 '{UNDERSTANDING_LABEL[judgment.reportedStatus]}'로 냈지만,{' '}
+          {judgment.adjustedReason}
+        </p>
+      )}
+
+      {judgment.aiReason && (
+        <AiNote title="이렇게 판단한 이유">{judgment.aiReason}</AiNote>
+      )}
+      {judgment.aiNeedsCheck && (
+        <AiNote title="확인해 볼 점">{judgment.aiNeedsCheck}</AiNote>
+      )}
+
+      {judgment.evidence.length > 0 ? (
+        <div className="flex flex-col gap-2">
+          <p className="text-caption font-bold text-ink-soft">
+            근거 메시지 {judgment.evidence.length}개
+          </p>
+          <ul className="flex flex-col gap-1.5">
+            {judgment.evidence.map((item) => (
+              <li
+                key={item.messageId}
+                className="flex flex-col gap-1 rounded-lg bg-surface-muted px-3 py-2.5"
+              >
+                <span className="text-caption font-bold text-ink-soft">
+                  {EVIDENCE_KIND_LABEL[item.kind]} · {item.conversationTitle}
+                </span>
+                <span className="text-body leading-relaxed break-words text-ink">
+                  "{item.excerpt}"
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <p className="text-caption text-ink-muted">
+          근거로 든 메시지가 없어요.
+        </p>
+      )}
+    </li>
+  );
+}
+
+// 고른 개념에 대한 모델별 판단과 근거. 이번 분석에 참여하지 않은 모델도 숨기지 않는다
 function ConceptDetailPanel({
   concept,
+  models,
   layoutReason,
 }: ConceptDetailPanelProps) {
   if (!concept) {
     return (
-      <Panel title="판단 근거" layoutReason={layoutReason}>
-        <p className="text-body text-ink-muted">개념을 고르면 여기에 보여요.</p>
+      <Panel title="모델별 판단" layoutReason={layoutReason}>
+        <p className="text-body text-ink-soft">
+          왼쪽 표에서 개념을 고르면 모델마다 어떻게 판단했는지 보여 드려요.
+        </p>
       </Panel>
     );
   }
 
+  const judged = new Set(concept.judgments.map((item) => item.provider));
+  const absent = models.filter((model) => !judged.has(model.provider));
+
   return (
-    <Panel title={`판단 근거: ${concept.name}`} layoutReason={layoutReason}>
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-body text-ink-soft">
-          숙련도{' '}
-          <strong className="text-lg text-heading">{concept.score}점</strong>
-        </span>
-        <LevelBadge level={concept.level} />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <h3 className="text-body font-bold text-ink-soft">이렇게 판단했어요</h3>
-        <ul className="flex flex-col gap-2">
-          {concept.evidence.map((item) => {
-            const { icon: Icon, label } = SOURCE_META[item.source];
-            return (
-              <li
-                key={item.id}
-                className="flex gap-3 rounded-xl bg-surface-muted px-3 py-2.5"
-              >
-                <Icon
-                  size={18}
-                  aria-hidden="true"
-                  className="mt-0.5 shrink-0 text-primary"
-                />
-                <div className="flex min-w-0 flex-col gap-1">
-                  <p className="text-body text-ink">{item.summary}</p>
-                  <p className="text-caption text-ink-muted">
-                    {label} · {item.date} · {SIGNAL_LABEL[item.signal]}
-                  </p>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-
-      {concept.aiExplanation && (
-        <AiNote title="AI 설명">{concept.aiExplanation}</AiNote>
-      )}
+    <Panel
+      title={`${concept.concept} · 모델별 판단`}
+      description={describeComparison(concept.comparison)}
+      layoutReason={layoutReason}
+    >
+      <ul className="flex flex-col gap-3">
+        {concept.judgments.map((judgment) => (
+          <JudgmentCard key={judgment.provider} judgment={judgment} />
+        ))}
+        {absent.map((model) => (
+          <li
+            key={model.provider}
+            className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-dashed border-line-strong px-4 py-3 text-body text-ink-muted"
+          >
+            <span className="font-bold">{PROVIDER_LABEL[model.provider]}</span>
+            <span>
+              {model.status === 'not_configured'
+                ? '연결 안 됨 · 이번 분석에 참여하지 않았어요'
+                : '이 개념은 판단하지 않았어요'}
+            </span>
+          </li>
+        ))}
+      </ul>
     </Panel>
   );
 }

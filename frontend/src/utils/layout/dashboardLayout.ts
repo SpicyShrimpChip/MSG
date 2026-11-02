@@ -21,8 +21,8 @@ const layoutItemSchema = z.object({
 const layoutSchema = z.object({
   aiSummary: z.string().trim().min(1).max(LAYOUT_SUMMARY_MAX_LENGTH),
   basis: z.object({
-    weaknessCount: count,
-    askedAgainCount: count,
+    notUnderstoodCount: count,
+    disagreementCount: count,
     conversationCount: count,
   }),
   items: z
@@ -45,11 +45,10 @@ export const DEFAULT_LAYOUT: DashboardLayout = {
   explanation: null,
   items: [
     { component: 'summary', order: 1, size: 'wide', aiReason: null },
-    { component: 'mastery', order: 2, size: 'normal', aiReason: null },
+    { component: 'conceptTable', order: 2, size: 'normal', aiReason: null },
     { component: 'conceptDetail', order: 3, size: 'normal', aiReason: null },
-    { component: 'recommendation', order: 4, size: 'normal', aiReason: null },
-    { component: 'courseShare', order: 5, size: 'normal', aiReason: null },
-    { component: 'conceptTable', order: 6, size: 'wide', aiReason: null },
+    { component: 'models', order: 4, size: 'normal', aiReason: null },
+    { component: 'recommendation', order: 5, size: 'normal', aiReason: null },
   ],
 };
 

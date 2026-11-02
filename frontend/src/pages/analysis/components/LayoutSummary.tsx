@@ -19,8 +19,8 @@ function LayoutSummary({
   const { aiSummary, basis } = layout.explanation;
 
   const numbers = [
-    { label: '보완 필요 개념', value: `${basis.weaknessCount}개` },
-    { label: '다시 설명 요청', value: `${basis.askedAgainCount}번` },
+    { label: '이해 부족 개념', value: `${basis.notUnderstoodCount}개` },
+    { label: '의견이 갈린 개념', value: `${basis.disagreementCount}개` },
     { label: '분석한 대화', value: `${basis.conversationCount}개` },
   ];
 

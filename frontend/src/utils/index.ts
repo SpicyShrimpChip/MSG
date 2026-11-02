@@ -1,6 +1,6 @@
 export * from './cn';
 export * from './conversation';
-export * from './dashboard';
+export * from './analysis';
 export * from './date';
 export * from './keywords';
 export * from './layout';

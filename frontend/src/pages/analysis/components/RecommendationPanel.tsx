@@ -1,60 +1,84 @@
-import { AiNote } from '@/components';
-import type { ConceptMastery, Recommendation, StudySummary } from '@/types';
+import { AiBadge } from '@/components';
+import type { ConceptResult } from '@/types';
 import Panel from './Panel';
+import { ComparisonBadge } from './UnderstandingBadge';
 
 interface RecommendationPanelProps {
-  recommendations: Recommendation[];
-  concepts: ConceptMastery[];
-  summaries: StudySummary[];
+  // 추천 순서대로 정렬된 개념
+  concepts: ConceptResult[];
   layoutReason?: string | null;
 }
 
-// AI가 추천한 학습 순서와 이유. 순서와 이유 모두 AI가 정한 것이라 보라색 상자에 담는다
+// 모델들이 권한 공부 방법 (처음 나온 것 하나). 없으면 null
+function firstActivity(concept: ConceptResult): string | null {
+  return (
+    concept.judgments.find((item) => item.aiRecommendedActivity)
+      ?.aiRecommendedActivity ?? null
+  );
+}
+
+// 추천 학습 순서. 순서는 코드 규칙, 각 개념에 붙은 공부 방법만 AI 글이다
 function RecommendationPanel({
-  recommendations,
   concepts,
-  summaries,
   layoutReason,
 }: RecommendationPanelProps) {
-  const conceptName = (id: string) =>
-    concepts.find((item) => item.conceptId === id)?.name ?? id;
-  const courseName = (id: number) =>
-    summaries.find((item) => item.courseId === id)?.courseName ?? '';
+  // 이미 이해한 개념은 순서에서 뺀다
+  const items = concepts.filter(
+    (item) => item.comparison.status !== 'understood',
+  );
 
   return (
-    <Panel title="추천 학습 순서" layoutReason={layoutReason}>
-      {recommendations.length === 0 ? (
-        <p className="text-body text-ink-muted">아직 추천할 순서가 없어요.</p>
+    <Panel
+      title="추천 학습 순서"
+      description="순서는 정해진 규칙으로 정해요. 이해 부족, 의견이 갈린 개념, 근거 부족 순이에요."
+      layoutReason={layoutReason}
+    >
+      {items.length === 0 ? (
+        <p className="text-body text-ink-soft">
+          모든 개념을 이해한 것으로 판단했어요. 퀴즈로 확인해 보세요.
+        </p>
       ) : (
-        recommendations.map((item) => (
-          <AiNote
-            key={item.courseId}
-            title={
-              recommendations.length > 1
-                ? `${courseName(item.courseId)} 추천 순서`
-                : '이 순서로 공부해 보세요'
-            }
-          >
-            <ol className="mb-3 flex flex-wrap items-center gap-2">
-              {item.conceptIds.map((id, index) => (
-                <li key={id} className="flex items-center gap-2">
-                  {index > 0 && (
-                    <span aria-hidden="true" className="text-ink-muted">
-                      →
+        <ol className="flex flex-col gap-2">
+          {items.map((item, index) => {
+            const activity = firstActivity(item);
+            return (
+              <li
+                key={item.concept}
+                className="flex gap-3 rounded-xl border border-line px-4 py-3"
+              >
+                <span
+                  aria-hidden="true"
+                  className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-caption font-extrabold text-on-primary"
+                >
+                  {index + 1}
+                </span>
+                <div className="flex min-w-0 flex-col gap-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-bold text-heading">
+                      <span className="sr-only">{index + 1}번째. </span>
+                      {item.concept}
                     </span>
-                  )}
-                  <span className="rounded-full border border-ai-border bg-surface-raised px-3 py-1 font-medium text-heading">
-                    {index + 1}. {conceptName(id)}
-                  </span>
-                </li>
-              ))}
-            </ol>
-            <p>
-              <span className="font-bold text-ai">이 순서인 이유 </span>
-              {item.aiReason}
-            </p>
-          </AiNote>
-        ))
+                    <ComparisonBadge
+                      outcome={item.comparison.outcome}
+                      status={item.comparison.status}
+                    />
+                  </div>
+                  {activity ? (
+                    <p className="flex flex-wrap items-center gap-1.5 text-caption text-ai">
+                      <AiBadge />
+                      {activity}
+                    </p>
+                  ) : item.comparison.status === 'insufficient_evidence' ? (
+                    <p className="text-caption text-ink-soft">
+                      판단할 대화가 적어요. 이 개념을 다룬 대화를 더 가져오면
+                      판단할 수 있어요.
+                    </p>
+                  ) : null}
+                </div>
+              </li>
+            );
+          })}
+        </ol>
       )}
     </Panel>
   );

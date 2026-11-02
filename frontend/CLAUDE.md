@@ -89,7 +89,7 @@ src/
 
 - 학습자료: 내 학습자료(목록), 자료 업로드, 자료 상세(탭: 요약 / 핵심 개념 / 퀴즈 / AI 요약 영상-준비 중)
 - 맞춤학습: 맞춤 커리큘럼(단계별 "이 순서인 이유" 표시), 퀴즈(목록·풀기·결과)
-- 학습분석: 학습 대시보드(배치 JSON 기반), AI 대화 가져오기
+- 학습분석: 학습 대시보드(학습 분석 API, 배치 JSON 틀), AI 대화 가져오기
 - 커뮤니티: 공지사항(목록·상세)
 - 관리자(`/admin/notices`·`new`·`:id/edit`, 관리자만): 공지 작성·수정·삭제. `RequireAdmin`(`RequireAuth` 안)은 안내용 가드이고 진짜 권한은 서버가 `/api/admin/**`에서 매번 확인한다. 상단바 "관리자" 링크는 `me.role === 'ADMIN'`일 때만 보인다. 목업 모드에서는 가드를 건너뛰고(주소로 직접 접속), 공지는 브라우저(`ai-lms-mock-notices`)에만 저장된다. 공지 본문은 글자로만 다룬다(HTML 해석 금지)
 - 이용안내: 서비스 소개, 개인정보 처리방침(작성지침에 따라 링크 이름은 띄어 쓴 "개인정보 처리방침", 푸터에서 굵게)
@@ -112,15 +112,21 @@ src/
 - **보내기:** 사용자가 체크한 대화만 가린 상태로 보낸다. `send.ts`가 과목마다, 요청 크기(1MB, 임시값)와 대화 수(50개)에 맞춰 나누고, 혼자 큰 대화는 메시지를 버리지 않고 조각으로 나눈다(`docs/frontend-requests.md` "대화 가져오기")
 - 내보내기 형식은 바뀔 수 있으므로 실제 파일로 검증하고, 읽지 못하면 무엇이 잘못됐는지 알려 준다. 실제 기록 파일은 레포에 넣지 않는다
 
+## 학습 대시보드 (학습 분석 API, 11/2)
+
+- `/analysis`는 과목을 골라 백엔드 학습 분석 API(`api/analysis.api.ts`: `providers`, `runs/latest`(없으면 404 → `null`), `runs` 시작)로 그린다. 타입은 백엔드 `AnalysisRun` 그대로(`types/analysis.ts`). GPT·Claude·Gemini가 따로 판단한 결과를 개념마다 비교해 보여 준다.
+- **비교는 정확도·숙련도가 아니다.** "2개 모두 같음", "3개 중 2개 같음"처럼 모델 개수로만 보여 준다(`describeComparison`, 퍼센트 금지). 판단 근거 부족은 이해 부족과 다른 모양(회색 점선, 물음표)으로 그린다(`UnderstandingBadge`). 연결 안 된 모델은 "연결 안 됨"으로 숨기지 않고 보여 준다.
+- 모델이 하나도 연결되지 않았거나 과목 키워드가 없으면 분석 버튼을 막고 이유를 보여 준다. 분석 오류는 서버 `message`를 그대로 보여 준다. 목업에서는 "예시 데이터예요"를 표시한다.
+- 숙련도 점수 막대·방사형 그래프·과목별 비중은 점수 산식(미결)이 정해지면 다시 붙인다.
+
 ## 대시보드 동적 배치
 
-- 배치 JSON은 `unknown`으로 받아 zod 스키마로 검증한 뒤에만 사용한다 (`utils/layout/dashboardLayout.ts`의 `parseDashboardLayout`).
-- 허용 영역 id: `summary`, `mastery`(개념 3개 이상이면 방사형 그래프 포함, wide면 그래프와 막대를 나란히), `conceptDetail`, `recommendation`, `courseShare`, `conceptTable`(개념별 상세 결과 표). 크기는 `wide`(한 줄 전체) / `normal`(넓은 화면에서 반 칸).
+- 배치 JSON은 `unknown`으로 받아 zod 스키마로 검증한 뒤에만 사용한다 (`utils/layout/dashboardLayout.ts`의 `parseDashboardLayout`). **지금 백엔드는 배치를 주지 않아(`AnalysisRun.layout` 없음) 실제 화면은 기본 배치이고, 목업에만 예시 배치가 있다.**
+- 허용 영역 id: `summary`(분석 요약), `conceptTable`(개념별 판단 표), `conceptDetail`(모델별 판단·근거), `models`(모델 연결 상태), `recommendation`(추천 학습 순서). 크기는 `wide`(한 줄 전체) / `normal`(넓은 화면에서 반 칸).
 - 없는 id, 같은 영역·같은 순서 번호 중복, 80자를 넘거나 빈 이유, 형식이 다른 숫자는 검증에서 거르고 **기본 배치**(`DEFAULT_LAYOUT`)로 보여 준다. 배치에서 빠진 영역은 기본 순서로 뒤에 붙인다.
 - 각 영역 제목 오른쪽 "이 자리인 이유" 말풍선(AI, 보라색)으로 이유를 보여 준다. 마우스를 올리거나 키보드로 가면 뜨고, 클릭·탭하면 고정, Esc·바깥 클릭으로 닫힌다(휴대폰·키보드 사용자도 볼 수 있게 호버만 쓰지 않는다). 그리고 맨 위 한 줄 띠(`LayoutSummary`)에 전체 이유와 **배치할 때 본 숫자**(코드, 파란색)를 나란히 보여 주고, **"기본 배치로 보기"**로 사용자가 AI 배치를 끌 수 있다.
 - "PDF로 받기"는 브라우저 인쇄(`window.print()`)를 연다. 상단바·푸터·버튼은 `print:hidden`으로 인쇄에서 뺀다.
 - 새 영역을 추가하려면 `DashboardComponentId` 타입, `DASHBOARD_COMPONENT_IDS`, `DEFAULT_LAYOUT`, `DashboardPage`의 `renderComponent`를 함께 고친다.
-- 목업에서는 주소에 `?layout=b`, `?layout=invalid`, `?layout=none`을 붙여 다른 배치·검증 실패·배치 없음을 확인할 수 있다.
 
 ## 디자인 (푸른 계열, 시안 v3 확정 2026-10-27)
 
