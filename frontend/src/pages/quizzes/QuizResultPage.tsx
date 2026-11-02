@@ -33,7 +33,7 @@ function QuizResultContent({ quizId }: { quizId: number }) {
       <EmptyState
         icon={<ListChecks size={24} aria-hidden="true" />}
         title="아직 푼 기록이 없어요"
-        description="퀴즈를 끝까지 풀면 결과가 여기에 표시되고, 개념별 숙련도에도 반영돼요."
+        description="퀴즈를 끝까지 풀면 결과가 여기에 표시돼요."
         action={{ label: '퀴즈 풀기', to: `/quizzes/${quizId}` }}
       />
     );
@@ -123,8 +123,8 @@ function QuizResultContent({ quizId }: { quizId: number }) {
       </ol>
 
       <p className="text-body text-ink-soft">
-        맞힘·틀림은 관련 개념의 숙련도를 계산하는 근거로 쓰여요. 학습
-        대시보드에서 어떤 문제가 근거가 됐는지 볼 수 있어요.
+        맞힘·틀림을 관련 개념의 숙련도 근거로 쓰고 학습 대시보드에 보여 주는
+        기능은 준비 중이에요.
       </p>
       <div className="flex flex-wrap gap-2">
         <Button to={`/quizzes/${quizId}`}>다시 풀기</Button>

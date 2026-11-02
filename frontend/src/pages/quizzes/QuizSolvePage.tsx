@@ -123,10 +123,7 @@ function QuizForm({ quizId }: { quizId: number }) {
 function QuizSolvePage() {
   const { quizId } = useParams();
   return (
-    <SubPage
-      title="퀴즈 풀기"
-      description="보기 하나를 골라 주세요. 채점 결과는 개념별 숙련도에 반영돼요"
-    >
+    <SubPage title="퀴즈 풀기" description="보기 하나를 골라 주세요">
       <AsyncBoundary>
         <QuizForm quizId={Number(quizId)} />
       </AsyncBoundary>
