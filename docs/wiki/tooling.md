@@ -67,6 +67,7 @@
 - 원인: `backend/build`(그리고 `frontend/dist`)에 이름 끝에 ` 2`가 붙은 복사본이 생겼다. 소스 폴더에는 없었다. 폴더 동기화(iCloud 등)가 만든 것으로 보이며 원인은 확인하지 못했다.
 - 해결: `./gradlew clean test`로 빌드 폴더를 지우고 다시 만든다. 소스·`git status`에는 영향이 없다.
 - 다음에는: 같은 오류가 나면 `find backend/build -name "* 2*"`로 확인한다. 자주 생기면 레포를 동기화하지 않는 폴더로 옮긴다.
+- 재발(2026-11-03): `build/classes`에 `BackendApplication 2.class`가 생겨 `bootRun`이 `Unable to find a single main class`로 멈췄다. 같은 날 `build/resources`의 마이그레이션 사본도 다시 생겼다. 해결은 같고(`clean`), `src/`에는 생기지 않았다.
 
 ## `bootRun`이 MySQL 드라이버를 찾으며 뜨지 않는다 (2026-11-01, #96)
 

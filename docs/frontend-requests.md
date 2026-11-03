@@ -187,7 +187,7 @@ MaterialDetail = MaterialSummary & {
 
 ### 인증·마이페이지 — 가입·로그인·갱신·로그아웃·내 정보·AI 분석 동의 변경 구현됨 (확정: Swagger `인증`, `회원`)
 
-화면: `/login`, `/signup`, 마이페이지(내 정보 표시까지 연결. AI 대화 분석 동의 철회·다시 동의, 탈퇴 화면은 아래 제안 API로 만들어 둠). 방식은 JWT access token(메모리) + HttpOnly 쿠키 refresh token. 자세한 흐름은 `docs/backend-design.md` 5번.
+화면: `/login`, `/signup`, 마이페이지(내 정보, AI 대화 분석·AI 퀴즈 처리 동의 철회·다시 동의, 비밀번호를 다시 넣는 탈퇴). 방식은 JWT access token(메모리) + HttpOnly 쿠키 refresh token. 자세한 흐름은 `docs/backend-design.md` 5번.
 
 | 메서드 | 경로                     | 요청 본문                 | 응답 `data`                                          | 상태   |
 | ------ | ------------------------ | ------------------------- | ---------------------------------------------------- | ------ |
@@ -196,8 +196,9 @@ MaterialDetail = MaterialSummary & {
 | POST   | `/api/auth/refresh`      | - (refresh 쿠키)          | `{ accessToken: string }` + 새 refresh 쿠키          | 구현됨 |
 | POST   | `/api/auth/logout`       | - (refresh 쿠키)          | 없음 (세션 폐기, 쿠키 삭제)                          | 구현됨 |
 | GET    | `/api/users/me`          | -                         | `User`                                               | 구현됨 |
-| PATCH  | `/api/users/me/consents` | `{ aiAnalysis: boolean }` | `User`                                               | 구현됨 |
-| DELETE | `/api/users/me`          | -                         | 없음 (탈퇴: 내 모든 데이터 삭제)                     | 제안   |
+| PATCH  | `/api/users/me/consents` | `{ aiAnalysis?: boolean, aiQuiz?: boolean }` (보낸 것만 바꿈, 둘 다 없으면 400) | `User` | 구현됨 |
+| PATCH  | `/api/users/me/profile`  | `LearningProfileInput`    | `User` (학습 목적·관심 직무, 11/3)                   | 구현됨 |
+| DELETE | `/api/users/me`          | `{ password }`            | 없음 (탈퇴: 내 모든 데이터 삭제, 11/3)               | 구현됨 |
 
 ```ts
 // 화면에 "이름"과 "비밀번호 확인" 칸이 있어 name, passwordConfirm을 추가했다 (2026-10-25)
@@ -219,9 +220,9 @@ User = { id: number, email: string, name: string, aiAnalysisConsent: boolean, ro
 - 로그인 실패 `message`는 이메일이 틀렸는지 비밀번호가 틀렸는지 구분하지 않는다("이메일 또는 비밀번호를 확인해 주세요."). 같은 이메일·같은 곳에서 15분에 5번 틀리면 429("로그인 시도가 너무 많아요. N분 뒤 다시 시도해 주세요.").
 - **`/api/auth/login`, `/refresh`, `/logout`은 `X-Requested-With: XMLHttpRequest` 헤더가 있어야 한다**(CSRF 방어, 없으면 403). 프론트 Axios 인스턴스가 모든 요청에 붙인다.
 - **동의 철회(`aiAnalysis: false`)하면 가져온 대화와 그로부터 계산된 분석 결과를 함께 삭제한다.** 삭제 범위는 아래 대화 가져오기와 같다. 프론트는 철회 전에 확인 창으로 "되돌릴 수 없어요"를 보여 준다. (11/1 구현: 대화·조각·메시지·가져오기 기록을 동의 변경과 같은 트랜잭션에서 지운다. 분석 결과 표는 아직 없어 분석 기능을 만들 때 함께 지운다. 과목·학습자료는 남는다. 철회한 뒤에는 다시 동의하기 전까지 대화 가져오기가 403이고, 분석은 동의한 사용자의 대화만 읽는다.)
-- **탈퇴(`DELETE /api/users/me`)는 내 모든 데이터를 지운다:** 계정, 과목, 자료와 그로부터 만든 요약·개념·퀴즈, 퀴즈 결과, 가져온 대화, 분석 결과(근거·점수·배치). refresh 토큰도 모두 폐기하고 쿠키를 지운다. 프론트는 확인 창을 거친 뒤 부르고, 성공하면 화면 데이터를 비우고 첫 화면으로 간다.
+- **탈퇴(`DELETE /api/users/me`, 11/3 구현)는 내 모든 데이터를 지운다:** 본인(토큰의 사용자)만, 지금 비밀번호를 다시 확인한 뒤(틀리면 400, 아무것도 지우지 않음) 계정, 과목, 자료와 그로부터 만든 개념·퀴즈·평가, 퀴즈 결과, 가져온 대화, 분석 결과를 지운다(FK CASCADE, 자료 원본 파일은 커밋 뒤 삭제 작업). refresh 토큰도 모두 지우고 쿠키를 비운다. 그 뒤 예전 access token은 401(사용자가 없음), 예전 refresh 쿠키도 401, 같은 비밀번호로 로그인도 401. 마지막 관리자는 탈퇴할 수 없다(409). 다른 회원의 데이터는 그대로다. 프론트는 확인 창을 거친 뒤 부르고, 성공하면 화면 데이터와 이 브라우저의 가릴 단어를 지우고 첫 화면으로 간다.
 - 동의를 다시 켜는 것(`aiAnalysis: true`)도 같은 API로 받는다. 동의 시각을 새로 기록한다(이미 같은 값이면 바꾸지 않는다). `aiAnalysis`가 없으면 400. 바꾸는 대상은 항상 토큰의 사용자 본인이다.
-- **동의 변경은 서버까지 연결됐다(11/1). 탈퇴 API는 아직 없다(404).** 마이페이지 버튼이 위 경로를 그대로 부른다. 동의를 철회하면 프론트가 이 브라우저에 저장한 "가릴 단어"도 함께 지운다. 동의하지 않은 사용자에게는 대화 가져오기 화면 위에 마이페이지 안내를 보여 준다.
+- **동의 변경(11/1)과 탈퇴(11/3)가 서버까지 연결됐다.** 마이페이지 버튼이 위 경로를 그대로 부른다. 동의를 철회하면 프론트가 이 브라우저에 저장한 "가릴 단어"도 함께 지운다. 동의하지 않은 사용자에게는 대화 가져오기 화면 위에 마이페이지 안내를 보여 준다.
 - **관리자 역할(10/27, 백엔드 반영):** `User.role`은 `USER`/`ADMIN`. 가입은 항상 `USER`이고 관리자는 DB에서 직접 지정한다. `/api/admin/**`는 관리자만 열리고(일반 사용자 403, 로그인 안 하면 401), 역할은 요청마다 DB에서 읽는다. `GET /api/users/me`와 로그인 응답의 `User`에 `role`을 넣었다(10/27). 화면에서 관리자 메뉴를 보일지 정하는 데만 쓰고, 권한은 서버가 매번 확인한다.
 - 토큰이 만료돼 401이 오면 프론트가 `/api/auth/refresh`를 한 번 부르고 원래 요청을 다시 보낸다(`api/axios.ts`). 갱신에도 실패하면 로그아웃 상태가 되고 로그인 가드가 로그인 화면으로 보낸다.
 - 로그인이 필요한 화면은 `router/RequireAuth.tsx` 아래에 둔다. **`VITE_USE_MOCK=true`(팀 기본값)에서는 가드를 건너뛰어** 백엔드 없이 화면을 개발할 수 있다.
@@ -320,7 +321,7 @@ ConceptFeedback = { id, courseId, concept, feedback: "already_know" | "want_to_s
 - 오류: 미동의 403, 남의 과목·분석 404, 과목 키워드 없음·분석할 대화 없음 400, 이미 분석 중 409, 24시간에 10번 넘음 429, 설정된 모델 없음 503, 분석 중 동의 철회·대화 삭제 409.
 - 개념은 과목 키워드다. 키워드가 없는 과목은 분석할 수 없다(과목 화면에서 키워드를 넣도록 안내).
 
-### 퀴즈 — 구현됨 (11/2, 확정: Swagger `퀴즈`). 퀴즈 만들기는 아직 없음
+### 퀴즈 — 구현됨 (11/2 풀기·채점, 11/3 학습 모드 3가지·AI 만들기·주관식·서술형, 확정: Swagger `퀴즈`)
 
 화면: `/quizzes`(목록), `/quizzes/{id}`(풀기), `/quizzes/{id}/result`(결과). 퀴즈는 올린 자료로 만든다(자료 → 요약·퀴즈 생성 API는 이 표에 아직 없고, 자료 처리 방식이 정해지면 따로 제안). 올린 본인만 볼 수 있다.
 
@@ -359,6 +360,72 @@ QuizResult  = {
 - 같은 퀴즈를 여러 번 풀 수 있다. 목록의 `lastCorrectCount`는 가장 최근 제출 기준이다.
 - `materialId`: 그 퀴즈를 만든 자료(자료 상세의 퀴즈 탭이 이 값으로 거른다). 약점 개념으로 만든 퀴즈처럼 자료가 없으면 `null`.
 - `/submissions/latest`: 결과 화면을 새로고침하거나 목록에서 "결과 보기"로 들어올 때 쓴다.
+
+#### 11/3 추가: 학습 모드 3가지, AI로 만들기, 주관식·서술형 (백엔드 V7)
+
+위 4개 API의 경로와 기존 필드는 그대로 두고 **필드를 더하기만** 했다(V6 요청 `{ questionId, choiceIndex }`도 그대로 받는다). 타입 전체는 `frontend/src/types/quiz.ts`(백엔드 DTO와 같은 모양).
+
+| 메서드 | 경로                                                  | 요청 본문         | 응답 `data`                                     |
+| ------ | ----------------------------------------------------- | ----------------- | ----------------------------------------------- |
+| POST   | `/api/quizzes`                                        | `QuizCreateInput` | `Quiz` (201, 같은 `requestKey`면 200으로 같은 퀴즈) |
+| POST   | `/api/quizzes/{id}/submissions/{submissionId}/grading` | -                 | `QuizResult` (채점 대기 답만 다시 채점)         |
+| GET    | `/api/quizzes/concept-stats?courseId=`                | -                 | `ConceptQuizStats[]`                            |
+
+```ts
+QuizCreateInput = {
+  requestKey: string,              // 화면에서 만든 UUID. 같은 키로 다시 보내면 새로 만들지 않는다 (실패하면 새 키로)
+  courseId: number,
+  mode: 'exam_prep' | 'self_development' | 'work',
+  questionTypes: ('multiple_choice' | 'short_answer' | 'essay')[], // 1~3개
+  questionCount: number,           // 고른 유형 수 이상, 10 이하 (유형별 수는 서버가 나눈다)
+  difficulty: 'easy' | 'medium' | 'hard',
+  concepts?: string[],             // 과목 키워드 중에서. 없으면 키워드 전체(최대 10)
+  examScope?: string,              // 시험 대비만, 200자
+  jobField?: string, jobFieldOther?: string, // 업무 활용만. 없으면 내 관심 직무, 그것도 없으면 일반 실무
+  materialId?: number,             // 연결만 한다. 자료 본문 추출이 없어 본문은 쓰지 않는다(materialContentUsed: false)
+}
+```
+
+- 더한 필드: `QuizSummary`(+`mode`, `difficulty`, `aiGenerated`, `lastScore`, `lastMaxScore`, `lastPendingCount`), `Quiz`(+`mode`, `difficulty`, `jobField`, `jobFieldOther`, `examScope`, `generatedBy`, `materialContentUsed`, 문제마다 `type`·`scenario`·`role`·`guide`·`criteria`(업무 활용 서술형의 평가 기준 이름만)·`maxScore`), `QuizAnswer`(+`text`, `choiceIndex`는 선택), `QuizResult`(+`score`, `maxScore`, `pendingCount`, `reviewCount`, `mode`, `assessment`, `suggestions`, 문제마다 `type`·`textAnswer`·`score`·`maxScore`·`gradingStatus`·`gradingMethod`·`gradingMessage`·`aiCalledCount`·`aiJudgedCount`·`acceptedAnswers`·`aiModelAnswer`·`rubric`·`aiFeedback`). `correctChoiceIndex`는 객관식이 아니면 `null`. 풀기 전 응답에는 여전히 정답·허용 답·모범 답안·배점별 기준·개념이 없다.
+- `User`에 `learningPurpose`('exam_prep'|'self_development'|'work'|'undecided'), `jobField`, `jobFieldOther`를 더했다. 가입 요청에 세 값을 넣을 수 있고(빠지면 undecided), 마이페이지는 `PATCH /api/users/me/profile`로 바꾼다. 직무 목록은 `constants/learning.ts`와 백엔드 `JobField`에 함께 둔다.
+- 학습 분석 응답 `concepts[]`에 `quiz: ConceptQuizStats | null`을 더했다(퀴즈 결과는 AI 판단과 따로, 추천 순서도 바꾸지 않는다).
+- **채점:** 객관식 코드, 주관식은 허용 답과 정규화 비교 후 다르면 AI 의미 판단, 서술형은 기준마다 AI가 수준만 고르고 점수는 서버가 더한다. AI 판단은 설정된 모델 모두가 따로 하고 과반 의견만 쓴다. `gradingStatus`: `graded` / `needs_review`(의견 갈림, 점수에 안 넣음) / `pending`(모델 없음·동의 없음·한도·실패, 점수에 안 넣음, `grading` API로 다시 채점). 화면은 `gradingMessage`를 그대로 보여 주면 된다.
+- **결과 판단 `assessment.status`:** `ready` / `not_ready` / `needs_check`(문항 3개 미만, 대기·확인 필요 답, 한 모델만 채점한 서술형). 서버 코드 규칙이고 숙련도 점수가 아니다. `reasons`는 코드가 센 숫자 문장.
+- **오류:** 만들기 403(AI 퀴즈 처리 동의 없음, 5-8), 400(값), 404(남의 과목·자료), 409(같은 사용자의 만들기가 진행 중, 이미 실패한 키), 429(24시간 20번), 502(모델 응답 실패·형식 오류, 저장 안 함), 503(연결된 모델 없음). 제출 422(AI로 보낼 답에 이메일·전화번호 등 개인정보, `data.questionIds`).
+- 모델을 기다리므로 만들기·제출은 오래 걸릴 수 있다(`quizzes.api.ts`에서 timeout을 늘려 둠).
+
+#### 11/3 안정화·추가 (백엔드 V8)
+
+| 메서드 | 경로                                     | 요청 본문 | 응답 `data`                                                                 |
+| ------ | ---------------------------------------- | --------- | --------------------------------------------------------------------------- |
+| GET    | `/api/quizzes/generations/{requestKey}`  | -         | `{ status: 'running'\|'succeeded'\|'failed'\|'timed_out', quizId, message, deadlineAt }` |
+| GET    | `/api/curriculum/courses/{courseId}`     | -         | `Curriculum` (`frontend/src/types/curriculum.ts`)                           |
+
+- **AI 퀴즈 처리 동의를 따로 받는다.** `User.aiQuizConsent`, 가입 `agreedAiQuiz`(선택, 없으면 false), 마이페이지 `PATCH /api/users/me/consents { aiQuiz }`. 대화 분석 동의(`aiAnalysis`)를 퀴즈로 넓히지 않는다. 기존 회원은 false. 동의가 없으면 만들기 403, 주관식·서술형은 `pending`(이유 문구는 `gradingMessage`).
+- 더한 필드: `QuizCreateInput.mockExam`(exam_prep만, 20문제까지), `Quiz.mockExam`, `QuizSummary.mockExam`·`lastReviewCount`, 개념별 결과 `correctCount`(채점이 끝나고 만점인 문제 수, 대기·확인 필요는 틀린 것으로 세지 않음)·`lastSubmittedAt`.
+- 오류 추가: 만들기 504(전체 시간 150초 초과, 저장 안 함), 429(24시간 실제 모델 요청 수 상한), 다시 채점 409(같은 제출을 채점 중)·429(24시간 AI 채점 실행 한도, 답은 그대로)·403(퀴즈 동의 없음)·503(모델 없음).
+- timeout: 만들기 180초, 제출·다시 채점 150초(서버 예산 150초·120초보다 길게). 만들기를 보낸 키는 탭 sessionStorage에 두고 새로 고치면 상태 API로 결과를 찾는다.
+
+#### 11/3 사전·사후평가·자료 핵심 개념 (백엔드 V9·V10, 확정: Swagger `사전·사후평가`, 핵심 개념 API도 같은 태그)
+
+| 메서드 | 경로                                   | 요청 본문                                   | 응답 `data`                                                   |
+| ------ | -------------------------------------- | ------------------------------------------- | ------------------------------------------------------------- |
+| POST   | `/api/assessments`                     | `AssessmentCreateInput`                     | `Quiz` (201, 풀기·결과는 `/api/quizzes/{id}` 그대로)          |
+| GET    | `/api/assessments/comparison`          | - (`?courseId=` 또는 `?materialId=`)        | `AssessmentComparison`                                        |
+| GET    | `/api/assessments/ai-status`           | -                                           | `QuizAiStatus` (키 값 없음, `materialContentEnabled` 포함)    |
+| GET    | `/api/materials/{id}/concepts`         | -                                           | `MaterialConcept[]` (안 뽑았으면 빈 목록)                     |
+| POST   | `/api/materials/{id}/concepts`         | `{ materialContentConsent: boolean }`       | `MaterialConcept[]` (새로 뽑은 개념으로 바꿈)                 |
+
+타입은 `frontend/src/types/assessment.ts`, `types/material.ts`(`MaterialConcept`), `types/quiz.ts`(`Quiz.topicSource`, `MaterialContentNote`).
+
+- **평가 = 퀴즈 행.** `quiz.assessment_kind`(PRE/POST), `pre_assessment_id`(사후 → 사전), `material_content_used`, `concept_source`(MATERIAL/COURSE). 풀기·채점·결과는 퀴즈와 같다. 과목에 연결된 자료만(아니면 400).
+- **사후평가는 최신 사전평가를 그대로 따른다:** 같은 개념·같은 개념 출처·유형별 문항 수·문항 수·난이도·모드. 사후 요청의 유형·수·난이도는 무시한다. 문제가 겹치지 않게 사전평가 문제 글을 `avoidQuestions`로 AI에 함께 보낸다. 사전평가가 없으면 400.
+- **평가할 개념:** 자료에서 뽑은 개념이 있으면 그것(`topicSource: 'material'`), 없으면 과목 키워드(`'course'`). 풀기 응답은 문제별 개념을 싣지 않으므로(V6 계약) 평가 단위 출처만 `topicSource`라는 이름으로 준다.
+- **비교 (`GET /comparison`):** 그 과목(또는 자료)의 **최신 제출된 사전평가 vs 그 사전평가에 연결된 최신 사후평가**. 각 평가의 가장 최근 제출만, **채점이 끝난 답만** 더한다(대기·확인 필요는 틀린 답으로 세지 않고 빼며 `pendingCount`·`reviewCount`로 알린다). `overallDelta`·`concepts[].delta`는 정답률 차이(%p, 반올림), `concepts[].status`는 서버 규칙(기준 `app.quiz.assessment.concept-min-rate` 0.6): improved / declined / unchanged / still_weak(사후도 기준 미만) / weak·ok(사후 전) / not_taken. `comparability`는 개념 집합·문항 수·유형별 수·난이도가 같은지와 주의 문장(`notes`: 문제는 새로 만든 것, 미채점 답, 자료 본문 사용 여부 차이 등). 숙련도 점수가 아니다.
+- **자료 본문 외부 전송 (`app.material-content.enabled`, 환경변수 `MATERIAL_CONTENT_ENABLED`, 기본 false):** 꺼져 있으면 `useMaterialContent: true` 평가 요청과 핵심 개념 뽑기가 403이고, 평가는 개념 목록으로만 만든다. 켜져 있어도 요청마다 `materialContentConsent: true`(없으면 400)와 AI 퀴즈 처리 동의(없으면 403)가 있어야 한다. 제공사·국가·보관 기간과 처리 근거를 처리방침에 확정하기 전에는 켜지 않는다.
+- **본문 읽기 (`MaterialTextExtractor`, 외부 서비스 없음):** TXT·MD(UTF-8), PPTX(슬라이드 글 칸, `[슬라이드 N]`), PDF(Apache PDFBox 3, 쪽마다 `[p. N]`, 최대 100쪽·12,000자, 넘으면 잘림). 글이 없는 PDF(스캔본) → `NO_TEXT`(OCR 미지원), 암호 PDF → `ENCRYPTED`, 손상 → `FAILED`. 본문에 개인정보 패턴(IP 제외 규칙)이 있으면 보내지 않는다(`PERSONAL_INFO`). 평가 만들기는 이때 본문 없이 만들고 `materialContentNote`로 이유를 준다(`materialContentUsed=false`). 뽑은 글은 저장하지 않는다.
+- **핵심 개념 뽑기:** AI가 `{name, description, quote}` 후보를 내면, 서버가 **이름과 근거 문장(quote)이 정규화한 자료 본문에 실제로 있는지** 확인해 통과한 것만 저장한다(최대 10개, 이름 20자). 근거 위치는 quote 앞의 마지막 `[p. N]`/`[슬라이드 N]` 표시로 서버가 정한다. 과목 키워드와 같은 개념이면 `courseKeyword: true`. 통과한 개념이 없으면 502이고 아무것도 저장하지 않는다. 읽지 못한 자료는 422(`data.reason`: NO_TEXT·ENCRYPTED·EMPTY·FAILED·NOT_SUPPORTED), 개인정보 422, 남의 자료 404, 모델 없음 503, 24시간 한도(만들기 한도와 같은 수, 모델 요청 상한 공유) 429. 자료를 지우면 개념도 지워진다(FK CASCADE).
+- **AI가 하나뿐일 때:** 만들기는 그 모델로, 채점도 그 모델 하나로 한다. 판단이 하나뿐이면 다수결이 아니라 `SINGLE_MODEL`("AI 모델 하나만 판단한 결과예요")로 표시하고 결과 판단은 "추가 확인 필요"(needs_check)로 본다. 화면은 "AI 1개만 판단 (다수결 아님)". 키와 모델 이름이 둘 다 있어야 그 모델을 쓰고, 하나도 없으면 만들기 503·`ai-status.available=false`.
 
 ## 4. 11/6 중간 심사 전에 필요한 것
 
@@ -417,7 +484,7 @@ layout = {
 
 ## 5-1. 백엔드 변경·보안 점검 공유 (10/27)
 
-> 5-1~5-6은 그때그때 공유한 기록이라 그 시점의 마이그레이션 번호가 적혀 있다. 지금 다음 번호는 `backend/CLAUDE.md` "DB 마이그레이션"(11/2 기준 `V7`)을 본다.
+> 5-1~5-8은 그때그때 공유한 기록이라 그 시점의 마이그레이션 번호가 적혀 있다. 지금 다음 번호는 `backend/CLAUDE.md` "DB 마이그레이션"(11/3 기준 `V11`)을 본다.
 
 **이미 머지된 백엔드 변경 (프론트 쪽에서 직접 고침)**
 
@@ -468,6 +535,28 @@ layout = {
 
 - 마이그레이션 **`V6__create_quiz.sql`** 을 썼다. **다음은 `V7`부터**다.
 - 위 "퀴즈" API 4개(목록·풀기·제출·최근 결과)를 제안 그대로 추가했다. 퀴즈 만들기(AI 생성)와 대시보드 근거 연결은 아직 없다.
+
+## 5-7. 학습 목적·3가지 학습 모드 퀴즈 (11/3)
+
+- 마이그레이션 **`V7__add_learning_purpose_and_quiz_modes.sql`** 을 썼다. **다음은 `V8`부터**다. 기존 행은 지우거나 바꾸지 않는다(V6 퀴즈는 모드 NULL·객관식, 기존 제출은 점수 = 맞힌 수).
+- 위 "퀴즈"의 11/3 추가 API와 `PATCH /api/users/me/profile`을 추가했다. 기존 퀴즈 API 4개의 경로·필드는 그대로이고 더하기만 했다. `QuizApiTest`(V6 계약)는 고치지 않고 그대로 통과한다.
+- 프론트에서 고친 곳: `types/quiz.ts`·`types/auth.ts`·`types/analysis.ts`(`concepts[].quiz`), `api/quizzes.api.ts`(만들기·다시 채점·개념별 결과), `api/auth.api.ts`(`updateLearningProfile`), `constants/learning.ts`(목적·직무·모드·유형 조합), `components/common/LearningProfileFields.tsx`(가입·마이페이지 공용), `pages/quizzes/QuizCreatePage.tsx`(새 화면 `/quizzes/new`), `QuizSolvePage.tsx`(유형별 입력, 탭 sessionStorage 임시 답, 제출 확인), `QuizResultPage.tsx`·`components/QuestionResultCard.tsx`(모드별 결과), `QuizListPage.tsx`·`QuizCard.tsx`, `pages/auth/SignupPage.tsx`, `pages/mypage/MyPage.tsx`, `pages/analysis/components/ConceptFeedbackBox.tsx`(확인 퀴즈 만들기 링크·결과), `mocks/quizzes.ts`(목업은 AI를 부르지 않고 예시 문제·채점 대기만), `pages/privacy/PrivacyPage.tsx`(퀴즈 때 외부 AI로 가는 항목 추가).
+- (5-8에서 바뀜) 퀴즈 만들기·AI 채점은 처음에 AI 분석 동의를 재사용했으나, 같은 날 **AI 퀴즈 처리 동의로 분리**했다. 실제 GPT·Claude·Gemini 호출은 아직 확인하지 않았다(테스트는 가짜 모델).
+
+## 5-8. 퀴즈 안정화·AI 퀴즈 처리 동의·맞춤 커리큘럼 (11/3)
+
+- 마이그레이션 **`V8__add_quiz_ai_consent_and_call_tracking.sql`** 을 썼다. **다음은 `V9`부터**다. 표: `quiz_grading_run`(AI 채점 실행 예약), `quiz_ai_call`(모델 호출 기록). 열: `users.ai_quiz_consent`·`ai_quiz_consented_at`, `quiz_generation.deadline_at`, `quiz.mock_exam`. 기존 행은 바꾸지 않는다(기존 회원은 퀴즈 동의 false).
+- 위 "11/3 안정화·추가"의 API 2개와 필드를 더했다. 기존 퀴즈·분석 API 경로는 그대로다.
+- 프론트에서 고친 곳: `types/quiz.ts`·`types/auth.ts`·`types/curriculum.ts`(새), `api/quizzes.api.ts`(상태 조회, timeout), `api/curriculum.api.ts`(새), `api/auth.api.ts`(`updateAiQuizConsent`), `pages/auth/components/ConsentNotice.tsx`·`SignupAgreements.tsx`·`SignupPage.tsx`(AI 퀴즈 처리 동의), `pages/mypage/MyPage.tsx`(동의 카드), `pages/quizzes/QuizCreatePage.tsx`(내 정보 로딩 뒤 기본값, 퀴즈 동의, 모의시험, 새로 고침 복구), `QuizSolvePage.tsx`(모의시험 표시·푼 시간), `components/QuizCard.tsx`(대기·확인 필요를 틀린 것으로 보이지 않게), `pages/curriculum/CurriculumPage.tsx`(빈 화면 → 실제 API), `ConceptFeedbackBox.tsx`(커리큘럼 링크), `pages/privacy/PrivacyPage.tsx`, `mocks/quizzes.ts`.
+- **개인정보 처리방침·동의 문구는 팀 검토가 필요하다**: AI 퀴즈 처리 동의 안내 문구, 제공사·국가·보관 기간(아직 미정), 기존 회원에게 새 동의를 어떻게 안내할지.
+
+## 5-9. 탈퇴·사전·사후평가·자료 핵심 개념 (11/3)
+
+- 마이그레이션 **`V9__add_pre_post_assessment.sql`**(`quiz.assessment_kind`·`pre_assessment_id`·`material_content_used`)과 **`V10__create_material_concept.sql`**(`material_concept` 표, `quiz.concept_source`)을 썼다. **다음은 `V11`부터**다. 기존 행은 바꾸지 않는다(일반 퀴즈는 평가 종류 NULL, 본문 사용 FALSE).
+- 위 "인증·마이페이지"의 탈퇴와 "11/3 사전·사후평가·자료 핵심 개념"의 API 5개를 더했다. 기존 퀴즈 API 경로·필드는 그대로이고 `Quiz`에 `assessmentKind`·`preAssessmentId`·`materialContentUsed`·`materialContentNote`·`topicSource`를 더했다.
+- 백엔드 의존성: `org.apache.pdfbox:pdfbox:3.0.3`(PDF 글 뽑기, 서버 안에서만).
+- 프론트에서 고친 곳: `types/assessment.ts`·`material.ts`·`quiz.ts`, `api/assessments.api.ts`·`materials.api.ts`, `pages/assessments/AssessmentPage.tsx`(`/assessments`), `pages/materials/components/MaterialConceptPanel.tsx`(새, 평가 화면·자료 상세 "핵심 개념" 탭 공용), `pages/analysis/components/AssessmentComparisonPanel.tsx`(대시보드 맨 위 비교), `utils/assessment.ts`, `pages/quizzes/components/QuestionResultCard.tsx`(AI 1개 판단 표시), `pages/mypage/MyPage.tsx`(탈퇴 비밀번호), `pages/privacy/PrivacyPage.tsx`·`pages/auth/components/ConsentNotice.tsx`(자료 본문 전송 안내), `mocks/`.
+- **자료 본문 전송은 기본 꺼짐이다.** 켜기 전에 제공사·이전 국가·보관 기간·처리 근거를 처리방침에 확정하고 팀·멘토 검토를 받는다.
 
 ## 6. 이 문서 고치는 법
 
