@@ -1,5 +1,5 @@
 import { ListChecks } from 'lucide-react';
-import { AsyncBoundary, EmptyState, SubPage } from '@/components';
+import { AsyncBoundary, Button, EmptyState, SubPage } from '@/components';
 import { useCourses, useQuizzes } from '@/hooks';
 import { formatSemester } from '@/utils';
 import QuizCard from './components/QuizCard';
@@ -13,8 +13,8 @@ function QuizList() {
       <EmptyState
         icon={<ListChecks size={24} aria-hidden="true" />}
         title="아직 만든 퀴즈가 없어요"
-        description="자료를 올리면 그 내용으로 퀴즈를 만들어 드려요."
-        action={{ label: '자료 올리기', to: '/materials/upload' }}
+        description="시험 대비·자기개발·업무 활용 중 목적을 골라 AI로 퀴즈를 만들어 보세요."
+        action={{ label: '퀴즈 만들기', to: '/quizzes/new' }}
       />
     );
   }
@@ -37,10 +37,13 @@ function QuizList() {
 
   return (
     <div className="flex flex-col gap-8">
-      <p className="text-body text-ink-soft">
-        퀴즈 {quizzes.length}개 · 채점 결과를 개념별 숙련도에 반영하는 기능은
-        준비 중이에요
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-body text-ink-soft">
+          퀴즈 {quizzes.length}개 · 개념별 결과는 학습 대시보드에서 대화 분석과
+          나란히 볼 수 있어요
+        </p>
+        <Button to="/quizzes/new">퀴즈 만들기</Button>
+      </div>
       {groups.map((group) => (
         <section
           key={group.key}
@@ -69,7 +72,10 @@ function QuizList() {
 
 function QuizListPage() {
   return (
-    <SubPage title="퀴즈" description="올린 자료로 만든 퀴즈를 풀어 보세요">
+    <SubPage
+      title="퀴즈"
+      description="공부하는 목적에 맞춰 만든 퀴즈를 풀고 결과를 확인해요"
+    >
       <AsyncBoundary>
         <QuizList />
       </AsyncBoundary>

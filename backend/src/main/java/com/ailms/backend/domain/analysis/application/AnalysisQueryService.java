@@ -25,6 +25,8 @@ import com.ailms.backend.domain.conversation.entity.Conversation;
 import com.ailms.backend.domain.conversation.entity.ConversationMessage;
 import com.ailms.backend.domain.conversation.entity.MessageRole;
 import com.ailms.backend.domain.course.dao.CourseRepository;
+import com.ailms.backend.domain.quiz.application.QuizStatsService;
+import com.ailms.backend.domain.quiz.dto.ConceptQuizStatsResponse;
 import com.ailms.backend.global.error.BusinessException;
 import com.ailms.backend.global.llm.LlmException;
 import java.util.ArrayList;
@@ -63,6 +65,7 @@ public class AnalysisQueryService {
 	private final ConversationRepository conversationRepository;
 	private final ConversationMessageRepository messageRepository;
 	private final CourseRepository courseRepository;
+	private final QuizStatsService quizStatsService;
 
 	public AnalysisRunResponse getRun(Long userId, Long runId) {
 		return toResponse(runRepository.findByIdAndUserId(runId, userId)
@@ -108,6 +111,12 @@ public class AnalysisQueryService {
 						result.getDroppedEvidenceCount()))
 				.toList();
 
+		// 퀴즈 결과는 대화 분석과 따로 센 값이라 판단·추천 순서를 바꾸지 않고 나란히 보여 준다
+		Map<String, ConceptQuizStatsResponse> quizStats = courseRepository.findById(run.getCourseId())
+				.map(course -> quizStatsService.byCourse(run.getUserId(), course))
+				.orElse(List.of()).stream()
+				.filter(stat -> stat.questionCount() > 0)
+				.collect(Collectors.toMap(ConceptQuizStatsResponse::conceptId, Function.identity(), (a, b) -> a));
 		List<ConceptConsensus> consensus = consensusRepository.findAllByRunIdOrderByIdAsc(run.getId());
 		List<ConceptConsensus> ordered = new ArrayList<>(consensus);
 		ordered.sort(Comparator
@@ -128,7 +137,8 @@ public class AnalysisQueryService {
 							item.getStatus() == null ? null : item.getStatus().apiValue(), item.getJudgedCount(),
 							item.getAgreeCount(), item.getCalledCount()),
 					modelJudgments, mine == null ? null : FeedbackResponse.from(mine), i + 1,
-					mine != null && mine.getFeedback() == FeedbackType.ALREADY_KNOW));
+					mine != null && mine.getFeedback() == FeedbackType.ALREADY_KNOW,
+					quizStats.get(item.getConceptKey())));
 		}
 		return new AnalysisRunResponse(run.getId(), run.getCourseId(), run.getStatus().apiValue(),
 				run.getPromptVersion(), run.getCreatedAt(), run.getCompletedAt(),

@@ -33,6 +33,7 @@ import AnalysisSummaryPanel from './components/AnalysisSummaryPanel';
 import ConceptDetailPanel from './components/ConceptDetailPanel';
 import ConceptFeedbackBox from './components/ConceptFeedbackBox';
 import ConceptTablePanel from './components/ConceptTablePanel';
+import AssessmentComparisonPanel from './components/AssessmentComparisonPanel';
 import LayoutSummary from './components/LayoutSummary';
 import ModelStatusPanel from './components/ModelStatusPanel';
 import RecommendationPanel from './components/RecommendationPanel';
@@ -270,6 +271,11 @@ function Dashboard() {
           AI 표시가 있는 내용은 AI가 작성했어요
         </p>
       </div>
+
+      {/* 맨 위: 사전평가 vs 사후평가 (평가가 없거나 불러오지 못해도 아래 분석은 그대로 보인다) */}
+      <AsyncBoundary key={`assessment-${course.id}`}>
+        <AssessmentComparisonPanel courseId={course.id} />
+      </AsyncBoundary>
 
       {/* 과목을 바꾸면 그 과목의 분석을 새로 불러온다 */}
       <AsyncBoundary key={course.id}>

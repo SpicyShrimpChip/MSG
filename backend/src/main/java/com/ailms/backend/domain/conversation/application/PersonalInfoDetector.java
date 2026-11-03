@@ -20,37 +20,84 @@ public class PersonalInfoDetector {
 	private static final String WORD_END = "(?![A-Za-z0-9_])";
 	private static final String OCTET = "(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)";
 
-	private record Rule(Pattern pattern, Predicate<String> validate) {
+	// 규칙 종류. IP만 따로 빼서 검사할 수 있게 이름을 붙인다 (목록 순서에 기대지 않는다)
+	private enum Kind {
+		SECRET, EMAIL, RRN, CARD, PHONE, IP
+	}
 
-		Rule(String regex) {
-			this(Pattern.compile(regex), matched -> true);
+	private record Rule(Kind kind, Pattern pattern, Predicate<String> validate) {
+
+		Rule(Kind kind, String regex) {
+			this(kind, Pattern.compile(regex), matched -> true);
 		}
 	}
 
 	private static final List<Rule> RULES = List.of(
 			// OpenAI·Anthropic 키, GitHub 토큰, AWS 액세스 키, Google API 키, Slack 토큰, JWT, Bearer 토큰
-			new Rule(WORD_START + "(?:sk-(?:ant-)?[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9]{30,}"
+			new Rule(Kind.SECRET, WORD_START + "(?:sk-(?:ant-)?[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9]{30,}"
 					+ "|github_pat_[A-Za-z0-9_]{30,}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35}|xox[baprs]-[A-Za-z0-9-]{10,}"
 					+ "|eyJ[A-Za-z0-9_-]{8,}\\.eyJ[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,})" + WORD_END
 					+ "|Bearer\\s+[A-Za-z0-9._~+/-]{20,}=*"),
 			// 이메일. 프론트와 같은 것을 찾되, 앞부분을 글자 덩어리의 맨 앞에서만 시작하고 되돌아가지 않게(++) 했다.
 			// 그냥 쓰면 '@' 없는 긴 영문·숫자 덩어리(코드, 붙여 넣은 키 등)에서 시작 위치마다 끝까지 읽어 시간이 제곱으로 는다
-			new Rule("(?<![A-Za-z0-9._%+-])[A-Za-z0-9._%+-]++@[A-Za-z0-9-]+(?:\\.[A-Za-z0-9-]+)*\\.[A-Za-z]{2,}"),
+			new Rule(Kind.EMAIL, "(?<![A-Za-z0-9._%+-])[A-Za-z0-9._%+-]++@[A-Za-z0-9-]+(?:\\.[A-Za-z0-9-]+)*\\.[A-Za-z]{2,}"),
 			// 주민등록번호 (월·일이 맞는 것만)
-			new Rule(Pattern.compile("(?<!\\d)\\d{6}[-\\s]?[1-4]\\d{6}(?!\\d)"), PersonalInfoDetector::isValidRrn),
+			new Rule(Kind.RRN, Pattern.compile("(?<!\\d)\\d{6}[-\\s]?[1-4]\\d{6}(?!\\d)"), PersonalInfoDetector::isValidRrn),
 			// 카드번호 (Luhn 검사를 통과한 것만)
-			new Rule(Pattern.compile("(?<!\\d)\\d(?:[ -]?\\d){12,18}(?!\\d)"), PersonalInfoDetector::passesLuhn),
+			new Rule(Kind.CARD, Pattern.compile("(?<!\\d)\\d(?:[ -]?\\d){12,18}(?!\\d)"), PersonalInfoDetector::passesLuhn),
 			// 휴대폰(010 등)·지역번호·070, 국가번호 +82 형태
-			new Rule("(?<![\\d-])(?:\\+82[-.\\s]?0?|0)(?:10|1[16789]|2|[3-6][1-5]|70)[-.\\s]?\\d{3,4}[-.\\s]?\\d{4}"
+			new Rule(Kind.PHONE, "(?<![\\d-])(?:\\+82[-.\\s]?0?|0)(?:10|1[16789]|2|[3-6][1-5]|70)[-.\\s]?\\d{3,4}[-.\\s]?\\d{4}"
 					+ "(?![\\d-])"),
 			// IPv4
-			new Rule("(?<![\\d.])(?:" + OCTET + "\\.){3}" + OCTET + "(?![\\d.])"));
+			new Rule(Kind.IP, "(?<![\\d.])(?:" + OCTET + "\\.){3}" + OCTET + "(?![\\d.])"));
 
 	public boolean containsPersonalInfo(String text) {
+		return matchesAny(text, RULES);
+	}
+
+	/**
+	 * 학습 글(퀴즈 답·시험 범위)용 검사. 키·이메일·주민번호·카드·전화번호는 그대로 막고, IPv4는 공인 주소만 막는다.
+	 * "192.168.0.0/24 대역을 나눈다"처럼 학습에 흔한 사설·예시 주소(10/8, 172.16/12, 192.168/16, 127/8, 169.254/16,
+	 * 문서용 192.0.2/24·198.51.100/24·203.0.113/24, 0.0.0.0, 255.255.255.x 마스크)는 개인을 가리키지 않아 통과한다.
+	 * 공인 주소는 집·회사 주소일 수 있어 막는다.
+	 */
+	public boolean containsPersonalInfoExceptIp(String text) {
+		if (matchesAny(text, RULES.stream().filter(rule -> rule.kind() != Kind.IP).toList())) {
+			return true;
+		}
 		if (text == null || text.isEmpty()) {
 			return false;
 		}
-		for (Rule rule : RULES) {
+		Matcher matcher = IPV4.matcher(text);
+		while (matcher.find()) {
+			if (!isExampleIp(matcher.group())) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private static final Pattern IPV4 = Pattern.compile("(?<![\\d.])(?:" + OCTET + "\\.){3}" + OCTET + "(?![\\d.])");
+
+	static boolean isExampleIp(String ip) {
+		String[] parts = ip.split("\\.");
+		int a = Integer.parseInt(parts[0]);
+		int b = Integer.parseInt(parts[1]);
+		int c = Integer.parseInt(parts[2]);
+		return a == 10 || a == 127 || a == 0 || a == 255
+				|| (a == 172 && b >= 16 && b <= 31)
+				|| (a == 192 && b == 168)
+				|| (a == 169 && b == 254)
+				|| (a == 192 && b == 0 && c == 2)
+				|| (a == 198 && b == 51 && c == 100)
+				|| (a == 203 && b == 0 && c == 113);
+	}
+
+	private static boolean matchesAny(String text, List<Rule> rules) {
+		if (text == null || text.isEmpty()) {
+			return false;
+		}
+		for (Rule rule : rules) {
 			Matcher matcher = rule.pattern().matcher(text);
 			while (matcher.find()) {
 				if (rule.validate().test(matcher.group())) {

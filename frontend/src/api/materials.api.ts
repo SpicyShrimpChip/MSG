@@ -1,12 +1,16 @@
 import type {
+  ConceptExtractInput,
   Material,
+  MaterialConcept,
   MaterialDetail,
   MaterialSummary,
   MaterialUploadInput,
 } from '@/types';
 import {
   mockDeleteMaterial,
+  mockExtractMaterialConcepts,
   mockGetMaterial,
+  mockGetMaterialConcepts,
   mockGetMaterials,
   mockUploadMaterial,
 } from '@/mocks';
@@ -50,4 +54,27 @@ export function getMaterial(id: number): Promise<MaterialDetail> {
 export function deleteMaterial(id: number): Promise<void> {
   if (USE_MOCK) return mockDeleteMaterial(id);
   return request<void>({ method: 'DELETE', url: `/materials/${id}` });
+}
+
+// 자료에서 뽑아 근거를 확인한 핵심 개념 (안 뽑았으면 빈 목록)
+export function getMaterialConcepts(id: number): Promise<MaterialConcept[]> {
+  if (USE_MOCK) return mockGetMaterialConcepts(id);
+  return request<MaterialConcept[]>({
+    method: 'GET',
+    url: `/materials/${id}/concepts`,
+  });
+}
+
+// 핵심 개념 뽑기: 자료 본문 발췌를 외부 AI로 보낸다(운영 설정이 꺼져 있으면 403). 서버가 근거를 본문에서 확인한 개념만 저장한다
+export function extractMaterialConcepts(
+  id: number,
+  input: ConceptExtractInput,
+): Promise<MaterialConcept[]> {
+  if (USE_MOCK) return mockExtractMaterialConcepts(id);
+  return request<MaterialConcept[]>({
+    method: 'POST',
+    url: `/materials/${id}/concepts`,
+    data: input,
+    timeout: 180_000,
+  });
 }

@@ -1,20 +1,51 @@
-import type { Quiz, QuizAnswer, QuizResult, QuizSummary } from '@/types';
+import type {
+  AssessmentComparison,
+  AssessmentCreateInput,
+  ConceptQuizStats,
+  Curriculum,
+  Quiz,
+  QuizAnswer,
+  QuizCreateInput,
+  QuizResult,
+  QuizResultItem,
+  QuizSummary,
+} from '@/types';
 import { ApiError } from '@/api/request';
 import { mockDelay } from './delay';
 
-// 목업 전용. 실제 서비스에서는 서버가 자료로 퀴즈를 만들고, 채점도 서버 코드가 한다 (프론트는 채점하지 않음).
-// 문제는 샘플 자료(mocks/materials.ts)를 바탕으로 직접 쓴 예시이고 시험 문제 원문이 아니다
+// 목업 전용. 실제 서비스에서는 서버가 AI로 퀴즈를 만들고, 채점도 서버 코드가 한다 (프론트는 채점하지 않음).
+// 문제는 샘플 자료(mocks/materials.ts)를 바탕으로 직접 쓴 예시이고 시험 문제 원문이 아니다.
+// 목업은 AI를 부르지 않는다: 만들기는 예시 문제를 돌려주고(generatedBy: null), 서술형·일치하지 않는 주관식은 "채점 대기"로 둔다
 interface MockQuestion {
   id: number;
+  type?: 'multiple_choice' | 'short_answer' | 'essay';
   text: string;
   choices: string[];
   answerIndex: number;
+  acceptedAnswers?: string[];
+  rubric?: { criterion: string; points: number }[];
   conceptIds: string[];
   // AI가 쓴 해설이라고 가정한 글
   aiExplanation: string;
 }
 
-interface MockQuiz extends Omit<Quiz, 'questions'> {
+interface MockQuiz extends Omit<
+  Quiz,
+  | 'questions'
+  | 'mode'
+  | 'difficulty'
+  | 'jobField'
+  | 'jobFieldOther'
+  | 'examScope'
+  | 'generatedBy'
+  | 'materialContentUsed'
+  | 'mockExam'
+  | 'assessmentKind'
+  | 'preAssessmentId'
+  | 'materialContentNote'
+  | 'topicSource'
+> {
+  mode?: Quiz['mode'];
   questions: MockQuestion[];
 }
 
@@ -128,7 +159,7 @@ const QUIZZES: MockQuiz[] = [
 ];
 
 // 제출 결과는 새로고침해도 남도록 브라우저에 저장한다 (퀴즈 id → 가장 최근 결과)
-const STORAGE_KEY = 'ai-lms-mock-quiz-results';
+const STORAGE_KEY = 'ai-lms-mock-quiz-results-v2';
 
 function loadResults(): Record<number, QuizResult> {
   try {
@@ -156,16 +187,29 @@ function findQuiz(id: number): MockQuiz {
   return quiz;
 }
 
+const typeOf = (question: MockQuestion) => question.type ?? 'multiple_choice';
+const maxScoreOf = (question: MockQuestion) =>
+  question.rubric?.reduce((sum, item) => sum + item.points, 0) ?? 1;
+
 export function mockGetQuizzes(): Promise<QuizSummary[]> {
   const results = getResults();
   return mockDelay(
-    QUIZZES.map(({ id, title, courseId, materialId, questions }) => ({
+    QUIZZES.map(({ id, title, courseId, materialId, questions, mode }) => ({
       id,
       title,
       courseId,
       materialId,
       questionCount: questions.length,
       lastCorrectCount: results[id]?.correctCount ?? null,
+      mode: mode ?? null,
+      difficulty: null,
+      aiGenerated: false,
+      lastScore: results[id]?.score ?? null,
+      lastMaxScore: results[id]?.maxScore ?? null,
+      lastPendingCount: results[id]?.pendingCount ?? null,
+      lastReviewCount: results[id]?.reviewCount ?? null,
+      mockExam: false,
+      assessmentKind: null,
     })),
   );
 }
@@ -176,10 +220,28 @@ export function mockGetQuiz(id: number): Promise<Quiz> {
     const { questions, ...quiz } = findQuiz(id);
     return mockDelay({
       ...quiz,
-      questions: questions.map(({ id: questionId, text, choices }) => ({
-        id: questionId,
-        text,
-        choices,
+      mode: quiz.mode ?? null,
+      difficulty: null,
+      jobField: null,
+      jobFieldOther: null,
+      examScope: null,
+      generatedBy: null,
+      materialContentUsed: false,
+      mockExam: false,
+      assessmentKind: null,
+      preAssessmentId: null,
+      materialContentNote: null,
+      topicSource: null,
+      questions: questions.map((question) => ({
+        id: question.id,
+        type: typeOf(question),
+        text: question.text,
+        choices: question.choices,
+        scenario: null,
+        role: null,
+        guide: null,
+        criteria: [],
+        maxScore: maxScoreOf(question),
       })),
     });
   } catch (error) {
@@ -187,35 +249,98 @@ export function mockGetQuiz(id: number): Promise<Quiz> {
   }
 }
 
-// 서버가 할 채점을 흉내 낸다
+const normalize = (text: string) =>
+  text
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[\s\-_.,;:!?'"`()[\]{}·/]/g, '');
+
+// 서버가 할 채점을 흉내 낸다 (AI 채점은 하지 않고 대기로 둔다)
 export function mockSubmitQuiz(
   id: number,
   answers: QuizAnswer[],
 ): Promise<QuizResult> {
   try {
     const quiz = findQuiz(id);
-    const results = quiz.questions.map((question) => {
-      const choiceIndex =
-        answers.find((answer) => answer.questionId === question.id)
-          ?.choiceIndex ?? -1;
+    const results: QuizResultItem[] = quiz.questions.map((question) => {
+      const answer = answers.find((item) => item.questionId === question.id);
+      const type = typeOf(question);
+      const maxScore = maxScoreOf(question);
+      const text = answer?.text?.trim() || null;
+      let correct = false;
+      let pending = false;
+      if (type === 'multiple_choice') {
+        correct = (answer?.choiceIndex ?? -1) === question.answerIndex;
+      } else if (text && type === 'short_answer') {
+        correct = (question.acceptedAnswers ?? []).some(
+          (item) => normalize(item) === normalize(text),
+        );
+        pending = !correct;
+      } else if (text) {
+        pending = true;
+      }
       return {
         questionId: question.id,
-        choiceIndex,
-        correct: choiceIndex === question.answerIndex,
-        correctChoiceIndex: question.answerIndex,
+        type,
+        choiceIndex:
+          type === 'multiple_choice' ? (answer?.choiceIndex ?? -1) : -1,
+        textAnswer: text,
+        correct,
+        correctChoiceIndex:
+          type === 'multiple_choice' ? question.answerIndex : null,
         concepts: question.conceptIds.map((conceptId) => ({
           conceptId,
           name: CONCEPT_NAMES[conceptId] ?? conceptId,
         })),
         aiExplanation: question.aiExplanation,
+        score: correct ? maxScore : 0,
+        maxScore,
+        gradingStatus: pending ? 'pending' : 'graded',
+        gradingMethod:
+          type === 'multiple_choice' ? 'code' : pending ? 'ai' : 'match',
+        gradingMessage: pending ? '목업에서는 AI 채점을 하지 않아요.' : null,
+        aiCalledCount: 0,
+        aiJudgedCount: 0,
+        acceptedAnswers: question.acceptedAnswers ?? [],
+        aiModelAnswer: null,
+        rubric: (question.rubric ?? []).map((item) => ({
+          ...item,
+          earned: null,
+          level: null,
+          agreeCount: 0,
+          judgedCount: 0,
+          aiReason: null,
+        })),
+        aiFeedback: null,
       };
     });
+    const graded = results.filter((item) => item.gradingStatus === 'graded');
+    const pendingCount = results.length - graded.length;
+    const score = graded.reduce((sum, item) => sum + item.score, 0);
+    const maxScore = graded.reduce((sum, item) => sum + item.maxScore, 0);
     const result: QuizResult = {
       submissionId: Date.now(),
       submittedAt: new Date().toISOString(),
       correctCount: results.filter((item) => item.correct).length,
       totalCount: results.length,
+      score,
+      maxScore,
+      pendingCount,
+      reviewCount: 0,
+      mode: quiz.mode ?? null,
       results,
+      assessment: {
+        status:
+          pendingCount > 0 || graded.length < 3
+            ? 'needs_check'
+            : maxScore > 0 && score / maxScore >= 0.8
+              ? 'ready'
+              : 'not_ready',
+        reasons: ['목업 결과예요. 실제 판단은 서버가 해요.'],
+        byType: [],
+        byConcept: [],
+      },
+      suggestions: [],
     };
     setResult(id, result);
     return mockDelay(result, 600);
@@ -224,8 +349,247 @@ export function mockSubmitQuiz(
   }
 }
 
+export function mockRegradeQuiz(id: number): Promise<QuizResult> {
+  const result = getResults()[id];
+  return result
+    ? mockDelay(result)
+    : Promise.reject(new ApiError('제출 기록을 찾을 수 없어요.', 404));
+}
+
 export function mockGetLatestQuizResult(
   id: number,
 ): Promise<QuizResult | null> {
   return mockDelay(getResults()[id] ?? null);
+}
+
+let nextMockId = 100;
+
+// 목업은 AI를 부르지 않는다. 고른 유형으로 예시 문제를 돌려주고 AI가 만든 것처럼 표시하지 않는다
+export function mockCreateQuiz(input: QuizCreateInput): Promise<Quiz> {
+  const id = nextMockId++;
+  const samples: Record<string, MockQuestion> = {
+    multiple_choice: {
+      id: id * 10 + 1,
+      text: '받는 사람만 열 수 있게 암호화하려면 어떤 키를 쓸까요?',
+      choices: [
+        '내 개인키',
+        '내 공개키',
+        '받는 사람의 공개키',
+        '받는 사람의 개인키',
+      ],
+      answerIndex: 2,
+      conceptIds: ['public-key'],
+      aiExplanation: '받는 사람의 공개키로 잠그면 그 사람의 개인키로만 열려요.',
+    },
+    short_answer: {
+      id: id * 10 + 2,
+      type: 'short_answer',
+      text: '서로 다른 두 입력이 같은 해시값을 갖기 어려워야 한다는 성질은?',
+      choices: [],
+      answerIndex: -1,
+      acceptedAnswers: ['충돌 저항성', '충돌 회피성'],
+      conceptIds: ['hash'],
+      aiExplanation: '같은 값이 나오는 두 입력을 찾기 어려운 성질이에요.',
+    },
+    essay: {
+      id: id * 10 + 3,
+      type: 'essay',
+      text: '전자서명과 공개키 암호화에서 키를 쓰는 방향이 어떻게 다른지 설명해 보세요.',
+      choices: [],
+      answerIndex: -1,
+      rubric: [
+        { criterion: '서명에 쓰는 키 설명', points: 3 },
+        { criterion: '암호화와 방향 비교', points: 3 },
+      ],
+      conceptIds: ['digital-signature', 'public-key'],
+      aiExplanation: '',
+    },
+  };
+  QUIZZES.unshift({
+    id,
+    title: '예시 퀴즈 (목업)',
+    courseId: input.courseId,
+    materialId: null,
+    mode: input.mode,
+    questions: input.questionTypes.map((type) => samples[type]),
+  });
+  return mockGetQuiz(id);
+}
+
+export function mockGetConceptQuizStats(
+  courseId: number,
+): Promise<ConceptQuizStats[]> {
+  void courseId;
+  return mockDelay([]);
+}
+
+// 목업은 AI를 부르지 않으므로 만들기 요청은 바로 끝난 것으로 본다
+export function mockGetGenerationStatus(requestKey: string) {
+  void requestKey;
+  return Promise.reject(
+    new ApiError('퀴즈 만들기 요청을 찾을 수 없어요.', 404),
+  );
+}
+
+// 목업 학습 순서 (예시 데이터. 실제 순서는 서버가 퀴즈 결과·대화 분석·피드백으로 정한다)
+export function mockGetCurriculum(courseId: number): Promise<Curriculum> {
+  return mockDelay({
+    courseId,
+    courseName: '예시 과목',
+    learningPurpose: 'undecided',
+    recommendedMode: 'self_development',
+    steps: [
+      {
+        order: 1,
+        conceptId: 'hash',
+        concept: '해시 함수',
+        stage: 'review',
+        reasons: [
+          '예시 데이터예요. 퀴즈에서 채점이 끝난 2문제의 득점은 0/2점(0%)이에요.',
+          '득점률이 보완 기준(60%)보다 낮아요.',
+        ],
+        evidence: {
+          questionCount: 2,
+          gradedCount: 2,
+          correctCount: 0,
+          score: 0,
+          maxScore: 2,
+          pendingCount: 0,
+          reviewCount: 0,
+          analysisStatus: null,
+          analysisOutcome: null,
+          feedback: null,
+          confirmation: null,
+        },
+        actions: [
+          {
+            type: 'review_quiz',
+            label: '복습 퀴즈 풀기',
+            quizMode: 'self_development',
+          },
+        ],
+      },
+      {
+        order: 2,
+        conceptId: 'pki',
+        concept: '인증서(PKI)',
+        stage: 'not_assessed',
+        reasons: [
+          '예시 데이터예요. 아직 이 개념을 확인한 퀴즈나 대화 분석이 없어요.',
+        ],
+        evidence: {
+          questionCount: 0,
+          gradedCount: 0,
+          correctCount: 0,
+          score: 0,
+          maxScore: 0,
+          pendingCount: 0,
+          reviewCount: 0,
+          analysisStatus: null,
+          analysisOutcome: null,
+          feedback: null,
+          confirmation: null,
+        },
+        actions: [
+          {
+            type: 'first_quiz',
+            label: '첫 퀴즈 풀기',
+            quizMode: 'self_development',
+          },
+        ],
+      },
+    ],
+    materials: [],
+    aiSuggestions: [],
+  });
+}
+
+// 목업은 AI를 부르지 않는다. 사전·사후평가는 예시 퀴즈를 돌려주고 AI가 만든 것처럼 표시하지 않는다
+export function mockCreateAssessment(input: AssessmentCreateInput) {
+  return mockCreateQuiz({
+    requestKey: input.requestKey,
+    courseId: 1,
+    mode: 'self_development',
+    questionTypes: ['multiple_choice', 'short_answer'],
+    questionCount: 2,
+    difficulty: 'medium',
+  });
+}
+
+// 목업 비교 (예시 데이터)
+export function mockGetAssessmentComparison(target: {
+  courseId?: number;
+  materialId?: number;
+}): Promise<AssessmentComparison> {
+  void target;
+  return mockDelay({
+    basis: '예시 데이터예요. 실제로는 최신 사전평가와 그 사후평가를 비교해요.',
+    material: { id: 1, title: '예시 자료' },
+    pre: {
+      quizId: 1,
+      title: '예시 자료 · 사전평가',
+      submissionId: 1,
+      submittedAt: '2026-11-01T10:00:00',
+      questionCount: 6,
+      gradedCount: 6,
+      score: 3,
+      maxScore: 6,
+      pendingCount: 0,
+      reviewCount: 0,
+    },
+    post: {
+      quizId: 2,
+      title: '예시 자료 · 사후평가',
+      submissionId: 2,
+      submittedAt: '2026-11-03T10:00:00',
+      questionCount: 6,
+      gradedCount: 6,
+      score: 5,
+      maxScore: 6,
+      pendingCount: 0,
+      reviewCount: 0,
+    },
+    overallDelta: 33,
+    comparability: {
+      sameConcepts: true,
+      sameQuestionCount: true,
+      sameQuestionTypes: true,
+      sameDifficulty: true,
+      notes: [
+        '사후평가 문제는 같은 개념으로 새로 만든 문제라 문제 자체는 달라요.',
+      ],
+    },
+    concepts: [
+      {
+        conceptId: 'hash',
+        name: '해시 함수',
+        preScore: 1,
+        preMaxScore: 3,
+        postScore: 3,
+        postMaxScore: 3,
+        delta: 67,
+        status: 'improved',
+      },
+      {
+        conceptId: 'pki',
+        name: '인증서(PKI)',
+        preScore: 2,
+        preMaxScore: 3,
+        postScore: 2,
+        postMaxScore: 3,
+        delta: 0,
+        status: 'unchanged',
+      },
+    ],
+  });
+}
+
+export function mockGetQuizAiStatus() {
+  return mockDelay({
+    available: false,
+    generation: null,
+    grading: [],
+    message: '목업에서는 AI를 부르지 않아요. 예시 문제만 보여 줘요.',
+    materialContentEnabled: false,
+  });
 }

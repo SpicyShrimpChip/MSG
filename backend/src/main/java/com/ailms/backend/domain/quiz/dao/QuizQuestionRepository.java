@@ -10,10 +10,13 @@ import org.springframework.data.jpa.repository.Query;
 public interface QuizQuestionRepository extends JpaRepository<QuizQuestion, Long> {
 
 	// 보기·개념을 한 번에 가져온다 (문제마다 조회가 따로 나가지 않게)
-	@EntityGraph(attributePaths = {"choices", "concepts"})
+	@EntityGraph(attributePaths = {"choices", "concepts", "acceptedAnswers", "rubric"})
 	List<QuizQuestion> findAllByQuizIdOrderBySortOrderAsc(Long quizId);
 
 	// 목록 화면의 문제 수. [quizId, count]
 	@Query("select q.quizId, count(q) from QuizQuestion q where q.quizId in :quizIds group by q.quizId")
 	List<Object[]> countByQuizIds(Collection<Long> quizIds);
+
+	@EntityGraph(attributePaths = {"concepts", "rubric"})
+	List<QuizQuestion> findAllByQuizIdIn(Collection<Long> quizIds);
 }

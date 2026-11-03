@@ -1,7 +1,6 @@
 import { useParams } from 'react-router-dom';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import {
-  BookOpen,
   FileCheck,
   ListChecks,
   LoaderCircle,
@@ -14,7 +13,6 @@ import {
   AiNote,
   AsyncBoundary,
   Button,
-  Card,
   EmptyState,
   SubPage,
   Tabs,
@@ -23,6 +21,7 @@ import { useCourses, useQuizzes } from '@/hooks';
 import type { MaterialDetail } from '@/types';
 import { formatDate } from '@/utils';
 import QuizCard from '@/pages/quizzes/components/QuizCard';
+import MaterialConceptPanel from './components/MaterialConceptPanel';
 
 // 요약·개념·퀴즈를 아직 만들지 않았거나(분석 전·분석 중) 만들지 못한 자료는 탭마다 같은 안내를 보여 준다
 function NotReady({ status }: { status: MaterialDetail['status'] }) {
@@ -74,50 +73,37 @@ function SummaryTab({ material }: { material: MaterialDetail }) {
   );
 }
 
+// 핵심 개념은 자료 분석 상태와 관계없이 "핵심 개념 뽑기"로 따로 만든다 (근거를 서버가 본문에서 확인한 것만)
 function ConceptsTab({ material }: { material: MaterialDetail }) {
-  if (material.status !== 'ready') return <NotReady status={material.status} />;
-  if (material.concepts.length === 0) {
-    return (
-      <EmptyState
-        icon={<BookOpen size={24} aria-hidden="true" />}
-        title="뽑은 핵심 개념이 없어요"
-        description="이 자료에서 과목 키워드와 맞는 개념을 찾지 못했어요. 내 과목의 키워드를 확인해 보세요."
-        action={{ label: '내 과목 보기', to: '/courses' }}
-      />
-    );
-  }
   return (
-    <div className="flex flex-col gap-4">
-      <p className="text-body text-ink-soft">
-        이 자료에서 다루는 개념 {material.concepts.length}개예요. 퀴즈 결과를
-        개념별 숙련도에 반영하는 기능은 준비 중이에요.
-      </p>
-      <ul className="grid gap-3 md:grid-cols-2">
-        {material.concepts.map((concept) => (
-          <Card
-            as="li"
-            key={concept.conceptId}
-            className="flex flex-col gap-3 p-5"
-          >
-            <p className="font-bold text-heading">{concept.name}</p>
-            {concept.aiDescription && (
-              <AiNote title="이 자료에서는">{concept.aiDescription}</AiNote>
-            )}
-          </Card>
-        ))}
-      </ul>
-      <div>
-        <Button to="/analysis" variant="secondary">
-          학습 대시보드에서 숙련도 보기
-        </Button>
-      </div>
-    </div>
+    <AsyncBoundary>
+      <MaterialConceptPanel
+        materialId={material.id}
+        fileName={material.fileName}
+      />
+    </AsyncBoundary>
   );
 }
 
 // 퀴즈는 자료 분석과 따로 저장될 수 있어서(분석 전 자료에 붙인 퀴즈 등) 상태와 관계없이 이 자료의 퀴즈를 먼저 찾는다.
 // 퀴즈가 없을 때만 분석 상태 안내를 보여 준다
+// 이 자료로 사전·사후평가 보기 (평가 화면에서 이 자료를 골라 둔다)
 function QuizTab({ material }: { material: MaterialDetail }) {
+  return (
+    <div className="flex flex-col gap-4">
+      {material.courseId !== null && (
+        <div>
+          <Button to={`/assessments?materialId=${material.id}`}>
+            이 자료로 사전·사후평가 보기
+          </Button>
+        </div>
+      )}
+      <QuizTabContent material={material} />
+    </div>
+  );
+}
+
+function QuizTabContent({ material }: { material: MaterialDetail }) {
   const { data: quizzes } = useQuizzes();
   const mine = quizzes.filter((quiz) => quiz.materialId === material.id);
   if (mine.length === 0) {

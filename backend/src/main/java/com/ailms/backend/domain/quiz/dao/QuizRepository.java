@@ -11,6 +11,21 @@ public interface QuizRepository extends JpaRepository<Quiz, Long> {
 
 	List<Quiz> findAllByUserIdOrderByIdDesc(Long userId);
 
+	// 사전·사후평가
+	Optional<Quiz> findFirstByUserIdAndMaterialIdAndAssessmentKindOrderByIdDesc(Long userId, Long materialId,
+			com.ailms.backend.domain.quiz.entity.AssessmentKind kind);
+
+	List<Quiz> findAllByUserIdAndCourseIdAndAssessmentKindOrderByIdDesc(Long userId, Long courseId,
+			com.ailms.backend.domain.quiz.entity.AssessmentKind kind);
+
+	List<Quiz> findAllByUserIdAndMaterialIdAndAssessmentKindOrderByIdDesc(Long userId, Long materialId,
+			com.ailms.backend.domain.quiz.entity.AssessmentKind kind);
+
+	List<Quiz> findAllByUserIdAndPreAssessmentIdOrderByIdDesc(Long userId, Long preAssessmentId);
+
+	// 과목의 내 퀴즈 (최근 것부터). AI 다음 개념 제안을 모을 때 쓴다
+	List<Quiz> findAllByUserIdAndCourseIdOrderByIdDesc(Long userId, Long courseId);
+
 	Optional<Quiz> findByIdAndUserId(Long id, Long userId);
 
 	long countByUserIdAndMaterialId(Long userId, Long materialId);

@@ -1,5 +1,6 @@
 package com.ailms.backend.domain.auth.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -33,5 +34,11 @@ public record SignupRequest(
 		boolean agreedPrivacy,
 
 		// 선택 동의. 동의하지 않아도 자료로 공부할 수 있다
-		boolean agreedAiAnalysis) {
+		boolean agreedAiAnalysis,
+		// 선택 동의. 퀴즈 만들기·주관식·서술형 AI 채점에 필요하다. 빠지면 false
+		boolean agreedAiQuiz,
+		// 아래 셋은 선택. 빠지면 '아직 정하지 않음'·직무 없음 (예전 가입 요청과 호환). 마이페이지에서 바꿀 수 있다
+		@Schema(description = "exam_prep / self_development / work / undecided. 없으면 undecided") String learningPurpose,
+		@Schema(description = "관심 직무. 없으면 null") String jobField,
+		@Schema(description = "jobField가 other일 때 분야 이름 (30자까지)") String jobFieldOther) {
 }

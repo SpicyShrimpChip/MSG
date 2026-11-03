@@ -33,6 +33,16 @@ export interface MaterialConcept {
   name: string;
   // 이 자료에서 그 개념을 어떻게 다루는지 (AI가 쓴 설명)
   aiDescription: string | null;
+  // 근거: 서버가 자료 본문에 실제로 있는지 확인한 문장과 위치("p. 3", "슬라이드 2"). 위치를 모르면 null
+  evidenceLocation: string | null;
+  evidenceQuote: string;
+  // 과목 키워드와 같은 개념인지 (자료 개념과 과목 키워드를 구분해 보여 준다)
+  courseKeyword: boolean;
+}
+
+// 핵심 개념 뽑기 (POST /api/materials/{id}/concepts). 자료 본문 발췌를 외부 AI로 보내므로 이번 요청의 확인이 필요하다
+export interface ConceptExtractInput {
+  materialContentConsent: boolean;
 }
 
 // 자료 상세 (GET /api/materials/{id}). ai로 시작하는 필드는 AI가 쓴 글이라 화면에서 보라색 "AI" 표시를 붙인다

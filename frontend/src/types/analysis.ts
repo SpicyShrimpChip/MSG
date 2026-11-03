@@ -1,3 +1,4 @@
+import type { ConceptQuizStats } from './quiz';
 // 학습 분석 (여러 AI 모델 비교). 백엔드 /api/analysis 응답과 같은 모양 (docs/frontend-requests.md "학습 분석")
 // 상태 비교·개수·순서는 코드가 정한 값, ai로 시작하는 필드만 AI가 쓴 글이다
 // (화면에서 AI 글은 보라색 + "AI" 표시로 구분하므로 필드를 섞지 않는다)
@@ -88,6 +89,8 @@ export interface ConceptResult {
   // 추천 학습 순서 (코드 규칙)
   studyOrder: number;
   recommendConfirmQuiz: boolean;
+  // 이 개념의 퀴즈 결과 (코드 집계, AI 판단과 따로). 퀴즈 기록이 없으면 null
+  quiz?: ConceptQuizStats | null;
 }
 
 export type ModelRunStatus =

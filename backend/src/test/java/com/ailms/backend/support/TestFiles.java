@@ -34,6 +34,18 @@ public final class TestFiles {
 				"ppt/presentation.xml", "<p:presentation/>"));
 	}
 
+	// 슬라이드 글이 든 PowerPoint (본문 읽기 테스트용, 직접 쓴 짧은 글)
+	public static byte[] pptxWithSlides(String... slides) {
+		Map<String, String> entries = new java.util.HashMap<>();
+		entries.put("[Content_Types].xml", contentTypes(PPTX_MAIN, "/ppt/presentation.xml"));
+		entries.put("ppt/presentation.xml", "<p:presentation/>");
+		for (int i = 0; i < slides.length; i++) {
+			entries.put("ppt/slides/slide" + (i + 1) + ".xml",
+					"<p:sld><p:txBody><a:p><a:r><a:t>" + slides[i] + "</a:t></a:r></a:p></p:txBody></p:sld>");
+		}
+		return zip(entries);
+	}
+
 	// 매크로가 든 PowerPoint (확장자만 pptx로 바꾼 경우)
 	public static byte[] pptm() {
 		return zip(Map.of(
