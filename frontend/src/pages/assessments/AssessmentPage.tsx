@@ -184,6 +184,7 @@ function MaterialAssessment({
           <MaterialConceptPanel
             materialId={material.id}
             fileName={material.fileName}
+            courseId={material.courseId}
           />
         </AsyncBoundary>
       </section>

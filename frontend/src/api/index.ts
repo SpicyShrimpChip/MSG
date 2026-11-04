@@ -9,3 +9,4 @@ export * from './quizzes.api';
 export * from './auth.api';
 export * from './curriculum.api';
 export * from './assessments.api';
+export * from './search.api';

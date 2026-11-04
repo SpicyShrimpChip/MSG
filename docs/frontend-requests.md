@@ -575,6 +575,28 @@ layout = {
 - 프론트에서 고친 곳: `types/assessment.ts`·`material.ts`·`quiz.ts`, `api/assessments.api.ts`·`materials.api.ts`, `pages/assessments/AssessmentPage.tsx`(`/assessments`), `pages/materials/components/MaterialConceptPanel.tsx`(새, 평가 화면·자료 상세 "핵심 개념" 탭 공용), `pages/analysis/components/AssessmentComparisonPanel.tsx`(대시보드 맨 위 비교), `utils/assessment.ts`, `pages/quizzes/components/QuestionResultCard.tsx`(AI 1개 판단 표시), `pages/mypage/MyPage.tsx`(탈퇴 비밀번호), `pages/privacy/PrivacyPage.tsx`·`pages/auth/components/ConsentNotice.tsx`(자료 본문 전송 안내), `mocks/`.
 - **자료 본문 전송은 기본 꺼짐이다.** 켜기 전에 제공사·이전 국가·보관 기간·처리 근거를 처리방침에 확정하고 팀·멘토 검토를 받는다.
 
+## 5-9-1. 검색·커리큘럼 4단계·개념 자세한 설명 (11/5, 백엔드 V11)
+
+- **마이그레이션 `V11__add_material_concept_study_note.sql`** (`material_concept`에 설명 열 추가). **다음은 `V12`부터**다.
+- **검색 `GET /api/search?q=`** (Swagger `검색`, 로그인 필요):
+  - 찾는 곳: 내 과목(이름·키워드), 내 자료(제목·파일 이름), 자료 핵심 개념(이름), 공지(제목, 5개까지)
+  - 규칙: 대소문자·띄어쓰기 무시. 과목 이름이 맞으면 그 과목의 자료도 `matchedBy: 'course'`로 준다. 자료 본문은 찾지 않는다
+  - 오류: 빈 검색어·50자 초과는 400
+  - 프론트: `types/search.ts`, `api/search.api.ts`, `pages/search/SearchPage.tsx`. 목업 `mocks/search.ts`는 같은 규칙(`utils/search.ts`)
+- **커리큘럼 응답에 `flow` 추가** (`GET /api/curriculum/courses/{id}`). 기존 필드는 그대로다.
+  - 4단계: 사전 테스트 → 핵심 개념 학습 → 개념별 확인 퀴즈 → 사후 평가
+  - 담는 값: `currentStep`, `stages[]`(done/current/upcoming + 코드가 센 요약), `preTest`·`postTest`(기존 사전·사후 비교 재사용), `concepts[]`(사전 결과·확인 퀴즈 결과·사후 결과·공부할 자료·`priority`), `overallDelta`
+  - 확인 퀴즈는 사전평가 제출 뒤에 푼 일반 퀴즈(평가 제외)만 센다
+  - 개념 학습은 기록하지 않으므로, 확인 퀴즈를 시작하면 개념 학습을 마친 것으로 본다
+  - 화면: `pages/curriculum/CurriculumPage.tsx`. 기존 개념별 순서·이유는 "개념별 복습 우선순위와 근거 보기"로 접어 두었다. `?courseId=`로 과목을 고른다
+- **개념 자세한 설명 `POST /api/materials/{id}/concepts/study-notes`** `{ conceptId, materialContentConsent }` → `MaterialConcept`
+  - 개념 하나씩 만든다(응답 길이·비용 때문)
+  - 담는 값: 자세한 설명, 자료와의 연결, 연결 문장(서버가 본문에서 확인한 것만, 아니면 null), 중요한 이유, 예시
+  - 보내기 조건·오류는 핵심 개념 뽑기와 같다. 없는 개념 404, 그 사이 개념을 다시 뽑았으면 409
+  - 개념 이름·근거는 바꾸지 않아 사전·사후평가 개념 체계가 유지된다. 하루 40번(`quiz_ai_call.purpose = CONCEPT_NOTE`)이고, 모델 요청 수 상한도 함께 적용된다
+  - `MaterialConcept`과 자료 상세 `concepts[]`에 `studyNote`(없으면 null)를 더했다
+- **자료 상세:** `?tab=concepts&concept=<conceptId>`로 오면 핵심 개념 탭에서 그 개념을 펼친다(커리큘럼 "개념 보기", 검색 결과).
+
 ## 5-10. 숙련도 점수 산식 설계안과 참고 문헌 (11/4, 제안 — 아직 확정 아님)
 
 **상태:** 팀이 확정하기 전의 제안이다. 확정되기 전에는 루트 `CLAUDE.md`의 미결 사항("숙련도 점수 산식")을 그대로 두고, 코드는 가중치·기준을 **전부 설정값**으로 둔다(`// TODO(미결)`). 화면은 지금처럼 숫자 점수 없이 "준비 중"이다. **11/6 중간보고서에는 이 설계안만 쓰고 구현은 11/13 이후**다.

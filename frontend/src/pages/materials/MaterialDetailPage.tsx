@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import {
   FileCheck,
@@ -73,13 +73,22 @@ function SummaryTab({ material }: { material: MaterialDetail }) {
   );
 }
 
-// 핵심 개념은 자료 분석 상태와 관계없이 "핵심 개념 뽑기"로 따로 만든다 (근거를 서버가 본문에서 확인한 것만)
-function ConceptsTab({ material }: { material: MaterialDetail }) {
+// 핵심 개념은 자료 분석 상태와 관계없이 "핵심 개념 뽑기"로 따로 만든다 (근거를 서버가 본문에서 확인한 것만).
+// 개념마다 "자세한 설명"(AI)으로 개념을 공부한다. 커리큘럼·검색에서 ?concept=로 오면 그 개념을 펼쳐 보여 준다
+function ConceptsTab({
+  material,
+  focusConceptId,
+}: {
+  material: MaterialDetail;
+  focusConceptId: string | null;
+}) {
   return (
     <AsyncBoundary>
       <MaterialConceptPanel
         materialId={material.id}
         fileName={material.fileName}
+        courseId={material.courseId}
+        focusConceptId={focusConceptId}
       />
     </AsyncBoundary>
   );
@@ -129,6 +138,9 @@ function QuizTabContent({ material }: { material: MaterialDetail }) {
 }
 
 function MaterialDetailContent({ materialId }: { materialId: number }) {
+  const [params] = useSearchParams();
+  const focusConceptId = params.get('concept');
+  const initialTab = params.get('tab') ?? (focusConceptId ? 'concepts' : null);
   const { data: material } = useSuspenseQuery({
     queryKey: [...MATERIALS_QUERY_KEY, materialId],
     queryFn: () => getMaterial(materialId),
@@ -157,6 +169,7 @@ function MaterialDetailContent({ materialId }: { materialId: number }) {
       </div>
       <Tabs
         label="자료 상세 보기"
+        initialId={initialTab}
         tabs={[
           {
             id: 'summary',
@@ -166,7 +179,12 @@ function MaterialDetailContent({ materialId }: { materialId: number }) {
           {
             id: 'concepts',
             label: '핵심 개념',
-            content: <ConceptsTab material={material} />,
+            content: (
+              <ConceptsTab
+                material={material}
+                focusConceptId={focusConceptId}
+              />
+            ),
           },
           {
             id: 'quiz',

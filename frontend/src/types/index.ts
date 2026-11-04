@@ -8,3 +8,4 @@ export * from './auth';
 export * from './conversation';
 export * from './curriculum';
 export * from './assessment';
+export * from './search';

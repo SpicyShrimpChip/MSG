@@ -38,10 +38,34 @@ export interface MaterialConcept {
   evidenceQuote: string;
   // 과목 키워드와 같은 개념인지 (자료 개념과 과목 키워드를 구분해 보여 준다)
   courseKeyword: boolean;
+  // 개념 공부용 자세한 설명 (AI). 아직 만들지 않았으면 null
+  studyNote: ConceptStudyNote | null;
+}
+
+// 개념 공부용 설명 (백엔드 ConceptStudyNoteResponse, V11). contextQuote·contextLocation만 서버가 자료 본문에서
+// 확인한 원문이고(회색 인용), 나머지 글은 AI가 자료 발췌를 근거로 쓴 것이다(보라)
+export interface ConceptStudyNote {
+  explanation: string;
+  // 자료 안에서 어떤 내용과 이어지는지
+  materialContext: string | null;
+  contextQuote: string | null;
+  contextLocation: string | null;
+  // 왜 중요한지
+  importance: string | null;
+  example: string | null;
+  // 설명을 쓴 모델 (gpt / claude / gemini)
+  generatedBy: string;
+  createdAt: string;
 }
 
 // 핵심 개념 뽑기 (POST /api/materials/{id}/concepts). 자료 본문 발췌를 외부 AI로 보내므로 이번 요청의 확인이 필요하다
 export interface ConceptExtractInput {
+  materialContentConsent: boolean;
+}
+
+// 개념 하나의 공부용 설명 만들기 (POST /api/materials/{id}/concepts/study-notes). 자료 본문 발췌를 외부 AI로 보낸다
+export interface ConceptStudyNoteInput {
+  conceptId: string;
   materialContentConsent: boolean;
 }
 

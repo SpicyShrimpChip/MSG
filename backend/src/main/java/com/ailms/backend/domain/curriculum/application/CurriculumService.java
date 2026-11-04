@@ -10,6 +10,7 @@ import com.ailms.backend.domain.course.dao.CourseRepository;
 import com.ailms.backend.domain.course.entity.Course;
 import com.ailms.backend.domain.curriculum.dto.CurriculumResponse;
 import com.ailms.backend.domain.material.dao.MaterialRepository;
+import com.ailms.backend.domain.material.entity.Material;
 import com.ailms.backend.domain.quiz.application.QuizProperties;
 import com.ailms.backend.domain.quiz.application.QuizStatsService;
 import com.ailms.backend.domain.quiz.dao.QuizRepository;
@@ -67,6 +68,7 @@ public class CurriculumService {
 	private final ConceptConsensusRepository consensusRepository;
 	private final QuizStatsService statsService;
 	private final QuizProperties properties;
+	private final CurriculumFlowBuilder flowBuilder;
 
 	public CurriculumResponse get(Long userId, Long courseId) {
 		Course course = courseRepository.findByIdAndUserId(courseId, userId)
@@ -85,8 +87,9 @@ public class CurriculumService {
 						.collect(Collectors.toMap(ConceptConsensus::getConceptKey, Function.identity(), (a, b) -> a)))
 				.orElse(Map.of());
 		List<ConceptQuizStatsResponse> stats = statsService.byCourse(userId, course);
-		List<CurriculumResponse.MaterialRef> materials = materialRepository.findAllByUserIdAndCourseId(userId, courseId)
-				.stream().map(material -> new CurriculumResponse.MaterialRef(material.getId(), material.getTitle()))
+		List<Material> courseMaterials = materialRepository.findAllByUserIdAndCourseId(userId, courseId);
+		List<CurriculumResponse.MaterialRef> materials = courseMaterials.stream()
+				.map(material -> new CurriculumResponse.MaterialRef(material.getId(), material.getTitle()))
 				.toList();
 
 		List<Planned> planned = new ArrayList<>();
@@ -101,7 +104,7 @@ public class CurriculumService {
 					item.stage().apiValue(), item.reasons(), item.evidence(), item.actions()));
 		}
 		return new CurriculumResponse(course.getId(), course.getName(), purpose.apiValue(), mode, steps, materials,
-				aiSuggestions(userId, courseId));
+				aiSuggestions(userId, courseId), flowBuilder.build(userId, course, courseMaterials));
 	}
 
 	private record Planned(Stage stage, int keywordOrder, ConceptQuizStatsResponse stat, List<String> reasons,

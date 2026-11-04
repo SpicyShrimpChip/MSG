@@ -2,7 +2,6 @@ import type {
   AssessmentComparison,
   AssessmentCreateInput,
   ConceptQuizStats,
-  Curriculum,
   Quiz,
   QuizAnswer,
   QuizCreateInput,
@@ -429,79 +428,6 @@ export function mockGetGenerationStatus(requestKey: string) {
   return Promise.reject(
     new ApiError('퀴즈 만들기 요청을 찾을 수 없어요.', 404),
   );
-}
-
-// 목업 학습 순서 (예시 데이터. 실제 순서는 서버가 퀴즈 결과·대화 분석·피드백으로 정한다)
-export function mockGetCurriculum(courseId: number): Promise<Curriculum> {
-  return mockDelay({
-    courseId,
-    courseName: '예시 과목',
-    learningPurpose: 'undecided',
-    recommendedMode: 'self_development',
-    steps: [
-      {
-        order: 1,
-        conceptId: 'hash',
-        concept: '해시 함수',
-        stage: 'review',
-        reasons: [
-          '예시 데이터예요. 퀴즈에서 채점이 끝난 2문제의 득점은 0/2점(0%)이에요.',
-          '득점률이 보완 기준(60%)보다 낮아요.',
-        ],
-        evidence: {
-          questionCount: 2,
-          gradedCount: 2,
-          correctCount: 0,
-          score: 0,
-          maxScore: 2,
-          pendingCount: 0,
-          reviewCount: 0,
-          analysisStatus: null,
-          analysisOutcome: null,
-          feedback: null,
-          confirmation: null,
-        },
-        actions: [
-          {
-            type: 'review_quiz',
-            label: '복습 퀴즈 풀기',
-            quizMode: 'self_development',
-          },
-        ],
-      },
-      {
-        order: 2,
-        conceptId: 'pki',
-        concept: '인증서(PKI)',
-        stage: 'not_assessed',
-        reasons: [
-          '예시 데이터예요. 아직 이 개념을 확인한 퀴즈나 대화 분석이 없어요.',
-        ],
-        evidence: {
-          questionCount: 0,
-          gradedCount: 0,
-          correctCount: 0,
-          score: 0,
-          maxScore: 0,
-          pendingCount: 0,
-          reviewCount: 0,
-          analysisStatus: null,
-          analysisOutcome: null,
-          feedback: null,
-          confirmation: null,
-        },
-        actions: [
-          {
-            type: 'first_quiz',
-            label: '첫 퀴즈 풀기',
-            quizMode: 'self_development',
-          },
-        ],
-      },
-    ],
-    materials: [],
-    aiSuggestions: [],
-  });
 }
 
 // 목업은 AI를 부르지 않는다. 사전·사후평가는 예시 퀴즈를 돌려주고 AI가 만든 것처럼 표시하지 않는다

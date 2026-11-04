@@ -1,5 +1,6 @@
 import type {
   ConceptExtractInput,
+  ConceptStudyNoteInput,
   Material,
   MaterialConcept,
   MaterialDetail,
@@ -7,6 +8,7 @@ import type {
   MaterialUploadInput,
 } from '@/types';
 import {
+  mockCreateConceptStudyNote,
   mockDeleteMaterial,
   mockExtractMaterialConcepts,
   mockGetMaterial,
@@ -74,6 +76,20 @@ export function extractMaterialConcepts(
   return request<MaterialConcept[]>({
     method: 'POST',
     url: `/materials/${id}/concepts`,
+    data: input,
+    timeout: 180_000,
+  });
+}
+
+// 개념 하나의 공부용 설명 만들기: 자료 본문 발췌를 외부 AI로 보낸다(조건은 개념 뽑기와 같다). 개념 이름·근거는 바뀌지 않는다
+export function createConceptStudyNote(
+  id: number,
+  input: ConceptStudyNoteInput,
+): Promise<MaterialConcept> {
+  if (USE_MOCK) return mockCreateConceptStudyNote(id, input);
+  return request<MaterialConcept>({
+    method: 'POST',
+    url: `/materials/${id}/concepts/study-notes`,
     data: input,
     timeout: 180_000,
   });

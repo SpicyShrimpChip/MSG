@@ -5,3 +5,5 @@ export * from './delay';
 export * from './notices';
 export * from './materials';
 export * from './quizzes';
+export * from './search';
+export * from './curriculum';

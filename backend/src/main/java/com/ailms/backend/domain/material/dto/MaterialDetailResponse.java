@@ -40,11 +40,13 @@ public record MaterialDetailResponse(
 			String aiDescription,
 			@Schema(description = "근거 위치 (쪽·슬라이드). 없으면 null") String evidenceLocation,
 			@Schema(description = "근거 문장 (자료 원문)") String evidenceQuote,
-			@Schema(description = "과목 키워드와 같은 개념인지") boolean courseKeyword) {
+			@Schema(description = "과목 키워드와 같은 개념인지") boolean courseKeyword,
+			@Schema(description = "학습용 자세한 설명 (AI). 아직 만들지 않았으면 null") ConceptStudyNoteResponse studyNote) {
 
 		static ConceptResponse from(MaterialConcept concept) {
 			return new ConceptResponse(concept.getConceptKey(), concept.getName(), concept.getDescription(),
-					concept.getEvidenceLocation(), concept.getEvidenceQuote(), concept.isCourseKeyword());
+					concept.getEvidenceLocation(), concept.getEvidenceQuote(), concept.isCourseKeyword(),
+					ConceptStudyNoteResponse.from(concept));
 		}
 	}
 }

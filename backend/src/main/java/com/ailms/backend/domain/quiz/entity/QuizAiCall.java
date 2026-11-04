@@ -24,6 +24,8 @@ public class QuizAiCall {
 	public static final String GENERATION = "GENERATION";
 	public static final String GRADING = "GRADING";
 	public static final String CONCEPTS = "CONCEPTS";
+	// 자료 핵심 개념의 학습용 설명 (V11)
+	public static final String CONCEPT_NOTE = "CONCEPT_NOTE";
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)

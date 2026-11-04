@@ -78,6 +78,22 @@ public class QuizStatsService {
 		return result;
 	}
 
+	/**
+	 * 일반 퀴즈(사전·사후평가 제외)의 개념별 결과. since가 있으면 그 뒤에 낸 제출만 센다(사전평가 뒤의 개념 확인 퀴즈).
+	 * 퀴즈마다 가장 최근 제출만, 채점이 끝난 답만 점수에 넣는다. 소유 확인은 부르는 쪽이 한다.
+	 */
+	public Map<String, QuizAssessor.ConceptStat> practiceByConcept(Long userId, Long courseId, LocalDateTime since) {
+		List<QuizSubmission> submissions = submissionRepository.findLatestPracticeInCourse(userId, courseId).stream()
+				.filter(s -> since == null || !s.getSubmittedAt().isBefore(since))
+				.toList();
+		return QuizAssessor
+				.byConcept(answered(submissions).stream().map(Answered::graded).toList(),
+						properties.assessment().conceptMinRate())
+				.stream()
+				.collect(Collectors.toMap(QuizAssessor.ConceptStat::conceptKey, Function.identity(), (a, b) -> a,
+						LinkedHashMap::new));
+	}
+
 	private record Answered(QuizAssessor.Graded graded, LocalDateTime submittedAt) {
 	}
 
