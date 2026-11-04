@@ -66,6 +66,7 @@ public class AnalysisQueryService {
 	private final ConversationMessageRepository messageRepository;
 	private final CourseRepository courseRepository;
 	private final QuizStatsService quizStatsService;
+	private final MasteryCalculator masteryCalculator;
 
 	public AnalysisRunResponse getRun(Long userId, Long runId) {
 		return toResponse(runRepository.findByIdAndUserId(runId, userId)
@@ -138,13 +139,33 @@ public class AnalysisQueryService {
 							item.getAgreeCount(), item.getCalledCount()),
 					modelJudgments, mine == null ? null : FeedbackResponse.from(mine), i + 1,
 					mine != null && mine.getFeedback() == FeedbackType.ALREADY_KNOW,
-					quizStats.get(item.getConceptKey())));
+					quizStats.get(item.getConceptKey()),
+					mastery(item, modelJudgments, quizStats.get(item.getConceptKey()))));
 		}
 		return new AnalysisRunResponse(run.getId(), run.getCourseId(), run.getStatus().apiValue(),
 				run.getPromptVersion(), run.getCreatedAt(), run.getCompletedAt(),
 				new AnalysisRunResponse.Input(run.getConversationCount(), run.getMessageCount(),
 						run.getTruncatedMessageCount()),
 				models, concepts);
+	}
+
+	// 숙련도: 퀴즈(채점이 끝난 문제)와 대화(사용자가 쓴 근거 메시지가 있는 대화 수 + 모델 비교가 일치한 상태)를 규칙으로 계산한다.
+	// 대화 수는 모델이 여럿이어도 같은 대화는 한 번만 센다(모델이 같은 판단을 해도 근거가 늘지 않는다).
+	// TODO(미결): 대화 신호를 메시지 단위로 세는 방법은 주미와 정하기 (지금은 개념 단위 판단을 대화 수만큼 센다)
+	private AnalysisRunResponse.Mastery mastery(ConceptConsensus item,
+			List<AnalysisRunResponse.Judgment> modelJudgments, ConceptQuizStatsResponse quiz) {
+		int conversationCount = (int) modelJudgments.stream()
+				.flatMap(judgment -> judgment.evidence().stream())
+				.filter(evidence -> evidence.kind() != null && evidence.kind().startsWith("user_"))
+				.map(AnalysisRunResponse.Evidence::conversationId)
+				.distinct().count();
+		MasteryCalculator.Result result = masteryCalculator.calculate(quiz == null ? 0 : quiz.gradedCount(),
+				quiz == null ? 0 : quiz.score(), quiz == null ? 0 : quiz.maxScore(), conversationCount,
+				item.getStatus());
+		return new AnalysisRunResponse.Mastery(result.level().apiValue(), result.score(), result.evidenceWeight(),
+				result.quizGradedCount(), result.quizRate(), result.conversationCount(),
+				result.conversationStatus() == null ? null : result.conversationStatus().apiValue(),
+				result.formulaVersion());
 	}
 
 	private static AnalysisRunResponse.Judgment toJudgment(ConceptJudgment judgment, AnalysisModelResult result,

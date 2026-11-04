@@ -138,6 +138,10 @@ class AnalysisApiTest {
 				.andExpect(jsonPath("$.data.concepts[0].comparison.status").doesNotExist())
 				.andExpect(jsonPath("$.data.concepts[0].comparison.judgedCount").value(3))
 				.andExpect(jsonPath("$.data.concepts[0].comparison.agreeCount").value(1))
+				// 숙련도: 의견이 갈려 대화 근거를 세지 않고 퀴즈도 없으므로 근거 부족이고 점수가 없다
+				.andExpect(jsonPath("$.data.concepts[0].mastery.level").value("insufficient_evidence"))
+				.andExpect(jsonPath("$.data.concepts[0].mastery.score").doesNotExist())
+				.andExpect(jsonPath("$.data.concepts[0].mastery.formulaVersion").value("1"))
 				.andExpect(jsonPath("$.data.concepts[1].comparison.outcome").value("unanimous"))
 				.andExpect(jsonPath("$.data.concepts[1].comparison.status").value("insufficient_evidence"))
 				.andExpect(jsonPath("$.data.concepts[2].comparison.outcome").value("majority"))

@@ -91,6 +91,24 @@ export interface ConceptResult {
   recommendConfirmQuiz: boolean;
   // 이 개념의 퀴즈 결과 (코드 집계, AI 판단과 따로). 퀴즈 기록이 없으면 null
   quiz?: ConceptQuizStats | null;
+  // 숙련도 단계와 근거 (코드 계산, AI 판단과 따로). 화면에는 아직 쓰지 않는다(준비 중). 숫자 점수는 보여 주지 않는다
+  mastery?: ConceptMastery | null;
+}
+
+// 근거 부족(insufficient_evidence)은 이해 부족과 다르다
+export type MasteryStage =
+  'insufficient_evidence' | 'needs_work' | 'normal' | 'strong';
+
+export interface ConceptMastery {
+  level: MasteryStage;
+  // 0~1, 근거 부족이면 null. 화면에 숫자로 보여 주지 않는다
+  score: number | null;
+  evidenceWeight: number;
+  quizGradedCount: number;
+  quizRate: number | null;
+  conversationCount: number;
+  conversationStatus: 'understood' | 'partial' | 'not_understood' | null;
+  formulaVersion: string;
 }
 
 export type ModelRunStatus =
