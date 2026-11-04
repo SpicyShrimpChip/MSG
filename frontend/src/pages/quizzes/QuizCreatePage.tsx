@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   useMutation,
   useQuery,
   useQueryClient,
   useSuspenseQuery,
 } from '@tanstack/react-query';
-import { FileText, LoaderCircle, Lock, Sparkles } from 'lucide-react';
+import { FileText, LoaderCircle, Lock, Sparkles, Target } from 'lucide-react';
 import {
   ANALYSIS_QUERY_KEY,
   ME_QUERY_KEY,
@@ -40,7 +40,7 @@ import {
 } from '@/constants';
 import { useCourses } from '@/hooks';
 import type { JobField, QuizDifficulty, QuizMode, User } from '@/types';
-import { cn, formatSemester } from '@/utils';
+import { cn, conceptStudyLink, formatSemester } from '@/utils';
 
 const EXAM_SCOPE_MAX = 200;
 const MOCK_EXAM_MAX_QUESTIONS = 20;
@@ -125,6 +125,17 @@ function QuizCreateForm({ me }: { me: User | null }) {
       ? me.learningPurpose
       : 'exam_prep';
   const paramCourse = Number(params.get('courseId'));
+  // 개념 확인 퀴즈(자료 상세·커리큘럼에서 옴): 자료의 개념 하나만 다룬다. 과목·개념은 바꾸지 않는다
+  const checkMaterialId = Number(params.get('checkMaterialId'));
+  const checkConceptId = params.get('checkConceptId');
+  const check =
+    checkMaterialId > 0 && checkConceptId
+      ? {
+          materialId: checkMaterialId,
+          conceptId: checkConceptId,
+          name: params.get('concept') ?? checkConceptId,
+        }
+      : null;
   const [mode, setMode] = useState<QuizMode>(defaultMode);
   const [courseId, setCourseId] = useState<number | null>(
     courses.some((course) => course.id === paramCourse)
@@ -133,9 +144,9 @@ function QuizCreateForm({ me }: { me: User | null }) {
   );
   const [typeSet, setTypeSet] = useState(defaultMode === 'work' ? 2 : 6);
   const [difficulty, setDifficulty] = useState<QuizDifficulty>('medium');
-  const [count, setCount] = useState(5);
+  const [count, setCount] = useState(check ? 3 : 5);
   const [concepts, setConcepts] = useState<string[]>(
-    params.get('concept') ? [params.get('concept')!] : [],
+    !check && params.get('concept') ? [params.get('concept')!] : [],
   );
   const [examScope, setExamScope] = useState('');
   const [jobField, setJobField] = useState<JobField | null>(
@@ -188,7 +199,7 @@ function QuizCreateForm({ me }: { me: User | null }) {
 
   const blocked =
     !course ||
-    keywords.length === 0 ||
+    (!check && keywords.length === 0) ||
     tooFew ||
     count > maxCount ||
     pendingKey !== null ||
@@ -204,8 +215,12 @@ function QuizCreateForm({ me }: { me: User | null }) {
       questionTypes: types,
       questionCount: count,
       difficulty,
-      mockExam: mode === 'exam_prep' && mockExam ? true : undefined,
-      concepts: concepts.filter((concept) => keywords.includes(concept)),
+      mockExam: !check && mode === 'exam_prep' && mockExam ? true : undefined,
+      concepts: check
+        ? undefined
+        : concepts.filter((concept) => keywords.includes(concept)),
+      materialId: check?.materialId,
+      checkConceptId: check?.conceptId,
       examScope:
         mode === 'exam_prep' && examScope.trim() ? examScope.trim() : undefined,
       jobField: mode === 'work' && jobField ? jobField : undefined,
@@ -218,6 +233,21 @@ function QuizCreateForm({ me }: { me: User | null }) {
 
   return (
     <form onSubmit={handleSubmit} className="flex max-w-3xl flex-col gap-6">
+      {check && (
+        <Notice icon={Target} iconClassName="text-primary">
+          <span className="font-bold text-heading">
+            ‘{check.name}’ 확인 퀴즈예요.
+          </span>{' '}
+          이 개념 문제만 나오고, 채점 결과로 이 개념의 학습 상태(이해 확인·복습
+          필요)가 정해져요.{' '}
+          <Link
+            to={conceptStudyLink(check.materialId, check.conceptId)}
+            className="font-bold text-primary underline-offset-4 hover:underline"
+          >
+            개념으로 돌아가기
+          </Link>
+        </Notice>
+      )}
       <fieldset className="flex flex-col gap-3">
         <legend className="mb-1 font-bold text-heading">학습 모드</legend>
         <div className="grid gap-2 md:grid-cols-3">
@@ -259,6 +289,7 @@ function QuizCreateForm({ me }: { me: User | null }) {
         <FormRow label="과목" htmlFor="quiz-course" required>
           <SelectInput
             id="quiz-course"
+            disabled={check !== null}
             value={courseId ?? ''}
             onChange={(e) => {
               setCourseId(Number(e.target.value));
@@ -273,47 +304,59 @@ function QuizCreateForm({ me }: { me: User | null }) {
           </SelectInput>
         </FormRow>
 
-        <fieldset className="flex flex-col gap-2">
-          <legend className="mb-1 text-body font-bold text-heading">
-            다룰 개념{' '}
-            <span className="font-medium text-ink-muted">
-              (고르지 않으면 과목 키워드 전체)
-            </span>
-          </legend>
-          {keywords.length === 0 ? (
-            <p className="text-body text-danger">
-              이 과목에 키워드가 없어요. 과목에 키워드를 먼저 넣어 주세요.
+        {check ? (
+          <div className="flex flex-col gap-1">
+            <p className="text-body font-bold text-heading">다룰 개념</p>
+            <p className="text-body text-ink">
+              {check.name}{' '}
+              <span className="text-caption text-ink-muted">
+                (자료에서 뽑은 개념 하나만)
+              </span>
             </p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {keywords.map((keyword) => {
-                const on = concepts.includes(keyword);
-                return (
-                  <button
-                    key={keyword}
-                    type="button"
-                    aria-pressed={on}
-                    onClick={() =>
-                      setConcepts((prev) =>
+          </div>
+        ) : (
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-1 text-body font-bold text-heading">
+              다룰 개념{' '}
+              <span className="font-medium text-ink-muted">
+                (고르지 않으면 과목 키워드 전체)
+              </span>
+            </legend>
+            {keywords.length === 0 ? (
+              <p className="text-body text-danger">
+                이 과목에 키워드가 없어요. 과목에 키워드를 먼저 넣어 주세요.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {keywords.map((keyword) => {
+                  const on = concepts.includes(keyword);
+                  return (
+                    <button
+                      key={keyword}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() =>
+                        setConcepts((prev) =>
+                          on
+                            ? prev.filter((item) => item !== keyword)
+                            : [...prev, keyword],
+                        )
+                      }
+                      className={cn(
+                        'rounded-full border px-3 py-1.5 text-caption font-medium',
                         on
-                          ? prev.filter((item) => item !== keyword)
-                          : [...prev, keyword],
-                      )
-                    }
-                    className={cn(
-                      'rounded-full border px-3 py-1.5 text-caption font-medium',
-                      on
-                        ? 'border-primary bg-primary-soft text-primary'
-                        : 'border-line-strong text-ink-soft hover:bg-surface-muted',
-                    )}
-                  >
-                    {keyword}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </fieldset>
+                          ? 'border-primary bg-primary-soft text-primary'
+                          : 'border-line-strong text-ink-soft hover:bg-surface-muted',
+                      )}
+                    >
+                      {keyword}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </fieldset>
+        )}
 
         <div className="grid gap-5 sm:grid-cols-3">
           <FormRow label="문제 유형" htmlFor="quiz-types" required>
@@ -371,7 +414,7 @@ function QuizCreateForm({ me }: { me: User | null }) {
           </p>
         )}
 
-        {mode === 'exam_prep' && (
+        {mode === 'exam_prep' && !check && (
           <label className="flex items-start gap-3 text-body text-heading">
             <input
               type="checkbox"

@@ -34,9 +34,15 @@ public record QuizResponse(
 		// 풀기 화면 응답에는 문제별 개념을 싣지 않는다(QuizApiTest). 그래서 평가 단위의 출처만 "topic"이라는 이름으로 준다
 		@Schema(description = "평가 개념의 출처: material(자료에서 뽑은 개념) / course(과목 키워드). 일반 퀴즈는 null")
 		String topicSource,
+		// 같은 이유로 "topic"이라는 이름을 쓴다. 개념 확인 퀴즈면 그 개념(퀴즈 전체가 이 개념 하나만 다룬다), 아니면 null
+		@Schema(description = "개념 확인 퀴즈가 다루는 자료 개념 (materialId, topicId = 개념 키, name). 그 밖의 퀴즈는 null")
+		CheckTopic checkTopic,
 		List<Question> questions) {
 
 	public record GeneratedBy(String provider, String model) {
+	}
+
+	public record CheckTopic(Long materialId, String topicId, String name) {
 	}
 
 	public record Question(
@@ -60,6 +66,8 @@ public record QuizResponse(
 				quiz.isMaterialContentUsed(), quiz.isMockExam(), ApiEnumValues.of(quiz.getAssessmentKind()),
 				quiz.getPreAssessmentId(), null,
 				quiz.getConceptSource() == null ? null : quiz.getConceptSource().toLowerCase(java.util.Locale.ROOT),
+				quiz.getCheckConceptKey() == null ? null
+						: new CheckTopic(quiz.getMaterialId(), quiz.getCheckConceptKey(), quiz.getCheckConceptName()),
 				questions.stream().map(q -> new Question(q.getId(), q.getType().apiValue(), q.getContent(),
 						List.copyOf(q.getChoices()), q.getScenario(), q.getWorkRole(), q.getAnswerGuide(),
 						quiz.getMode() == QuizMode.WORK && q.getType() == QuestionType.ESSAY
@@ -72,6 +80,6 @@ public record QuizResponse(
 	public QuizResponse withMaterialContentNote(String note) {
 		return new QuizResponse(id, title, courseId, materialId, mode, difficulty, jobField, jobFieldOther, examScope,
 				generatedBy, materialContentUsed, mockExam, assessmentKind, preAssessmentId, note, topicSource,
-				questions);
+				checkTopic, questions);
 	}
 }

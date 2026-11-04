@@ -4,28 +4,32 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from '@tanstack/react-query';
-import {
-  BookOpen,
-  ChevronDown,
-  ListChecks,
-  LoaderCircle,
-  Lock,
-  Quote,
-} from 'lucide-react';
+import { BookOpen, ChevronDown, LoaderCircle, Lock, Quote } from 'lucide-react';
 import {
   ASSESSMENTS_QUERY_KEY,
   CURRICULUM_QUERY_KEY,
   MATERIALS_QUERY_KEY,
+  STUDY_QUERY_KEY,
   USE_MOCK,
   createConceptStudyNote,
   extractMaterialConcepts,
+  getConceptStudies,
   getMaterialConcepts,
   getQuizAiStatus,
 } from '@/api';
-import { AiNote, Button, Card, Chip, ErrorText, Notice } from '@/components';
+import {
+  AiNote,
+  Button,
+  Card,
+  Chip,
+  ErrorText,
+  Notice,
+  StudyStatusBadge,
+} from '@/components';
 import { useMe } from '@/hooks';
-import type { MaterialConcept, QuizAiStatus } from '@/types';
+import type { ConceptStudy, MaterialConcept, QuizAiStatus } from '@/types';
 import { cn } from '@/utils';
+import ConceptStudyActions from './ConceptStudyActions';
 
 // 본문을 읽을 수 있는 형식 (서버 MaterialTextExtractor와 같다). PDF는 글이 들어 있는 PDF만, 스캔본은 OCR이 없어 못 읽는다
 export const READABLE_EXTENSIONS = ['txt', 'md', 'pptx', 'pdf'];
@@ -109,12 +113,14 @@ function ConceptCard({
   courseId,
   blockedReason,
   defaultOpen,
+  study,
 }: {
   concept: MaterialConcept;
   materialId: number;
   courseId: number | null;
   blockedReason: string | null;
   defaultOpen: boolean;
+  study: ConceptStudy | undefined;
 }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(defaultOpen);
@@ -149,10 +155,6 @@ function ConceptCard({
     },
   });
 
-  const quizLink =
-    courseId === null
-      ? null
-      : `/quizzes/new?courseId=${courseId}&mode=self_development&concept=${encodeURIComponent(concept.name)}`;
   const panelId = `concept-${materialId}-${concept.conceptId}`;
 
   return (
@@ -171,6 +173,7 @@ function ConceptCard({
               : '자료에서 찾은 개념'}
           </Chip>
           {concept.studyNote && <Chip tone="neutral">자세한 설명 있음</Chip>}
+          {study && <StudyStatusBadge status={study.status} />}
         </div>
         {/* 근거 문장은 자료 원문이고 서버가 본문에 있는지 확인했다 (AI 글 아님) */}
         {concept.evidenceQuote && (
@@ -198,11 +201,6 @@ function ConceptCard({
             />
             {open ? '개념 설명 접기' : '개념 자세히 공부하기'}
           </Button>
-          {quizLink && (
-            <Button variant="secondary" to={quizLink}>
-              <ListChecks size={16} aria-hidden="true" />이 개념 퀴즈 풀기
-            </Button>
-          )}
         </div>
 
         {open && (
@@ -266,6 +264,18 @@ function ConceptCard({
             </div>
           </div>
         )}
+
+        {study && (
+          <ConceptStudyActions
+            study={study}
+            materialId={materialId}
+            courseId={courseId}
+            onRestudy={() => {
+              setOpen(true);
+              ref.current?.scrollIntoView({ block: 'start' });
+            }}
+          />
+        )}
       </Card>
     </li>
   );
@@ -308,6 +318,11 @@ function MaterialConceptPanel({
     queryKey: [...ASSESSMENTS_QUERY_KEY, 'ai-status'],
     queryFn: getQuizAiStatus,
   });
+  // 개념별 학습 기록·확인 퀴즈 결과 (실제 모드는 서버 DB, 체험 모드는 이 브라우저)
+  const { data: studies } = useSuspenseQuery({
+    queryKey: [...STUDY_QUERY_KEY, materialId],
+    queryFn: () => getConceptStudies(materialId),
+  });
   const [confirmed, setConfirmed] = useState(false);
 
   const mutation = useMutation({
@@ -323,6 +338,10 @@ function MaterialConceptPanel({
         exact: true,
       });
       void queryClient.invalidateQueries({ queryKey: CURRICULUM_QUERY_KEY });
+      // 다시 뽑으면 개념 목록이 바뀌므로 학습 상태도 다시 읽는다 (기록은 개념 키로 이어진다)
+      void queryClient.invalidateQueries({
+        queryKey: [...STUDY_QUERY_KEY, materialId],
+      });
       setConfirmed(false);
     },
   });
@@ -358,6 +377,9 @@ function MaterialConceptPanel({
                 courseId={courseId}
                 blockedReason={blockedReason}
                 defaultOpen={concept.conceptId === focusConceptId}
+                study={studies.find(
+                  (item) => item.conceptId === concept.conceptId,
+                )}
               />
             ))}
           </ul>

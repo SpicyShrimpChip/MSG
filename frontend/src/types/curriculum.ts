@@ -1,6 +1,7 @@
 // 맞춤 학습 순서 (GET /api/curriculum/courses/{courseId}). 백엔드 CurriculumResponse와 같은 모양.
 // 순서·단계·이유(reasons)는 서버 코드 규칙(파랑)이고, aiSuggestions만 AI가 퀴즈를 만들 때 제안한 개념(보라)이다
 import type { QuizMode } from './quiz';
+import type { ConceptStudy } from './study';
 
 export type CurriculumStage =
   | 'priority_study'
@@ -85,6 +86,23 @@ export interface CurriculumFlow {
   postTest: FlowAssessment;
   // 전체 향상 폭 (%p). 둘 중 하나라도 채점 결과가 없으면 null
   overallDelta: number | null;
+  // 개념별 학습 진행 (학습 완료 기록·확인 퀴즈 결과로 센 값)
+  progress: StudyProgress;
+}
+
+// 학습 진행률: 분모는 학습 기록을 남길 수 있는 개념(자료에서 뽑은 개념), 분자는 "학습 완료"를 누른 개념
+export interface StudyProgress {
+  totalConcepts: number;
+  studiableConcepts: number;
+  studiedConcepts: number;
+  // 소수 첫째 자리 %. 학습할 수 있는 개념이 없으면 null
+  percent: number | null;
+  checkedConcepts: number;
+  understoodConcepts: number;
+  reviewNeededConcepts: number;
+  needsCheckConcepts: number;
+  lastStudiedAt: string | null;
+  lastStudiedConcept: string | null;
 }
 
 export interface FlowAssessment {
@@ -118,4 +136,6 @@ export interface FlowConcept {
   postStatus: string | null;
   // 사전 테스트에서 부족했거나 채점 결과가 없어 먼저 공부하면 좋은 개념
   priority: boolean;
+  // 자료에서 뽑은 개념의 학습 상태. 과목 키워드뿐인 개념은 null
+  study: ConceptStudy | null;
 }

@@ -78,6 +78,9 @@ import org.springframework.util.StringUtils;
 public class QuizGenerationService {
 
 	static final String CONSENT_REQUIRED_MESSAGE = "AI로 퀴즈를 만들려면 AI 퀴즈 처리 동의가 필요해요. 마이페이지에서 동의할 수 있어요.";
+	static final String CHECK_NEEDS_MATERIAL_MESSAGE = "개념 확인 퀴즈는 그 개념을 뽑은 학습자료를 골라야 만들 수 있어요.";
+	static final String CHECK_COMBINATION_MESSAGE = "개념 확인 퀴즈는 사전·사후평가나 모의시험과 함께 만들 수 없어요.";
+	static final String CHECK_CONCEPT_NOT_FOUND_MESSAGE = "이 자료에서 그 개념을 찾을 수 없어요. 핵심 개념을 먼저 뽑아 주세요.";
 	static final String COURSE_NOT_FOUND_MESSAGE = "과목을 찾을 수 없어요.";
 	static final String MATERIAL_NOT_FOUND_MESSAGE = "자료를 찾을 수 없어요.";
 	static final String MATERIAL_COURSE_MESSAGE = "고른 자료가 이 과목에 연결돼 있지 않아요.";
@@ -171,7 +174,7 @@ public class QuizGenerationService {
 			List<QuestionType> types, Map<QuestionType, Integer> plan, QuizDifficulty difficulty, List<String> concepts,
 			String examScope, JobField jobField, String jobFieldOther, boolean mockExam, AssessmentKind assessmentKind,
 			Long preAssessmentId, List<String> avoidQuestions, String materialExcerpt, String materialContentNote,
-			String conceptSource) {
+			String conceptSource, String checkConceptKey, String checkConceptName) {
 
 		String jobLabel() {
 			if (jobField == null) {
@@ -412,6 +415,22 @@ public class QuizGenerationService {
 				throw badRequest(ASSESSMENT_MATERIAL_MESSAGE);
 			}
 		}
+		// 개념 확인 퀴즈: 자료에서 뽑은 개념 하나만 다룬다(다른 개념 문제는 파서가 거절). 평가·모의시험과 함께 쓰지 않는다
+		com.ailms.backend.domain.material.entity.MaterialConcept checkConcept = null;
+		if (StringUtils.hasText(request.checkConceptId())) {
+			if (material == null) {
+				throw badRequest(CHECK_NEEDS_MATERIAL_MESSAGE);
+			}
+			if (kind != null || Boolean.TRUE.equals(request.mockExam())) {
+				throw badRequest(CHECK_COMBINATION_MESSAGE);
+			}
+			String key = request.checkConceptId().strip();
+			checkConcept = materialConceptRepository
+					.findAllByMaterialIdAndUserIdOrderBySortOrderAsc(material.getId(), userId).stream()
+					.filter(concept -> concept.getConceptKey().equals(key))
+					.findFirst()
+					.orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, CHECK_CONCEPT_NOT_FOUND_MESSAGE));
+		}
 		// 사후평가: 같은 자료의 최신 사전평가와 개념·유형·문항 수·난이도·모드를 맞춘다(요청 값은 쓰지 않는다)
 		Quiz pre = null;
 		List<QuizQuestion> preQuestions = List.of();
@@ -455,6 +474,8 @@ public class QuizGenerationService {
 		if (pre != null && !preQuestions.isEmpty()) {
 			concepts = preConcepts(course, preQuestions);
 			conceptSource = pre.getConceptSource();
+		} else if (checkConcept != null) {
+			concepts = List.of(checkConcept.getName());
 		} else if (kind != null) {
 			List<String> fromMaterial = materialConceptRepository
 					.findAllByMaterialIdAndUserIdOrderBySortOrderAsc(material.getId(), userId).stream()
@@ -521,7 +542,8 @@ public class QuizGenerationService {
 				mode, List.copyOf(types), QuizTypePlan.plan(mode, types, count), difficulty, concepts, examScope,
 				jobField, jobFieldOther, mockExam, kind, pre == null ? null : pre.getId(),
 				preQuestions.stream().map(QuizQuestion::getContent).limit(MAX_AVOID_QUESTIONS).toList(), excerpt,
-				contentNote, conceptSource);
+				contentNote, conceptSource, checkConcept == null ? null : checkConcept.getConceptKey(),
+				checkConcept == null ? null : checkConcept.getName());
 	}
 
 	// 사전평가 문제들이 다룬 개념 (과목 키워드 이름으로, 처음 나온 순서)
@@ -606,7 +628,8 @@ public class QuizGenerationService {
 				client.provider().apiValue(), client.model(), parsed.suggestions(), spec.mockExam(), now)
 				.asAssessment(spec.assessmentKind(), spec.preAssessmentId())
 				.withMaterialContentUsed(spec.materialExcerpt() != null)
-				.withConceptSource(spec.conceptSource()));
+				.withConceptSource(spec.conceptSource())
+				.asConceptCheck(spec.checkConceptKey(), spec.checkConceptName()));
 		List<QuizQuestion> questions = new ArrayList<>();
 		for (int i = 0; i < parsed.questions().size(); i++) {
 			questions.add(parsed.questions().get(i).toEntity(quiz.getId(), i));
@@ -619,6 +642,10 @@ public class QuizGenerationService {
 
 	// 제목은 코드가 만든다 (출제 보장처럼 읽히는 제목이 생기지 않게)
 	private static String title(Spec spec) {
+		if (spec.checkConceptName() != null) {
+			String title = spec.checkConceptName() + " 확인 퀴즈";
+			return title.length() <= Quiz.TITLE_MAX_LENGTH ? title : title.substring(0, Quiz.TITLE_MAX_LENGTH);
+		}
 		if (spec.assessmentKind() != null) {
 			String title = spec.materialTitle() + " · " + (spec.assessmentKind() == AssessmentKind.PRE ? "사전평가" : "사후평가");
 			return title.length() <= Quiz.TITLE_MAX_LENGTH ? title : title.substring(0, Quiz.TITLE_MAX_LENGTH);

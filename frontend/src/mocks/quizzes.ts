@@ -11,6 +11,7 @@ import type {
 } from '@/types';
 import { ApiError } from '@/api/request';
 import { mockDelay } from './delay';
+import { mockMaterialsSnapshot } from './materials';
 
 // 목업 전용. 실제 서비스에서는 서버가 AI로 퀴즈를 만들고, 채점도 서버 코드가 한다 (프론트는 채점하지 않음).
 // 문제는 샘플 자료(mocks/materials.ts)를 바탕으로 직접 쓴 예시이고 시험 문제 원문이 아니다.
@@ -43,8 +44,10 @@ interface MockQuiz extends Omit<
   | 'preAssessmentId'
   | 'materialContentNote'
   | 'topicSource'
+  | 'checkTopic'
 > {
   mode?: Quiz['mode'];
+  checkTopic?: Quiz['checkTopic'];
   questions: MockQuestion[];
 }
 
@@ -231,6 +234,7 @@ export function mockGetQuiz(id: number): Promise<Quiz> {
       preAssessmentId: null,
       materialContentNote: null,
       topicSource: null,
+      checkTopic: quiz.checkTopic ?? null,
       questions: questions.map((question) => ({
         id: question.id,
         type: typeOf(question),
@@ -404,12 +408,27 @@ export function mockCreateQuiz(input: QuizCreateInput): Promise<Quiz> {
       aiExplanation: '',
     },
   };
+  // 개념 확인 퀴즈면 그 개념으로 표시만 한다 (목업 문제는 예시 그대로, AI가 만든 것처럼 보이지 않게 제목에 목업을 붙인다)
+  const checkName = input.checkConceptId
+    ? (mockMaterialsSnapshot()
+        .find((material) => material.id === input.materialId)
+        ?.concepts.find((concept) => concept.conceptId === input.checkConceptId)
+        ?.name ?? input.checkConceptId)
+    : null;
   QUIZZES.unshift({
     id,
-    title: '예시 퀴즈 (목업)',
+    title: checkName ? `${checkName} 확인 퀴즈 (목업)` : '예시 퀴즈 (목업)',
     courseId: input.courseId,
-    materialId: null,
+    materialId: input.checkConceptId ? (input.materialId ?? null) : null,
     mode: input.mode,
+    checkTopic:
+      input.checkConceptId && input.materialId
+        ? {
+            materialId: input.materialId,
+            topicId: input.checkConceptId,
+            name: checkName ?? input.checkConceptId,
+          }
+        : null,
     questions: input.questionTypes.map((type) => samples[type]),
   });
   return mockGetQuiz(id);

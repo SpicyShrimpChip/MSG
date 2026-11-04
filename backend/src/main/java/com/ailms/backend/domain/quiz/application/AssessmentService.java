@@ -75,7 +75,7 @@ public class AssessmentService {
 						: request.questionTypes(),
 				request.questionCount() == null ? DEFAULT_COUNT : request.questionCount(), request.difficulty(), null,
 				null, null, null, material.getId(), null, request.kind(), request.useMaterialContent(),
-				request.materialContentConsent()));
+				request.materialContentConsent(), null));
 	}
 
 	@Transactional(readOnly = true)

@@ -10,3 +10,4 @@ export * from './password';
 export * from './liquidGlass';
 export * from './maskWords';
 export * from './search';
+export * from './conceptStudy';

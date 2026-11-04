@@ -28,6 +28,11 @@ public interface QuizRepository extends JpaRepository<Quiz, Long> {
 
 	Optional<Quiz> findByIdAndUserId(Long id, Long userId);
 
+	// 개념 확인 퀴즈 (최신 순)
+	List<Quiz> findAllByUserIdAndCourseIdAndCheckConceptKeyIsNotNullOrderByIdDesc(Long userId, Long courseId);
+
+	List<Quiz> findAllByUserIdAndMaterialIdAndCheckConceptKeyIsNotNullOrderByIdDesc(Long userId, Long materialId);
+
 	long countByUserIdAndMaterialId(Long userId, Long materialId);
 
 	// 내 자료별 퀴즈 수 (자료 목록용, 한 번에 센다). 자료 없이 만든 퀴즈는 세지 않는다

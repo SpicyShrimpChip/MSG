@@ -21,7 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>DB: users 행을 지우면 FK ON DELETE CASCADE로 refresh_token, course(키워드), material, conversation(가져오기·조각·메시지),
  * analysis_run(모델 결과·판단·근거·합의), concept_feedback, quiz(문제·보기·제출·답·채점 기록), quiz_generation,
- * quiz_grading_run, quiz_ai_call이 함께 지워진다. 공지사항(notice)은 작성자만 NULL이 되고 남는다(다른 사용자가 보는 글).
+ * quiz_grading_run, quiz_ai_call, material_concept, concept_study_progress(개념 학습 기록, V12)가 함께 지워진다. 공지사항(notice)은 작성자만 NULL이 되고 남는다(다른 사용자가 보는 글).
  * 파일: 자료 원본은 같은 트랜잭션에서 file_deletion_task로 남기고 커밋 뒤 지운다(실패하면 주기 작업이 다시 시도,
  * 자료 삭제와 같은 정책). 남은 Access Token은 사용자 행이 없으므로 다음 요청부터 401이다.
  *

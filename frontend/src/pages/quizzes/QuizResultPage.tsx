@@ -3,10 +3,13 @@ import {
   useMutation,
   useQueryClient,
   useSuspenseQueries,
+  useSuspenseQuery,
 } from '@tanstack/react-query';
 import { ListChecks, RefreshCw, Sparkles } from 'lucide-react';
 import {
   QUIZZES_QUERY_KEY,
+  STUDY_QUERY_KEY,
+  getConceptStudies,
   getLatestQuizResult,
   getQuiz,
   regradeQuiz,
@@ -19,6 +22,7 @@ import {
   EmptyState,
   ErrorText,
   ScoreBar,
+  StudyStatusBadge,
   SubPage,
 } from '@/components';
 import { QUESTION_TYPE_LABELS, quizModeLabel } from '@/constants';
@@ -28,7 +32,7 @@ import type {
   QuizResult,
   SuggestionKind,
 } from '@/types';
-import { formatDate } from '@/utils';
+import { conceptStudyLink, formatDate } from '@/utils';
 import QuestionResultCard from './components/QuestionResultCard';
 
 const percentOf = (score: number, max: number) =>
@@ -200,6 +204,54 @@ function Breakdown({ result }: { result: QuizResult }) {
   );
 }
 
+// 개념 확인 퀴즈 결과: 그 개념의 학습 상태(서버 코드 규칙)와 개념·커리큘럼으로 돌아가는 길
+function CheckTopicResult({ quiz }: { quiz: Quiz }) {
+  const topic = quiz.checkTopic!;
+  const { data: studies } = useSuspenseQuery({
+    queryKey: [...STUDY_QUERY_KEY, topic.materialId],
+    queryFn: () => getConceptStudies(topic.materialId),
+  });
+  const study = studies.find((item) => item.conceptId === topic.topicId);
+  return (
+    <Card
+      as="section"
+      aria-label="개념 학습 상태"
+      className="flex flex-col gap-3 p-5"
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="text-lg font-extrabold text-heading">
+          ‘{topic.name}’ 학습 상태
+        </h2>
+        {study && <StudyStatusBadge status={study.status} />}
+      </div>
+      <p className="text-body text-ink">
+        {study
+          ? study.reason
+          : '이 개념을 자료에서 다시 뽑아 지금은 학습 상태를 찾을 수 없어요.'}
+      </p>
+      {study?.status === 'review_needed' && (
+        <p className="text-body text-ink-soft">
+          아래 문제별 결과에서 틀린 부분과 개선 방향을 확인하고, 개념 설명을
+          다시 읽은 뒤 "다시 학습 완료"를 눌러 주세요.
+        </p>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <Button to={conceptStudyLink(topic.materialId, topic.topicId)}>
+          {study?.status === 'review_needed'
+            ? '개념 다시 학습하기'
+            : '개념으로 돌아가기'}
+        </Button>
+        <Button
+          variant="secondary"
+          to={`/curriculum?courseId=${quiz.courseId}`}
+        >
+          커리큘럼으로 돌아가기
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
 function QuizResultContent({ quizId }: { quizId: number }) {
   const queryClient = useQueryClient();
   const [{ data: quiz }, { data: result }] = useSuspenseQueries({
@@ -291,6 +343,11 @@ function QuizResultContent({ quizId }: { quizId: number }) {
         )}
       </Card>
 
+      {quiz.checkTopic && (
+        <AsyncBoundary>
+          <CheckTopicResult quiz={quiz} />
+        </AsyncBoundary>
+      )}
       <Assessment quiz={quiz} result={result} />
       <Breakdown result={result} />
 

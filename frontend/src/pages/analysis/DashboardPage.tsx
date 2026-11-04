@@ -34,6 +34,7 @@ import ConceptDetailPanel from './components/ConceptDetailPanel';
 import ConceptFeedbackBox from './components/ConceptFeedbackBox';
 import ConceptTablePanel from './components/ConceptTablePanel';
 import AssessmentComparisonPanel from './components/AssessmentComparisonPanel';
+import StudyProgressPanel from './components/StudyProgressPanel';
 import LayoutSummary from './components/LayoutSummary';
 import ModelStatusPanel from './components/ModelStatusPanel';
 import RecommendationPanel from './components/RecommendationPanel';
@@ -275,6 +276,11 @@ function Dashboard() {
       {/* 맨 위: 사전평가 vs 사후평가 (평가가 없거나 불러오지 못해도 아래 분석은 그대로 보인다) */}
       <AsyncBoundary key={`assessment-${course.id}`}>
         <AssessmentComparisonPanel courseId={course.id} />
+      </AsyncBoundary>
+
+      {/* 개념별 학습 진도 (커리큘럼 응답 재사용, 대화 분석과 따로) */}
+      <AsyncBoundary key={`study-${course.id}`}>
+        <StudyProgressPanel courseId={course.id} />
       </AsyncBoundary>
 
       {/* 과목을 바꾸면 그 과목의 분석을 새로 불러온다 */}

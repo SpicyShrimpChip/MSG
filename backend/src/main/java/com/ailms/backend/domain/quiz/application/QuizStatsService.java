@@ -33,7 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class QuizStatsService {
 
 	// 확인 퀴즈로 "확인됨"이라고 말하려면 이만큼은 채점이 끝나야 한다
-	static final int CONFIRM_MIN_GRADED = 2;
+	public static final int CONFIRM_MIN_GRADED = 2;
 
 	private final QuizSubmissionRepository submissionRepository;
 	private final QuizAnswerRepository answerRepository;

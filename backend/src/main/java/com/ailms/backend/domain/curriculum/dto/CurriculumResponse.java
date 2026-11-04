@@ -1,5 +1,6 @@
 package com.ailms.backend.domain.curriculum.dto;
 
+import com.ailms.backend.domain.study.dto.ConceptStudyResponse;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -34,7 +35,25 @@ public record CurriculumResponse(
 			@Schema(description = "개념별 학습·확인 퀴즈 상태 (사전평가 개념 순서, 없으면 자료 개념·과목 키워드 순서)")
 			List<FlowConcept> concepts,
 			@Schema(description = "사후 평가 (사전평가와 같은 개념·유형·문항 수·난이도)") AssessmentState postTest,
-			@Schema(description = "전체 향상 폭 (%p, 사후 - 사전). 둘 중 하나라도 채점 결과가 없으면 null") Integer overallDelta) {
+			@Schema(description = "전체 향상 폭 (%p, 사후 - 사전). 둘 중 하나라도 채점 결과가 없으면 null") Integer overallDelta,
+			@Schema(description = "개념별 학습 진행 (학습 완료 기록·확인 퀴즈 결과로 센 값)") StudyProgress progress) {
+	}
+
+	/**
+	 * 학습 진행률. 분모는 학습 기록을 남길 수 있는 개념(자료에서 뽑은 개념) 수이고, 분자는 "학습 완료"를 누른 개념 수다(페이지를 열거나
+	 * 퀴즈를 만든 것만으로는 세지 않는다). 확인 퀴즈 결과는 따로 센다. 숙련도 점수가 아니다.
+	 */
+	public record StudyProgress(
+			@Schema(description = "흐름의 전체 개념 수") int totalConcepts,
+			@Schema(description = "학습 기록을 남길 수 있는 개념 수 (자료에서 뽑은 개념)") int studiableConcepts,
+			@Schema(description = "학습 완료 기록이 있는 개념 수") int studiedConcepts,
+			@Schema(description = "학습 진행률 % (소수 첫째 자리). 학습할 수 있는 개념이 없으면 null") Double percent,
+			@Schema(description = "확인 퀴즈를 제출한 개념 수") int checkedConcepts,
+			@Schema(description = "확인 퀴즈로 이해가 확인된 개념 수") int understoodConcepts,
+			@Schema(description = "복습이 필요한 개념 수") int reviewNeededConcepts,
+			@Schema(description = "추가 확인이 필요한 개념 수 (채점 대기·문항 부족 등)") int needsCheckConcepts,
+			@Schema(description = "가장 최근 학습 완료 시각. 없으면 null") LocalDateTime lastStudiedAt,
+			@Schema(description = "가장 최근에 학습을 완료한 개념 이름. 없으면 null") String lastStudiedConcept) {
 	}
 
 	public record FlowStage(
@@ -75,7 +94,9 @@ public record CurriculumResponse(
 			@Schema(description = "향상 폭 (%p). 한쪽이라도 없으면 null") Integer delta,
 			@Schema(description = "사후 평가 뒤 비교 상태 (improved 등, AssessmentComparison과 같음). 사후 평가 전이면 null")
 			String postStatus,
-			@Schema(description = "사전 테스트에서 부족했거나 아직 확인하지 않아 먼저 공부하면 좋은 개념인지") boolean priority) {
+			@Schema(description = "사전 테스트에서 부족했거나 아직 확인하지 않아 먼저 공부하면 좋은 개념인지") boolean priority,
+			@Schema(description = "자료에서 뽑은 개념의 학습 상태 (학습 완료·확인 퀴즈). 과목 키워드뿐인 개념은 null")
+			ConceptStudyResponse study) {
 	}
 
 	public record Step(

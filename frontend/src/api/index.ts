@@ -10,3 +10,4 @@ export * from './auth.api';
 export * from './curriculum.api';
 export * from './assessments.api';
 export * from './search.api';
+export * from './study.api';

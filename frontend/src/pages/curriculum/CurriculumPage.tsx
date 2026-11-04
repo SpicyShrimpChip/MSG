@@ -9,6 +9,7 @@ import {
   ClipboardCheck,
   FileText,
   ListChecks,
+  RotateCcw,
   Route,
   Trophy,
 } from 'lucide-react';
@@ -24,6 +25,7 @@ import {
   LevelBadge,
   ScoreBar,
   SelectInput,
+  StudyStatusBadge,
   SubPage,
 } from '@/components';
 import { useCourses } from '@/hooks';
@@ -36,7 +38,13 @@ import type {
   FlowConcept,
   FlowStepKey,
 } from '@/types';
-import { cn, formatSemester } from '@/utils';
+import {
+  checkQuizLink,
+  cn,
+  conceptStudyLink,
+  formatDate,
+  formatSemester,
+} from '@/utils';
 
 const STAGE_LABEL: Record<CurriculumStage, string> = {
   priority_study: '더 공부할래요',
@@ -248,6 +256,38 @@ function PreTestStep({ flow }: { flow: CurriculumFlow }) {
 
 // ---------- STEP 2 ----------
 
+// 학습 진행률: 실제 "학습 완료" 기록으로 센 서버 값 (페이지를 열거나 퀴즈를 만든 것만으로는 세지 않음)
+function StudyProgressBar({ flow }: { flow: CurriculumFlow }) {
+  const { progress } = flow;
+  if (progress.studiableConcepts === 0 || progress.percent === null) {
+    return (
+      <p className="text-caption text-ink-soft">
+        자료에서 핵심 개념을 뽑으면 개념마다 "학습 완료"를 기록하고 진행률을 볼
+        수 있어요.
+      </p>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-1.5">
+      <ScoreBar value={progress.percent} />
+      <p className="text-body text-ink">
+        총 {progress.studiableConcepts}개 개념 중{' '}
+        <strong className="text-primary">
+          {progress.studiedConcepts}개 학습 완료 ({progress.percent}%)
+        </strong>
+        {progress.reviewNeededConcepts > 0 &&
+          ` · 복습 필요 ${progress.reviewNeededConcepts}개`}
+      </p>
+      {progress.lastStudiedConcept && progress.lastStudiedAt && (
+        <p className="text-caption text-ink-muted">
+          최근 학습: {progress.lastStudiedConcept} (
+          {formatDate(progress.lastStudiedAt)})
+        </p>
+      )}
+    </div>
+  );
+}
+
 function ConceptStudyStep({ flow }: { flow: CurriculumFlow }) {
   const ordered = [
     ...flow.concepts.filter((concept) => concept.priority),
@@ -255,6 +295,7 @@ function ConceptStudyStep({ flow }: { flow: CurriculumFlow }) {
   ];
   return (
     <StepSection flow={flow} stepKey="concept_study">
+      <StudyProgressBar flow={flow} />
       {flow.conceptSource === 'course' && (
         <p className="text-caption text-ink-soft">
           지금 개념은 과목 키워드예요. 자료 상세의 "핵심 개념" 탭에서 개념을
@@ -265,12 +306,13 @@ function ConceptStudyStep({ flow }: { flow: CurriculumFlow }) {
         <ul className="grid gap-3 md:grid-cols-2">
           {ordered.map((concept) => {
             const link = conceptLink(concept);
+            const review = concept.study?.status === 'review_needed';
             return (
               <li
                 key={concept.conceptId}
                 className={cn(
                   'flex flex-col gap-2 rounded-xl border p-4',
-                  concept.priority
+                  concept.priority || review
                     ? 'border-weakness/40 bg-weakness-soft'
                     : 'border-line',
                 )}
@@ -280,6 +322,11 @@ function ConceptStudyStep({ flow }: { flow: CurriculumFlow }) {
                   {concept.priority && <Chip tone="primary">먼저 공부</Chip>}
                 </div>
                 <div className="flex flex-wrap gap-1.5">
+                  {concept.study ? (
+                    <StudyStatusBadge status={concept.study.status} />
+                  ) : (
+                    <Chip tone="neutral">학습 기록 없음 (과목 키워드)</Chip>
+                  )}
                   <PreStatusBadge concept={concept} />
                   {concept.hasStudyNote && (
                     <Chip tone="neutral">자세한 설명 있음</Chip>
@@ -293,11 +340,17 @@ function ConceptStudyStep({ flow }: { flow: CurriculumFlow }) {
                 )}
                 {link ? (
                   <Button
-                    variant={concept.priority ? 'primary' : 'secondary'}
+                    variant={
+                      concept.priority || review ? 'primary' : 'secondary'
+                    }
                     to={link}
                   >
-                    <BookOpen size={16} aria-hidden="true" />
-                    개념 보기
+                    {review ? (
+                      <RotateCcw size={16} aria-hidden="true" />
+                    ) : (
+                      <BookOpen size={16} aria-hidden="true" />
+                    )}
+                    {review ? '다시 학습하기' : '개념 보기'}
                   </Button>
                 ) : (
                   <p className="text-caption text-ink-soft">
@@ -322,6 +375,146 @@ const PRACTICE_LABEL: Record<FlowConcept['practiceStatus'], string> = {
   ok: '기준 이상',
 };
 
+// 자료 개념: 개념 확인 퀴즈 결과(학습 상태)로 보여 준다
+function StudiedConceptRow({
+  concept,
+  courseId,
+}: {
+  concept: FlowConcept;
+  courseId: number;
+}) {
+  const study = concept.study!;
+  const latest = study.latestCheck;
+  const quizHref =
+    study.openCheckQuizId !== null
+      ? `/quizzes/${study.openCheckQuizId}`
+      : checkQuizLink(courseId, study.materialId, study.conceptId, study.name);
+  return (
+    <li className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="font-bold text-heading">{concept.name}</p>
+          {concept.priority && <Chip tone="primary">먼저 확인</Chip>}
+          <StudyStatusBadge status={study.status} />
+        </div>
+        {latest ? (
+          <div className="flex max-w-80 flex-col gap-1">
+            {latest.rate !== null && (
+              <ScoreBar
+                value={latest.rate}
+                level={study.status === 'review_needed' ? 'weakness' : 'normal'}
+              />
+            )}
+            <p className="text-caption text-ink-soft">
+              최근 확인 퀴즈 {latest.score}/{latest.maxScore}점
+              {latest.rate !== null && ` (${latest.rate}%)`}
+              {latest.waitingCount > 0 && ` · 대기 ${latest.waitingCount}`} ·
+              응시 {study.checkHistory.length}번
+            </p>
+          </div>
+        ) : (
+          <p className="text-caption text-ink-soft">
+            {study.studied
+              ? '학습을 완료했어요. 확인 퀴즈를 풀어 보세요.'
+              : '아직 확인 퀴즈를 풀지 않았어요. 먼저 개념을 공부하면 좋아요.'}
+          </p>
+        )}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {study.status === 'review_needed' ? (
+          <>
+            <Button to={conceptStudyLink(study.materialId, study.conceptId)}>
+              <RotateCcw size={16} aria-hidden="true" />
+              다시 학습하기
+            </Button>
+            {latest && (
+              <Button
+                variant="secondary"
+                to={`/quizzes/${latest.quizId}/result`}
+              >
+                결과 보기
+              </Button>
+            )}
+          </>
+        ) : (
+          <>
+            <Button
+              variant={study.status === 'studied' ? 'primary' : 'secondary'}
+              to={quizHref}
+            >
+              <ListChecks size={16} aria-hidden="true" />
+              {study.openCheckQuizId !== null
+                ? '이어 풀기'
+                : latest
+                  ? '다시 풀기'
+                  : '확인 퀴즈 풀기'}
+            </Button>
+            {latest && (
+              <Button
+                variant="secondary"
+                to={`/quizzes/${latest.quizId}/result`}
+              >
+                결과 보기
+              </Button>
+            )}
+          </>
+        )}
+      </div>
+    </li>
+  );
+}
+
+// 과목 키워드뿐인 개념: 예전처럼 일반 퀴즈 결과로 보여 준다
+function KeywordConceptRow({
+  concept,
+  courseId,
+  mode,
+}: {
+  concept: FlowConcept;
+  courseId: number;
+  mode: string;
+}) {
+  const rate =
+    concept.practiceMaxScore === 0
+      ? 0
+      : Math.round((concept.practiceScore / concept.practiceMaxScore) * 100);
+  return (
+    <li className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="font-bold text-heading">{concept.name}</p>
+          {concept.priority && <Chip tone="primary">먼저 확인</Chip>}
+          {concept.practiceStatus === 'weak' ? (
+            <LevelBadge level="weakness" />
+          ) : (
+            <Chip
+              tone={concept.practiceStatus === 'ok' ? 'primary' : 'neutral'}
+            >
+              {PRACTICE_LABEL[concept.practiceStatus]}
+            </Chip>
+          )}
+        </div>
+        {concept.practiceGradedCount > 0 && (
+          <div className="flex max-w-80 flex-col gap-1">
+            <ScoreBar
+              value={rate}
+              level={concept.practiceStatus === 'weak' ? 'weakness' : 'normal'}
+            />
+            <p className="text-caption text-ink-soft">
+              퀴즈 {concept.practiceGradedCount}문제 · {concept.practiceScore}/
+              {concept.practiceMaxScore}점 ({rate}%)
+            </p>
+          </div>
+        )}
+      </div>
+      <Button variant="secondary" to={quizLink(courseId, mode, concept.name)}>
+        <ListChecks size={16} aria-hidden="true" />
+        {concept.practiceGradedCount > 0 ? '다시 풀기' : '퀴즈 풀기'}
+      </Button>
+    </li>
+  );
+}
+
 function ConceptQuizStep({
   flow,
   courseId,
@@ -335,73 +528,28 @@ function ConceptQuizStep({
     <StepSection flow={flow} stepKey="concept_quiz">
       {flow.concepts.length > 0 && (
         <ul className="flex flex-col divide-y divide-line rounded-xl border border-line">
-          {flow.concepts.map((concept) => {
-            const rate =
-              concept.practiceMaxScore === 0
-                ? 0
-                : Math.round(
-                    (concept.practiceScore / concept.practiceMaxScore) * 100,
-                  );
-            return (
-              <li
+          {flow.concepts.map((concept) =>
+            concept.study ? (
+              <StudiedConceptRow
                 key={concept.conceptId}
-                className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-bold text-heading">{concept.name}</p>
-                    {concept.priority && <Chip tone="primary">먼저 확인</Chip>}
-                    {concept.practiceStatus === 'weak' ? (
-                      <LevelBadge level="weakness" />
-                    ) : (
-                      <Chip
-                        tone={
-                          concept.practiceStatus === 'ok'
-                            ? 'primary'
-                            : 'neutral'
-                        }
-                      >
-                        {PRACTICE_LABEL[concept.practiceStatus]}
-                      </Chip>
-                    )}
-                  </div>
-                  {concept.practiceGradedCount > 0 && (
-                    <div className="flex max-w-80 flex-col gap-1">
-                      <ScoreBar
-                        value={rate}
-                        level={
-                          concept.practiceStatus === 'weak'
-                            ? 'weakness'
-                            : 'normal'
-                        }
-                      />
-                      <p className="text-caption text-ink-soft">
-                        확인 퀴즈 {concept.practiceGradedCount}문제 ·{' '}
-                        {concept.practiceScore}/{concept.practiceMaxScore}점 (
-                        {rate}%)
-                      </p>
-                    </div>
-                  )}
-                </div>
-                <Button
-                  variant={
-                    concept.practiceStatus === 'not_started' && concept.priority
-                      ? 'primary'
-                      : 'secondary'
-                  }
-                  to={quizLink(courseId, mode, concept.name)}
-                >
-                  <ListChecks size={16} aria-hidden="true" />
-                  {concept.practiceGradedCount > 0 ? '다시 풀기' : '퀴즈 풀기'}
-                </Button>
-              </li>
-            );
-          })}
+                concept={concept}
+                courseId={courseId}
+              />
+            ) : (
+              <KeywordConceptRow
+                key={concept.conceptId}
+                concept={concept}
+                courseId={courseId}
+                mode={mode}
+              />
+            ),
+          )}
         </ul>
       )}
       <p className="text-caption text-ink-muted">
-        사전 테스트를 본 뒤에 푼 퀴즈만 세요. 퀴즈마다 가장 최근 제출에서 채점이
-        끝난 답만 점수에 넣어요.
+        확인 퀴즈는 그 개념 문제만 나와요. 채점이 끝난 답만 점수에 넣고, 채점을
+        기다리거나 AI 판단이 엇갈린 답은 틀린 답으로 세지 않아 "추가 확인
+        필요"로 보여 줘요. 기준은 정답률 60%예요.
       </p>
     </StepSection>
   );
@@ -413,8 +561,34 @@ function PostTestStep({ flow }: { flow: CurriculumFlow }) {
   const { preTest, postTest, assessmentMaterial, overallDelta } = flow;
   const preDone = preTest.status === 'submitted';
   const compared = flow.concepts.filter((concept) => concept.postRate !== null);
+  // 복습 추천: 확인 퀴즈에서 복습이 필요하다고 나온 개념 (서버 상태 그대로)
+  const review = flow.concepts.filter(
+    (concept) => concept.study?.status === 'review_needed',
+  );
   return (
     <StepSection flow={flow} stepKey="post_test">
+      {review.length > 0 && (
+        <div className="flex flex-col gap-2 rounded-xl bg-weakness-soft p-4">
+          <p className="text-body font-bold text-heading">
+            사후 평가 전에 복습하면 좋은 개념
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {review.map((concept) => (
+              <Button
+                key={concept.conceptId}
+                variant="secondary"
+                to={conceptStudyLink(
+                  concept.study!.materialId,
+                  concept.study!.conceptId,
+                )}
+              >
+                <RotateCcw size={16} aria-hidden="true" />
+                {concept.name} 다시 학습하기
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
       {postTest.status === 'submitted' && (
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap items-baseline gap-3">

@@ -1,13 +1,16 @@
 import type {
+  ConceptStudy,
   Curriculum,
   CurriculumFlow,
   FlowAssessment,
   FlowConcept,
+  StudyProgress,
 } from '@/types';
 import { ApiError } from '@/api/request';
 import { mockGetCourses } from './courses';
 import { mockDelay } from './delay';
 import { mockMaterialsSnapshot } from './materials';
+import { mockStudyOf } from './study';
 
 // 예시 사전 테스트 결과 (정보보호개론 예시 자료의 개념, 개념마다 3점 → 합계 7/12점). 실제 값은 서버가 제출·채점 기록으로 센다
 const SAMPLE_PRE: Record<string, number> = {
@@ -16,8 +19,6 @@ const SAMPLE_PRE: Record<string, number> = {
   pki: 67,
   hash: 33,
 };
-// 예시 확인 퀴즈 결과 (사전 테스트 뒤에 푼 것): 해시 함수만 풀었다
-const SAMPLE_PRACTICE: Record<string, [number, number]> = { hash: [2, 2] };
 
 const NO_TEST: FlowAssessment = {
   status: 'none',
@@ -29,8 +30,50 @@ const NO_TEST: FlowAssessment = {
   submittedAt: null,
 };
 
-// 서버 CurriculumFlowBuilder와 같은 규칙으로 예시 흐름을 만든다.
-// 정보보호개론(예시 과목 1)은 사전 테스트를 본 뒤 확인 퀴즈를 푸는 중, 다른 과목은 처음 상태다
+type Need = 'study' | 'quiz' | 'ok';
+
+// 서버 CurriculumFlowBuilder.need와 같은 규칙
+function need(concept: FlowConcept, practiceStarted: boolean): Need {
+  if (concept.study) {
+    if (['not_studied', 'review_needed'].includes(concept.study.status))
+      return 'study';
+    return concept.study.status === 'studied' ? 'quiz' : 'ok';
+  }
+  if (concept.practiceGradedCount > 0) return 'ok';
+  return practiceStarted ? 'quiz' : 'study';
+}
+
+function progressOf(concepts: FlowConcept[]): StudyProgress {
+  const studies = concepts
+    .map((concept) => concept.study)
+    .filter((study): study is ConceptStudy => study !== null);
+  const studied = studies.filter((study) => study.studied).length;
+  const last = studies
+    .filter((study) => study.lastStudiedAt)
+    .sort((a, b) =>
+      (b.lastStudiedAt ?? '').localeCompare(a.lastStudiedAt ?? ''),
+    )[0];
+  const count = (status: ConceptStudy['status']) =>
+    studies.filter((study) => study.status === status).length;
+  return {
+    totalConcepts: concepts.length,
+    studiableConcepts: studies.length,
+    studiedConcepts: studied,
+    percent:
+      studies.length === 0
+        ? null
+        : Math.round((studied * 1000) / studies.length) / 10,
+    checkedConcepts: studies.filter((study) => study.latestCheck).length,
+    understoodConcepts: count('understood'),
+    reviewNeededConcepts: count('review_needed'),
+    needsCheckConcepts: count('needs_check'),
+    lastStudiedAt: last?.lastStudiedAt ?? null,
+    lastStudiedConcept: last?.name ?? null,
+  };
+}
+
+// 서버 CurriculumFlowBuilder와 같은 규칙으로 예시 흐름을 만든다. 학습 기록은 체험 모드 기록(mocks/study.ts)을 쓴다.
+// 정보보호개론(예시 과목 1)은 사전 테스트를 본 상태, 다른 과목은 처음 상태다
 function buildFlow(courseId: number, keywords: string[]): CurriculumFlow {
   const materials = mockMaterialsSnapshot().filter(
     (material) => material.courseId === courseId,
@@ -47,6 +90,7 @@ function buildFlow(courseId: number, keywords: string[]): CurriculumFlow {
           materialId: material.id,
           materialTitle: material.title,
           hasStudyNote: concept.studyNote !== null,
+          study: mockStudyOf(material, concept.conceptId, concept.name),
         }))
       : keywords.map((keyword) => ({
           conceptId: keyword.toLowerCase(),
@@ -54,21 +98,23 @@ function buildFlow(courseId: number, keywords: string[]): CurriculumFlow {
           materialId: materials[0]?.id ?? null,
           materialTitle: materials[0]?.title ?? null,
           hasStudyNote: false,
+          study: null,
         }))
   ).map((base) => {
     const preRate = sample ? (SAMPLE_PRE[base.conceptId] ?? null) : null;
     const preStatus: FlowConcept['preStatus'] =
       preRate === null ? 'not_taken' : preRate < 60 ? 'weak' : 'ok';
-    const [score, max] = (sample && SAMPLE_PRACTICE[base.conceptId]) || [0, 0];
+    const check = base.study?.latestCheck ?? null;
+    const graded = check?.gradedCount ?? 0;
     return {
       ...base,
       preRate,
       preStatus,
-      practiceGradedCount: max,
-      practiceScore: score,
-      practiceMaxScore: max,
+      practiceGradedCount: graded,
+      practiceScore: check?.score ?? 0,
+      practiceMaxScore: check?.maxScore ?? 0,
       practiceStatus:
-        max === 0 ? 'not_started' : score / max < 0.6 ? 'weak' : 'ok',
+        graded === 0 ? 'not_started' : (check?.rate ?? 0) < 60 ? 'weak' : 'ok',
       postRate: null,
       delta: null,
       postStatus: null,
@@ -78,13 +124,16 @@ function buildFlow(courseId: number, keywords: string[]): CurriculumFlow {
 
   const priority = concepts.filter((concept) => concept.priority);
   const targets = priority.length > 0 ? priority : concepts;
-  const practiced = targets.filter((c) => c.practiceGradedCount > 0).length;
+  const practiceStarted = concepts.some((c) => c.practiceGradedCount > 0);
+  const needs = targets.map((concept) => need(concept, practiceStarted));
+  const remaining = needs.filter((item) => item !== 'ok').length;
+  const progress = progressOf(concepts);
   const weakNames = priority.map((concept) => concept.name);
   const currentStep = !sample
     ? 'pre_test'
-    : practiced === 0
+    : needs.includes('study')
       ? 'concept_study'
-      : practiced < targets.length
+      : needs.includes('quiz')
         ? 'concept_quiz'
         : 'post_test';
   const order = ['pre_test', 'concept_study', 'concept_quiz', 'post_test'];
@@ -96,6 +145,10 @@ function buildFlow(courseId: number, keywords: string[]): CurriculumFlow {
         ? 'current'
         : 'upcoming';
   const material = materials[0] ?? null;
+  const studyHead =
+    progress.studiableConcepts > 0
+      ? `총 ${progress.studiableConcepts}개 개념 중 ${progress.studiedConcepts}개 학습 완료 (${progress.percent}%). `
+      : '';
 
   return {
     currentStep,
@@ -117,17 +170,23 @@ function buildFlow(courseId: number, keywords: string[]): CurriculumFlow {
         title: '핵심 개념 학습',
         status: status(1),
         summary:
+          studyHead +
           (sample
             ? `먼저 공부할 개념 ${weakNames.length}개: ${weakNames.join(', ')}.`
             : `개념 ${concepts.length}개를 자료로 공부해요.`) +
-          ` 자세한 설명이 있는 개념 ${concepts.filter((c) => c.hasStudyNote).length}개.`,
+          (progress.reviewNeededConcepts > 0
+            ? ` 복습이 필요한 개념 ${progress.reviewNeededConcepts}개.`
+            : ''),
       },
       {
         key: 'concept_quiz',
         order: 3,
         title: '개념별 확인 퀴즈',
         status: status(2),
-        summary: `${sample ? '사전 테스트 뒤 ' : ''}확인 퀴즈를 푼 개념 ${practiced}/${targets.length}개.`,
+        summary:
+          progress.studiableConcepts > 0
+            ? `확인 퀴즈를 푼 개념 ${progress.checkedConcepts}/${progress.studiableConcepts}개. 이해 확인 ${progress.understoodConcepts}개 · 복습 필요 ${progress.reviewNeededConcepts}개 · 추가 확인 필요 ${progress.needsCheckConcepts}개.`
+            : '확인 퀴즈를 푼 개념이 아직 없어요.',
       },
       {
         key: 'post_test',
@@ -135,7 +194,10 @@ function buildFlow(courseId: number, keywords: string[]): CurriculumFlow {
         title: '사후 평가',
         status: status(3),
         summary: sample
-          ? '아직 사후 평가를 보지 않았어요. 사전 테스트와 같은 기준으로 만들어 비교해요.'
+          ? '아직 사후 평가를 보지 않았어요. 사전 테스트와 같은 기준으로 만들어 비교해요.' +
+            (remaining > 0
+              ? ` 아직 학습하거나 확인하지 않은 개념이 ${remaining}개 있지만 사후 평가는 볼 수 있어요.`
+              : '')
           : '사전 테스트를 본 뒤에 같은 개념·문항 수·난이도로 사후 평가를 봐요.',
       },
     ],
@@ -157,6 +219,7 @@ function buildFlow(courseId: number, keywords: string[]): CurriculumFlow {
     concepts,
     postTest: NO_TEST,
     overallDelta: null,
+    progress,
   };
 }
 

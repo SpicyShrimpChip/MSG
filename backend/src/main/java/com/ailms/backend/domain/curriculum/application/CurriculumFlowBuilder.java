@@ -12,6 +12,8 @@ import com.ailms.backend.domain.quiz.application.QuizStatsService;
 import com.ailms.backend.domain.quiz.dao.QuizRepository;
 import com.ailms.backend.domain.quiz.dto.AssessmentComparisonResponse;
 import com.ailms.backend.domain.quiz.entity.Quiz;
+import com.ailms.backend.domain.study.application.ConceptStudyService;
+import com.ailms.backend.domain.study.dto.ConceptStudyResponse;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -19,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -30,11 +33,13 @@ import org.springframework.stereotype.Component;
  * <ul>
  * <li>사전·사후 평가: 기존 비교(AssessmentService.compare)를 그대로 쓴다. 과목의 최신 사전평가(제출한 것 우선)와 그 사후평가.</li>
  * <li>개념 목록: 사전평가가 채점됐으면 그 개념(사후평가도 같은 개념), 아니면 과목 자료에서 뽑은 개념, 그것도 없으면 과목 키워드.</li>
- * <li>확인 퀴즈: 일반 퀴즈(평가 제외)의 개념별 결과 중 사전평가 제출 뒤에 낸 것만 센다.</li>
- * <li>지금 단계: 사전 미제출 → 사전 테스트 / 확인 퀴즈를 하나도 안 풂 → 개념 학습 / 먼저 공부할 개념(사전 기준 미만·미채점, 없으면 전체)
- * 중 확인 퀴즈 채점 결과가 없는 개념이 있음 → 확인 퀴즈 / 사후 미제출 → 사후 평가 / 모두 끝 → done.</li>
+ * <li>개념 학습·확인 퀴즈: 자료에서 뽑은 개념은 학습 기록(학습 완료)과 개념 확인 퀴즈 결과로 상태를 정한다(ConceptStudyService).
+ * 과목 키워드뿐인 개념(학습 기록을 남길 곳이 없음)은 예전처럼 사전평가 제출 뒤 일반 퀴즈 결과로 본다.</li>
+ * <li>먼저 공부할 개념(대상): 사전 테스트 기준 미만·미채점 개념, 없으면 전체.</li>
+ * <li>지금 단계: 사전 미제출 → 사전 테스트 / 대상 중 학습 전·복습 필요 개념이 있음 → 개념 학습 / 학습 완료 뒤 확인 퀴즈를 안 푼 개념이 있음
+ * → 확인 퀴즈 / 사후 미제출 → 사후 평가 / 모두 끝 → done. 이해 확인·추가 확인 필요(채점 대기 등)는 막지 않는다.</li>
  * </ul>
- * 개념 학습(설명 읽기)은 기록하지 않으므로 확인 퀴즈를 시작하면 개념 학습을 마친 것으로 본다. 숙련도 점수가 아니다.
+ * 학습 진행률은 실제 "학습 완료" 기록으로만 센다(페이지 열람·퀴즈 생성은 세지 않음). 사후 평가는 막지 않고 남은 학습을 안내한다. 숙련도 점수가 아니다.
  */
 @Component
 @RequiredArgsConstructor
@@ -54,6 +59,12 @@ class CurriculumFlowBuilder {
 	private final MaterialConceptRepository conceptRepository;
 	private final QuizStatsService statsService;
 	private final QuizProperties properties;
+	private final ConceptStudyService studyService;
+
+	// 대상 개념이 지금 해야 할 일
+	private enum Need {
+		STUDY, QUIZ, OK
+	}
 
 	CurriculumResponse.Flow build(Long userId, Course course, List<Material> materials) {
 		AssessmentComparisonResponse comparison = assessmentService.compare(userId, course.getId(), null);
@@ -78,6 +89,8 @@ class CurriculumFlowBuilder {
 		courseConcepts.stream().filter(c -> c.getMaterialId().equals(preferred))
 				.forEach(c -> studyByKey.putIfAbsent(c.getConceptKey(), c));
 		courseConcepts.forEach(c -> studyByKey.putIfAbsent(c.getConceptKey(), c));
+		Map<String, ConceptStudyResponse> studies = studyService.forCourse(userId, course.getId(),
+				List.copyOf(studyByKey.values()));
 
 		// 개념 목록과 출처
 		Map<String, String> names = new LinkedHashMap<>();
@@ -114,19 +127,21 @@ class CurriculumFlowBuilder {
 			Integer practiceRate = graded == 0 ? null : percent(score, max);
 			String practiceStatus = graded == 0 ? (waiting > 0 ? "pending" : "not_started")
 					: practiceRate == null || practiceRate < minPercent ? "weak" : "ok";
-			MaterialConcept study = studyByKey.get(key);
-			Long materialId = study != null ? study.getMaterialId() : preferred;
+			MaterialConcept studyConcept = studyByKey.get(key);
+			Long materialId = studyConcept != null ? studyConcept.getMaterialId() : preferred;
 			Material material = materialId == null ? null : materialById.get(materialId);
+			ConceptStudyResponse study = studyConcept == null ? null
+					: studies.get(ConceptStudyService.key(studyConcept.getMaterialId(), key));
 			concepts.add(new CurriculumResponse.FlowConcept(key, name, materialId,
-					material == null ? null : material.getTitle(), study != null && study.hasStudyNote(), preRate,
-					preStatus, graded, score, max, practiceStatus,
+					material == null ? null : material.getTitle(), studyConcept != null && studyConcept.hasStudyNote(),
+					preRate, preStatus, graded, score, max, practiceStatus,
 					postDone && delta != null ? percent(delta.postScore(), delta.postMaxScore()) : null,
 					postDone && delta != null ? delta.delta() : null,
 					postDone && delta != null ? delta.status() : null,
-					preDone && !"ok".equals(preStatus)));
+					preDone && !"ok".equals(preStatus), study));
 		});
 
-		// 확인 퀴즈 대상: 사전 테스트에서 먼저 공부할 개념, 없으면 전체
+		// 대상: 사전 테스트에서 먼저 공부할 개념, 없으면 전체
 		List<CurriculumResponse.FlowConcept> targets = concepts.stream().filter(CurriculumResponse.FlowConcept::priority)
 				.toList();
 		if (targets.isEmpty()) {
@@ -134,20 +149,22 @@ class CurriculumFlowBuilder {
 		}
 		boolean practiceStarted = concepts.stream()
 				.anyMatch(c -> c.practiceGradedCount() > 0 || "pending".equals(c.practiceStatus()));
-		long practiced = targets.stream().filter(c -> c.practiceGradedCount() > 0).count();
-		boolean practiceDone = !targets.isEmpty() && practiced == targets.size();
+		List<Need> needs = targets.stream().map(c -> need(c, practiceStarted)).toList();
+		long remaining = needs.stream().filter(need -> need != Need.OK).count();
 
 		String current = !preDone ? PRE_TEST
-				: !practiceStarted ? CONCEPT_STUDY
-						: !practiceDone ? CONCEPT_QUIZ
+				: needs.contains(Need.STUDY) ? CONCEPT_STUDY
+						: needs.contains(Need.QUIZ) ? CONCEPT_QUIZ
 								: !postDone ? POST_TEST : DONE;
 		int currentIndex = DONE.equals(current) ? ORDER.size() : ORDER.indexOf(current);
 
+		CurriculumResponse.StudyProgress progress = progress(concepts);
+		long practiced = targets.stream().filter(c -> c.practiceGradedCount() > 0).count();
 		Map<String, String> summaries = Map.of(
 				PRE_TEST, preSummary(pre, preDone, concepts, minPercent, assessmentMaterial),
-				CONCEPT_STUDY, studySummary(concepts, preDone),
-				CONCEPT_QUIZ, quizSummary(targets, practiced, preDone),
-				POST_TEST, postSummary(post, postDone, preDone, comparison.overallDelta()));
+				CONCEPT_STUDY, studySummary(concepts, preDone, progress),
+				CONCEPT_QUIZ, quizSummary(targets, practiced, preDone, progress),
+				POST_TEST, postSummary(post, postDone, preDone, comparison.overallDelta(), remaining));
 		List<CurriculumResponse.FlowStage> stages = new ArrayList<>();
 		for (int i = 0; i < ORDER.size(); i++) {
 			String key = ORDER.get(i);
@@ -156,7 +173,40 @@ class CurriculumFlowBuilder {
 		}
 
 		return new CurriculumResponse.Flow(current, stages, source, assessmentMaterial, state(pre, preDone), concepts,
-				state(post, postDone), comparison.overallDelta());
+				state(post, postDone), comparison.overallDelta(), progress);
+	}
+
+	// 자료 개념은 학습 기록·확인 퀴즈로, 과목 키워드뿐인 개념은 예전처럼 일반 퀴즈 결과로 본다
+	private static Need need(CurriculumResponse.FlowConcept concept, boolean practiceStarted) {
+		if (concept.study() != null) {
+			return switch (concept.study().status()) {
+				case "not_studied", "review_needed" -> Need.STUDY;
+				case "studied" -> Need.QUIZ;
+				default -> Need.OK;
+			};
+		}
+		if (concept.practiceGradedCount() > 0) {
+			return Need.OK;
+		}
+		return practiceStarted ? Need.QUIZ : Need.STUDY;
+	}
+
+	// 학습 진행률: 분모는 학습 기록을 남길 수 있는 개념(자료 개념), 분자는 학습 완료 기록이 있는 개념
+	static CurriculumResponse.StudyProgress progress(List<CurriculumResponse.FlowConcept> concepts) {
+		List<ConceptStudyResponse> studies = concepts.stream().map(CurriculumResponse.FlowConcept::study)
+				.filter(Objects::nonNull).toList();
+		int studied = (int) studies.stream().filter(ConceptStudyResponse::studied).count();
+		ConceptStudyResponse last = studies.stream().filter(s -> s.lastStudiedAt() != null)
+				.max(Comparator.comparing(ConceptStudyResponse::lastStudiedAt)).orElse(null);
+		return new CurriculumResponse.StudyProgress(concepts.size(), studies.size(), studied,
+				studies.isEmpty() ? null : Math.round(studied * 1000.0 / studies.size()) / 10.0,
+				(int) studies.stream().filter(s -> s.latestCheck() != null).count(),
+				count(studies, "understood"), count(studies, "review_needed"), count(studies, "needs_check"),
+				last == null ? null : last.lastStudiedAt(), last == null ? null : last.name());
+	}
+
+	private static int count(List<ConceptStudyResponse> studies, String status) {
+		return (int) studies.stream().filter(s -> status.equals(s.status())).count();
 	}
 
 	private static Integer percent(Integer score, Integer max) {
@@ -193,22 +243,37 @@ class CurriculumFlowBuilder {
 		return waiting > 0 ? result + " 채점 대기·확인 필요 " + waiting + "문제는 점수에서 뺐어요." : result;
 	}
 
-	private static String studySummary(List<CurriculumResponse.FlowConcept> concepts, boolean preDone) {
+	private static String studySummary(List<CurriculumResponse.FlowConcept> concepts, boolean preDone,
+			CurriculumResponse.StudyProgress progress) {
 		if (concepts.isEmpty()) {
 			return "공부할 개념이 없어요. 과목 키워드를 넣거나 자료에서 핵심 개념을 뽑아 주세요.";
 		}
-		long notes = concepts.stream().filter(CurriculumResponse.FlowConcept::hasStudyNote).count();
 		List<String> priority = concepts.stream().filter(CurriculumResponse.FlowConcept::priority)
 				.map(CurriculumResponse.FlowConcept::name).toList();
 		String head = preDone && !priority.isEmpty()
 				? "먼저 공부할 개념 " + priority.size() + "개: " + String.join(", ", priority) + "."
 				: "개념 " + concepts.size() + "개를 자료로 공부해요.";
-		return head + " 자세한 설명이 있는 개념 " + notes + "개.";
+		if (progress.studiableConcepts() == 0) {
+			return head + " 자료에서 핵심 개념을 뽑으면 개념마다 학습 완료를 기록할 수 있어요.";
+		}
+		String result = "총 " + progress.studiableConcepts() + "개 개념 중 " + progress.studiedConcepts() + "개 학습 완료 ("
+				+ progress.percent() + "%). " + head;
+		if (progress.reviewNeededConcepts() > 0) {
+			result += " 복습이 필요한 개념 " + progress.reviewNeededConcepts() + "개.";
+		}
+		int keywordOnly = progress.totalConcepts() - progress.studiableConcepts();
+		return keywordOnly > 0 ? result + " 자료 개념이 아닌 과목 키워드 " + keywordOnly + "개는 학습 기록 없이 퀴즈로만 확인해요." : result;
 	}
 
-	private static String quizSummary(List<CurriculumResponse.FlowConcept> targets, long practiced, boolean preDone) {
+	private static String quizSummary(List<CurriculumResponse.FlowConcept> targets, long practiced, boolean preDone,
+			CurriculumResponse.StudyProgress progress) {
 		if (targets.isEmpty()) {
 			return "확인 퀴즈를 낼 개념이 없어요.";
+		}
+		if (progress.studiableConcepts() > 0) {
+			return "확인 퀴즈를 푼 개념 " + progress.checkedConcepts() + "/" + progress.studiableConcepts() + "개. 이해 확인 "
+					+ progress.understoodConcepts() + "개 · 복습 필요 " + progress.reviewNeededConcepts() + "개 · 추가 확인 필요 "
+					+ progress.needsCheckConcepts() + "개.";
 		}
 		List<String> weak = targets.stream().filter(c -> "weak".equals(c.practiceStatus()))
 				.map(CurriculumResponse.FlowConcept::name).toList();
@@ -217,15 +282,16 @@ class CurriculumFlowBuilder {
 	}
 
 	private static String postSummary(AssessmentComparisonResponse.Snapshot post, boolean postDone, boolean preDone,
-			Integer overallDelta) {
+			Integer overallDelta, long remaining) {
 		if (!preDone) {
 			return "사전 테스트를 본 뒤에 같은 개념·문항 수·난이도로 사후 평가를 봐요.";
 		}
+		String left = remaining > 0 ? " 아직 학습하거나 확인하지 않은 개념이 " + remaining + "개 있지만 사후 평가는 볼 수 있어요." : "";
 		if (post == null) {
-			return "아직 사후 평가를 보지 않았어요. 사전 테스트와 같은 기준으로 만들어 비교해요.";
+			return "아직 사후 평가를 보지 않았어요. 사전 테스트와 같은 기준으로 만들어 비교해요." + left;
 		}
 		if (!postDone) {
-			return "사후 평가를 만들었지만 아직 풀지 않았어요.";
+			return "사후 평가를 만들었지만 아직 풀지 않았어요." + left;
 		}
 		String result = "사후 평가 " + post.score() + "/" + post.maxScore() + "점.";
 		return overallDelta == null ? result

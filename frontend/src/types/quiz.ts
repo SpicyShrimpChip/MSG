@@ -73,6 +73,8 @@ export interface Quiz {
   materialContentNote: MaterialContentNote | null;
   // 평가 개념의 출처: 자료에서 뽑은 개념 / 과목 키워드. 일반 퀴즈는 null
   topicSource: 'material' | 'course' | null;
+  // 개념 확인 퀴즈가 다루는 자료 개념 (topicId = 개념 conceptId). 그 밖의 퀴즈는 null
+  checkTopic: { materialId: number; topicId: string; name: string } | null;
   questions: QuizQuestion[];
 }
 
@@ -209,6 +211,8 @@ export interface QuizCreateInput {
   materialId?: number;
   // 모의시험 (exam_prep만, 20문제까지)
   mockExam?: boolean;
+  // 개념 확인 퀴즈: materialId의 자료에서 뽑은 개념 하나만 다룬다 (concepts는 무시)
+  checkConceptId?: string;
 }
 
 // 만들기 요청 상태 (GET /api/quizzes/generations/{requestKey}). 새로 고친 화면이 같은 요청의 결과를 찾는다
