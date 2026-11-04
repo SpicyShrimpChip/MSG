@@ -44,7 +44,23 @@ public record AnalysisRunResponse(
 			@Schema(description = "추천 학습 순서 (1부터, 코드 규칙). 더 공부할래요 → 이해 부족 → 부분 이해 → 의견 불일치 → 근거 부족 → 이해") int studyOrder,
 			@Schema(description = "이미 알아요를 남겨 확인 퀴즈를 권하는지") boolean recommendConfirmQuiz,
 			@Schema(description = "이 개념의 퀴즈 결과 (코드 집계, AI 판단과 따로). 퀴즈 기록이 없으면 null")
-			ConceptQuizStatsResponse quiz) {
+			ConceptQuizStatsResponse quiz,
+			@Schema(description = "숙련도 단계와 근거 (코드 계산, AI 판단·점수와 따로). 화면은 숫자 대신 단계와 근거를 보여 준다")
+			Mastery mastery) {
+	}
+
+	@Schema(description = "개념 하나의 숙련도. 점수는 LLM이 아니라 규칙(app.mastery)으로 계산한 값이고 정확도가 아니다. 설계: docs/frontend-requests.md 5-10절")
+	public record Mastery(
+			@Schema(allowableValues = {"insufficient_evidence", "needs_work", "normal", "strong"},
+					description = "근거 부족 / 보완 필요 / 보통 / 강점. 근거 부족은 이해 부족이 아니다") String level,
+			@Schema(description = "점수 (0~1). 근거 부족이면 null. 화면에 숫자로 보여 주지 않는다") Double score,
+			@Schema(description = "모은 근거 무게 합") double evidenceWeight,
+			@Schema(description = "세어 넣은 퀴즈 문제 수 (채점이 끝난 문제만)") int quizGradedCount,
+			@Schema(description = "퀴즈 득점률 (0~1). 퀴즈 근거가 없으면 null") Double quizRate,
+			@Schema(description = "세어 넣은 대화 수 (사용자가 쓴 근거 메시지가 있는 대화)") int conversationCount,
+			@Schema(allowableValues = {"understood", "partial", "not_understood"},
+					description = "대화에 적용한 상태. 대화 근거를 세지 않았으면 null") String conversationStatus,
+			@Schema(description = "산식 버전") String formulaVersion) {
 	}
 
 	public record Comparison(

@@ -311,7 +311,7 @@ AI 모델 설정: 키·모델 이름은 환경변수(`OPENAI_API_KEY`·`OPENAI_M
 TODO(미결):
 - **외부 AI로 대화를 보내기 전에 개인정보처리방침에 제공사·국가(국외 이전)·학습 미사용 여부를 적어야 한다(`PrivacyPage.tsx` TODO).** 실제 사용자 데이터로 키를 켜기 전에 처리한다.
 - 쓸 모델 이름, 모델별 비용 한도·월 예산, 분석을 비동기로 돌릴지(지금은 요청 안에서 기다림, 최대 약 2분).
-- ~~숙련도 점수 산식~~: 11/5에 설계안을 초기값으로 확정했다(`frontend-requests.md` 5-10절). 구현은 11/13 이후. 남은 미결은 대화 신호를 현재 `UnderstandingStatus`·`evidence`에 대응시키는 방법과 설정값 이름이다.
+- ~~숙련도 점수 산식~~: 11/5에 설계안을 초기값으로 확정했다(`frontend-requests.md` 5-10절). 계산은 11/5에 구현했다(`MasteryCalculator`, `concepts[].mastery`, 화면은 준비 중). 남은 미결은 대화 신호를 현재 `UnderstandingStatus`·`evidence`에 대응시키는 방법과 설정값 이름이다.
 
 ### 퀴즈·학습 모드 (11/2 객관식 풀기·채점, 11/3 3가지 학습 모드·AI 생성·주관식·서술형 구현)
 
@@ -354,7 +354,7 @@ TODO(미결):
 
 ## 7. AI 분석·RAG와의 연결
 
-- **숙련도:** `evidence`(대화 분류 신호·퀴즈 정오) → 점수 계산 클래스(가중치 설정값, 산식은 11/5 확정: `frontend-requests.md` 5-10절, 구현은 11/13 이후) → `concept_mastery`. LLM은 `evidence`와 점수를 받아 설명만 쓴다(`aiExplanation`).
+- **숙련도:** `evidence`(대화 분류 신호·퀴즈 정오) → 점수 계산 클래스(가중치 설정값, 산식 11/5 확정·구현: `frontend-requests.md` 5-10절, `MasteryCalculator`) → `concept_mastery`. LLM은 `evidence`와 점수를 받아 설명만 쓴다(`aiExplanation`).
 - **다중 모델 (1차 구현):** 같은 입력을 GPT·Claude·Gemini `LlmClient`에 따로 보내 각 결과를 `analysis_model_result`·`analysis_concept_judgment`에 저장하고, 비교 규칙(코드)이 `analysis_concept_consensus`를 만든다(설계안의 `ai_model_judgment` 대신). 위 "학습 대화 개념 분석" 참고.
 - **RAG 질의응답:** 6번 흐름으로 근거 조각을 찾고, 답변과 함께 `chat_citation`에 근거를 남겨 화면에 출처를 보여 준다.
 - **맞춤 설명서·이미지·영상:** 약점 개념 → 관련 조각 검색 → 생성 요청 → `ai_generation`에 상태·모델·결과 위치 저장. 파일은 `global/storage`.

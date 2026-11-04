@@ -81,6 +81,23 @@ app:
     daily-run-limit: 10
     running-timeout: 10m
 
+  # 개념별 숙련도 점수 (domain/analysis, 11/5 설계안 초기값). 전부 근거 없는 초기 가정이라 사용자 테스트 뒤 조정한다.
+  # 점수 = (Σ무게·값 + 1) ÷ (Σ무게 + 2). 산식을 바꾸면 formula-version을 올린다 (docs/frontend-requests.md 5-10절)
+  mastery:
+    formula-version: "1"
+    # 퀴즈 문제 하나, 대화 한 건의 근거 무게 (퀴즈가 직접 확인한 결과라 대화보다 크게)
+    quiz-weight: 1.0
+    conversation-weight: 0.5
+    # 대화 판단별 값 (스스로 활용 / 재설명 요청·부분 이해 / 이해 못 함)
+    understood-value: 1.0
+    partial-value: 0.3
+    not-understood-value: 0.0
+    # 근거 무게 합이 이보다 작으면 점수 대신 "근거 부족"
+    min-evidence-weight: 3.0
+    # 점수 < 0.4 보완 필요, 0.7 이상 강점, 그 사이 보통
+    needs-work-below: 0.4
+    strong-from: 0.7
+
   # 퀴즈 만들기·AI 채점 (domain/quiz). 키가 없으면 만들기는 503, 주관식 의미 판단·서술형 채점은 "채점 대기"로 둔다
   quiz:
     # 퀴즈를 만들 때 쓸 모델 순서. 설정된 첫 모델 하나만 부르고 실패하면 남은 시간 안에서 다음 모델로 넘어간다 (gpt, claude, gemini)
