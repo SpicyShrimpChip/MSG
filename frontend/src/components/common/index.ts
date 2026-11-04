@@ -22,6 +22,7 @@ export { default as ScoreBar } from './ScoreBar';
 export { default as BoardTable, type BoardColumn } from './BoardTable';
 export { default as GlassSurface } from './GlassSurface';
 export { default as Notice } from './Notice';
+export { default as DemoStartButton } from './DemoStartButton';
 export {
   default as LearningProfileFields,
   type LearningProfileValue,

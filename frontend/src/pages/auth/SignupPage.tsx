@@ -12,6 +12,7 @@ import {
   type LearningProfileValue,
 } from '@/components';
 import { isPasswordValid } from '@/utils';
+import MockAuthNotice from './components/MockAuthNotice';
 import PasswordRules from './components/PasswordRules';
 import SignupAgreements from './components/SignupAgreements';
 
@@ -72,6 +73,7 @@ function SignupPage() {
   return (
     <SubPage title="회원가입">
       <form onSubmit={handleSubmit} className="flex max-w-xl flex-col gap-8">
+        <MockAuthNotice from={from} />
         <div className="flex flex-col gap-6">
           <FormRow label="이메일" htmlFor="signup-email" required>
             <TextInput

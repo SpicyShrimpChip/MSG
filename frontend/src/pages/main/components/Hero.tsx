@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Lock } from 'lucide-react';
-import { LevelBadge, ScoreBar } from '@/components';
+import { DemoStartButton, LevelBadge, ScoreBar } from '@/components';
 import type { MasteryLevel } from '@/types';
 
 // 첫 화면 오른쪽 예시 카드. 실제 사용자 데이터가 아니라 화면 소개용 예시라서 "예시 화면" 표시를 붙인다
@@ -86,6 +86,7 @@ function Hero() {
             >
               AI 대화 가져오기
             </Link>
+            <DemoStartButton className="inline-flex h-13 items-center rounded-xl px-4 font-bold text-on-brand-hover underline underline-offset-4 hover:text-on-brand" />
           </div>
           <p className="mt-5 flex items-center gap-1.5 text-body text-on-brand-hover">
             <Lock size={15} aria-hidden="true" />
