@@ -110,17 +110,23 @@ API는 **제안**이다. 확정은 백엔드 API 문서(Swagger)에서 하고, �
 
 ### 공지사항 — 목록 구현됨, 상세·관리자 작성·수정·삭제 구현됨 (10/27, 확정: Swagger `공지사항`, `공지사항 관리 (관리자)`)
 
-| 메서드 | 경로                          | 권한   | 응답 `data`                              |
-| ------ | ----------------------------- | ------ | ---------------------------------------- |
-| GET    | `/api/notices`                | 공개   | `Notice[]` (본문 없음)                   |
-| GET    | `/api/notices/{id}`           | 공개   | `NoticeDetail` (없으면 404)              |
-| POST   | `/api/admin/notices`          | 관리자 | `NoticeDetail` (201), 본문 `{ title, content }` |
-| PUT    | `/api/admin/notices/{id}`     | 관리자 | `NoticeDetail`, 본문 `{ title, content }` |
-| DELETE | `/api/admin/notices/{id}`     | 관리자 | 없음 (완전히 삭제)                       |
+| 메서드 | 경로                      | 권한   | 응답 `data`                                     |
+| ------ | ------------------------- | ------ | ----------------------------------------------- |
+| GET    | `/api/notices`            | 공개   | `Notice[]` (본문 없음)                          |
+| GET    | `/api/notices/{id}`       | 공개   | `NoticeDetail` (없으면 404)                     |
+| POST   | `/api/admin/notices`      | 관리자 | `NoticeDetail` (201), 본문 `{ title, content }` |
+| PUT    | `/api/admin/notices/{id}` | 관리자 | `NoticeDetail`, 본문 `{ title, content }`       |
+| DELETE | `/api/admin/notices/{id}` | 관리자 | 없음 (완전히 삭제)                              |
 
 ```ts
 Notice = { id: number, title: string, createdAt: string }; // createdAt: "2026-10-24"
-NoticeDetail = { id: number, title: string, content: string, createdAt: string, updatedAt: string | null }; // updatedAt: 수정한 적이 없으면 null
+NoticeDetail = {
+  id: number,
+  title: string,
+  content: string,
+  createdAt: string,
+  updatedAt: string | null,
+}; // updatedAt: 수정한 적이 없으면 null
 ```
 
 - 제목 100자·본문 5000자까지, 둘 다 필수이고 앞뒤 공백은 서버가 지운다. 어기면 400 + 안내 문구.
@@ -132,11 +138,11 @@ NoticeDetail = { id: number, title: string, content: string, createdAt: string, 
 
 화면: `/courses` (학습자료 > 내 과목). 등록한 키워드는 AI 대화 가져오기에서 공부한 대화를 고를 때, 자료 올리기에서 과목을 고를 때 쓴다.
 
-| 메서드 | 경로                | 요청 본문     | 응답 `data`                       |
-| ------ | ------------------- | ------------- | --------------------------------- |
-| GET    | `/api/courses`      | -             | `Course[]` (로그인한 사용자 것만, 등록 순) |
-| POST   | `/api/courses`      | `CourseInput` | `Course` (201)                    |
-| PATCH  | `/api/courses/{id}` | `CourseInput` | `Course` (보낸 값으로 모두 바꿈)  |
+| 메서드 | 경로                | 요청 본문     | 응답 `data`                                            |
+| ------ | ------------------- | ------------- | ------------------------------------------------------ |
+| GET    | `/api/courses`      | -             | `Course[]` (로그인한 사용자 것만, 등록 순)             |
+| POST   | `/api/courses`      | `CourseInput` | `Course` (201)                                         |
+| PATCH  | `/api/courses/{id}` | `CourseInput` | `Course` (보낸 값으로 모두 바꿈)                       |
 | DELETE | `/api/courses/{id}` | -             | 없음. **그 과목의 학습자료와 원본 파일도 함께 지운다** |
 
 ```ts
@@ -155,12 +161,12 @@ semester    = "2026-1" | "2026-summer" | "2026-2" | "2026-winter"
 
 화면: `/materials/upload`(올리기), `/materials`(목록, 과목별로 묶음), `/materials/{id}`(상세: 요약 / 핵심 개념 / 퀴즈 탭). 올린 본인만 볼 수 있다.
 
-| 메서드 | 경로                  | 요청 본문                                          | 응답 `data`                                       |
-| ------ | --------------------- | -------------------------------------------------- | ------------------------------------------------- |
-| POST   | `/api/materials`      | `multipart/form-data`: `courseId`(선택), `title`, `file` | `Material` (201) |
-| GET    | `/api/materials`      | -                                                  | `MaterialSummary[]` (최신순)                      |
-| GET    | `/api/materials/{id}` | -                                                  | `MaterialDetail`                                  |
-| DELETE | `/api/materials/{id}` | -                                                  | 없음 (자료 정보와 원본 파일을 함께 지운다)        |
+| 메서드 | 경로                  | 요청 본문                                                | 응답 `data`                                |
+| ------ | --------------------- | -------------------------------------------------------- | ------------------------------------------ |
+| POST   | `/api/materials`      | `multipart/form-data`: `courseId`(선택), `title`, `file` | `Material` (201)                           |
+| GET    | `/api/materials`      | -                                                        | `MaterialSummary[]` (최신순)               |
+| GET    | `/api/materials/{id}` | -                                                        | `MaterialDetail`                           |
+| DELETE | `/api/materials/{id}` | -                                                        | 없음 (자료 정보와 원본 파일을 함께 지운다) |
 
 ```ts
 Material = { id: number, courseId: number | null, title: string }
@@ -189,16 +195,16 @@ MaterialDetail = MaterialSummary & {
 
 화면: `/login`, `/signup`, 마이페이지(내 정보, AI 대화 분석·AI 퀴즈 처리 동의 철회·다시 동의, 비밀번호를 다시 넣는 탈퇴). 방식은 JWT access token(메모리) + HttpOnly 쿠키 refresh token. 자세한 흐름은 `docs/backend-design.md` 5번.
 
-| 메서드 | 경로                     | 요청 본문                 | 응답 `data`                                          | 상태   |
-| ------ | ------------------------ | ------------------------- | ---------------------------------------------------- | ------ |
-| POST   | `/api/auth/signup`       | `SignupInput`             | `User` (201)                                         | 구현됨 |
-| POST   | `/api/auth/login`        | `{ email, password }`     | `{ accessToken: string, user: User }` + refresh 쿠키 | 구현됨 |
-| POST   | `/api/auth/refresh`      | - (refresh 쿠키)          | `{ accessToken: string }` + 새 refresh 쿠키          | 구현됨 |
-| POST   | `/api/auth/logout`       | - (refresh 쿠키)          | 없음 (세션 폐기, 쿠키 삭제)                          | 구현됨 |
-| GET    | `/api/users/me`          | -                         | `User`                                               | 구현됨 |
-| PATCH  | `/api/users/me/consents` | `{ aiAnalysis?: boolean, aiQuiz?: boolean }` (보낸 것만 바꿈, 둘 다 없으면 400) | `User` | 구현됨 |
-| PATCH  | `/api/users/me/profile`  | `LearningProfileInput`    | `User` (학습 목적·관심 직무, 11/3)                   | 구현됨 |
-| DELETE | `/api/users/me`          | `{ password }`            | 없음 (탈퇴: 내 모든 데이터 삭제, 11/3)               | 구현됨 |
+| 메서드 | 경로                     | 요청 본문                                                                       | 응답 `data`                                          | 상태   |
+| ------ | ------------------------ | ------------------------------------------------------------------------------- | ---------------------------------------------------- | ------ |
+| POST   | `/api/auth/signup`       | `SignupInput`                                                                   | `User` (201)                                         | 구현됨 |
+| POST   | `/api/auth/login`        | `{ email, password }`                                                           | `{ accessToken: string, user: User }` + refresh 쿠키 | 구현됨 |
+| POST   | `/api/auth/refresh`      | - (refresh 쿠키)                                                                | `{ accessToken: string }` + 새 refresh 쿠키          | 구현됨 |
+| POST   | `/api/auth/logout`       | - (refresh 쿠키)                                                                | 없음 (세션 폐기, 쿠키 삭제)                          | 구현됨 |
+| GET    | `/api/users/me`          | -                                                                               | `User`                                               | 구현됨 |
+| PATCH  | `/api/users/me/consents` | `{ aiAnalysis?: boolean, aiQuiz?: boolean }` (보낸 것만 바꿈, 둘 다 없으면 400) | `User`                                               | 구현됨 |
+| PATCH  | `/api/users/me/profile`  | `LearningProfileInput`                                                          | `User` (학습 목적·관심 직무, 11/3)                   | 구현됨 |
+| DELETE | `/api/users/me`          | `{ password }`                                                                  | 없음 (탈퇴: 내 모든 데이터 삭제, 11/3)               | 구현됨 |
 
 ```ts
 // 화면에 "이름"과 "비밀번호 확인" 칸이 있어 name, passwordConfirm을 추가했다 (2026-10-25)
@@ -211,7 +217,13 @@ SignupInput = {
   agreedPrivacy: boolean, // true여야 함
   agreedAiAnalysis: boolean,
 };
-User = { id: number, email: string, name: string, aiAnalysisConsent: boolean, role: 'USER' | 'ADMIN' };
+User = {
+  id: number,
+  email: string,
+  name: string,
+  aiAnalysisConsent: boolean,
+  role: "USER" | "ADMIN",
+};
 ```
 
 - 가입 동의 3가지 중 이용약관·개인정보 수집은 필수, **AI 대화 분석은 선택**이다. 선택 동의를 안 해도 자료로 공부할 수 있어야 한다.
@@ -234,11 +246,11 @@ User = { id: number, email: string, name: string, aiAnalysisConsent: boolean, ro
 - 원본 파일과 이미지·첨부 내용은 서버로 가지 않는다(대신 `[이미지]`, `[첨부 파일]` 표시만 남는다).
 - 사용자가 직접 넣은 "가릴 단어"(학교·회사 등) 목록도 서버로 보내지 않는다. 가린 결과(`[가린 단어]`)만 간다. 목록은 브라우저(localStorage)에만 계정별로 저장한다(10/31, #90). 그래서 이 목록을 위한 API는 필요 없다.
 
-| 메서드 | 경로                      | 요청 본문            | 응답 `data`                                                        |
-| ------ | ------------------------- | -------------------- | ------------------------------------------------------------------ |
+| 메서드 | 경로                      | 요청 본문            | 응답 `data`                                                                           |
+| ------ | ------------------------- | -------------------- | ------------------------------------------------------------------------------------- |
 | POST   | `/api/conversations`      | `ConversationImport` | 201 `{ importedCount, importCompleted }` / 422 `{ rejected: RejectedConversation[] }` |
-| GET    | `/api/conversations`      | -                    | `ConversationSummary[]` (내 것만, 최근에 가져온 순)                |
-| DELETE | `/api/conversations/{id}` | -                    | 없음                                                               |
+| GET    | `/api/conversations`      | -                    | `ConversationSummary[]` (내 것만, 최근에 가져온 순)                                   |
+| DELETE | `/api/conversations/{id}` | -                    | 없음                                                                                  |
 
 ```ts
 ConversationImport = {
@@ -274,15 +286,15 @@ ConversationSummary  = { id, courseId, source, title, createdAt: string | null, 
 
 GPT·Claude·Gemini가 과목 하나의 가져온 대화를 **같은 기준으로 따로** 분석하고, 서버 코드가 개념(= 과목 키워드)마다 의견을 비교한다. 숙련도 점수는 아직 만들지 않는다. **학습 대시보드(`/analysis`)는 11/2부터 이 API(`providers`·`runs/latest`·`runs` 시작)로 그린다**(`frontend/src/api/analysis.api.ts`, 타입 `frontend/src/types/analysis.ts`, 목업 `frontend/src/mocks/analysis.ts`). 예전에 제안한 `/api/analysis/dashboard`는 만들지 않아도 된다(아래 "학습 대시보드").
 
-| 메서드 | 경로 | 요청 본문 | 응답 `data` |
-| --- | --- | --- | --- |
-| GET | `/api/analysis/providers` | - | `ProviderStatus[]` (모델별 설정 여부, 키는 안 줌) |
-| POST | `/api/analysis/courses/{courseId}/runs` | - | `AnalysisRun` (201). 모델을 기다리므로 수십 초 걸릴 수 있다 |
-| GET | `/api/analysis/courses/{courseId}/runs/latest` | - | `AnalysisRun` (가장 최근에 끝난 분석, 없으면 404) |
-| GET | `/api/analysis/runs/{runId}` | - | `AnalysisRun` |
-| GET | `/api/analysis/courses/{courseId}/feedback` | - | `ConceptFeedback[]` |
-| PUT | `/api/analysis/courses/{courseId}/feedback` | `{ concept, feedback, comment?, analysisRunId? }` | `ConceptFeedback` (있으면 바꾼다) |
-| DELETE | `/api/analysis/feedback/{id}` | - | 없음 (피드백 취소) |
+| 메서드 | 경로                                           | 요청 본문                                         | 응답 `data`                                                 |
+| ------ | ---------------------------------------------- | ------------------------------------------------- | ----------------------------------------------------------- |
+| GET    | `/api/analysis/providers`                      | -                                                 | `ProviderStatus[]` (모델별 설정 여부, 키는 안 줌)           |
+| POST   | `/api/analysis/courses/{courseId}/runs`        | -                                                 | `AnalysisRun` (201). 모델을 기다리므로 수십 초 걸릴 수 있다 |
+| GET    | `/api/analysis/courses/{courseId}/runs/latest` | -                                                 | `AnalysisRun` (가장 최근에 끝난 분석, 없으면 404)           |
+| GET    | `/api/analysis/runs/{runId}`                   | -                                                 | `AnalysisRun`                                               |
+| GET    | `/api/analysis/courses/{courseId}/feedback`    | -                                                 | `ConceptFeedback[]`                                         |
+| PUT    | `/api/analysis/courses/{courseId}/feedback`    | `{ concept, feedback, comment?, analysisRunId? }` | `ConceptFeedback` (있으면 바꾼다)                           |
+| DELETE | `/api/analysis/feedback/{id}`                  | -                                                 | 없음 (피드백 취소)                                          |
 
 ```ts
 ProviderStatus = { provider: "gpt" | "claude" | "gemini", model: string | null, configured: boolean }
@@ -311,6 +323,7 @@ ConceptFeedback = { id, courseId, concept, feedback: "already_know" | "want_to_s
 ```
 
 화면에 보여 줄 때 지킬 것:
+
 - **모델 비교는 정확도·숙련도가 아니다.** "정확도 67%·100%"처럼 보여 주지 말고 "3개 모델 중 2개가 '부분 이해'" 같은 개수로 보여 주기. 실패·미설정 모델이 있으면 `judgedCount`/`calledCount`로 실제 판단한 모델 수를 보여 주기.
 - `outcome`: `unanimous`(판단한 모델 모두 같음. 3개면 전원 일치), `majority`(3개 중 2개 = 다수 의견), `disagreement`(모두 다름, `status` 없음), `single_model`(판단한 모델이 하나라 비교 못 함), `no_result`(판단한 모델 없음).
 - `insufficient_evidence`(판단 근거 부족)는 `not_understood`(이해 부족)와 다르다. 같은 색·문구로 묶지 않기.
@@ -365,11 +378,11 @@ QuizResult  = {
 
 위 4개 API의 경로와 기존 필드는 그대로 두고 **필드를 더하기만** 했다(V6 요청 `{ questionId, choiceIndex }`도 그대로 받는다). 타입 전체는 `frontend/src/types/quiz.ts`(백엔드 DTO와 같은 모양).
 
-| 메서드 | 경로                                                  | 요청 본문         | 응답 `data`                                     |
-| ------ | ----------------------------------------------------- | ----------------- | ----------------------------------------------- |
-| POST   | `/api/quizzes`                                        | `QuizCreateInput` | `Quiz` (201, 같은 `requestKey`면 200으로 같은 퀴즈) |
-| POST   | `/api/quizzes/{id}/submissions/{submissionId}/grading` | -                 | `QuizResult` (채점 대기 답만 다시 채점)         |
-| GET    | `/api/quizzes/concept-stats?courseId=`                | -                 | `ConceptQuizStats[]`                            |
+| 메서드 | 경로                                                   | 요청 본문         | 응답 `data`                                         |
+| ------ | ------------------------------------------------------ | ----------------- | --------------------------------------------------- |
+| POST   | `/api/quizzes`                                         | `QuizCreateInput` | `Quiz` (201, 같은 `requestKey`면 200으로 같은 퀴즈) |
+| POST   | `/api/quizzes/{id}/submissions/{submissionId}/grading` | -                 | `QuizResult` (채점 대기 답만 다시 채점)             |
+| GET    | `/api/quizzes/concept-stats?courseId=`                 | -                 | `ConceptQuizStats[]`                                |
 
 ```ts
 QuizCreateInput = {
@@ -396,10 +409,10 @@ QuizCreateInput = {
 
 #### 11/3 안정화·추가 (백엔드 V8)
 
-| 메서드 | 경로                                     | 요청 본문 | 응답 `data`                                                                 |
-| ------ | ---------------------------------------- | --------- | --------------------------------------------------------------------------- |
-| GET    | `/api/quizzes/generations/{requestKey}`  | -         | `{ status: 'running'\|'succeeded'\|'failed'\|'timed_out', quizId, message, deadlineAt }` |
-| GET    | `/api/curriculum/courses/{courseId}`     | -         | `Curriculum` (`frontend/src/types/curriculum.ts`)                           |
+| 메서드 | 경로                                    | 요청 본문 | 응답 `data`                                                                              |
+| ------ | --------------------------------------- | --------- | ---------------------------------------------------------------------------------------- |
+| GET    | `/api/quizzes/generations/{requestKey}` | -         | `{ status: 'running'\|'succeeded'\|'failed'\|'timed_out', quizId, message, deadlineAt }` |
+| GET    | `/api/curriculum/courses/{courseId}`    | -         | `Curriculum` (`frontend/src/types/curriculum.ts`)                                        |
 
 - **AI 퀴즈 처리 동의를 따로 받는다.** `User.aiQuizConsent`, 가입 `agreedAiQuiz`(선택, 없으면 false), 마이페이지 `PATCH /api/users/me/consents { aiQuiz }`. 대화 분석 동의(`aiAnalysis`)를 퀴즈로 넓히지 않는다. 기존 회원은 false. 동의가 없으면 만들기 403, 주관식·서술형은 `pending`(이유 문구는 `gradingMessage`).
 - 더한 필드: `QuizCreateInput.mockExam`(exam_prep만, 20문제까지), `Quiz.mockExam`, `QuizSummary.mockExam`·`lastReviewCount`, 개념별 결과 `correctCount`(채점이 끝나고 만점인 문제 수, 대기·확인 필요는 틀린 것으로 세지 않음)·`lastSubmittedAt`.
@@ -408,13 +421,13 @@ QuizCreateInput = {
 
 #### 11/3 사전·사후평가·자료 핵심 개념 (백엔드 V9·V10, 확정: Swagger `사전·사후평가`, 핵심 개념 API도 같은 태그)
 
-| 메서드 | 경로                                   | 요청 본문                                   | 응답 `data`                                                   |
-| ------ | -------------------------------------- | ------------------------------------------- | ------------------------------------------------------------- |
-| POST   | `/api/assessments`                     | `AssessmentCreateInput`                     | `Quiz` (201, 풀기·결과는 `/api/quizzes/{id}` 그대로)          |
-| GET    | `/api/assessments/comparison`          | - (`?courseId=` 또는 `?materialId=`)        | `AssessmentComparison`                                        |
-| GET    | `/api/assessments/ai-status`           | -                                           | `QuizAiStatus` (키 값 없음, `materialContentEnabled` 포함)    |
-| GET    | `/api/materials/{id}/concepts`         | -                                           | `MaterialConcept[]` (안 뽑았으면 빈 목록)                     |
-| POST   | `/api/materials/{id}/concepts`         | `{ materialContentConsent: boolean }`       | `MaterialConcept[]` (새로 뽑은 개념으로 바꿈)                 |
+| 메서드 | 경로                           | 요청 본문                             | 응답 `data`                                                |
+| ------ | ------------------------------ | ------------------------------------- | ---------------------------------------------------------- |
+| POST   | `/api/assessments`             | `AssessmentCreateInput`               | `Quiz` (201, 풀기·결과는 `/api/quizzes/{id}` 그대로)       |
+| GET    | `/api/assessments/comparison`  | - (`?courseId=` 또는 `?materialId=`)  | `AssessmentComparison`                                     |
+| GET    | `/api/assessments/ai-status`   | -                                     | `QuizAiStatus` (키 값 없음, `materialContentEnabled` 포함) |
+| GET    | `/api/materials/{id}/concepts` | -                                     | `MaterialConcept[]` (안 뽑았으면 빈 목록)                  |
+| POST   | `/api/materials/{id}/concepts` | `{ materialContentConsent: boolean }` | `MaterialConcept[]` (새로 뽑은 개념으로 바꿈)              |
 
 타입은 `frontend/src/types/assessment.ts`, `types/material.ts`(`MaterialConcept`), `types/quiz.ts`(`Quiz.topicSource`, `MaterialContentNote`).
 
@@ -461,7 +474,12 @@ layout = {
   },
   items: [
     {
-      component: "summary" | "conceptTable" | "conceptDetail" | "models" | "recommendation",
+      component:
+        "summary" |
+        "conceptTable" |
+        "conceptDetail" |
+        "models" |
+        "recommendation",
       order: number, // 1부터, 겹치지 않게
       size: "wide" | "normal",
       aiReason: string, // 이 위치·크기인 이유 (AI), 80자까지
@@ -503,7 +521,6 @@ layout = {
 - GitHub Secret scanning·Push protection·Dependabot 보안 업데이트를 켰다. 비밀값이 든 커밋은 푸시 때 막힌다.
 - `main`은 삭제·강제 푸시가 막혔다(CI 필수는 경로 필터를 정리한 뒤에 추가 예정).
 - `.claude/settings.json`을 공유한다: Claude가 `.env`를 읽거나 `main`에 푸시하지 못하게 한다.
-
 
 ## 5-2. 마이그레이션을 V1부터 다시 시작 (10/31)
 
@@ -557,6 +574,78 @@ layout = {
 - 백엔드 의존성: `org.apache.pdfbox:pdfbox:3.0.3`(PDF 글 뽑기, 서버 안에서만).
 - 프론트에서 고친 곳: `types/assessment.ts`·`material.ts`·`quiz.ts`, `api/assessments.api.ts`·`materials.api.ts`, `pages/assessments/AssessmentPage.tsx`(`/assessments`), `pages/materials/components/MaterialConceptPanel.tsx`(새, 평가 화면·자료 상세 "핵심 개념" 탭 공용), `pages/analysis/components/AssessmentComparisonPanel.tsx`(대시보드 맨 위 비교), `utils/assessment.ts`, `pages/quizzes/components/QuestionResultCard.tsx`(AI 1개 판단 표시), `pages/mypage/MyPage.tsx`(탈퇴 비밀번호), `pages/privacy/PrivacyPage.tsx`·`pages/auth/components/ConsentNotice.tsx`(자료 본문 전송 안내), `mocks/`.
 - **자료 본문 전송은 기본 꺼짐이다.** 켜기 전에 제공사·이전 국가·보관 기간·처리 근거를 처리방침에 확정하고 팀·멘토 검토를 받는다.
+
+## 5-10. 숙련도 점수 산식 설계안과 참고 문헌 (11/4, 제안 — 아직 확정 아님)
+
+**상태:** 팀이 확정하기 전의 제안이다. 확정되기 전에는 루트 `CLAUDE.md`의 미결 사항("숙련도 점수 산식")을 그대로 두고, 코드는 가중치·기준을 **전부 설정값**으로 둔다(`// TODO(미결)`). 화면은 지금처럼 숫자 점수 없이 "준비 중"이다. **11/6 중간보고서에는 이 설계안만 쓰고 구현은 11/13 이후**다.
+
+### 원칙 (이미 정한 것)
+
+- 점수는 **명시적 규칙의 코드**가 계산한다. LLM은 근거를 설명만 한다(루트 `CLAUDE.md`, `backend-design.md` "숙련도" `evidence` → 점수 계산 클래스 → `concept_mastery`).
+- 근거가 부족한 것을 이해 부족으로 바꾸지 않는다. 대화만으로 단정하지 않는다.
+- "정확도"·"진단" 같은 표현을 쓰지 않는다. 가중치는 **근거 없는 초기 가정**이고 사용자 테스트 뒤에 조정한다.
+- 산식이 바뀌면 `concept_mastery.formula_version`을 올려 이전 결과와 구분한다.
+
+### 계산 (개념 하나마다)
+
+1. **근거를 모은다.** 개념마다 근거 한 건은 값 `s`(0~1)와 가중치 `w`를 가진다.
+
+| 근거                                    | 값 `s`                   | 가중치 `w` (설정값) |
+| --------------------------------------- | ------------------------ | ------------------- |
+| 퀴즈 객관식 정답 / 오답                 | 1 / 0                    | 1.0                 |
+| 퀴즈 주관식·서술형                      | 채점된 점수 ÷ 만점 (0~1) | 1.0                 |
+| 대화: 스스로 활용 (`understood`에 해당) | 1                        | 0.5                 |
+| 대화: 재설명 요청 (`partial`에 해당)    | 0.3                      | 0.5                 |
+| 대화: 이해 못 함 (`not_understood`)     | 0                        | 0.5                 |
+
+- 퀴즈 가중치를 대화의 2배로 둔 이유: 퀴즈는 직접 확인한 결과이고 대화는 간접 신호다.
+- **채점 대기·확인 필요 답은 근거에서 뺀다**(지금 사전·사후평가 비교와 같은 규칙). 몇 개를 뺐는지는 화면에 숫자로 보여 준다.
+- 대화 신호를 현재 분석 결과(`UnderstandingStatus`, 모델별 판단과 `ConsensusCalculator`의 다수 의견)의 어느 값에 대응시킬지, 근거 한 건을 메시지 단위로 셀지 개념 단위로 셀지는 **현재 데이터 구조에 맞춰 백엔드에서 정한다**.
+
+2. **점수 = (Σ w·s + 1) ÷ (Σ w + 2).** 근거가 한두 개일 때 점수가 0이나 1로 튀지 않게 하는 보정이다(일반 통계의 라플라스 보정과 같은 꼴).
+3. **근거 부족:** `Σ w`가 기준 `T`(제안 3.0, 설정값) 미만이면 점수를 내지 않고 `insufficient_evidence`("근거 부족")로 둔다.
+4. **단계:** 점수 < 0.4 보완 필요 / 0.4 이상 0.7 미만 보통 / 0.7 이상 강점(제안, 설정값).
+5. **화면은 숫자 대신 4단계**(근거 부족·보완 필요·보통·강점)와 **근거 목록**을 함께 보여 준다(예: "퀴즈 3문제 중 2개 정답, 대화 2건"). 근거 부족은 이해 부족과 다른 모양으로 그린다(지금 `UnderstandingBadge`와 같은 원칙).
+6. **유형 B(자료로 시작)는 퀴즈만, 유형 A(대화로 시작)는 대화만으로도** 같은 식이 그대로 동작한다.
+
+### 계산 예시 (단위 테스트로 써도 된다. `T`=3.0, 기준 0.4·0.7일 때)
+
+| 근거                                         | Σ w·s | Σ w | 점수               | 단계                  |
+| -------------------------------------------- | ----- | --- | ------------------ | --------------------- |
+| 퀴즈 3문제 중 2개 정답                       | 2     | 3   | (2+1)÷(3+2) = 0.60 | 보통                  |
+| 퀴즈 4문제 중 4개 정답                       | 4     | 4   | (4+1)÷(4+2) ≈ 0.83 | 강점                  |
+| 퀴즈 4문제 중 1개 정답 + 대화 이해 못 함 2건 | 1     | 5   | (1+1)÷(5+2) ≈ 0.29 | 보완 필요             |
+| 대화 이해 못 함 2건만                        | 0     | 1   | Σ w < 3            | 근거 부족 (점수 없음) |
+| 퀴즈 1문제 정답만                            | 1     | 1   | Σ w < 3            | 근거 부족 (점수 없음) |
+
+### 나중으로 미룬 것 (2단계 후보)
+
+- 최근 근거에 더 큰 가중치를 주는 **시간 감쇠(반감기)**. 지금은 넣지 않는다.
+- 문항·학습자 난이도를 따로 추정하는 방식, 매개변수를 데이터로 학습하는 방식(아래 BKT). 데이터가 쌓인 뒤에 검토한다.
+
+### 정해야 하는 값 (설정값으로 분리)
+
+대화 신호별 값(1 / 0.3 / 0)과 가중치 비율(1.0 : 0.5), 근거 부족 기준 `T`, 단계 경계(0.4·0.7), 시간 감쇠를 둘지. 전부 초기 가정이다.
+
+### 참고 문헌 — 확인한 것과 쓰는 법
+
+**"참고했다"까지만 쓴다. 이 산식은 아래 모델을 구현한 것이 아니라 우리가 만든 단순한 규칙이다.** 보고서·README에 "BKT를 적용했다" 같은 표현을 쓰지 않는다. 아래는 2026-11-04에 웹 검색으로 서지 정보를 확인한 것이다(논문 전문은 읽지 않았고 초록·서지 정보까지만 확인).
+
+| 자료                                                                                                                                                                                                                                                                              | 우리 설계와의 관계                                                                                                                                                        |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Khan Academy 숙련도 단계(Attempted·Familiar·Proficient·Mastered). [고객센터 "How do Khan Academy's Mastery levels work?"](https://support.khanacademy.org/hc/tr/articles/5548760867853)                                                                                           | 점수 숫자 대신 **단계**로 보여 주는 방향의 참고. 정답률 구간(출처마다 70~85%, 70~99%로 다름)은 인용하지 않는다. 영어판 주소는 확인하지 못했으니 인용할 때 열어서 확인한다 |
+| Corbett, A. T. & Anderson, J. R. (1995). Knowledge Tracing: Modeling the Acquisition of Procedural Knowledge. _User Modeling and User-Adapted Interaction_ 4(4): 253–278. [DOI 10.1007/BF01099821](https://link.springer.com/doi/10.1007/BF01099821) (Bayesian Knowledge Tracing) | 학생이 개념을 아는지를 확률로 추정하는 고전 모델. 매개변수를 데이터로 학습해야 해서 **2단계 후보**. 이미 배운 것은 잊지 않는다고 가정하는 한계가 알려져 있다              |
+| Pelánek, R. (2016). Applications of the Elo rating system in adaptive educational systems. _Computers & Education_ 98: 169–179. [DOI 10.1016/j.compedu.2016.03.017](https://doi.org/10.1016/j.compedu.2016.03.017)                                                                | 학생 답을 "학생과 문항의 대결"로 보고 학생 실력과 문항 난이도를 함께 추정. 단순하고 튼튼하다고 소개됨. 문항이 많아야 해서 지금은 쓰지 않는다                              |
+| Settles, B. & Meeder, B. (2016). A Trainable Spaced Repetition Model for Language Learning. _ACL_ 1848–1858. [DOI 10.18653/v1/P16-1174](https://doi.org/10.18653/v1/P16-1174) (Duolingo, Half-Life Regression)                                                                    | 기억이 유지되는 "반감기"를 추정. 시간 감쇠를 도입할 때의 참고(2단계). 한 외부 분석 글은 공개 데이터에서 예측력이 약하다고 주장한다(비공식 글 하나라 참고만)               |
+| Woźniak, P. (1990). SM-2 알고리즘(SuperMemo). [SuperMemo Guru "Algorithm SM-2"](https://www.supermemo.guru/wiki/SuperMemo_2)                                                                                                                                                      | 복습 간격을 정하는 간격 반복 알고리즘(Anki 등이 변형해 사용). 복습 시점 추천을 만들 때 참고(2단계)                                                                        |
+
+- **문항 반응 이론(IRT)** 등 다른 문헌은 이번에 확인하지 않았으므로 인용하지 않는다.
+- 위 표의 "관계" 칸 문장은 우리 설계에 대한 설명이고 논문의 주장이 아니다. 논문 내용을 인용할 때는 원문을 열어서 확인한다.
+
+### 주미에게 묻는 것 (5-10 관련)
+
+- 위 입력 매핑(대화 신호를 현재 `UnderstandingStatus`·`evidence`에 어떻게 대응시킬지)이 지금 데이터로 가능한지, 근거 한 건을 무엇 단위로 셀지.
+- 설정값 이름·위치(`app.mastery.*` 같은)와 `concept_mastery`·`formula_version`을 11/13 이후에 만들 때 순서.
 
 ## 6. 이 문서 고치는 법
 
