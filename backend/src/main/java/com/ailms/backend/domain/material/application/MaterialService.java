@@ -58,6 +58,7 @@ public class MaterialService {
 	private final MaterialRepository materialRepository;
 	private final CourseRepository courseRepository;
 	private final QuizRepository quizRepository;
+	private final com.ailms.backend.domain.material.dao.MaterialConceptRepository conceptRepository;
 	private final MaterialFileInspector fileInspector;
 	private final FileStorage fileStorage;
 	private final FileCleanupService fileCleanupService;
@@ -75,7 +76,8 @@ public class MaterialService {
 	public MaterialDetailResponse getMaterial(Long userId, Long id) {
 		Material material = find(userId, id);
 		return MaterialDetailResponse.from(material,
-				(int) quizRepository.countByUserIdAndMaterialId(userId, material.getId()));
+				(int) quizRepository.countByUserIdAndMaterialId(userId, material.getId()),
+				conceptRepository.findAllByMaterialIdAndUserIdOrderBySortOrderAsc(material.getId(), userId));
 	}
 
 	/**

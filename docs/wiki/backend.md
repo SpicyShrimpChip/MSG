@@ -56,3 +56,10 @@
 - 원인: `ai_lms_test`는 테스트 사이에 지워지지 않아 처음 적용한 `V6`의 체크섬이 `flyway_schema_history`에 남아 있다. H2는 매번 새로 만들어서 문제가 안 보인다.
 - 해결: 테스트 DB에서만 그 버전의 표를 지우고 `DELETE FROM flyway_schema_history WHERE version = '6'` 후 다시 돌렸다. 서비스 DB(`ai_lms`)에 적용했다면 같은 방법으로 로컬에서 되돌린다.
 - 다음에는: 표 이름·열은 `pgTest` 전에 정한다. 머지된 번호라면 고치지 말고 새 번호를 쓴다(위 "머지된 마이그레이션은 고치지 않고").
+
+## 응답에 새 필드를 더했더니 다른 사람의 계약 테스트가 깨졌다 (2026-11-03, PR 번호는 머지 때)
+
+- 상황: 퀴즈 풀기 응답에 평가 개념 출처 `conceptSource`를 더하자 `QuizApiTest`의 "풀기 화면에는 정답·해설이 없다"가 실패했다.
+- 원인: 그 테스트는 응답 글 전체에 `"concept"`라는 글자가 없는지 본다(문제별 개념 힌트를 막는 계약). 필드 이름에 그 글자가 들어갔다.
+- 해결: 팀원 테스트는 고치지 않고 필드 이름을 `topicSource`로 바꿨다. 값(material/course)과 뜻은 그대로다.
+- 다음에는: 풀기 응답(`QuizResponse`)에 필드를 더하기 전에 `QuizApiTest`의 금지 단어(correct, aiExplanation, 해설, concept)를 먼저 본다.

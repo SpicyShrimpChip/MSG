@@ -7,3 +7,5 @@ export * from './notices.api';
 export * from './materials.api';
 export * from './quizzes.api';
 export * from './auth.api';
+export * from './curriculum.api';
+export * from './assessments.api';

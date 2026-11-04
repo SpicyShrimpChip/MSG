@@ -1,5 +1,6 @@
 package com.ailms.backend.domain.analysis.dto;
 
+import com.ailms.backend.domain.quiz.dto.ConceptQuizStatsResponse;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -41,7 +42,9 @@ public record AnalysisRunResponse(
 			@Schema(description = "모델별 판단 (성공한 모델 중 이 개념을 판단한 것만)") List<Judgment> judgments,
 			@Schema(description = "사용자가 남긴 학습 피드백. 없으면 null") FeedbackResponse feedback,
 			@Schema(description = "추천 학습 순서 (1부터, 코드 규칙). 더 공부할래요 → 이해 부족 → 부분 이해 → 의견 불일치 → 근거 부족 → 이해") int studyOrder,
-			@Schema(description = "이미 알아요를 남겨 확인 퀴즈를 권하는지 (확인 퀴즈 기능은 다음 단계)") boolean recommendConfirmQuiz) {
+			@Schema(description = "이미 알아요를 남겨 확인 퀴즈를 권하는지") boolean recommendConfirmQuiz,
+			@Schema(description = "이 개념의 퀴즈 결과 (코드 집계, AI 판단과 따로). 퀴즈 기록이 없으면 null")
+			ConceptQuizStatsResponse quiz) {
 	}
 
 	public record Comparison(

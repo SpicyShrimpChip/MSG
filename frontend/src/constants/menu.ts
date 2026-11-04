@@ -26,6 +26,7 @@ export const MENU: MenuGroup[] = [
     children: [
       { label: '맞춤 커리큘럼', path: '/curriculum' },
       { label: '퀴즈', path: '/quizzes' },
+      { label: '사전·사후평가', path: '/assessments' },
     ],
   },
   {

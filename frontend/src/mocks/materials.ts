@@ -29,18 +29,27 @@ const SAMPLE: MaterialDetail[] = [
         name: '공개키 암호',
         aiDescription:
           '암호화할 때 어느 키를 쓰는지(받는 사람의 공개키)를 중심으로 정리했어요.',
+        evidenceLocation: null,
+        evidenceQuote: '받는 사람의 공개키로 잠그고',
+        courseKeyword: false,
       },
       {
         conceptId: 'digital-signature',
         name: '전자서명',
         aiDescription:
           '서명은 개인키, 검증은 공개키로 한다는 점이 암호화와 반대라고 짚었어요.',
+        evidenceLocation: null,
+        evidenceQuote: '보내는 사람이 개인키로 서명하고',
+        courseKeyword: false,
       },
       {
         conceptId: 'pki',
         name: '인증서(PKI)',
         aiDescription:
           '공개키의 주인을 인증 기관이 보증한다는 흐름만 짧게 있어요.',
+        evidenceLocation: null,
+        evidenceQuote: '인증 기관이 발급한 인증서로 확인한다',
+        courseKeyword: false,
       },
     ],
   },
@@ -60,6 +69,9 @@ const SAMPLE: MaterialDetail[] = [
         name: '해시 함수',
         aiDescription:
           '비밀번호 저장과 솔트를 예로 들어 성질(일방향성, 충돌 저항성)을 풀었어요.',
+        evidenceLocation: null,
+        evidenceQuote: '같은 비밀번호도 다른 값이 되도록 솔트를 붙인다',
+        courseKeyword: false,
       },
     ],
   },
@@ -79,6 +91,9 @@ const SAMPLE: MaterialDetail[] = [
         name: '페이징',
         aiDescription:
           '주소 변환과 교체 알고리즘을 이어서 정리했어요. 알고리즘끼리 비교는 아직 없어요.',
+        evidenceLocation: null,
+        evidenceQuote: '페이지 테이블이 페이지 번호를 프레임 번호로 바꿔 준다',
+        courseKeyword: false,
       },
     ],
   },
@@ -167,4 +182,19 @@ export function removeMockMaterialsOfCourse(courseId: number) {
 export function mockDeleteMaterial(id: number): Promise<void> {
   setAll(getAll().filter((item) => item.id !== id));
   return mockDelay(undefined);
+}
+
+export function mockGetMaterialConcepts(id: number) {
+  return mockGetMaterial(id).then((material) => material.concepts);
+}
+
+// 목업은 AI를 부르지 않는다. 가짜 개념을 만들지 않고 서버 기본값(본문 전송 꺼짐)처럼 거절한다
+export function mockExtractMaterialConcepts(id: number): Promise<never> {
+  void id;
+  return Promise.reject(
+    new ApiError(
+      '목업에서는 AI를 부르지 않아 핵심 개념을 새로 뽑지 않아요.',
+      403,
+    ),
+  );
 }

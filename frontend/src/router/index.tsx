@@ -59,6 +59,14 @@ export const router = createBrowserRouter([
             lazy: lazyPage(() => import('@/pages/quizzes/QuizListPage')),
           },
           {
+            path: 'assessments',
+            lazy: lazyPage(() => import('@/pages/assessments/AssessmentPage')),
+          },
+          {
+            path: 'quizzes/new',
+            lazy: lazyPage(() => import('@/pages/quizzes/QuizCreatePage')),
+          },
+          {
             path: 'quizzes/:quizId',
             lazy: lazyPage(() => import('@/pages/quizzes/QuizSolvePage')),
           },

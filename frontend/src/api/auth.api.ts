@@ -1,4 +1,10 @@
-import type { LoginInput, LoginResult, SignupInput, User } from '@/types';
+import type {
+  LearningProfileInput,
+  LoginInput,
+  LoginResult,
+  SignupInput,
+  User,
+} from '@/types';
 import { hasSessionHint, useAuthStore } from '@/store/useAuthStore';
 import { refreshAccessToken } from './axios';
 import { request } from './request';
@@ -46,11 +52,34 @@ export function updateAiConsent(aiAnalysis: boolean): Promise<User> {
   });
 }
 
+// AI 퀴즈 처리 동의를 바꾼다(대화 분석 동의와 별도). 철회해도 만든 퀴즈·결과는 남고 이후 AI 처리만 멈춘다
+export function updateAiQuizConsent(aiQuiz: boolean): Promise<User> {
+  return request<User>({
+    method: 'PATCH',
+    url: '/users/me/consents',
+    data: { aiQuiz },
+  });
+}
+
+// 학습 목적·관심 직무를 바꾼다. 확정: Swagger `회원` PATCH /api/users/me/profile. 바뀐 내 정보를 돌려준다
+export function updateLearningProfile(
+  input: LearningProfileInput,
+): Promise<User> {
+  return request<User>({
+    method: 'PATCH',
+    url: '/users/me/profile',
+    data: input,
+  });
+}
+
 // 탈퇴: 서버가 내 모든 데이터를 지운다. 성공하면 브라우저 쪽 세션도 지운다
-// TODO: 백엔드 DELETE /api/users/me는 아직 없다(제안: docs/frontend-requests.md "인증·마이페이지").
-// 생기기 전까지 마이페이지 탈퇴 버튼을 막아 둔다(MyPage.tsx ACCOUNT_DELETION_READY)
-export async function deleteAccount(): Promise<void> {
-  await request<null>({ method: 'DELETE', url: '/users/me' });
+// 확정(11/3): Swagger `회원` DELETE /api/users/me { password }. 비밀번호가 틀리면 400, 마지막 관리자 409
+export async function deleteAccount(password: string): Promise<void> {
+  await request<null>({
+    method: 'DELETE',
+    url: '/users/me',
+    data: { password },
+  });
   useAuthStore.getState().clearSession();
 }
 

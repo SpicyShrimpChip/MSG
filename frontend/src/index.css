@@ -67,6 +67,9 @@
   --color-weakness-soft: #fdecea;
   /* 보완 필요 개념의 점수 막대 (글자보다 밝은 붉은 기, 바탕 대비 3:1 이상) */
   --color-weakness-bar: #e0574a;
+  /* 사전·사후평가 비교 그래프 (코드가 계산한 점수). 사전=주황, 사후=파랑. dataviz 검사(CVD·대비) 통과 */
+  --color-chart-pre: #eb6834;
+  --color-chart-post: #1d4ed8;
 
   /* 오류 메시지에만 쓴다 */
   --color-danger: #b91c1c;
@@ -133,6 +136,8 @@
   --color-weakness: #fca99f;
   --color-weakness-soft: #3a1a17;
   --color-weakness-bar: #f08378;
+  --color-chart-pre: #d95926;
+  --color-chart-post: #3987e5;
 
   --color-danger: #fca5a5;
 

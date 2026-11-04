@@ -6,21 +6,34 @@ import {
   useSuspenseQuery,
 } from '@tanstack/react-query';
 import { Lock, UserRound } from 'lucide-react';
-import { ME_QUERY_KEY, deleteAccount, getMe, updateAiConsent } from '@/api';
+import {
+  ME_QUERY_KEY,
+  deleteAccount,
+  getMe,
+  updateAiConsent,
+  updateAiQuizConsent,
+  updateLearningProfile,
+} from '@/api';
 import {
   AsyncBoundary,
   Button,
   Card,
   ConfirmDialog,
   EmptyState,
+  FormRow,
+  LearningProfileFields,
+  TextInput,
   SubPage,
   ErrorText,
+  type LearningProfileValue,
 } from '@/components';
+import { LEARNING_PURPOSES, jobFieldLabel } from '@/constants';
 import { useSavedMaskWords } from '@/hooks';
 import { useAuthStore } from '@/store';
 import type { User } from '@/types';
 import {
   AI_CONSENT_NOTICE,
+  AI_QUIZ_CONSENT_NOTICE,
   NoticeList,
 } from '@/pages/auth/components/ConsentNotice';
 import WordList from '@/pages/analysis/components/import/WordList';
@@ -43,6 +56,157 @@ function AccountInfo({ me }: { me: User }) {
         </div>
       ))}
     </dl>
+  );
+}
+
+// AI 퀴즈 처리 동의: 대화 분석 동의와 따로. 철회해도 만든 퀴즈·결과는 남고 이후 AI 생성·채점만 멈춘다
+function AiQuizConsentSection({ me }: { me: User }) {
+  const queryClient = useQueryClient();
+  const [confirming, setConfirming] = useState(false);
+  const mutation = useMutation({
+    mutationFn: updateAiQuizConsent,
+    onSuccess: (user) => queryClient.setQueryData(ME_QUERY_KEY, user),
+  });
+  return (
+    <Card
+      as="section"
+      aria-labelledby="mypage-ai-quiz-consent"
+      className="flex flex-col gap-4 p-6"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2
+          id="mypage-ai-quiz-consent"
+          className="text-lg font-extrabold text-heading"
+        >
+          AI 퀴즈 처리 동의{' '}
+          <span className="text-body font-medium text-ink-muted">(선택)</span>
+        </h2>
+        <span className="text-body font-bold text-heading">
+          {me.aiQuizConsent ? '동의함' : '동의하지 않음'}
+        </span>
+      </div>
+      <NoticeList items={AI_QUIZ_CONSENT_NOTICE} />
+      <p className="text-body leading-relaxed text-ink-soft">
+        {me.aiQuizConsent
+          ? '철회하면 AI로 퀴즈를 만들거나 주관식·서술형을 AI로 채점하지 않아요. 이미 만든 퀴즈와 채점 결과는 남아요.'
+          : '동의하지 않으면 AI 퀴즈 만들기와 주관식·서술형 AI 채점을 쓸 수 없어요. 객관식 채점은 그대로 돼요.'}
+      </p>
+      <ErrorText error={mutation.error} />
+      <div>
+        {me.aiQuizConsent ? (
+          <Button
+            variant="secondary"
+            disabled={mutation.isPending}
+            onClick={() => setConfirming(true)}
+          >
+            동의 철회하기
+          </Button>
+        ) : (
+          <Button
+            disabled={mutation.isPending}
+            onClick={() => mutation.mutate(true)}
+          >
+            AI 퀴즈 처리에 동의하기
+          </Button>
+        )}
+      </div>
+      <ConfirmDialog
+        open={confirming}
+        title="AI 퀴즈 처리 동의를 철회할까요?"
+        description="이후 AI 퀴즈 만들기와 주관식·서술형 AI 채점이 멈춰요. 이미 만든 퀴즈와 결과는 남아요."
+        confirmLabel="철회하기"
+        onConfirm={() => {
+          setConfirming(false);
+          mutation.mutate(false);
+        }}
+        onCancel={() => setConfirming(false)}
+      />
+    </Card>
+  );
+}
+
+// 학습 목적·관심 직무: 다음에 만드는 퀴즈의 기본값이 된다 (이미 만든 퀴즈는 그대로)
+function LearningProfileSection({ me }: { me: User }) {
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState<LearningProfileValue>({
+    learningPurpose: me.learningPurpose,
+    jobField: me.jobField,
+    jobFieldOther: me.jobFieldOther ?? '',
+  });
+  const mutation = useMutation({
+    mutationFn: updateLearningProfile,
+    onSuccess: (user) => {
+      queryClient.setQueryData(ME_QUERY_KEY, user);
+      setEditing(false);
+    },
+  });
+  const purposeLabel = LEARNING_PURPOSES.find(
+    (item) => item.value === me.learningPurpose,
+  )?.label;
+
+  return (
+    <Card
+      as="section"
+      aria-labelledby="mypage-learning"
+      className="flex flex-col gap-4 p-6"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2
+          id="mypage-learning"
+          className="text-lg font-extrabold text-heading"
+        >
+          학습 목적·관심 직무
+        </h2>
+        {!editing && (
+          <Button variant="secondary" onClick={() => setEditing(true)}>
+            바꾸기
+          </Button>
+        )}
+      </div>
+      {editing ? (
+        <form
+          className="flex flex-col gap-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            mutation.mutate({
+              learningPurpose: value.learningPurpose,
+              jobField: value.jobField,
+              jobFieldOther:
+                value.jobField === 'other' ? value.jobFieldOther.trim() : null,
+            });
+          }}
+        >
+          <LearningProfileFields
+            idPrefix="mypage"
+            value={value}
+            onChange={setValue}
+          />
+          <ErrorText error={mutation.error} />
+          <div className="flex gap-2">
+            <Button type="submit" disabled={mutation.isPending}>
+              저장하기
+            </Button>
+            <Button variant="secondary" onClick={() => setEditing(false)}>
+              취소
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <dl className="grid gap-1 text-body sm:grid-cols-[auto_1fr] sm:gap-x-6">
+          <dt className="text-ink-soft">학습 목적</dt>
+          <dd className="font-bold text-heading">{purposeLabel}</dd>
+          <dt className="text-ink-soft">관심 직무</dt>
+          <dd className="font-bold text-heading">
+            {jobFieldLabel(me.jobField, me.jobFieldOther) ?? '고르지 않음'}
+          </dd>
+        </dl>
+      )}
+      <p className="text-caption text-ink-muted">
+        다음에 만드는 퀴즈의 기본값이 돼요. 퀴즈를 만들 때마다 다른 목적을
+        골라도 되고, 이미 만든 퀴즈는 바뀌지 않아요.
+      </p>
+    </Card>
   );
 }
 
@@ -165,17 +329,16 @@ function MaskWordsSection({ me }: { me: User }) {
   );
 }
 
-// TODO: 백엔드 탈퇴 API(DELETE /api/users/me)가 생기면 true로 바꾸고 안내 문구를 지운다
-const ACCOUNT_DELETION_READY = false;
-
 // 탈퇴: 서버가 내 모든 데이터를 지운 뒤 브라우저의 화면 데이터와 저장한 가릴 단어도 비우고 첫 화면으로 간다
 function DeleteAccountSection({ me }: { me: User }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [confirming, setConfirming] = useState(false);
+  // 본인 확인: 지금 비밀번호를 다시 받는다 (서버가 확인)
+  const [password, setPassword] = useState('');
   const { clear: clearMaskWords } = useSavedMaskWords(me.id);
   const mutation = useMutation({
-    mutationFn: deleteAccount,
+    mutationFn: () => deleteAccount(password),
     onSuccess: () => {
       clearMaskWords();
       queryClient.clear();
@@ -193,21 +356,28 @@ function DeleteAccountSection({ me }: { me: User }) {
         탈퇴하고 내 데이터 지우기
       </h2>
       <p className="text-body leading-relaxed text-ink-soft">
-        계정과 함께 내 과목, 올린 자료와 그로부터 만든 요약·퀴즈, 퀴즈 결과,
-        가져온 AI 대화, 분석 결과와 이 브라우저에 저장한 가릴 단어가 모두
-        지워져요.
+        계정과 함께 내 과목, 올린 자료와 원본 파일, 그 자료로 만든
+        퀴즈·사전·사후평가와 채점 결과, 가져온 AI 대화, 분석 결과와 피드백, 이
+        브라우저에 저장한 가릴 단어가 모두 지워지고 되돌릴 수 없어요. 내가 쓴
+        공지사항이 있으면 글은 남고 작성자만 지워져요.
       </p>
-      {!ACCOUNT_DELETION_READY && (
-        <p className="text-body text-ink-soft">탈퇴 기능은 준비 중이에요.</p>
-      )}
+      <FormRow label="지금 비밀번호" htmlFor="mypage-delete-password" required>
+        <TextInput
+          id="mypage-delete-password"
+          type="password"
+          autoComplete="current-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+      </FormRow>
       <ErrorText error={mutation.error} />
       <div>
         <Button
           variant="secondary"
-          disabled={!ACCOUNT_DELETION_READY || mutation.isPending}
+          disabled={password === '' || mutation.isPending}
           onClick={() => setConfirming(true)}
         >
-          탈퇴하기
+          {mutation.isPending ? '지우는 중…' : '탈퇴하기'}
         </Button>
       </div>
       <ConfirmDialog
@@ -233,7 +403,9 @@ function MyAccount() {
   return (
     <div className="flex max-w-2xl flex-col gap-6">
       <AccountInfo me={me} />
+      <LearningProfileSection me={me} />
       <AiConsentSection me={me} />
+      <AiQuizConsentSection me={me} />
       <MaskWordsSection me={me} />
       <DeleteAccountSection me={me} />
     </div>

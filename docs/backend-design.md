@@ -26,10 +26,14 @@
 | `V4__create_conversation.sql` | `conversation_import`, `conversation_import_request`, `conversation`, `conversation_part`, `conversation_message` | 가져온 AI 대화. 가져오기 작업과 받은 요청 번호(재전송 중복 방지), 대화·조각·메시지. 프론트가 가린 글만 저장한다 |
 | `V5__create_learning_analysis.sql` | `analysis_run`, `analysis_run_conversation`, `analysis_model_result`, `analysis_concept_judgment`, `analysis_judgment_evidence`, `analysis_concept_consensus`, `concept_feedback` | 학습 대화 개념 분석(모델별 결과 원본·검증한 판단·근거 메시지·개념별 비교)과 학습 모드 피드백. 아래 "학습 대화 개념 분석" |
 | `V6__create_quiz.sql` | `quiz`, `quiz_question`, `quiz_choice`, `quiz_question_concept`, `quiz_submission`, `quiz_answer` | 객관식 퀴즈와 제출 기록(문제별 채점 결과). 아래 "퀴즈·시험 모드" |
+| `V7__add_learning_purpose_and_quiz_modes.sql` | `quiz_suggestion`, `quiz_generation`, `quiz_question_accepted_answer`, `quiz_question_rubric`, `quiz_answer_rubric_score` (+열) | 학습 목적·3가지 학습 모드·AI 만들기·주관식·서술형. 아래 "퀴즈·학습 모드" |
+| `V8__add_quiz_ai_consent_and_call_tracking.sql` | `quiz_grading_run`, `quiz_ai_call` (+열) | AI 퀴즈 처리 동의, 채점 실행 예약, 모델 호출 기록·한도 |
+| `V9__add_pre_post_assessment.sql` | (열) `quiz.assessment_kind`·`pre_assessment_id`·`material_content_used` | 사전·사후평가(퀴즈 행). 사전평가를 지우면 사후의 연결만 NULL |
+| `V10__create_material_concept.sql` | `material_concept` (+`quiz.concept_source`) | 자료에서 뽑아 근거를 확인한 핵심 개념. 자료·사용자 삭제 때 CASCADE |
 | `db/vector/V0_1__enable_pgvector.sql` | (확장) | pgvector `vector` 확장. H2에는 없어 local·prod·`pgTest`에서만 읽는다. 버전을 `0.1`로 둬서 항상 `V1`보다 먼저 돈다 |
 | `db/seed/R__sample_notices.sql` | (데이터) | 로컬 샘플 공지 3건. **운영(prod) 프로필은 이 폴더를 읽지 않는다** |
 
-- 테이블 구조는 Flyway 마이그레이션 파일로만 바꾼다. 이미 적용된 `V*` 파일은 고치지 않고 새 번호를 추가한다(지금 다음은 `V7`).
+- 테이블 구조는 Flyway 마이그레이션 파일로만 바꾼다. 이미 적용된 `V*` 파일은 고치지 않고 새 번호를 추가한다(지금 다음은 `V11`).
 - Hibernate는 `ddl-auto: validate`로 엔티티와 테이블이 맞는지 검사만 한다.
 
 ### `notice`
@@ -50,6 +54,11 @@
 | `ai_analysis_consent` | BOOLEAN | AI 대화 분석 동의(선택) |
 | `ai_analysis_consented_at` | TIMESTAMP(6) NULL | 동의 시각 |
 | `terms_agreed_at`, `privacy_agreed_at` | TIMESTAMP(6) | 필수 동의 시각 |
+| `learning_purpose` | VARCHAR(20) DEFAULT `UNDECIDED` | 주된 학습 목적 `EXAM_PREP`/`SELF_DEVELOPMENT`/`WORK`/`UNDECIDED` (V7, 기존 회원은 `UNDECIDED`). 퀴즈 만들기의 기본 모드 |
+| `job_field` | VARCHAR(40) NULL | 관심 직무 분야 (V7). 목록은 코드 `JobField`(늘릴 때 DB 변경 없음) |
+| `job_field_other` | VARCHAR(30) NULL | `job_field`가 `OTHER`일 때만 짧은 분야 이름 |
+| `ai_quiz_consent` | BOOLEAN DEFAULT FALSE | AI 퀴즈 처리 동의(선택, V8). 퀴즈 만들기·주관식·서술형 AI 채점에 필요. 대화 분석 동의와 별도이고 기존 회원은 FALSE(자동 동의하지 않음) |
+| `ai_quiz_consented_at` | TIMESTAMP(6) NULL | 마지막 동의 시각 |
 | `created_at`, `updated_at` | TIMESTAMP(6) | |
 
 ### `refresh_token`
@@ -260,7 +269,8 @@ domain/
 | 대화 삭제 (구현됨, `DELETE /api/conversations/{id}`) | `conversation` 삭제 → 조각·메시지 연쇄. 나중에 붙을 근거도 FK CASCADE로 | 해당 없음 | - |
 | 대화 한 건 삭제 → 분석 (구현됨) | 그 대화를 쓴 `analysis_run` 전체를 앱이 먼저 삭제(`AnalysisCleanup`, 모델이 쓴 이유에 대화 내용이 담길 수 있어서). 모델 결과·판단·근거·비교는 연쇄 삭제, 피드백의 `analysis_run_id`는 NULL | 해당 없음 | - |
 | AI 대화 분석 동의 철회 (구현됨, `PATCH /api/users/me/consents`) | 그 사용자의 `conversation`(조각·메시지 연쇄)과 `conversation_import`(받은 요청 연쇄)를 동의 변경과 같은 트랜잭션에서 삭제. 과목·자료는 남는다. 그 사용자의 `analysis_run`도 모두 삭제(모델 결과·판단·근거·비교 연쇄). 학습 피드백(`concept_feedback`)은 사용자가 쓴 기록이라 남긴다(미결: 철회 때 함께 지울지). 사용자 행을 잠가 같은 사용자의 대화 가져오기·분석과 차례로 처리한다. 숙련도 재계산은 숙련도를 만들 때 추가 | 해당 없음(대화는 임베딩하지 않는 안) | - |
-| 탈퇴 (미구현) | `users` 삭제 → 모든 자식 행 `ON DELETE CASCADE` | `deleteByUser(userId)` | **CASCADE는 저장소 파일을 지우지 못한다.** 탈퇴 처리 코드가 같은 트랜잭션에서 그 사용자 자료의 `storage_key`를 `deleteAfterCommit`으로 넘기거나 `materials/{user_id}/` 폴더 삭제 작업을 남겨야 한다 |
+| 자료 삭제 → 핵심 개념 (구현됨, V10) | `material_concept`가 FK `ON DELETE CASCADE`로 함께 삭제(근거 문장은 자료 원문이라 남기지 않는다) | 해당 없음 | - |
+| 탈퇴 (구현됨, 11/3 `DELETE /api/users/me`) | 비밀번호 재확인 → 사용자 행 잠금 → 마지막 관리자면 409 → 그 사용자 자료의 `storage_key`를 `deleteAfterCommit`으로 넘기고 → `users` 삭제(모든 자식 행 `ON DELETE CASCADE`: 세션·과목·자료·개념·퀴즈·평가·제출·대화·분석). 공지 `author_id`는 NULL. 탈퇴 뒤 예전 access token은 사용자가 없어 401, refresh 토큰 행이 없어 갱신 401 | `deleteByUser(userId)` (벡터 단계) | 그 사용자 자료의 원본 파일(커밋 뒤) |
 
 - 벡터 DB·파일 삭제는 DB 트랜잭션 밖이라 실패할 수 있다. 파일은 **구현됨**: `FileCleanupService.deleteAfterCommit`이 같은 트랜잭션에 `file_deletion_task`를 남기고 커밋 뒤 지운다. 롤백되면 작업 행도 사라져 파일이 그대로 남고(DB가 가리키는 파일이 먼저 사라지지 않음), 삭제에 실패하면 작업 행이 남아 다시 시도한다. 벡터 삭제도 같은 작업 목록에 붙이면 된다.
 - 올리기는 반대 순서다: 검사 → 파일 저장 → DB 행 저장. DB 저장이나 커밋이 실패하면 방금 저장한 파일을 지우고(트랜잭션 동기화 `afterCompletion`), 그것도 실패하면 `file_deletion_task`로 넘긴다.
@@ -303,22 +313,38 @@ TODO(미결):
 - 쓸 모델 이름, 모델별 비용 한도·월 예산, 분석을 비동기로 돌릴지(지금은 요청 안에서 기다림, 최대 약 2분).
 - 숙련도 점수 산식(대화 비교 결과 + 퀴즈·시험 결과의 가중치).
 
-### 퀴즈·시험 모드 (11/2 객관식 풀기·채점 구현, 나머지는 설계안)
+### 퀴즈·학습 모드 (11/2 객관식 풀기·채점, 11/3 3가지 학습 모드·AI 생성·주관식·서술형 구현)
 
-**구현됨 (11/2, `V6`, `domain/quiz`):** 객관식 학습용 퀴즈를 풀고 서버가 채점한다(`QuizGrader`, 정답 번호와 같은지만 본다). 풀기 전 응답(`QuizResponse`)에는 정답·해설 필드가 아예 없다. 다시 풀면 `quiz_submission`이 쌓이고 화면은 가장 최근 것을 쓴다. 회원·과목·자료를 지우면 퀴즈와 제출 기록도 FK CASCADE로 지워진다. 아직 없는 것: 퀴즈 만들기(AI 생성, 모델 키가 정해지면), 단답·서술형·배점, 결과를 대시보드 근거·숙련도에 반영(산식 미결). 그때는 아래 표(안)의 열을 새 마이그레이션으로 더한다.
+**11/2 (`V6`):** 객관식 퀴즈 풀기·서버 채점(`QuizGrader`), 제출 이력. 풀기 전 응답에는 정답 필드가 아예 없다.
 
-| 구분 | 학습용 확인 퀴즈 | 모의시험 |
-| --- | --- | --- |
-| 목적 | 개념 이해 확인, "이미 알아요" 검증 근거 | 실제 시험처럼 풀고 개념별 점수 |
-| 문항 | 객관식·단답형 위주, 개념 1개에 1~3문항 | 단답형·주관식·서술형, 문항마다 관련 개념(여러 개 가능)과 배점 |
-| 채점 | 객관식·단답형은 코드(정답 목록·정규화 비교), 부분 점수 저장 | 단답형은 코드, 주관식·서술형은 채점 기준(rubric) 항목별로 모델이 판단하고 코드가 점수를 합산. 모델 채점은 근거 문장을 함께 저장 |
-| 사용자 피드백 버튼 | 있음 (학습 모드) | **없음.** 답안과 채점 기준으로만 결과를 낸다 |
-| 결과 반영 | 개념별 정오·부분 점수 → 추천 순서 갱신, 피드백 검증 근거 | 개념별 획득 점수/가능 점수, 오답 유형, 부족한 개념 추천. AI 대화 비교보다 우선하는 근거로 쓴다 |
-| 근거 부족 | 개념별 문항 수가 적으면(예: 가능 점수가 기준 미만) "근거 부족"으로 두고 숙련도를 단정하지 않는다 | 같음 |
+**11/3 (`V7`, `domain/quiz`):** 학습 모드 3가지와 문제 유형 3가지, AI 퀴즈 만들기, AI 채점(점수는 코드).
 
-표(안): `quiz`(type: PRACTICE/EXAM, course_id, material_id NULL, source_run_id NULL), `quiz_question`(type: CHOICE/SHORT/ESSAY, 배점, 정답·채점 기준), `quiz_question_concept`(문항-개념, 배점 비율), `quiz_submission`(mode, 제출 시각), `quiz_answer`(답안, 점수, 채점 방식 CODE/MODEL, 오답 유형, 모델 채점 근거), `concept_score`(제출별 개념 획득/가능 점수). 숙련도(`concept_mastery`)는 이 결과와 대화 비교 결과를 받아 코드로 계산한다(산식 미결).
+| 구분 | 시험 대비 `EXAM_PREP` | 자기개발 `SELF_DEVELOPMENT` | 업무 활용 `WORK` |
+| --- | --- | --- | --- |
+| 문제 초점 (지시문 `QuizPrompt`) | 핵심 개념 정의·원리·차이·적용. 시험 범위 안. 출제 가능성은 추정(출제 보장 표현은 검증에서 거절) | 자기 말로 설명·비교·새 상황 적용·연관 분야, 기초 → 응용 → 연관 | 직무 상황(`scenario`)·역할(`work_role`)을 주고 해결 방법 설명. 기본 유형은 서술형 |
+| 결과 화면 (`QuizAssessor`, 코드) | 총점·유형별·개념별, 보완 개념 다시 풀기 | 다음 단계 준비(ready/not_ready/needs_check) + AI 제안(`quiz_suggestion`, 실제 결과와 따로) | 평가 기준별 결과·AI 피드백(잘한 점·빠진 점·개선·실무 고려)·참고 모범 답안 |
 
-API(안): `POST /api/quizzes/practice`(개념으로 확인 퀴즈 만들기), `POST /api/exams`(과목 모의시험 만들기), `POST /api/quizzes/{id}/submissions`(제출·채점), `GET /api/quizzes/{id}/submissions/latest`. 지금 프론트 퀴즈 타입은 객관식만 있어(`types/quiz.ts`) 단답·서술형을 붙일 때 같은 PR에서 타입을 바꾼다.
+- **만들기 (`QuizGenerationService`):** AI 퀴즈 처리 동의(`ai_quiz_consent`, 대화 분석 동의와 별도)가 있어야 한다(아래 "11/3 안정화"). 설정 순서(`app.quiz.generation-providers`)에서 설정된 첫 모델 하나만 부르고 실패·형식 오류면 다음 모델로 넘어간다. 외부로는 과목 이름·개념(과목 키워드)·적은 시험 범위·직무 분야와 코드가 요약한 개념별 참고 상태(최근 대화 분석 다수 의견, 지난 퀴즈 점수, 내 피드백)만 보낸다. **대화 원문은 보내지 않는다.** 자료 본문 발췌는 사전·사후평가에서 운영 설정(`app.material-content.enabled`, 기본 꺼짐)과 요청마다 확인이 있을 때만 보낸다(아래 "사전·사후평가"). 일반 퀴즈는 `materialId`를 줘도 연결만 하고 `materialContentUsed=false`. 유형별 문제 수는 코드가 정하고(`QuizTypePlan`, 고른 유형마다 1문제 이상), `QuizGenerationParser`가 문제 수·유형별 수·객관식 정답 하나·보기 중복·주관식 허용 답·서술형 기준 2~6개(배점 2~5)·모범 답안·업무 상황·개념 범위를 검증해 하나라도 틀리면 저장하지 않는다(502). 요청 기록 `quiz_generation`: `(user_id, request_key)` UNIQUE로 같은 요청을 한 번만 만들고, 진행 중 1개·24시간 한도(429)·실패 이유·사용 모델·토큰을 남긴다.
+- **채점 (`QuizService`·`AnswerGradingService`):** 객관식은 코드. 주관식은 정규화(NFKC·대소문자·공백·일부 기호) 후 허용 답과 같으면 코드(`MATCH`), 다르면 AI 의미 판단. 서술형은 채점 기준마다 AI가 met/partial/not_met만 고르고 점수는 코드(충족 = 배점, 부분 = 배점/2 내림). AI 판단은 **설정된 모델 모두(최대 3개)**가 따로 하고 과반 의견을 쓴다(11/3 결정). 과반이 없으면 `NEEDS_REVIEW`(점수에 넣지 않음), 모델 하나만 판단하면 `SINGLE_MODEL`로 표시해 "추가 확인 필요". 모델 없음·동의 없음·24시간 한도·호출 실패면 채점 완료로 치지 않고 `PENDING`으로 저장하고 `POST .../submissions/{id}/grading`으로 다시 채점한다. AI로 보낼 답에 개인정보 패턴(IP 제외)이 있으면 422로 돌려보내고 저장하지 않는다.
+- **분석과의 연결 (`QuizStatsService`):** 과목의 퀴즈마다 가장 최근 제출로 개념별 문항 수·점수를 코드로 센다(`GET /api/quizzes/concept-stats`, 학습 분석 응답 `concepts[].quiz`). AI 대화 분석·모델 비교·사용자 피드백과 섞지 않고 나란히 둔다. "이미 알아요"를 남긴 개념은 그 뒤에 푼 문제로 `confirmation`(confirmed/not_confirmed/needs_check/not_taken)을 정한다. 피드백 버튼만으로는 아무 값도 바뀌지 않는다. 숙련도 점수(대화 + 퀴즈 가중치)는 여전히 미결이라 만들지 않았다.
+- **V7 표·열:** `quiz`(+`mode`, `difficulty`, `job_field`, `job_field_other`, `exam_scope`, `generated_provider`, `generated_model`), `quiz_suggestion`, `quiz_generation`, `quiz_question`(+`question_type`, `scenario`, `work_role`, `answer_guide`, `model_answer`, `correct_choice_index` NULL 허용), `quiz_question_accepted_answer`, `quiz_question_rubric`, `quiz_submission`(+`score`, `max_score`, `pending_count`, `review_count`), `quiz_answer`(+`text_answer`, `score`, `max_score`, `grading_status`, `grading_method`, `grading_note`, `ai_called_count`, `ai_judged_count`, `ai_strengths`·`ai_missing`·`ai_improvements`·`ai_practical`), `quiz_answer_rubric_score`. 새 표는 모두 부모에 `ON DELETE CASCADE`(`quiz_generation.quiz_id`만 `SET NULL`). 기존 V6 행은 모드 NULL·객관식으로 남고, 기존 제출은 `score = correct_count`, 기존 답은 맞았으면 `score = 1`로 채웠다.
+- **11/3 안정화 (`V8`):**
+  - 동의 분리: 퀴즈 만들기·AI 채점은 `ai_quiz_consent`가 있어야 한다(대화 분석 동의를 퀴즈로 넓히지 않는다). 동의가 없으면 만들기 403, AI가 필요한 답은 보내지 않고 `PENDING`(NO_CONSENT). 보내지 않으니 이때는 개인정보 검사도 하지 않는다. 대화 분석 결과에서 나온 개념 상태는 대화 분석에도 동의한 경우에만 생성 참고로 보낸다.
+  - 비용 상한 세 겹(설정 `app.quiz`): 24시간 만들기 요청 20번, AI 채점 실행 30번(처음 채점·다시 채점 모두 `quiz_grading_run`에 예약), 실제 모델 요청 150번(`quiz_ai_call.attempts` 합, 재시도·실패·시간 초과 포함). 한도 확인과 예약은 `users` 행을 `SELECT … FOR UPDATE`로 잠근 같은 트랜잭션에서 해 동시 요청으로 넘지 못한다. 다시 채점이 한도를 넘으면 429이고 답은 그대로 둔다. 같은 제출을 채점하는 실행이 진행 중이면 409.
+  - 시간 예산: 만들기 150초·채점 120초 안에서만 모델을 부르고 기다린다(`ModelInvoker.await`, 남은 시간이 10초+대기보다 적으면 재시도하지 않음). 프론트 timeout은 만들기 180초·제출 150초. 마감이 지나면 504(만들기) 또는 `PENDING`(MODEL_FAILED, 채점)이고, 늦게 끝난 호출의 결과는 버린다.
+  - 소유권: 만들기 기록(`quiz_generation.deadline_at`)과 채점 실행(`quiz_grading_run.deadline_at`)에 마감 시각을 두고, 결과를 저장하기 전에 사용자 행을 잠근 채 그 기록이 아직 RUNNING·마감 전인지 확인한다. 성공·실패·시간 초과·예상하지 못한 예외 모두 `finally`에서 RUNNING을 끝낸다. 서버가 재시작돼 남은 RUNNING은 다음 요청이 마감을 보고 TIMED_OUT으로 정리한다(마감 전이면 409로 막는다). `GET /api/quizzes/generations/{requestKey}`로 상태를 조회한다.
+  - 스레드: 분석과 퀴즈가 `ModelInvoker`의 스레드 묶음을 따로 쓴다(각 6개).
+  - 개인정보: 퀴즈 답·시험 범위는 IP 중 공인 주소만 막고 사설·문서용 주소는 통과(`PersonalInfoDetector.containsPersonalInfoExceptIp`, 규칙에 종류 이름을 붙여 순서에 기대지 않는다).
+  - 모의시험(`quiz.mock_exam`): 시험 대비 모드에서만, 20문제까지, 범위 전체를 고르게. 풀기·채점·결과는 퀴즈와 같다(시간 제한 없음, 화면에 푼 시간만 표시).
+- **맞춤 학습 순서 (`domain/curriculum`, 표 없음):** `GET /api/curriculum/courses/{id}`가 개념마다 퀴즈 결과(채점 끝난 답만)·최근 대화 분석 다수 의견·내 피드백을 나란히 보고 코드 규칙으로 단계와 순서를 정한다: 더 공부할래요 → 퀴즈 보완(득점률 < 60%) → 대화 분석 이해 부족·부분·불일치(퀴즈 근거 없음) → 추가 확인 필요(대기·확인 필요, 2문제 미만, 이미 알아요 미확인, 대화만 이해) → 근거 없음 → 다음 단계 준비(≥ 80%). 단계마다 이유 문장과 행동(복습·확인·첫 퀴즈, 과목 자료, 다음 개념)을 준다. AI 다음 개념 제안(`quiz_suggestion`)은 따로 `aiSuggestions`로 준다.
+- **사전·사후평가 (`V9`) · 자료 핵심 개념 (`V10`), 11/3:**
+  - 평가는 퀴즈 행이다(`assessment_kind` PRE/POST, `pre_assessment_id`). 사후평가는 최신 사전평가의 개념·개념 출처(`concept_source`)·유형별 문항 수·난이도·모드를 그대로 쓰고, 사전평가 문제 글을 겹치지 않게 AI에 함께 보낸다. 문제 자체는 새로 만든 것이라 같은 문제의 재응시가 아니다.
+  - 비교 기준: 과목(또는 자료)의 최신 제출된 사전평가 vs 그 사전평가에 연결된 최신 사후평가, 각 평가의 최근 제출, 채점이 끝난 답만(대기·확인 필요는 빼고 수를 알림). 변화량(%p)과 개념 상태(기준 정답률 0.6)는 코드가 계산하고, 개념 집합·문항 수·유형별 수·난이도가 같은지와 주의 문장을 함께 준다.
+  - 자료 본문 외부 전송: `app.material-content.enabled`(기본 false). 꺼져 있으면 본문을 쓰는 요청은 403이고 평가는 개념 목록으로만 만든다. 켜져 있어도 AI 퀴즈 처리 동의 + 요청마다 확인 + 개인정보 검사(IP는 공인만) 통과가 필요하다. 처리 근거·제공사·국가·보관 기간 확정 전에는 켜지 않는다.
+  - 본문 읽기 범위(`MaterialTextExtractor`): TXT·MD, PPTX 슬라이드 글 칸, 글이 있는 PDF(PDFBox, 쪽마다 표시, 100쪽·12,000자 상한). 스캔 PDF는 OCR이 없어 NO_TEXT, 암호 PDF는 ENCRYPTED, 손상은 FAILED. HWP·HWPX는 아직 업로드 형식이 아니다. 뽑은 글은 저장하지 않는다.
+  - 핵심 개념(`material_concept`): AI 후보 중 이름과 근거 문장이 본문에 실제로 있는 것만 저장하고, 위치는 서버가 본문 표시로 정한다. 과목 키워드와 같으면 `course_keyword`. 다시 뽑으면 기존 개념을 지우고 바꾼다.
+  - AI 하나: 만들기·채점 모두 그 모델 하나로 하고, 채점 판단이 하나면 `SINGLE_MODEL`로 표시해 "추가 확인 필요"로 본다(다수결로 보이지 않게).
+- **아직 없는 것:** 모의시험 시간 제한·시험 단위 묶음, 스캔 PDF 글자 인식(OCR), 자료 요약, 숙련도 점수 산식, 모델별 서술형 판단 원문 보관(지금은 기준별 다수 의견·근거 하나만 저장), 사람이 "확인 필요" 답을 직접 확정하는 기능.
 
 ### 업로드 원본 보관 (11/1 결정, 일부 미결)
 

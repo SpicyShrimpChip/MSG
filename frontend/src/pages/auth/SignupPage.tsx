@@ -2,7 +2,15 @@ import { useState, type FormEvent } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { signup } from '@/api';
-import { Button, FormRow, SubPage, TextInput, ErrorText } from '@/components';
+import {
+  Button,
+  FormRow,
+  LearningProfileFields,
+  SubPage,
+  TextInput,
+  ErrorText,
+  type LearningProfileValue,
+} from '@/components';
 import { isPasswordValid } from '@/utils';
 import PasswordRules from './components/PasswordRules';
 import SignupAgreements from './components/SignupAgreements';
@@ -22,6 +30,13 @@ function SignupPage() {
   // 이용약관·개인정보 수집·이용 안내 확인(필수)과 AI 대화 분석 동의(선택)
   const [acknowledged, setAcknowledged] = useState(false);
   const [aiConsent, setAiConsent] = useState(false);
+  const [aiQuizConsent, setAiQuizConsent] = useState(false);
+  // 학습 목적·관심 직무 (선택, 마이페이지에서 바꿀 수 있다)
+  const [profile, setProfile] = useState<LearningProfileValue>({
+    learningPurpose: 'undecided',
+    jobField: null,
+    jobFieldOther: '',
+  });
   const mismatch = confirm !== '' && confirm !== password;
 
   const mutation = useMutation({
@@ -46,6 +61,11 @@ function SignupPage() {
       agreedTerms: acknowledged,
       agreedPrivacy: acknowledged,
       agreedAiAnalysis: aiConsent,
+      agreedAiQuiz: aiQuizConsent,
+      learningPurpose: profile.learningPurpose,
+      jobField: profile.jobField,
+      jobFieldOther:
+        profile.jobField === 'other' ? profile.jobFieldOther.trim() : null,
     });
   };
 
@@ -108,11 +128,31 @@ function SignupPage() {
           </FormRow>
         </div>
 
+        <section
+          aria-labelledby="signup-learning"
+          className="flex flex-col gap-3"
+        >
+          <h2
+            id="signup-learning"
+            className="text-lg font-extrabold text-heading"
+          >
+            학습 목적{' '}
+            <span className="text-body font-medium text-ink-muted">(선택)</span>
+          </h2>
+          <LearningProfileFields
+            idPrefix="signup"
+            value={profile}
+            onChange={setProfile}
+          />
+        </section>
+
         <SignupAgreements
           acknowledged={acknowledged}
           onAcknowledgedChange={setAcknowledged}
           aiConsent={aiConsent}
           onAiConsentChange={setAiConsent}
+          aiQuizConsent={aiQuizConsent}
+          onAiQuizConsentChange={setAiQuizConsent}
         />
 
         <ErrorText error={mutation.error} />
