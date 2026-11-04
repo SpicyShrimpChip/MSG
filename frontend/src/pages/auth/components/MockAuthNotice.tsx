@@ -13,7 +13,7 @@ function MockAuthNotice({ from }: MockAuthNoticeProps) {
   if (!USE_MOCK) return null;
 
   return (
-    <Notice icon={Info} className="max-w-md">
+    <Notice icon={Info}>
       <p>
         {from ? '이 화면은 로그인한 뒤에 볼 수 있어요. ' : ''}
         지금은 체험용 화면이라 로그인과 회원가입은 아직 열려 있지 않아요. 예시
