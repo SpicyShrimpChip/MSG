@@ -2,7 +2,8 @@ import { useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ME_QUERY_KEY, login } from '@/api';
-import { Button, ErrorText, FormRow, SubPage, TextInput } from '@/components';
+import { Button, ErrorText, FormRow, TextInput } from '@/components';
+import AuthCard from './components/AuthCard';
 import MockAuthNotice from './components/MockAuthNotice';
 
 interface LoginLocationState {
@@ -36,11 +37,8 @@ function LoginPage() {
   };
 
   return (
-    <SubPage title="로그인">
-      <form
-        onSubmit={handleSubmit}
-        className="flex w-full max-w-md flex-col gap-5"
-      >
+    <AuthCard title="로그인" description="계정으로 계속해요">
+      <form onSubmit={handleSubmit} className="flex w-full flex-col gap-5">
         <MockAuthNotice from={state.from} />
         {state.signedUpEmail && (
           <p role="status" className="text-body text-ink-soft">
@@ -89,7 +87,7 @@ function LoginPage() {
           </Link>
         </p>
       </form>
-    </SubPage>
+    </AuthCard>
   );
 }
 
