@@ -24,6 +24,7 @@ import com.ailms.backend.global.error.BusinessException;
 import com.ailms.backend.global.security.ApiErrorResponder;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -116,7 +117,9 @@ public class ConceptStudyService {
 		Checks checks = checks(userId,
 				quizRepository.findAllByUserIdAndMaterialIdAndCheckConceptKeyIsNotNullOrderByIdDesc(userId, materialId))
 				.get(key(materialId, conceptKey));
-		LocalDateTime now = LocalDateTime.now(clock);
+		// DB 열(TIMESTAMP(6))과 같은 마이크로초로 맞춘다. Linux JDK는 나노초까지 주므로, 맞추지 않으면 저장 직후 응답과
+		// 다시 읽은 값이 달라진다
+		LocalDateTime now = LocalDateTime.now(clock).truncatedTo(ChronoUnit.MICROS);
 		ConceptStudyProgress progress = progressRepository
 				.findByUserIdAndMaterialIdAndConceptKey(userId, materialId, conceptKey).orElse(null);
 		if (progress == null) {
