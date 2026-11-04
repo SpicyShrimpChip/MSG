@@ -26,4 +26,10 @@ public interface QuizSubmissionRepository extends JpaRepository<QuizSubmission, 
 			+ " where l.quizId = q.id and q.userId = :userId and q.courseId = :courseId and l.userId = :userId"
 			+ " group by l.quizId)")
 	List<QuizSubmission> findLatestInCourse(Long userId, Long courseId);
+
+	// 과목의 일반 퀴즈(사전·사후평가 제외)마다 가장 최근 제출 (커리큘럼의 개념별 확인 퀴즈 단계)
+	@Query("select s from QuizSubmission s where s.id in (select max(l.id) from QuizSubmission l, Quiz q"
+			+ " where l.quizId = q.id and q.userId = :userId and q.courseId = :courseId and l.userId = :userId"
+			+ " and q.assessmentKind is null group by l.quizId)")
+	List<QuizSubmission> findLatestPracticeInCourse(Long userId, Long courseId);
 }

@@ -18,12 +18,16 @@ export interface TabItem {
 interface TabsProps {
   label: string;
   tabs: TabItem[];
+  // 처음 열 탭 (주소의 ?tab= 등). 없거나 맞는 탭이 없으면 첫 탭
+  initialId?: string | null;
 }
 
 // 접근성 탭: 좌우 화살표로 탭 이동, 선택된 탭만 Tab 키 순서에 들어간다
-function Tabs({ label, tabs }: TabsProps) {
+function Tabs({ label, tabs, initialId }: TabsProps) {
   const baseId = useId();
-  const [selectedId, setSelectedId] = useState(tabs[0]?.id);
+  const [selectedId, setSelectedId] = useState(
+    tabs.find((tab) => tab.id === initialId)?.id ?? tabs[0]?.id,
+  );
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   const handleKeyDown = (e: KeyboardEvent, index: number) => {

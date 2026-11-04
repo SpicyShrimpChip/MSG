@@ -3,6 +3,7 @@ package com.ailms.backend.domain.quiz.api;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -170,6 +171,59 @@ class MaterialConceptApiTest {
 		mockMvc.perform(delete("/api/materials/" + material).header(HttpHeaders.AUTHORIZATION, bearer(token)))
 				.andExpect(status().isOk());
 		assertThat(jdbcTemplate.queryForObject("select count(*) from material_concept", Integer.class)).isZero();
+	}
+
+	@Test
+	void 개념_하나의_학습용_설명을_만들고_자료에_없는_연결_문장은_버린다() throws Exception {
+		long material = upload("슬라이드.pptx", TestFiles.pptxWithSlides("네트워크 개요",
+				"VLAN은 브로드캐스트 도메인을 나눈다", "트렁크 포트는 태그를 붙인다"));
+		extract(material, true).andExpect(status().isOk());
+		fakeLlm.get(LlmProvider.GPT).answer("{\"explanation\":\"VLAN은 스위치 하나를 여러 개의 논리적인 망으로 나누는 기술이다. "
+				+ "같은 VLAN끼리만 브로드캐스트가 전달된다.\",\"materialContext\":\"트렁크와 함께 쓰인다\","
+				+ "\"contextQuote\":\"트렁크 포트는 태그를 붙인다\",\"importance\":\"망 분리의 기본\",\"example\":\"층별로 VLAN을 나눈다\"}");
+
+		explain(material, "vlan", true)
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.conceptId").value("vlan"))
+				.andExpect(jsonPath("$.data.evidenceQuote").value("VLAN은 브로드캐스트 도메인을 나눈다"))
+				.andExpect(jsonPath("$.data.studyNote.explanation").value(containsString("논리적인 망")))
+				.andExpect(jsonPath("$.data.studyNote.contextQuote").value("트렁크 포트는 태그를 붙인다"))
+				.andExpect(jsonPath("$.data.studyNote.contextLocation").value("슬라이드 3"))
+				.andExpect(jsonPath("$.data.studyNote.importance").value("망 분리의 기본"))
+				.andExpect(jsonPath("$.data.studyNote.generatedBy").value("gpt"));
+		String sent = lastPrompt();
+		assertThat(sent).contains("\"name\":\"VLAN\"", "otherConcepts", "트렁크");
+		assertThat(jdbcTemplate.queryForObject("select count(*) from quiz_ai_call where purpose = 'CONCEPT_NOTE'",
+				Integer.class)).isEqualTo(1);
+
+		// 목록·자료 상세에도 설명이 붙는다. 지어낸 연결 문장은 저장하지 않는다
+		fakeLlm.get(LlmProvider.GPT).answer("{\"explanation\":\"트렁크는 여러 VLAN의 프레임을 한 링크로 나르는 연결이다.\","
+				+ "\"contextQuote\":\"자료에 없는 문장이다\"}");
+		explain(material, "트렁크", true).andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.studyNote.contextQuote").value(nullValue()))
+				.andExpect(jsonPath("$.data.studyNote.example").value(nullValue()));
+		mockMvc.perform(get("/api/materials/" + material).header(HttpHeaders.AUTHORIZATION, bearer(token)))
+				.andExpect(jsonPath("$.data.concepts[0].studyNote.importance").value("망 분리의 기본"));
+	}
+
+	@Test
+	void 학습용_설명은_없는_개념_404_확인_없음_400_설명이_비면_502() throws Exception {
+		long material = upload("노트.txt", "VLAN은 브로드캐스트 도메인을 나눈다".getBytes());
+		extract(material, true).andExpect(status().isOk());
+
+		explain(material, "ospf", true).andExpect(status().isNotFound());
+		explain(material, "vlan", false).andExpect(status().isBadRequest());
+		fakeLlm.get(LlmProvider.GPT).answer("{\"explanation\":\"짧음\"}");
+		explain(material, "vlan", true).andExpect(status().isBadGateway());
+		mockMvc.perform(get("/api/materials/" + material + "/concepts").header(HttpHeaders.AUTHORIZATION, bearer(token)))
+				.andExpect(jsonPath("$.data[0].studyNote").value(nullValue()));
+	}
+
+	private ResultActions explain(long material, String conceptId, boolean confirmed) throws Exception {
+		return mockMvc.perform(post("/api/materials/" + material + "/concepts/study-notes")
+				.header(HttpHeaders.AUTHORIZATION, bearer(token)).contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(
+						Map.of("conceptId", conceptId, "materialContentConsent", confirmed))));
 	}
 
 	private String lastPrompt() {

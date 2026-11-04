@@ -38,13 +38,16 @@ public record QuizCreateRequest(
 		@Schema(description = "학습자료 본문(발췌, 12,000자까지)을 외부 AI로 보내 문제 만들기. TXT·MD·PPTX만 읽고 PDF는 아직 못 읽는다")
 		Boolean useMaterialContent,
 		@Schema(description = "자료 본문을 외부 AI로 보내는 데 대한 이번 요청의 확인 (useMaterialContent일 때 필수)")
-		Boolean materialContentConsent) {
+		Boolean materialContentConsent,
+		@Schema(description = "개념 확인 퀴즈: 자료(materialId, 필수)에서 뽑은 개념의 conceptId. 있으면 그 개념 하나만 다루고 concepts는 무시한다. "
+				+ "사전·사후평가·모의시험과 함께 쓸 수 없다")
+		@Size(max = 40, message = "개념을 다시 골라 주세요.") String checkConceptId) {
 
 	// 일반 퀴즈 만들기 (사전·사후평가·자료 본문 없이)
 	public QuizCreateRequest(String requestKey, Long courseId, String mode, List<String> questionTypes,
 			Integer questionCount, String difficulty, List<String> concepts, String examScope, String jobField,
 			String jobFieldOther, Long materialId, Boolean mockExam) {
 		this(requestKey, courseId, mode, questionTypes, questionCount, difficulty, concepts, examScope, jobField,
-				jobFieldOther, materialId, mockExam, null, null, null);
+				jobFieldOther, materialId, mockExam, null, null, null, null);
 	}
 }

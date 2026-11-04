@@ -101,6 +101,13 @@ public class Quiz {
 	@Column(length = 10)
 	private String conceptSource;
 
+	// 개념 확인 퀴즈가 다루는 자료 개념 (material_id의 개념 키·이름, V12). 그 밖의 퀴즈는 null
+	@Column(length = 20)
+	private String checkConceptKey;
+
+	@Column(length = 20)
+	private String checkConceptName;
+
 	@Column(nullable = false)
 	private LocalDateTime createdAt;
 
@@ -140,6 +147,13 @@ public class Quiz {
 
 	public Quiz withConceptSource(String source) {
 		this.conceptSource = source;
+		return this;
+	}
+
+	// 개념 확인 퀴즈로 표시한다 (만들 때만). 자료(materialId)의 개념 하나
+	public Quiz asConceptCheck(String conceptKey, String conceptName) {
+		this.checkConceptKey = conceptKey;
+		this.checkConceptName = conceptName;
 		return this;
 	}
 

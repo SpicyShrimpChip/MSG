@@ -63,3 +63,10 @@
 - 원인: 그 테스트는 응답 글 전체에 `"concept"`라는 글자가 없는지 본다(문제별 개념 힌트를 막는 계약). 필드 이름에 그 글자가 들어갔다.
 - 해결: 팀원 테스트는 고치지 않고 필드 이름을 `topicSource`로 바꿨다. 값(material/course)과 뜻은 그대로다.
 - 다음에는: 풀기 응답(`QuizResponse`)에 필드를 더하기 전에 `QuizApiTest`의 금지 단어(correct, aiExplanation, 해설, concept)를 먼저 본다.
+
+## 저장 직후 응답의 시각이 다시 읽은 값과 달라 Linux CI에서만 테스트가 깨진다 (2026-11-05, #123)
+
+- 상황: 개념 학습 완료 API의 `firstCompletedAt`을 두 번 비교하는 테스트가 macOS에서는 통과했는데 CI(`build-and-test`, `postgres-test`)에서만 실패했다.
+- 원인: Linux의 JDK 17은 `Instant.now()`가 나노초까지 나오고, DB 열(`TIMESTAMP(6)`)은 마이크로초까지만 저장한다. 저장 직후 응답은 메모리의 나노초 값을, 다시 읽은 응답은 잘린 값을 준다. macOS는 시계가 마이크로초라 차이가 안 보인다. 테스트 시계 `MutableClock`에 나노초를 더해 로컬에서 재현했다.
+- 해결: 엔티티에 넣는 시각을 `LocalDateTime.now(clock).truncatedTo(ChronoUnit.MICROS)`로 DB 정밀도에 맞췄다.
+- 다음에는: 저장 직후 응답으로 시각을 돌려주거나 비교하는 코드는 마이크로초로 자른다. CI에서만 깨지면 OS별 시계 정밀도부터 의심한다.

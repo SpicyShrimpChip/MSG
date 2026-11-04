@@ -575,6 +575,63 @@ layout = {
 - 프론트에서 고친 곳: `types/assessment.ts`·`material.ts`·`quiz.ts`, `api/assessments.api.ts`·`materials.api.ts`, `pages/assessments/AssessmentPage.tsx`(`/assessments`), `pages/materials/components/MaterialConceptPanel.tsx`(새, 평가 화면·자료 상세 "핵심 개념" 탭 공용), `pages/analysis/components/AssessmentComparisonPanel.tsx`(대시보드 맨 위 비교), `utils/assessment.ts`, `pages/quizzes/components/QuestionResultCard.tsx`(AI 1개 판단 표시), `pages/mypage/MyPage.tsx`(탈퇴 비밀번호), `pages/privacy/PrivacyPage.tsx`·`pages/auth/components/ConsentNotice.tsx`(자료 본문 전송 안내), `mocks/`.
 - **자료 본문 전송은 기본 꺼짐이다.** 켜기 전에 제공사·이전 국가·보관 기간·처리 근거를 처리방침에 확정하고 팀·멘토 검토를 받는다.
 
+## 5-9-1. 검색·커리큘럼 4단계·개념 자세한 설명 (11/5, 백엔드 V11)
+
+- **마이그레이션 `V11__add_material_concept_study_note.sql`** (`material_concept`에 설명 열 추가). **다음은 `V12`부터**다.
+- **검색 `GET /api/search?q=`** (Swagger `검색`, 로그인 필요):
+  - 찾는 곳: 내 과목(이름·키워드), 내 자료(제목·파일 이름), 자료 핵심 개념(이름), 공지(제목, 5개까지)
+  - 규칙: 대소문자·띄어쓰기 무시. 과목 이름이 맞으면 그 과목의 자료도 `matchedBy: 'course'`로 준다. 자료 본문은 찾지 않는다
+  - 오류: 빈 검색어·50자 초과는 400
+  - 프론트: `types/search.ts`, `api/search.api.ts`, `pages/search/SearchPage.tsx`. 목업 `mocks/search.ts`는 같은 규칙(`utils/search.ts`)
+- **커리큘럼 응답에 `flow` 추가** (`GET /api/curriculum/courses/{id}`). 기존 필드는 그대로다.
+  - 4단계: 사전 테스트 → 핵심 개념 학습 → 개념별 확인 퀴즈 → 사후 평가
+  - 담는 값: `currentStep`, `stages[]`(done/current/upcoming + 코드가 센 요약), `preTest`·`postTest`(기존 사전·사후 비교 재사용), `concepts[]`(사전 결과·확인 퀴즈 결과·사후 결과·공부할 자료·`priority`), `overallDelta`
+  - 확인 퀴즈는 사전평가 제출 뒤에 푼 일반 퀴즈(평가 제외)만 센다
+  - 개념 학습은 기록하지 않으므로, 확인 퀴즈를 시작하면 개념 학습을 마친 것으로 본다
+  - 화면: `pages/curriculum/CurriculumPage.tsx`. 기존 개념별 순서·이유는 "개념별 복습 우선순위와 근거 보기"로 접어 두었다. `?courseId=`로 과목을 고른다
+- **개념 자세한 설명 `POST /api/materials/{id}/concepts/study-notes`** `{ conceptId, materialContentConsent }` → `MaterialConcept`
+  - 개념 하나씩 만든다(응답 길이·비용 때문)
+  - 담는 값: 자세한 설명, 자료와의 연결, 연결 문장(서버가 본문에서 확인한 것만, 아니면 null), 중요한 이유, 예시
+  - 보내기 조건·오류는 핵심 개념 뽑기와 같다. 없는 개념 404, 그 사이 개념을 다시 뽑았으면 409
+  - 개념 이름·근거는 바꾸지 않아 사전·사후평가 개념 체계가 유지된다. 하루 40번(`quiz_ai_call.purpose = CONCEPT_NOTE`)이고, 모델 요청 수 상한도 함께 적용된다
+  - `MaterialConcept`과 자료 상세 `concepts[]`에 `studyNote`(없으면 null)를 더했다
+- **자료 상세:** `?tab=concepts&concept=<conceptId>`로 오면 핵심 개념 탭에서 그 개념을 펼친다(커리큘럼 "개념 보기", 검색 결과).
+
+## 5-9-2. 개념별 학습 기록·확인 퀴즈·복습 순환 (11/5, 백엔드 V12)
+
+- **마이그레이션 `V12__create_concept_study_progress.sql`.** **다음은 `V13`부터**다.
+  - 새 표 `concept_study_progress`: 사용자·자료·개념 키마다 한 행. 회원·과목·자료 삭제 시 CASCADE
+  - `quiz.check_concept_key`·`check_concept_name` 추가
+- **개념은 (자료, 개념 키)로 가리킨다.** `material_concept.id`는 "다시 뽑기" 때 바뀌어서 쓰지 않는다. 같은 이름도 자료가 다르면 다른 기록이다.
+- **학습 상태 `GET /api/materials/{id}/concepts/progress`** → `ConceptStudy[]` (Swagger `개념 학습 기록`)
+  - 학습 기록(`studied`, `firstCompletedAt`, `lastStudiedAt`, `studyCount`)과 확인 퀴즈 결과(`latestCheck`, `checkHistory`)를 따로 담는다
+  - `openCheckQuizId`: 만들었지만 아직 안 푼 확인 퀴즈
+  - `status`는 둘을 합친 코드 규칙 결과다: `not_studied` / `studied` / `understood` / `review_needed` / `needs_check`
+- **학습 완료 `POST /api/materials/{id}/concepts/progress`** `{ conceptId }` → `ConceptStudy`
+  - 여러 번 보내도 기록은 하나다
+  - `review_needed`에서 다시 보낼 때만 `lastStudiedAt`과 `studyCount`가 바뀐다
+  - 학습 완료는 이해 여부·숙련도·대화 분석을 바꾸지 않는다
+  - 오류: 남의 자료·없는 개념 404, 과목 없는 자료 400
+- **판정 규칙 (`ConceptStudyRules`):** 확인 퀴즈의 가장 최근 제출이 마지막 학습 완료와 같거나 그 뒤면 그 결과로 정한다.
+  - 대기·확인 필요 답이 있거나, 채점이 끝난 문제가 2개(`QuizStatsService.CONFIRM_MIN_GRADED`) 미만이면 `needs_check`
+  - 정답률이 0.6(`app.quiz.assessment.concept-min-rate`) 이상이면 `understood`, 미만이면 `review_needed`
+  - 채점이 끝나지 않은 답은 틀린 답으로 세지 않는다
+- **개념 확인 퀴즈:** 기존 `POST /api/quizzes`에 `checkConceptId`를 더했다(`materialId` 필수).
+  - 그 개념 하나만 다루고, 다른 개념 문제는 파서가 거절한다
+  - 제목은 "<개념> 확인 퀴즈". 사전·사후평가·모의시험과 함께 쓰면 400, 없는 개념은 404
+  - 풀기·채점·다시 채점은 기존 API를 그대로 쓴다
+  - `Quiz`에 `checkTopic { materialId, topicId, name }`을 더했다. 풀기 응답에는 `concept` 글자를 쓰지 않는다는 V6 계약 때문에 `topic`이라는 이름을 쓴다
+- **커리큘럼 `flow`:**
+  - `concepts[].study`(자료 개념의 `ConceptStudy`, 과목 키워드뿐이면 null)와 `progress`(학습 진행률 등)를 더했다
+  - 지금 단계 규칙이 바뀌었다: 먼저 공부할 개념 중 학습 전·복습 필요가 있으면 개념 학습, 학습 완료 뒤 확인 퀴즈를 안 풀었으면 확인 퀴즈, 그 밖은 사후 평가
+  - 과목 키워드뿐인 개념은 예전처럼 일반 퀴즈 결과로 본다
+  - 사후 평가는 막지 않고, 남은 개념 수를 요약에 쓴다
+- **프론트:**
+  - 새 파일: `types/study.ts`, `api/study.api.ts`, `utils/conceptStudy.ts`, `components/common/StudyStatusBadge.tsx`, `pages/materials/components/ConceptStudyActions.tsx`, `pages/analysis/components/StudyProgressPanel.tsx`(대시보드)
+  - 확인 퀴즈 모드: `/quizzes/new?checkMaterialId=&checkConceptId=&concept=`
+  - 결과 화면: "개념으로 돌아가기"·"커리큘럼으로 돌아가기"
+  - 체험 모드 기록은 `mocks/study.ts`가 localStorage(`ai-lms-mock-study`)에만 둔다(서버로 보내지 않음)
+
 ## 5-10. 숙련도 점수 산식 설계안과 참고 문헌 (11/4, 제안 — 아직 확정 아님)
 
 **상태:** 팀이 확정하기 전의 제안이다. 확정되기 전에는 루트 `CLAUDE.md`의 미결 사항("숙련도 점수 산식")을 그대로 두고, 코드는 가중치·기준을 **전부 설정값**으로 둔다(`// TODO(미결)`). 화면은 지금처럼 숫자 점수 없이 "준비 중"이다. **11/6 중간보고서에는 이 설계안만 쓰고 구현은 11/13 이후**다.

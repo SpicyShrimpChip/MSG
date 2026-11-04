@@ -6,7 +6,13 @@ import {
   useSuspenseQuery,
 } from '@tanstack/react-query';
 import { Briefcase, LoaderCircle, Sparkles } from 'lucide-react';
-import { QUIZZES_QUERY_KEY, getQuiz, submitQuiz } from '@/api';
+import {
+  CURRICULUM_QUERY_KEY,
+  QUIZZES_QUERY_KEY,
+  STUDY_QUERY_KEY,
+  getQuiz,
+  submitQuiz,
+} from '@/api';
 import {
   AsyncBoundary,
   Button,
@@ -160,6 +166,9 @@ function QuizForm({ quizId }: { quizId: number }) {
         queryKey: QUIZZES_QUERY_KEY,
         exact: true,
       });
+      // 확인 퀴즈 결과로 개념 학습 상태·커리큘럼 단계가 바뀐다
+      void queryClient.invalidateQueries({ queryKey: STUDY_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: CURRICULUM_QUERY_KEY });
       navigate(`/quizzes/${quizId}/result`);
     },
   });

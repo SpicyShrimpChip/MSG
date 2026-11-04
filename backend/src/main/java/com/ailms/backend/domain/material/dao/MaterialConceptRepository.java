@@ -10,6 +10,9 @@ public interface MaterialConceptRepository extends JpaRepository<MaterialConcept
 
 	List<MaterialConcept> findAllByMaterialIdAndUserIdOrderBySortOrderAsc(Long materialId, Long userId);
 
+	// 검색·커리큘럼용: 내 자료 전체의 개념
+	List<MaterialConcept> findAllByUserIdOrderByMaterialIdAscSortOrderAsc(Long userId);
+
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query("delete from MaterialConcept c where c.materialId = :materialId and c.userId = :userId")
 	void deleteAllOfMaterial(Long materialId, Long userId);
