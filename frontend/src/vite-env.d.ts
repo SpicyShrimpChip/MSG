@@ -8,6 +8,8 @@ interface ImportMetaEnv {
   readonly VITE_API_BASE_URL?: string;
   // 'true'면 API 함수가 src/mocks/ 데이터를 돌려준다
   readonly VITE_USE_MOCK?: string;
+  // 'true'면 목업 모드에서도 체험 버튼 없이 모든 화면이 열린다 (개발용, 공개 배포에는 넣지 않는다)
+  readonly VITE_MOCK_OPEN_ACCESS?: string;
 }
 
 // TS 시스템에 명세서 강제 병합

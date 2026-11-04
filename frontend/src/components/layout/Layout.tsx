@@ -1,4 +1,5 @@
 import { Outlet } from 'react-router-dom';
+import DemoBanner from './DemoBanner';
 import Header from './Header';
 import Footer from './Footer';
 import NavigationProgress from './NavigationProgress';
@@ -9,6 +10,7 @@ function Layout() {
   return (
     <div className="flex min-h-screen flex-col">
       <NavigationProgress />
+      <DemoBanner />
       <Header />
       <main className="flex-1">
         <PageTransition>

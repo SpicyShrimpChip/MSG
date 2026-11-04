@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ME_QUERY_KEY, login } from '@/api';
 import { Button, ErrorText, FormRow, SubPage, TextInput } from '@/components';
+import MockAuthNotice from './components/MockAuthNotice';
 
 interface LoginLocationState {
   // 로그인 가드가 넘겨 준 원래 주소
@@ -40,6 +41,7 @@ function LoginPage() {
         onSubmit={handleSubmit}
         className="flex w-full max-w-md flex-col gap-5"
       >
+        <MockAuthNotice from={state.from} />
         {state.signedUpEmail && (
           <p role="status" className="text-body text-ink-soft">
             가입이 완료됐어요. 로그인해 주세요.

@@ -83,7 +83,8 @@ src/
 - **토큰 갱신(`api/axios.ts`):** 요청 인터셉터가 `Authorization: Bearer`를 붙인다. 401이 오면 `refreshAccessToken()`으로 한 번 갱신하고 원래 요청을 다시 보낸다. 여러 요청이 동시에 401을 받아도 갱신은 한 번만 보낸다(Refresh Token은 한 번 쓰면 폐기돼서, 두 번 보내면 서버가 재사용으로 보고 세션을 끊는다). `/auth/*` 요청은 갱신하지 않고, 갱신이 실패하면 `clearSession()`으로 로그아웃 상태가 된다. `X-Requested-With` 헤더는 CSRF 방어라 지우지 않는다.
 - **화면 가드:** `router/RequireAuth.tsx`는 로그인이 필요한 화면을 감싼다(`unknown`이면 로딩, `anonymous`면 `/login`으로 보내고 `state.from`으로 원래 화면에 돌아온다). `router/RequireAdmin.tsx`는 반드시 `RequireAuth` 안에 두고 `useMe()`의 `role`이 `ADMIN`이 아니면 안내 화면을 보여 준다. 가드는 안내용일 뿐이고 진짜 권한은 서버가 요청마다 확인한다. 내 데이터를 보여 주는 새 화면은 `RequireAuth` 아래에 넣는다.
 - **내 정보**는 스토어가 아니라 `hooks/useMe.ts`(React Query `['me']`)로 읽고, 로그인했을 때만 불러온다.
-- 목업 모드(`VITE_USE_MOCK=true`)에서는 두 가드가 검사를 건너뛴다. 실제 로그인으로 확인하려면 `.env.development.local`에 `VITE_USE_MOCK=false`를 넣고 백엔드를 켠다(`docs/setup.md`).
+- **목업 모드(`VITE_USE_MOCK=true`, Vercel 배포)에는 로그인이 없어서 "체험 모드"로 가드를 통과한다(11/4).** `store/useDemoStore.ts`의 `active`(탭 `sessionStorage`)가 켜져 있어야 `RequireAuth`가 화면을 열고, 아니면 `/login`으로 보낸다. 켜는 곳은 `DemoStartButton`("로그인 없이 체험해 보기": 메인 첫 화면·시작 안내·로그인/가입 화면의 안내 상자 `MockAuthNotice`)이고, 체험 중에는 `DemoBanner`(`Layout` 맨 위 띠)가 "예시 데이터"라고 알리며 "체험 끝내기"로 끈다. 끝낼 때는 가드가 먼저 `/login`으로 보내 버리지 않게 `window.location.assign('/')`로 메인을 새로 불러온다. 관리자 화면(`RequireAdmin`)은 체험에서도 열지 않는다. 서버와 연결된 실제 모드(`VITE_USE_MOCK=false`)에서는 체험 상태·버튼·띠가 모두 없다.
+- 개발 중 매번 체험 버튼을 누르기 번거로우면 `.env.development.local`에 `VITE_MOCK_OPEN_ACCESS=true`를 넣는다(목업 모드에서 가드를 모두 연다, 관리자 포함. 공개 배포에는 넣지 않는다). 실제 로그인으로 확인하려면 `VITE_USE_MOCK=false`를 넣고 백엔드를 켠다(`docs/setup.md`).
 
 ## 주요 화면 (GNB 5개 + 드롭다운)
 
@@ -92,7 +93,7 @@ src/
 - 사전·사후평가(`/assessments`, 11/3): 과목에 연결된 자료를 골라 사전평가 → 공부 → 사후평가(같은 개념·유형·문항 수·난이도). 평가할 개념은 자료에서 뽑은 개념(`MaterialConceptPanel`, 자료 상세 "핵심 개념" 탭과 공용: 근거 문장은 자료 원문이라 회색 인용, AI 설명만 보라), 없으면 과목 키워드. 자료 본문 전송은 서버 설정(`ai-status.materialContentEnabled`, 기본 꺼짐)이 꺼져 있으면 체크를 막고 이유를 보여 준다. 켜져 있어도 요청마다 확인 체크가 있어야 한다. 대시보드 맨 위 `AssessmentComparisonPanel`이 사전(주황 `chart-pre`)·사후(파랑 `chart-post`) 막대, %p 변화, 오른 개념·아직 부족한 개념(복습 퀴즈 링크), 비교 주의 문장을 서버 값 그대로 보여 준다(채점 대기는 틀린 답으로 세지 않음). 채점 판단이 AI 1개뿐이면 "AI 1개만 판단 (다수결 아님)"
 - 학습분석: 학습 대시보드(학습 분석 API, 배치 JSON 틀), AI 대화 가져오기
 - 커뮤니티: 공지사항(목록·상세)
-- 관리자(`/admin/notices`·`new`·`:id/edit`, 관리자만): 공지 작성·수정·삭제. `RequireAdmin`(`RequireAuth` 안)은 안내용 가드이고 진짜 권한은 서버가 `/api/admin/**`에서 매번 확인한다. 상단바 "관리자" 링크는 `me.role === 'ADMIN'`일 때만 보인다. 목업 모드에서는 가드를 건너뛰고(주소로 직접 접속), 공지는 브라우저(`ai-lms-mock-notices`)에만 저장된다. 공지 본문은 글자로만 다룬다(HTML 해석 금지)
+- 관리자(`/admin/notices`·`new`·`:id/edit`, 관리자만): 공지 작성·수정·삭제. `RequireAdmin`(`RequireAuth` 안)은 안내용 가드이고 진짜 권한은 서버가 `/api/admin/**`에서 매번 확인한다. 상단바 "관리자" 링크는 `me.role === 'ADMIN'`일 때만 보인다. 목업 모드에서는 체험 모드에서도 열지 않고(개발 중 `VITE_MOCK_OPEN_ACCESS=true`만 예외), 그때 공지는 브라우저(`ai-lms-mock-notices`)에만 저장된다. 공지 본문은 글자로만 다룬다(HTML 해석 금지)
 - 이용안내: 서비스 소개, 개인정보 처리방침(작성지침에 따라 링크 이름은 띄어 쓴 "개인정보 처리방침", 푸터에서 굵게)
 - 메인(`/`): 지금은 비로그인 소개 하나 — 파란 띠 → 바로가기 4칸 → 스크롤 5단계 소개(`pages/main/components/story/`) → 시작 안내(`StartPaths`) → 개인정보 안내. 로그인 홈(가입 직후·기록 쌓는 중·기록 있음)은 아직 없음(흐름은 정해 둠)
 - 그 외: 로그인, 회원가입(비밀번호 4조건 실시간 표시), 마이페이지(동의 철회·데이터 삭제, 대화 가져올 때 가릴 단어), 검색

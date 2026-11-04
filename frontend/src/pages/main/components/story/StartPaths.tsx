@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, MessageSquare, Upload } from 'lucide-react';
 import * as m from 'motion/react-m';
+import { DemoStartButton } from '@/components';
 import { FADE_UP } from '@/constants';
 import { useAuthStore } from '@/store';
 
@@ -94,6 +95,8 @@ function StartPaths() {
           >
             로그인
           </Link>
+          {/* 공개 배포(목업 모드)에서만 보인다 */}
+          <DemoStartButton className="ml-4 font-bold text-primary underline-offset-4 hover:underline" />
         </p>
       )}
     </m.div>
