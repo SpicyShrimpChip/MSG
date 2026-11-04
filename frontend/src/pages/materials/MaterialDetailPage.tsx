@@ -30,7 +30,7 @@ function NotReady({ status }: { status: MaterialDetail['status'] }) {
       <EmptyState
         icon={<FileCheck size={24} aria-hidden="true" />}
         title="파일을 올렸어요. 아직 AI 분석 전이에요"
-        description="요약, 핵심 개념, 퀴즈를 만드는 기능은 준비 중이에요. 올린 파일은 지우기 전까지 보관해요."
+        description="자료 요약은 준비 중이에요. 핵심 개념은 핵심 개념 탭에서, 퀴즈는 퀴즈 만들기에서 확인해 보세요. 올린 파일은 지우기 전까지 보관해요."
       />
     );
   }
