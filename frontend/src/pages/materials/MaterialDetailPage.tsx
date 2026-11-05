@@ -123,7 +123,7 @@ function QuizTabContent({ material }: { material: MaterialDetail }) {
       <EmptyState
         icon={<ListChecks size={24} aria-hidden="true" />}
         title="이 자료로 만든 퀴즈가 아직 없어요"
-        description="퀴즈 결과를 개념별 숙련도에 반영하는 기능은 준비 중이에요."
+        description="퀴즈 결과는 학습 대시보드에서 개념별 숙련도의 근거로 쓰여요."
         action={{ label: '퀴즈 목록 보기', to: '/quizzes' }}
       />
     );

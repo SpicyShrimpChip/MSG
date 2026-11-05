@@ -60,7 +60,9 @@ public record AnalysisRunResponse(
 			@Schema(description = "세어 넣은 대화 수 (사용자가 쓴 근거 메시지가 있는 대화)") int conversationCount,
 			@Schema(allowableValues = {"understood", "partial", "not_understood"},
 					description = "대화에 적용한 상태. 대화 근거를 세지 않았으면 null") String conversationStatus,
-			@Schema(description = "산식 버전") String formulaVersion) {
+			@Schema(description = "산식 버전") String formulaVersion,
+			@Schema(description = "근거 부족일 때 단계가 나오려면 더 풀어야 하는 퀴즈 문제 수 (모두 채점된다고 보고 셈). 근거가 충분하면 null")
+			Integer quizNeeded) {
 	}
 
 	public record Comparison(

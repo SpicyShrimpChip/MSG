@@ -80,6 +80,7 @@ function AnalysisResult({ run }: { run: AnalysisRun }) {
       case 'conceptDetail':
         return (
           <ConceptDetailPanel
+            courseId={run.courseId}
             concept={current}
             models={run.models}
             layoutReason={reason}

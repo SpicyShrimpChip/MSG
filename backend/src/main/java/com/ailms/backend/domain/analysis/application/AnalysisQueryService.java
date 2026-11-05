@@ -165,7 +165,7 @@ public class AnalysisQueryService {
 		return new AnalysisRunResponse.Mastery(result.level().apiValue(), result.score(), result.evidenceWeight(),
 				result.quizGradedCount(), result.quizRate(), result.conversationCount(),
 				result.conversationStatus() == null ? null : result.conversationStatus().apiValue(),
-				result.formulaVersion());
+				result.formulaVersion(), result.quizNeeded());
 	}
 
 	private static AnalysisRunResponse.Judgment toJudgment(ConceptJudgment judgment, AnalysisModelResult result,

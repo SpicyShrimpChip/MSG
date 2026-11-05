@@ -91,7 +91,7 @@ export interface ConceptResult {
   recommendConfirmQuiz: boolean;
   // 이 개념의 퀴즈 결과 (코드 집계, AI 판단과 따로). 퀴즈 기록이 없으면 null
   quiz?: ConceptQuizStats | null;
-  // 숙련도 단계와 근거 (코드 계산, AI 판단과 따로). 화면에는 아직 쓰지 않는다(준비 중). 숫자 점수는 보여 주지 않는다
+  // 숙련도 단계와 근거 (코드 계산, AI 판단과 따로). 화면은 단계와 근거만 보여 주고 숫자 점수는 보여 주지 않는다
   mastery?: ConceptMastery | null;
 }
 
@@ -109,6 +109,8 @@ export interface ConceptMastery {
   conversationCount: number;
   conversationStatus: 'understood' | 'partial' | 'not_understood' | null;
   formulaVersion: string;
+  // 근거 부족일 때 단계가 나오려면 더 풀어야 하는 퀴즈 문제 수. 근거가 충분하면 null
+  quizNeeded: number | null;
 }
 
 export type ModelRunStatus =

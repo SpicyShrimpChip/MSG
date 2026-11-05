@@ -634,7 +634,7 @@ layout = {
 
 ## 5-10. 숙련도 점수 산식 설계안과 참고 문헌 (11/4 제안, 11/5 초기값으로 확정)
 
-**상태:** 11/5에 변지환이 아래 설계안을 **초기값으로 확정**했다(루트 `CLAUDE.md` 미결 항목에도 반영). 숫자(가중치·기준·경계)는 근거 없는 초기 가정이라 **전부 설정값**(`app.mastery.*`)으로 두고 사용자 테스트 뒤 조정한다. **11/5에 변지환이 계산을 코드로 넣었다**: `analysis/application/MasteryCalculator`(+`MasteryProperties`, 단위 테스트 11개가 아래 계산 예시와 같은 값을 확인), 분석 응답 `concepts[].mastery`(`level`·`score`·`evidenceWeight`·`quizGradedCount`·`quizRate`·`conversationCount`·`conversationStatus`·`formulaVersion`, 프론트 타입 `ConceptMastery`). 화면은 아직 "준비 중"이라 쓰지 않는다. 주미 확인이 남은 것은 아래 "주미에게 묻는 것"뿐이다. 화면은 지금처럼 숫자 점수 없이 "준비 중"이다. **11/6 중간보고서에는 이 설계안만 쓰고 구현은 11/13 이후**다.
+**상태:** 11/5에 변지환이 아래 설계안을 **초기값으로 확정**했다(루트 `CLAUDE.md` 미결 항목에도 반영). 숫자(가중치·기준·경계)는 근거 없는 초기 가정이라 **전부 설정값**(`app.mastery.*`)으로 두고 사용자 테스트 뒤 조정한다. **11/5에 변지환이 계산을 코드로 넣었다**: `analysis/application/MasteryCalculator`(+`MasteryProperties`, 단위 테스트 11개가 아래 계산 예시와 같은 값을 확인), 분석 응답 `concepts[].mastery`(`level`·`score`·`evidenceWeight`·`quizGradedCount`·`quizRate`·`conversationCount`·`conversationStatus`·`formulaVersion`·`quizNeeded`(근거 부족일 때 단계가 나오려면 더 풀 퀴즈 문제 수, 충분하면 null), 프론트 타입 `ConceptMastery`). 화면은 대시보드 개념 표와 개념 근거에 단계·근거만 보여 준다(숫자 점수 없음). 주미 확인이 남은 것은 아래 "주미에게 묻는 것"뿐이다. 저장(`concept_mastery`)과 대화 신호를 메시지 단위로 셀지는 남아 있다.
 
 ### 원칙 (이미 정한 것)
 

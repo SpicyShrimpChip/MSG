@@ -50,6 +50,7 @@ class MasteryCalculatorTest {
 		assertThat(result.level()).isEqualTo(Level.INSUFFICIENT_EVIDENCE);
 		assertThat(result.score()).isNull();
 		assertThat(result.evidenceWeight()).isEqualTo(1.0);
+		assertThat(result.quizNeeded()).isEqualTo(2); // 기준 3.0까지 2.0 남음 ÷ 퀴즈 1.0
 	}
 
 	@Test
@@ -58,6 +59,24 @@ class MasteryCalculatorTest {
 
 		assertThat(result.level()).isEqualTo(Level.INSUFFICIENT_EVIDENCE);
 		assertThat(result.score()).isNull();
+		assertThat(result.quizNeeded()).isEqualTo(2);
+	}
+
+	@Test
+	void 남은_무게가_소수면_퀴즈_문제_수를_올림한다() {
+		// 퀴즈 1문제 + 대화 1건 = 1.5, 기준까지 1.5 남음 → 2문제
+		var result = calculator.calculate(1, 1, 1, 1, UnderstandingStatus.UNDERSTOOD);
+
+		assertThat(result.level()).isEqualTo(Level.INSUFFICIENT_EVIDENCE);
+		assertThat(result.quizNeeded()).isEqualTo(2);
+	}
+
+	@Test
+	void 근거가_충분하면_더_풀_퀴즈_수가_없다() {
+		var result = calculator.calculate(3, 3, 3, 0, null);
+
+		assertThat(result.level()).isNotEqualTo(Level.INSUFFICIENT_EVIDENCE);
+		assertThat(result.quizNeeded()).isNull();
 	}
 
 	@Test
@@ -67,6 +86,7 @@ class MasteryCalculatorTest {
 		assertThat(result.level()).isEqualTo(Level.INSUFFICIENT_EVIDENCE);
 		assertThat(result.evidenceWeight()).isZero();
 		assertThat(result.quizRate()).isNull();
+		assertThat(result.quizNeeded()).isEqualTo(3);
 	}
 
 	@Test

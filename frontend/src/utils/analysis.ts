@@ -4,6 +4,7 @@ import type {
   ConceptComparison,
   ConceptFeedbackType,
   ConceptResult,
+  MasteryStage,
   UnderstandingStatus,
 } from '@/types';
 
@@ -11,6 +12,14 @@ export const PROVIDER_LABEL: Record<AnalysisProvider, string> = {
   gpt: 'GPT',
   claude: 'Claude',
   gemini: 'Gemini',
+};
+
+// 숙련도 단계 (코드 계산). 근거 부족은 이해 부족과 다르다
+export const MASTERY_LABEL: Record<MasteryStage, string> = {
+  insufficient_evidence: '근거 부족',
+  needs_work: '보완 필요',
+  normal: '보통',
+  strong: '강점',
 };
 
 export const UNDERSTANDING_LABEL: Record<UnderstandingStatus, string> = {
