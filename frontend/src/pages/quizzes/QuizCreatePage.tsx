@@ -232,7 +232,7 @@ function QuizCreateForm({ me }: { me: User | null }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex max-w-3xl flex-col gap-6">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       {check && (
         <Notice icon={Target} iconClassName="text-primary">
           <span className="font-bold text-heading">
@@ -578,6 +578,7 @@ function QuizCreateWithProfile() {
 function QuizCreatePage() {
   return (
     <SubPage
+      narrow="reading"
       title="퀴즈 만들기"
       description="공부하는 목적에 맞춰 AI가 문제를 만들고, 채점은 서버가 기준대로 해요"
     >

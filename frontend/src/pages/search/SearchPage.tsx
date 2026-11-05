@@ -264,10 +264,11 @@ function SearchPage() {
 
   return (
     <SubPage
+      narrow="reading"
       title="검색"
       description={keyword ? `‘${keyword}’ 검색 결과` : undefined}
     >
-      <div className="flex max-w-3xl flex-col gap-6">
+      <div className="flex flex-col gap-6">
         <SearchBody keyword={keyword} />
       </div>
     </SubPage>

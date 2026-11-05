@@ -293,7 +293,7 @@ function QuizResultContent({ quizId }: { quizId: number }) {
   const modeLabel = quizModeLabel(quiz.mode);
 
   return (
-    <div className="flex max-w-3xl flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <Card as="section" aria-label="점수" className="flex flex-col gap-3 p-6">
         <h2 className="text-lg font-extrabold text-heading">
           {quiz.title}
@@ -392,7 +392,7 @@ function QuizResultContent({ quizId }: { quizId: number }) {
 function QuizResultPage() {
   const { quizId } = useParams();
   return (
-    <SubPage title="퀴즈 결과">
+    <SubPage narrow="reading" title="퀴즈 결과">
       <AsyncBoundary>
         <QuizResultContent quizId={Number(quizId)} />
       </AsyncBoundary>

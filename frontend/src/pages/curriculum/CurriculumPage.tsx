@@ -838,7 +838,7 @@ function CurriculumContent() {
     );
   }
   return (
-    <div className="flex max-w-4xl flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <FormRow label="과목" htmlFor="curriculum-course">
         <SelectInput
           id="curriculum-course"
@@ -862,6 +862,7 @@ function CurriculumContent() {
 function CurriculumPage() {
   return (
     <SubPage
+      narrow="reading"
       title="맞춤 커리큘럼"
       description="사전 테스트로 지금 수준을 확인하고, 부족한 개념부터 공부한 뒤 사후 평가로 얼마나 나아졌는지 확인해요"
     >

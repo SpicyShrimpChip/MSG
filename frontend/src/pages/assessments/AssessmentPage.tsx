@@ -390,7 +390,7 @@ function MaterialPicker({ me }: { me: User | null }) {
     );
   }
   return (
-    <div className="flex max-w-3xl flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <FormRow label="학습자료" htmlFor="assess-material">
         <SelectInput
           id="assess-material"
@@ -423,6 +423,7 @@ function WithProfile() {
 function AssessmentPage() {
   return (
     <SubPage
+      narrow="reading"
       title="사전·사후평가"
       description="학습자료로 공부 전 수준을 확인하고, 공부한 뒤 같은 개념으로 다시 평가해 얼마나 나아졌는지 비교해요"
     >
