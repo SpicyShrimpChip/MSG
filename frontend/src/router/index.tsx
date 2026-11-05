@@ -124,7 +124,7 @@ export const router = createBrowserRouter([
         ],
       },
 
-      // 커뮤니티
+      // 공지사항: 11/5 멘토링으로 주 메뉴에서 뺐다(AI 서비스 정체성). 관리자 화면·검색 결과에서만 연다
       {
         path: 'notices',
         lazy: lazyPage(() => import('@/pages/notices/NoticeListPage')),

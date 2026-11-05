@@ -38,11 +38,6 @@ export const MENU: MenuGroup[] = [
     ],
   },
   {
-    label: '커뮤니티',
-    path: '/notices',
-    children: [{ label: '공지사항', path: '/notices' }],
-  },
-  {
     label: '이용안내',
     path: '/about',
     children: [
