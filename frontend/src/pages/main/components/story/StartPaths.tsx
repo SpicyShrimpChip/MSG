@@ -24,7 +24,7 @@ const PATHS: {
     to: '/materials/upload',
     who: 'AI 대화 기록이 적다면',
     title: '자료 올리고 시작하기',
-    description: '필기·정리 노트로 요약과 퀴즈부터 시작해요.',
+    description: '필기·정리 노트를 올리고 퀴즈로 지금 수준부터 확인해요.',
     icon: <Upload size={22} aria-hidden="true" />,
   },
 ];

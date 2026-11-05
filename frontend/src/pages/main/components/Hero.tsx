@@ -1,15 +1,16 @@
 import { Link } from 'react-router-dom';
 import { Lock } from 'lucide-react';
-import { DemoStartButton, LevelBadge, ScoreBar } from '@/components';
-import type { MasteryLevel } from '@/types';
+import { DemoStartButton } from '@/components';
+import MasteryMeter from '@/pages/analysis/components/MasteryMeter';
+import type { MasteryStage } from '@/types';
 
-// 첫 화면 오른쪽 예시 카드. 실제 사용자 데이터가 아니라 화면 소개용 예시라서 "예시 화면" 표시를 붙인다
-const SAMPLE_CONCEPTS: { name: string; score: number; level: MasteryLevel }[] =
-  [
-    { name: '대칭키 암호', score: 82, level: 'strength' },
-    { name: '해시 함수', score: 63, level: 'normal' },
-    { name: '공개키 암호', score: 41, level: 'weakness' },
-  ];
+// 첫 화면 오른쪽 예시 카드. 실제 사용자 데이터가 아니라 화면 소개용 예시라서 "예시 화면" 표시를 붙인다.
+// 대시보드처럼 숫자 점수 없이 숙련도 단계만 보여 준다
+const SAMPLE_CONCEPTS: { name: string; level: MasteryStage }[] = [
+  { name: '대칭키 암호', level: 'strong' },
+  { name: '해시 함수', level: 'normal' },
+  { name: '공개키 암호', level: 'needs_work' },
+];
 
 function SampleCard() {
   return (
@@ -26,17 +27,12 @@ function SampleCard() {
         </div>
         <ul className="flex flex-col gap-4">
           {SAMPLE_CONCEPTS.map((concept) => (
-            <li key={concept.name} className="flex flex-col gap-2">
-              <div className="flex items-center justify-between gap-2 text-body">
-                <span className="font-medium text-heading">{concept.name}</span>
-                <span className="flex items-center gap-2">
-                  <LevelBadge level={concept.level} />
-                  <span className="font-bold text-heading">
-                    {concept.score}
-                  </span>
-                </span>
-              </div>
-              <ScoreBar value={concept.score} level={concept.level} />
+            <li
+              key={concept.name}
+              className="flex flex-wrap items-center justify-between gap-2 text-body"
+            >
+              <span className="font-medium text-heading">{concept.name}</span>
+              <MasteryMeter level={concept.level} size="lg" />
             </li>
           ))}
         </ul>
