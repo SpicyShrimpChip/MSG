@@ -17,6 +17,7 @@ export { default as FormRow } from './FormRow';
 export { default as LevelBadge } from './LevelBadge';
 export { default as StudyStatusBadge } from './StudyStatusBadge';
 export { default as TextInput } from './TextInput';
+export { default as PasswordInput } from './PasswordInput';
 export { FIELD_CLASS } from './fieldClass';
 export { default as SelectInput } from './SelectInput';
 export { default as ScoreBar } from './ScoreBar';

@@ -2,7 +2,13 @@ import { useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ME_QUERY_KEY, login } from '@/api';
-import { Button, ErrorText, FormRow, TextInput } from '@/components';
+import {
+  Button,
+  ErrorText,
+  FormRow,
+  PasswordInput,
+  TextInput,
+} from '@/components';
 import AuthCard from './components/AuthCard';
 import MockAuthNotice from './components/MockAuthNotice';
 
@@ -57,9 +63,8 @@ function LoginPage() {
           />
         </FormRow>
         <FormRow label="비밀번호" htmlFor="login-password">
-          <TextInput
+          <PasswordInput
             id="login-password"
-            type="password"
             autoComplete="current-password"
             required
             value={password}

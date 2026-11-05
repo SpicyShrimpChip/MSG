@@ -6,6 +6,7 @@ import {
   Button,
   FormRow,
   LearningProfileFields,
+  PasswordInput,
   TextInput,
   ErrorText,
   type LearningProfileValue,
@@ -87,9 +88,8 @@ function SignupPage() {
             />
           </FormRow>
           <FormRow label="비밀번호" htmlFor="signup-password" required>
-            <TextInput
+            <PasswordInput
               id="signup-password"
-              type="password"
               autoComplete="new-password"
               required
               value={password}
@@ -106,9 +106,8 @@ function SignupPage() {
               mismatch ? '비밀번호가 서로 달라요. 다시 확인해 주세요.' : ''
             }
           >
-            <TextInput
+            <PasswordInput
               id="signup-password-confirm"
-              type="password"
               autoComplete="new-password"
               required
               value={confirm}
