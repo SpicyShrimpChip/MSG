@@ -400,7 +400,7 @@ function MyAccount() {
     queryFn: getMe,
   });
   return (
-    <div className="flex max-w-2xl flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <AccountInfo me={me} />
       <LearningProfileSection me={me} />
       <AiConsentSection me={me} />
@@ -418,6 +418,7 @@ function MyPage() {
 
   return (
     <SubPage
+      narrow="form"
       title="마이페이지"
       description="내 정보와 동의 상태, 저장된 데이터를 관리해요"
     >

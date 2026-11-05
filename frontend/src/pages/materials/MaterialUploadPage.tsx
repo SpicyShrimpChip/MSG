@@ -78,7 +78,7 @@ function MaterialUploadForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex max-w-2xl flex-col gap-8">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-8">
       <div className="flex flex-col gap-6">
         <FormRow label="과목" htmlFor="material-course" required>
           {!hasCourses ? (
@@ -190,6 +190,7 @@ function MaterialUploadForm() {
 function MaterialUploadPage() {
   return (
     <SubPage
+      narrow="form"
       title="자료 올리기"
       description="공부할 자료를 올리면 요약과 핵심 개념을 정리해 드려요"
     >

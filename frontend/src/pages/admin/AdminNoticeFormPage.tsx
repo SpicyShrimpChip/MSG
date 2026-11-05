@@ -48,7 +48,7 @@ function NoticeForm({ notice }: { notice?: NoticeDetail }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex max-w-3xl flex-col gap-6">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       <FormRow label="제목" htmlFor="notice-title" required>
         <TextInput
           id="notice-title"
@@ -123,6 +123,7 @@ function AdminNoticeFormPage() {
 
   return (
     <SubPage
+      narrow="reading"
       title={editing ? '공지 고치기' : '새 공지 쓰기'}
       description="올린 공지는 모든 사용자가 볼 수 있어요 (관리자 전용)"
     >

@@ -157,7 +157,11 @@ function ExportHelpPage() {
   if (!help) return <NotFoundPage />;
 
   return (
-    <SubPage title={`${help.name} 대화 내보내기`} description={help.summary}>
+    <SubPage
+      narrow="reading"
+      title={`${help.name} 대화 내보내기`}
+      description={help.summary}
+    >
       <div className="-mt-4 flex flex-wrap items-center justify-between gap-3">
         <Link
           to="/analysis/import"
@@ -200,7 +204,7 @@ function ExportHelpPage() {
         </nav>
       </div>
 
-      <div className="flex max-w-3xl flex-col gap-10">
+      <div className="flex flex-col gap-10">
         <section aria-labelledby="help-before" className="flex flex-col gap-3">
           <h2 id="help-before" className="text-lg font-extrabold text-heading">
             시작하기 전에

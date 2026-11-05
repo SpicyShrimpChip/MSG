@@ -22,7 +22,8 @@ function AuthCard({
       <div
         className={cn(
           'mx-auto flex w-full flex-col gap-6 rounded-2xl border border-line bg-surface-raised p-6 shadow-sm md:p-8',
-          wide ? 'max-w-xl' : 'max-w-md',
+          // 회원가입은 학습 목적 선택·동의 안내 표가 길어서 넓게 둔다 (11/6: 576px → 768px)
+          wide ? 'max-w-3xl' : 'max-w-md',
         )}
       >
         <div className="flex flex-col gap-2 text-center">

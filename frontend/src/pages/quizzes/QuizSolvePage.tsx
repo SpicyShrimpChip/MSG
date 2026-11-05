@@ -186,7 +186,7 @@ function QuizForm({ quizId }: { quizId: number }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex max-w-3xl flex-col gap-6">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
         <h2 className="text-2xl font-extrabold text-heading">{quiz.title}</h2>
         <p className="flex flex-wrap items-center gap-2 text-caption text-ink-muted">
@@ -333,6 +333,7 @@ function QuizSolvePage() {
   const { quizId } = useParams();
   return (
     <SubPage
+      narrow="reading"
       title="퀴즈 풀기"
       description="문제를 풀고 제출하면 서버가 채점해요"
     >
