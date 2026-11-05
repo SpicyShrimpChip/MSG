@@ -44,9 +44,12 @@ public class MasteryCalculator {
 	 * @param conversationCount   세어 넣은 대화 수
 	 * @param conversationStatus  대화에 적용한 상태. 대화 근거를 세지 않았으면 null
 	 * @param formulaVersion      산식 버전
+	 * @param quizNeeded          근거 부족일 때 단계가 나오려면 더 풀어야 하는 퀴즈 문제 수(모두 채점된다고 보고 셈).
+	 *                            근거가 충분하면 null
 	 */
 	public record Result(Level level, Double score, double evidenceWeight, int quizGradedCount, Double quizRate,
-			int conversationCount, UnderstandingStatus conversationStatus, String formulaVersion) {
+			int conversationCount, UnderstandingStatus conversationStatus, String formulaVersion,
+			Integer quizNeeded) {
 	}
 
 	private final MasteryProperties properties;
@@ -84,13 +87,22 @@ public class MasteryCalculator {
 
 		if (weightSum < properties.minEvidenceWeight()) {
 			return new Result(Level.INSUFFICIENT_EVIDENCE, null, weightSum, quizCount, quizRate,
-					usedConversationCount, usedStatus, properties.formulaVersion());
+					usedConversationCount, usedStatus, properties.formulaVersion(), quizNeeded(weightSum));
 		}
 		double score = (weightedValueSum + 1) / (weightSum + 2);
 		Level level = score < properties.needsWorkBelow() ? Level.NEEDS_WORK
 				: score >= properties.strongFrom() ? Level.STRONG : Level.NORMAL;
 		return new Result(level, score, weightSum, quizCount, quizRate, usedConversationCount, usedStatus,
-				properties.formulaVersion());
+				properties.formulaVersion(), null);
+	}
+
+	// 기준까지 남은 무게를 퀴즈 한 문제 무게로 나눠 올림한다. 0.1+0.2 같은 소수 오차로 한 문제 더 세지 않게 아주 작은 값을 뺀다
+	private Integer quizNeeded(double weightSum) {
+		if (properties.quizWeight() <= 0) {
+			return null;
+		}
+		double remaining = properties.minEvidenceWeight() - weightSum;
+		return Math.max(1, (int) Math.ceil(remaining / properties.quizWeight() - 1e-9));
 	}
 
 	private Double conversationValue(UnderstandingStatus status) {

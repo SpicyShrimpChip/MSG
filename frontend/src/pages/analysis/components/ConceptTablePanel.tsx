@@ -1,5 +1,6 @@
 import type { ConceptResult } from '@/types';
 import { FEEDBACK_LABEL, cn, describeComparison } from '@/utils';
+import MasteryMeter from './MasteryMeter';
 import Panel from './Panel';
 import { ComparisonBadge } from './UnderstandingBadge';
 
@@ -20,7 +21,7 @@ function ConceptTablePanel({
   return (
     <Panel
       title="개념별 판단"
-      description="판단 개수는 정확도가 아니라 몇 개 모델이 같은 판단을 했는지예요."
+      description="숙련도는 퀴즈 결과와 대화 판단을 정해진 규칙으로 계산한 단계예요. 판단 개수는 정확도가 아니라 몇 개 모델이 같은 판단을 했는지예요."
       layoutReason={layoutReason}
     >
       <div className="overflow-x-auto">
@@ -29,6 +30,9 @@ function ConceptTablePanel({
             <tr className="bg-surface-muted text-caption text-ink-soft">
               <th scope="col" className="px-3 py-2.5 text-left font-bold">
                 개념
+              </th>
+              <th scope="col" className="px-3 py-2.5 text-left font-bold">
+                숙련도
               </th>
               <th scope="col" className="px-3 py-2.5 text-left font-bold">
                 모델들의 판단
@@ -62,6 +66,13 @@ function ConceptTablePanel({
                       {item.concept}
                     </button>
                   </th>
+                  <td className="px-3 py-3">
+                    {item.mastery ? (
+                      <MasteryMeter level={item.mastery.level} />
+                    ) : (
+                      <span className="text-caption text-ink-muted">-</span>
+                    )}
+                  </td>
                   <td className="px-3 py-3">
                     <ComparisonBadge
                       outcome={item.comparison.outcome}

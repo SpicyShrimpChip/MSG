@@ -133,6 +133,18 @@ const RUN: AnalysisRun = {
       feedback: null,
       studyOrder: 1,
       recommendConfirmQuiz: false,
+      // 숙련도 예시 (서버 규칙 계산 결과 모양)
+      mastery: {
+        level: 'needs_work',
+        score: 0.29,
+        evidenceWeight: 5,
+        quizGradedCount: 4,
+        quizRate: 0.25,
+        conversationCount: 2,
+        conversationStatus: 'not_understood',
+        formulaVersion: '1',
+        quizNeeded: null,
+      },
     },
     {
       concept: '해시',
@@ -173,6 +185,18 @@ const RUN: AnalysisRun = {
       feedback: null,
       studyOrder: 2,
       recommendConfirmQuiz: false,
+      // 숙련도 예시 (서버 규칙 계산 결과 모양)
+      mastery: {
+        level: 'insufficient_evidence',
+        score: null,
+        evidenceWeight: 1,
+        quizGradedCount: 1,
+        quizRate: 1,
+        conversationCount: 0,
+        conversationStatus: null,
+        formulaVersion: '1',
+        quizNeeded: 2,
+      },
     },
     {
       concept: '방화벽',
@@ -205,6 +229,18 @@ const RUN: AnalysisRun = {
       feedback: null,
       studyOrder: 3,
       recommendConfirmQuiz: false,
+      // 숙련도 예시 (서버 규칙 계산 결과 모양)
+      mastery: {
+        level: 'insufficient_evidence',
+        score: null,
+        evidenceWeight: 0,
+        quizGradedCount: 0,
+        quizRate: null,
+        conversationCount: 0,
+        conversationStatus: null,
+        formulaVersion: '1',
+        quizNeeded: 3,
+      },
     },
     {
       concept: '접근 제어',
@@ -231,6 +267,18 @@ const RUN: AnalysisRun = {
       feedback: null,
       studyOrder: 4,
       recommendConfirmQuiz: false,
+      // 숙련도 예시 (서버 규칙 계산 결과 모양)
+      mastery: {
+        level: 'normal',
+        score: 0.58,
+        evidenceWeight: 4,
+        quizGradedCount: 3,
+        quizRate: 0.67,
+        conversationCount: 2,
+        conversationStatus: 'partial',
+        formulaVersion: '1',
+        quizNeeded: null,
+      },
     },
     {
       concept: '대칭키 암호',
@@ -263,6 +311,18 @@ const RUN: AnalysisRun = {
       feedback: null,
       studyOrder: 5,
       recommendConfirmQuiz: false,
+      // 숙련도 예시 (서버 규칙 계산 결과 모양)
+      mastery: {
+        level: 'strong',
+        score: 0.76,
+        evidenceWeight: 6.5,
+        quizGradedCount: 5,
+        quizRate: 0.8,
+        conversationCount: 3,
+        conversationStatus: 'understood',
+        formulaVersion: '1',
+        quizNeeded: null,
+      },
     },
   ],
   // 목업에서만 동적 배치 예시를 보여 준다 (백엔드는 아직 배치를 주지 않는다)

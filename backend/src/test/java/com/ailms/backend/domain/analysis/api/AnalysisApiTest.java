@@ -142,6 +142,7 @@ class AnalysisApiTest {
 				.andExpect(jsonPath("$.data.concepts[0].mastery.level").value("insufficient_evidence"))
 				.andExpect(jsonPath("$.data.concepts[0].mastery.score").doesNotExist())
 				.andExpect(jsonPath("$.data.concepts[0].mastery.formulaVersion").value("1"))
+				.andExpect(jsonPath("$.data.concepts[0].mastery.quizNeeded").value(3))
 				.andExpect(jsonPath("$.data.concepts[1].comparison.outcome").value("unanimous"))
 				.andExpect(jsonPath("$.data.concepts[1].comparison.status").value("insufficient_evidence"))
 				.andExpect(jsonPath("$.data.concepts[2].comparison.outcome").value("majority"))

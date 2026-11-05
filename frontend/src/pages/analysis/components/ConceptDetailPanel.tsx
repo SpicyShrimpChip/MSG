@@ -11,10 +11,12 @@ import {
   UNDERSTANDING_LABEL,
   describeComparison,
 } from '@/utils';
+import MasteryEvidence from './MasteryEvidence';
 import Panel from './Panel';
 import { UnderstandingBadge } from './UnderstandingBadge';
 
 interface ConceptDetailPanelProps {
+  courseId: number;
   concept: ConceptResult | null;
   models: ModelRun[];
   layoutReason?: string | null;
@@ -91,6 +93,7 @@ function JudgmentCard({ judgment }: { judgment: ConceptJudgment }) {
 
 // 고른 개념에 대한 모델별 판단과 근거. 이번 분석에 참여하지 않은 모델도 숨기지 않는다
 function ConceptDetailPanel({
+  courseId,
   concept,
   models,
   layoutReason,
@@ -110,11 +113,20 @@ function ConceptDetailPanel({
   const absent = models.filter((model) => !judged.has(model.provider));
 
   return (
-    <Panel
-      title={`${concept.concept} · 모델별 판단`}
-      description={describeComparison(concept.comparison)}
-      layoutReason={layoutReason}
-    >
+    <Panel title={concept.concept} layoutReason={layoutReason}>
+      {concept.mastery && (
+        <MasteryEvidence
+          courseId={courseId}
+          concept={concept.concept}
+          mastery={concept.mastery}
+        />
+      )}
+      <div className="flex flex-col gap-1">
+        <h3 className="font-extrabold text-heading">모델별 판단</h3>
+        <p className="text-caption text-ink-muted">
+          {describeComparison(concept.comparison)}
+        </p>
+      </div>
       <ul className="flex flex-col gap-3">
         {concept.judgments.map((judgment) => (
           <JudgmentCard key={judgment.provider} judgment={judgment} />
