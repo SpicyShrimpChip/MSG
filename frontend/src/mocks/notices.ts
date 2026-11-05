@@ -14,9 +14,9 @@ const STORAGE_KEY = 'ai-lms-mock-notices';
 const SAMPLE: NoticeDetail[] = [
   {
     id: 3,
-    title: 'AI 대화 가져오기 기능을 준비하고 있어요',
+    title: 'AI 대화 가져오기를 열었어요',
     content:
-      'ChatGPT, Claude와 공부한 대화를 가져와 개념별로 분석하는 기능을 준비하고 있어요. 준비가 끝나면 이곳에서 알려 드릴게요.',
+      'ChatGPT, Claude에서 내보낸 대화 파일을 가져올 수 있어요. 파일은 내 브라우저에서 읽고, 공부한 대화 중 내가 고른 것만 개인정보를 가린 뒤 보내요. 메인 화면의 "AI 대화 가져오기"에서 시작해 보세요.',
     createdAt: '2026-10-24',
     updatedAt: null,
   },
