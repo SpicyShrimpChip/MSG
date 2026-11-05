@@ -52,8 +52,9 @@ function SampleCard() {
 // 메인 첫 화면: 짙은 파랑 띠 위에 소개 문구와 두 진입 경로(사용자 유형 A·B), 오른쪽에 예시 카드
 function Hero() {
   return (
-    <section className="bg-brand text-on-brand">
-      <div className="mx-auto flex max-w-page flex-wrap items-center gap-14 px-6 pt-20 pb-32">
+    // 넓은 화면에서는 상단바 자리(80px) 밑까지 파란 띠를 끌어올려 알약이 띠 위에 떠 있게 한다 (위에 검은 띠가 남지 않게)
+    <section className="bg-brand text-on-brand lg:-mt-20">
+      <div className="mx-auto flex max-w-page flex-wrap items-center gap-14 px-6 pt-20 pb-32 lg:pt-40">
         <div className="min-w-0 flex-[1_1_460px]">
           <p className="mb-5 inline-flex rounded-full bg-on-brand/12 px-3 py-1.5 text-caption font-medium text-on-brand-hover">
             학습 자료 + ChatGPT·Claude 대화 기록 분석

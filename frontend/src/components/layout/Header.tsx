@@ -3,7 +3,6 @@ import {
   useEffect,
   useRef,
   useState,
-  type CSSProperties,
   type FormEvent,
   type ReactNode,
 } from 'react';
@@ -19,14 +18,12 @@ import { useAuthStore } from '@/store';
 import Gnb from './Gnb';
 import MobileMenu, { MOBILE_MENU_ID } from './MobileMenu';
 import ThemeToggle from './ThemeToggle';
-import { SEARCH_WIDTH, useCapsuleMode, useCapsuleWidth } from './useCapsule';
+import { useScrolled } from './useScrolled';
 import { GlassSurface } from '../common';
 import { FIELD_CLASS } from '../common/fieldClass';
 
-// 알약 높이(px). 알약 클래스 h-14와 같다
-const CAPSULE_HEIGHT = 56;
-// 알약 전환과 검색 칸 접기는 같은 시간·곡선으로 움직인다 (따로 움직이면 한 박자씩 어긋나 끊겨 보인다)
-const CAPSULE_TRANSITION = 'duration-[640ms] ease-[cubic-bezier(0.16,1,0.3,1)]';
+// 넓은 화면 상단바 알약 높이(px): 맨 위 64(h-16), 스크롤하면 56(h-14). 유리 바탕(GlassSurface)에도 같은 값을 넘긴다
+const CAPSULE_HEIGHT = { top: 64, scrolled: 56 };
 
 const ACCOUNT_LINK_CLASS = 'font-medium text-ink-soft hover:text-heading';
 
@@ -54,7 +51,7 @@ function useAccountItems(): { key: string; node: ReactNode }[] {
         node: (
           <Link
             to="/signup"
-            className="rounded-lg bg-primary px-3.5 py-2 font-bold text-on-primary hover:bg-primary-hover"
+            className="inline-flex h-10 items-center rounded-lg bg-primary px-4 font-bold text-on-primary hover:bg-primary-hover"
           >
             회원가입
           </Link>
@@ -130,22 +127,12 @@ function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
-  const logoRef = useRef<HTMLDivElement>(null);
-  const gnbRef = useRef<HTMLElement>(null);
-  const rightRef = useRef<HTMLDivElement>(null);
-  const capsule = useCapsuleMode();
-  // 알약일 때 검색칸은 접어 두고, 돋보기를 누르거나 입력 중일 때만 펼친다
+  const scrolled = useScrolled();
+  const capsuleHeight = scrolled ? CAPSULE_HEIGHT.scrolled : CAPSULE_HEIGHT.top;
+  // 스크롤하면 검색칸을 돋보기로 접고, 돋보기를 누르거나 입력 중일 때만 펼친다
   const [searchOpen, setSearchOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const searchFormRef = useRef<HTMLFormElement>(null);
-  const searchCollapsed = capsule && !searchOpen && !keyword;
-  const capsuleWidth = useCapsuleWidth(
-    logoRef,
-    gnbRef,
-    rightRef,
-    searchFormRef,
-    searchCollapsed ? SEARCH_WIDTH.collapsed : SEARCH_WIDTH.open,
-  );
+  const searchCollapsed = scrolled && !searchOpen && !keyword;
 
   // Esc로 닫고 포커스를 햄버거 버튼으로 돌려준다
   useEffect(() => {
@@ -167,38 +154,31 @@ function Header() {
   };
 
   return (
-    // 로고·주 메뉴·검색·계정을 한 줄에 둔다. 좁은 화면에서는 주 메뉴 대신 햄버거 메뉴(MobileMenu).
-    // 넓은 화면에서는 위에 붙어 따라오고, 맨 위를 벗어나면 가운데로 모인 반투명 알약이 된다.
-    // 알약일 때도 바깥 높이(h-17)는 그대로 둬서 아래 내용이 들썩이지 않게 한다
-    <header
-      className={`relative z-40 border-b lg:sticky lg:top-0 lg:h-17 print:hidden ${
-        capsule
-          ? 'border-transparent bg-transparent'
-          : 'border-line bg-surface-raised'
-      }`}
-    >
+    // 좁은 화면: 흰 바탕 한 줄 + 햄버거 메뉴(MobileMenu).
+    // 넓은 화면: 처음부터 본문 폭(1152px)의 유리 알약이 위에 떠 있고, 스크롤하면 높이가 64 → 56px로 줄고 검색칸은 돋보기로 접힌다.
+    // 바깥 자리(h-20 = 80px)는 그대로 둬서 아래 내용이 들썩이지 않게 한다. 배경은 투명이라 첫 화면 파란 띠는 이 자리까지 끌어올린다(Hero의 lg:-mt-20)
+    <header className="relative z-40 border-b border-line bg-surface-raised lg:sticky lg:top-0 lg:h-20 lg:border-transparent lg:bg-transparent lg:pt-2 print:hidden">
       <div
-        style={{ '--capsule': `${capsuleWidth}px` } as CSSProperties}
-        className={`mx-auto flex flex-wrap items-center justify-between gap-y-3 border transition-[max-width,height,margin,padding,border-radius,column-gap,background-color,border-color,box-shadow] ${CAPSULE_TRANSITION} max-lg:py-3.5 lg:flex-nowrap ${
-          capsule
-            ? 'glass-frame mt-1.5 h-14 max-w-(--capsule) gap-x-5 rounded-full border-transparent pr-3 pl-5'
-            : 'max-w-page gap-x-6 border-transparent px-6 lg:h-17'
+        className={`glass-frame mx-auto flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-6 max-lg:max-w-page max-lg:py-3.5 max-lg:shadow-none max-lg:after:hidden lg:w-[calc(100%-3rem)] lg:max-w-[72rem] lg:flex-nowrap lg:rounded-full lg:pr-3 lg:pl-5 lg:transition-[height] lg:duration-300 lg:ease-out ${
+          scrolled ? 'lg:h-14' : 'lg:h-16'
         }`}
       >
-        {/* 알약일 때 유리 바탕 (높이 h-14 = 56px, 모서리는 그 절반) */}
-        {capsule && (
-          <GlassSurface radius={CAPSULE_HEIGHT / 2} height={CAPSULE_HEIGHT} />
-        )}
-        <div
-          ref={logoRef}
-          className="flex items-center justify-between max-lg:w-full lg:shrink-0"
-        >
+        {/* 유리 바탕 (모서리는 높이의 절반). 알약 바로 안에 둬야 둥근 모서리를 물려받는다. 넓은 화면에서만 */}
+        <GlassSurface
+          radius={capsuleHeight / 2}
+          height={capsuleHeight}
+          className="max-lg:hidden"
+        />
+        {/* 배치: [로고 + 메뉴] ……… [검색·계정·화면 모드]. 메뉴는 로고 옆(48px)에 붙이고 빈 공간은 가운데에 둔다
+            (메뉴를 정가운데에 두면 넓은 오른쪽 묶음 때문에 메뉴가 검색칸에 붙어 오른쪽으로 쏠려 보였다, 11/6).
+            min-w-max: 내용 폭 아래로는 줄지 않게 (없으면 "ai-lms"가 하이픈에서 끊긴다) */}
+        <div className="flex items-center justify-between max-lg:w-full lg:min-w-max lg:shrink-0">
           <Link to="/" className="flex items-center gap-2.5 text-heading">
             <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-on-primary">
               AI
             </span>
             {/* TODO(미결): 서비스 이름 확정 후 교체 */}
-            <span className="text-xl font-bold">ai-lms</span>
+            <span className="text-xl font-bold whitespace-nowrap">ai-lms</span>
           </Link>
           <button
             ref={menuButtonRef}
@@ -226,63 +206,62 @@ function Header() {
           </button>
         </div>
 
-        <Gnb ref={gnbRef} compact={capsule} />
+        <Gnb />
 
-        <div
-          ref={rightRef}
-          className="flex flex-wrap items-center gap-3 text-sm lg:shrink-0 lg:flex-nowrap"
-        >
-          {/* 알약일 때는 돋보기 버튼만 두고, 누르면 칸이 옆으로 펼쳐진다 (상자 안의 상자가 생기지 않게) */}
-          {/* 폭(w-9 / w-42)은 useCapsule의 SEARCH_WIDTH와 같다. 칸 폭 하나만 바뀌고 안의 입력칸은 남는 폭을 채운다 */}
-          <form
-            ref={searchFormRef}
-            role="search"
-            onSubmit={handleSearch}
-            className={`flex h-9 shrink-0 items-center gap-1.5 overflow-hidden transition-[width,padding,border-color,background-color] ${CAPSULE_TRANSITION} ${
-              searchCollapsed
-                ? 'w-9 rounded-full border border-transparent px-[3px]'
-                : `w-42 pr-1 pl-2.5 ${FIELD_CLASS}`
-            }`}
-          >
-            <label htmlFor="global-search" className="sr-only">
-              검색
-            </label>
-            <input
-              ref={searchInputRef}
-              id="global-search"
-              type="search"
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              onBlur={() => {
-                if (!keyword) setSearchOpen(false);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') {
-                  setSearchOpen(false);
-                  e.currentTarget.blur();
-                }
-              }}
-              tabIndex={searchCollapsed ? -1 : undefined}
-              placeholder="자료, 개념 검색"
-              className="w-0 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-ink-muted"
-            />
-            <button
-              type={searchCollapsed ? 'button' : 'submit'}
-              aria-label={searchCollapsed ? '검색 열기' : '검색하기'}
-              onClick={
+        <div className="flex flex-wrap items-center gap-3 text-sm lg:ml-auto lg:min-w-max lg:shrink-0 lg:flex-nowrap">
+          {/* 검색칸 자리는 펼친 폭(w-44)으로 고정하고 칸만 오른쪽으로 접는다.
+              자리가 그대로라 검색칸이 접히고 펼쳐져도 메뉴는 움직이지 않는다 */}
+          <div className="flex w-44 shrink-0 justify-end">
+            {/* 맨 위에서는 펼쳐 두고, 스크롤하면 돋보기만 남긴다. 칸 폭(w-44 ↔ w-10) 하나만 알약 높이와 같은 시간으로 바뀌고,
+                안의 입력칸은 남는 폭을 채운다. 돋보기 버튼은 두 모양에서 크기·자리가 같다(바뀌는 순간 튀지 않게) */}
+            <form
+              role="search"
+              onSubmit={handleSearch}
+              className={`flex h-10 shrink-0 items-center gap-1.5 overflow-hidden transition-[width,padding,border-color,background-color] duration-300 ease-out ${
                 searchCollapsed
-                  ? () => {
-                      setSearchOpen(true);
-                      searchInputRef.current?.focus();
-                    }
-                  : undefined
-              }
-              // 접혀도 펼쳐져도 크기·모양이 같은 버튼 (바뀌는 순간 아이콘이 튀지 않게)
-              className="grid size-7 shrink-0 place-items-center rounded-full text-ink-soft hover:bg-primary-soft hover:text-heading"
+                  ? 'w-10 rounded-full border border-transparent px-1'
+                  : `w-44 pr-1 pl-3 ${FIELD_CLASS}`
+              }`}
             >
-              <Search size={17} aria-hidden="true" />
-            </button>
-          </form>
+              <label htmlFor="global-search" className="sr-only">
+                검색
+              </label>
+              <input
+                ref={searchInputRef}
+                id="global-search"
+                type="search"
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                onBlur={() => {
+                  if (!keyword) setSearchOpen(false);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    setSearchOpen(false);
+                    e.currentTarget.blur();
+                  }
+                }}
+                tabIndex={searchCollapsed ? -1 : undefined}
+                placeholder="자료, 개념 검색"
+                className="w-0 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-ink-muted"
+              />
+              <button
+                type={searchCollapsed ? 'button' : 'submit'}
+                aria-label={searchCollapsed ? '검색 열기' : '검색하기'}
+                onClick={
+                  searchCollapsed
+                    ? () => {
+                        setSearchOpen(true);
+                        searchInputRef.current?.focus();
+                      }
+                    : undefined
+                }
+                className="grid size-8 shrink-0 place-items-center rounded-full text-ink-soft hover:bg-primary-soft hover:text-heading"
+              >
+                <Search size={17} aria-hidden="true" />
+              </button>
+            </form>
+          </div>
 
           <nav aria-label="계정" className="flex items-center gap-3">
             {accountItems.map((item) => (
