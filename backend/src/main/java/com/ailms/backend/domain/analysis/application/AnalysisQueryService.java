@@ -52,7 +52,6 @@ public class AnalysisQueryService {
 
 	static final String RUN_NOT_FOUND_MESSAGE = "분석 결과를 찾을 수 없어요.";
 	static final String NO_RUN_MESSAGE = "아직 이 과목을 분석한 결과가 없어요.";
-	private static final int EXCERPT_LENGTH = 120;
 	private static final Set<AnalysisRunStatus> FINISHED =
 			Set.of(AnalysisRunStatus.COMPLETED, AnalysisRunStatus.PARTIAL, AnalysisRunStatus.FAILED);
 
@@ -179,12 +178,11 @@ public class AnalysisQueryService {
 						.map(item -> {
 							ConversationMessage message = messages.get(item.getMessageId());
 							Conversation conversation = conversations.get(message.getConversationId());
-							String content = message.getContent();
 							return new AnalysisRunResponse.Evidence(message.getId(), message.getConversationId(),
 									conversation == null ? null : conversation.getTitle(),
 									message.getRole() == MessageRole.USER ? "user" : "assistant",
 									item.getKind().apiValue(), item.getNote(),
-									content.length() <= EXCERPT_LENGTH ? content : content.substring(0, EXCERPT_LENGTH));
+									EvidenceExcerpt.of(message.getContent()));
 						})
 						.toList());
 	}
@@ -231,7 +229,7 @@ public class AnalysisQueryService {
 			case RATE_LIMITED -> "호출 한도를 넘어 결과를 받지 못했어요.";
 			case SERVER_ERROR -> "제공사 서버 오류로 결과를 받지 못했어요.";
 			case AUTH_FAILED -> "API 키가 맞지 않아 부르지 못했어요.";
-			case REJECTED -> "요청이 거절됐어요. 모델 이름 설정을 확인해 주세요.";
+			case REJECTED -> "요청이 거절됐어요. 모델 이름이나 계정 상태(크레딧·권한)를 확인해 주세요.";
 			case NETWORK -> "제공사에 연결하지 못했어요.";
 			case BAD_RESPONSE -> "응답을 읽지 못했어요.";
 		};
