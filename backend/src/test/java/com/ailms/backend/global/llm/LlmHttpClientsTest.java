@@ -101,10 +101,24 @@ class LlmHttpClientsTest {
 		assertThat(sent.path()).isEqualTo("/v1/messages");
 		assertThat(sent.headers().get("x-api-key")).isEqualTo("test-key");
 		assertThat(sent.headers().get("anthropic-version")).isEqualTo(AnthropicClient.API_VERSION);
-		assertThat(sent.body().path("system").asText()).isEqualTo("지시문");
+		assertThat(sent.body().path("system").path(0).path("text").asText()).isEqualTo("지시문");
+		assertThat(sent.body().path("system").path(0).path("cache_control").path("type").asText())
+				.isEqualTo("ephemeral");
 		assertThat(sent.body().path("messages").path(0).path("content").asText()).isEqualTo("대화 글");
 		assertThat(sent.body().path("max_tokens").asInt()).isEqualTo(500);
 		assertThat(response).isEqualTo(new LlmResponse("{\"concepts\":[]}", 20, 7));
+	}
+
+	@Test
+	void Claude_입력_토큰은_캐시_쓰기_읽기를_더해_입력_전체로_센다() {
+		responseBody = """
+				{"content":[{"type":"text","text":"{}"}],
+				 "usage":{"input_tokens":20,"cache_creation_input_tokens":0,"cache_read_input_tokens":900,
+				 "output_tokens":7}}""";
+
+		LlmResponse response = new AnthropicClient(properties(Duration.ofSeconds(5)), objectMapper).complete(request);
+
+		assertThat(response).isEqualTo(new LlmResponse("{}", 920, 7));
 	}
 
 	@Test
