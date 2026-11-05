@@ -1,5 +1,5 @@
 import { useMemo, type CSSProperties } from 'react';
-import { buildEdgeLens, supportsGlassLens, type LensEdge } from '@/utils';
+import { buildEdgeLens, cn, supportsGlassLens, type LensEdge } from '@/utils';
 
 // 크롬·엣지에서만 굴절을 그린다 (다른 브라우저는 흐림만)
 const LENS_SUPPORTED =
@@ -23,6 +23,8 @@ interface GlassSurfaceProps {
   // 휘는 세기와 무지개 번짐 (utils/liquidGlass.ts)
   strength?: number;
   chromatic?: number;
+  // 바깥 요소에 더할 클래스 (예: 좁은 화면에서 숨기기). 감싸는 상자를 따로 두면 모서리 둥글기(inherit)를 못 물려받아 네모가 된다
+  className?: string;
 }
 
 const lensStyle = (style: CSSProperties, lens: string) =>
@@ -37,6 +39,7 @@ function GlassSurface({
   band = 10,
   strength = 40,
   chromatic = 2,
+  className,
 }: GlassSurfaceProps) {
   const lens = useMemo(() => {
     if (!LENS_SUPPORTED) return null;
@@ -59,14 +62,14 @@ function GlassSurface({
 
   if (!lens) {
     return (
-      <span aria-hidden="true" className="glass-surface">
+      <span aria-hidden="true" className={cn('glass-surface', className)}>
         <span className="glass-tile inset-0" />
       </span>
     );
   }
 
   return (
-    <span aria-hidden="true" className="glass-surface">
+    <span aria-hidden="true" className={cn('glass-surface', className)}>
       <span
         data-lens=""
         className="glass-tile"

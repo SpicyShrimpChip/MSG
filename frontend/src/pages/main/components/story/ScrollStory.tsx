@@ -121,10 +121,10 @@ function PinnedStory({ header }: { header: ReactNode }) {
       // 고정된 무대 한 화면 + 단계마다 STEP_SCROLL_VH만큼
       style={{ height: `calc(100svh + ${TOTAL * STEP_SCROLL_VH}vh)` }}
     >
-      {/* 머리말을 무대 안 맨 위에 두어 장면과 항상 같이 움직인다 (따로 고정하면 구간 끝에서 장면이 머리말 밑으로 겹쳐 올라갔다) */}
-      <div className="sticky top-0 flex h-svh flex-col gap-6 pt-20 pb-6">
+      {/* 머리말을 무대 안에 두어 장면과 항상 같이 움직인다. 머리말+장면을 한 묶음으로 남은 높이 가운데에 둬서 제목이 장면 바로 위에 온다 */}
+      <div className="sticky top-0 flex h-svh flex-col justify-center gap-6 pt-20 pb-6 [@media(min-height:900px)]:gap-12">
         {header}
-        <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,5fr)_minmax(0,6fr)] items-center gap-16">
+        <div className="grid min-h-0 grid-cols-[minmax(0,5fr)_minmax(0,6fr)] items-center gap-16">
           <div className="flex flex-col gap-8">
             {/* 큰 단계 번호 + 제목 + 설명 */}
             <div className="min-h-56">
@@ -257,19 +257,17 @@ function StackedStory() {
 // (숨겨진 쪽의 제목이어도 section의 aria-labelledby 이름으로 읽힌다)
 function intro(withId: boolean) {
   return (
-    <div className="flex flex-col gap-2.5">
-      <p className="text-sm font-extrabold tracking-wide text-primary">
-        이렇게 동작해요
-      </p>
+    // 구간 이름표: 한 줄 제목 + 오른쪽 설명 + 본문 폭 끝까지 가는 선. 주인공은 아래 단계 번호·장면이라 작게 둔다
+    <div className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-1.5 border-b border-line pb-4">
       <h2
         id={withId ? 'story-title' : undefined}
-        className="text-3xl font-extrabold tracking-tight text-heading"
+        className="text-xl font-extrabold tracking-tight text-heading"
       >
         대화 기록이 공부 순서가 되기까지
       </h2>
-      <p className="text-ink-soft">
-        AI 대화 기록이 적어도 괜찮아요. 자료로 시작하면 퀴즈 기록이 쌓이는 대로
-        같은 방식으로 분석해요.
+      <p className="text-body text-ink-soft">
+        AI 대화 기록이 적어도 괜찮아요. 자료로 시작해도 퀴즈 기록이 쌓이면 같은
+        방식으로 분석해요.
       </p>
     </div>
   );

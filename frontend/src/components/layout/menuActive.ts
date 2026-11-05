@@ -1,7 +1,7 @@
 import type { MenuGroup } from '@/constants';
 
 // 현재 경로가 이 메뉴 경로이거나 그 아래 경로인지
-export const isActivePath = (path: string, pathname: string) =>
+const isActivePath = (path: string, pathname: string) =>
   pathname === path || pathname.startsWith(`${path}/`);
 
 // 현재 위치를 나타내는 메뉴 경로 하나. 겹치면 더 긴(구체적인) 경로를 고른다.
