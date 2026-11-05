@@ -120,6 +120,6 @@ public record AnalysisRunResponse(
 			@Schema(allowableValues = {"user", "assistant"}) String role,
 			@Schema(allowableValues = {"user_explanation", "user_solution", "user_question", "ai_explanation"}) String kind,
 			String aiNote,
-			@Schema(description = "메시지 앞부분 (120자)") String excerpt) {
+			@Schema(description = "메시지 앞부분. 마크다운 표시(제목·목록·굵게·코드·링크)를 걷어 내고 120자 안쪽에서 단어 경계로 자르며, 잘렸으면 끝에 …") String excerpt) {
 	}
 }
