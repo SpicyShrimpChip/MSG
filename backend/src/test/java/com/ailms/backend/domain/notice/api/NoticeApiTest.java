@@ -28,7 +28,7 @@ class NoticeApiTest {
 				.andExpect(jsonPath("$.message").value(""))
 				.andExpect(jsonPath("$.data", hasSize(3)))
 				.andExpect(jsonPath("$.data[0].id").value(3))
-				.andExpect(jsonPath("$.data[0].title").value("AI 대화 가져오기 기능을 준비하고 있어요"))
+				.andExpect(jsonPath("$.data[0].title").value("AI 대화 가져오기를 열었어요"))
 				.andExpect(jsonPath("$.data[0].createdAt").value("2026-10-24"))
 				.andExpect(jsonPath("$.data[1].id").value(2))
 				.andExpect(jsonPath("$.data[2].id").value(1))
