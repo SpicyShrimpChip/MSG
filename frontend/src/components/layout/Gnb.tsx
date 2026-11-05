@@ -1,13 +1,7 @@
 import type { Ref } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { MENU, type MenuGroup } from '@/constants';
-import { isActivePath } from './menuActive';
-
-// 현재 경로가 이 메뉴 묶음(대메뉴 또는 하위 메뉴)에 속하는지
-const isActiveGroup = (group: MenuGroup, pathname: string) =>
-  [group.path, ...group.children.map((child) => child.path)].some((path) =>
-    isActivePath(path, pathname),
-  );
+import { MENU } from '@/constants';
+import { currentMenuPath, isActiveGroup } from './menuActive';
 
 interface GnbProps {
   // 상단바가 알약 폭을 재는 데 쓴다
@@ -20,6 +14,7 @@ interface GnbProps {
 // 알약 폭을 메뉴 칸 너비로 재므로, 두 모양에서 칸 너비(px-3·글자 굵기)는 같게 둔다
 function Gnb({ ref, compact = false }: GnbProps) {
   const { pathname } = useLocation();
+  const current = currentMenuPath(MENU, pathname);
 
   return (
     <nav
@@ -29,7 +24,7 @@ function Gnb({ ref, compact = false }: GnbProps) {
     >
       <ul className="flex h-full gap-1">
         {MENU.map((group) => {
-          const active = isActiveGroup(group, pathname);
+          const active = isActiveGroup(group, current);
           return (
             // 마우스를 올리거나 키보드로 포커스가 들어오면 하위 메뉴를 연다
             // (마우스 클릭 포커스로는 열지 않아 이동 후 메뉴가 남지 않는다)

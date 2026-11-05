@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import * as m from 'motion/react-m';
 import { MENU, MOTION_TRANSITION } from '@/constants';
-import { isActivePath } from './menuActive';
+import { currentMenuPath } from './menuActive';
 
 export const MOBILE_MENU_ID = 'mobile-menu';
 
@@ -14,10 +14,7 @@ interface MobileMenuProps {
 function MobileMenu({ onClose }: MobileMenuProps) {
   const { pathname } = useLocation();
   // '/analysis'와 '/analysis/import'처럼 겹치면 더 긴(구체적인) 경로 하나만 현재 위치로 표시한다
-  const currentPath = MENU.flatMap((group) => group.children)
-    .map((child) => child.path)
-    .filter((path) => isActivePath(path, pathname))
-    .sort((a, b) => b.length - a.length)[0];
+  const currentPath = currentMenuPath(MENU, pathname);
 
   // 화면이 넓어져 상단바의 주 메뉴가 보이면 닫는다
   useEffect(() => {
