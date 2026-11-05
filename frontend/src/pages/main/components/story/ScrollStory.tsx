@@ -83,7 +83,7 @@ function StackedCards({ children }: { children: ReactNode }) {
 }
 
 // 넓은 화면: 구간을 지나는 동안 무대를 화면에 고정해 두고, 스크롤한 만큼 단계를 넘긴다
-function PinnedStory() {
+function PinnedStory({ header }: { header: ReactNode }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ step: 0, direction: 1 });
   const { step, direction } = view;
@@ -121,96 +121,100 @@ function PinnedStory() {
       // 고정된 무대 한 화면 + 단계마다 STEP_SCROLL_VH만큼
       style={{ height: `calc(100svh + ${TOTAL * STEP_SCROLL_VH}vh)` }}
     >
-      <div className="sticky top-0 grid h-svh grid-cols-[minmax(0,5fr)_minmax(0,6fr)] items-center gap-16 py-12">
-        <div className="flex flex-col gap-10">
-          {/* 큰 단계 번호 + 제목 + 설명 */}
-          <div className="min-h-64">
-            <AnimatePresence mode="wait" initial={false}>
-              <m.div key={step} {...FADE_UP} className="flex flex-col gap-4">
-                <p className="flex items-baseline gap-2">
-                  <span className="text-6xl leading-none font-extrabold tracking-tighter text-primary">
-                    {pad(step + 1)}
-                  </span>
-                  <span className="text-lg font-bold text-line-strong">
-                    / {pad(TOTAL)}
-                  </span>
-                </p>
-                <h3 className="text-[38px] leading-tight font-extrabold tracking-tight whitespace-pre-line text-heading">
-                  {current.headline}
-                </h3>
-                <p className="text-[17px] leading-relaxed text-ink-soft">
-                  {current.body}
-                </p>
-              </m.div>
-            </AnimatePresence>
-          </div>
-
-          {/* 세로 타임라인: 스크롤한 만큼 선이 파랗게 차오른다 */}
-          <ol className="relative">
-            <span
-              aria-hidden="true"
-              className="absolute top-5.5 bottom-5.5 left-2.25 w-0.5 rounded-full bg-line"
-            />
-            <m.span
-              aria-hidden="true"
-              className="absolute top-5.5 bottom-5.5 left-2.25 w-0.5 origin-top rounded-full bg-primary"
-              style={{ scaleY: scrollYProgress }}
-            />
-            {STORY_STEPS.map((item, index) => {
-              const active = index === step;
-              const reached = index <= step;
-              return (
-                <li key={item.title} className="relative">
-                  <button
-                    type="button"
-                    onClick={() => goTo(index)}
-                    aria-current={active ? 'step' : undefined}
-                    className="group flex min-h-11 w-full items-center gap-3.5 rounded-lg text-left"
-                  >
-                    <span
-                      className={`size-5 shrink-0 rounded-full border-2 transition-[background-color,border-color,box-shadow] ${
-                        reached
-                          ? 'border-primary bg-primary'
-                          : 'border-line-strong bg-surface-raised'
-                      } ${active ? 'shadow-[0_0_0_5px] shadow-primary-pill' : ''}`}
-                    />
-                    <span
-                      className={
-                        active
-                          ? 'font-extrabold text-heading'
-                          : 'font-medium text-ink-muted group-hover:text-heading'
-                      }
-                    >
-                      {item.title}
+      {/* 머리말을 무대 안 맨 위에 두어 장면과 항상 같이 움직인다 (따로 고정하면 구간 끝에서 장면이 머리말 밑으로 겹쳐 올라갔다) */}
+      <div className="sticky top-0 flex h-svh flex-col gap-6 pt-20 pb-6">
+        {header}
+        <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,5fr)_minmax(0,6fr)] items-center gap-16">
+          <div className="flex flex-col gap-8">
+            {/* 큰 단계 번호 + 제목 + 설명 */}
+            <div className="min-h-56">
+              <AnimatePresence mode="wait" initial={false}>
+                <m.div key={step} {...FADE_UP} className="flex flex-col gap-4">
+                  <p className="flex items-baseline gap-2">
+                    <span className="text-6xl leading-none font-extrabold tracking-tighter text-primary">
+                      {pad(step + 1)}
                     </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ol>
-        </div>
-
-        <StackedCards>
-          <BrowserFrame path={current.path}>
-            {/* 들어오는 장면과 나가는 장면을 같은 칸에 겹쳐 둔다. 높이를 고정해 장면마다 창이 들썩이지 않게 한다 */}
-            <div className="grid h-110 overflow-hidden p-6.5">
-              <AnimatePresence initial={false} custom={direction}>
-                <m.div
-                  key={step}
-                  custom={direction}
-                  variants={SCENE_VARIANTS}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  transition={SWEEP_TRANSITION}
-                  className="[grid-area:1/1]"
-                >
-                  <current.Scene />
+                    <span className="text-lg font-bold text-line-strong">
+                      / {pad(TOTAL)}
+                    </span>
+                  </p>
+                  <h3 className="text-[38px] leading-tight font-extrabold tracking-tight whitespace-pre-line text-heading">
+                    {current.headline}
+                  </h3>
+                  <p className="text-[17px] leading-relaxed text-ink-soft">
+                    {current.body}
+                  </p>
                 </m.div>
               </AnimatePresence>
             </div>
-          </BrowserFrame>
-        </StackedCards>
+
+            {/* 세로 타임라인: 스크롤한 만큼 선이 파랗게 차오른다 */}
+            <ol className="relative">
+              <span
+                aria-hidden="true"
+                className="absolute top-5.5 bottom-5.5 left-2.25 w-0.5 rounded-full bg-line"
+              />
+              <m.span
+                aria-hidden="true"
+                className="absolute top-5.5 bottom-5.5 left-2.25 w-0.5 origin-top rounded-full bg-primary"
+                style={{ scaleY: scrollYProgress }}
+              />
+              {STORY_STEPS.map((item, index) => {
+                const active = index === step;
+                const reached = index <= step;
+                return (
+                  <li key={item.title} className="relative">
+                    <button
+                      type="button"
+                      onClick={() => goTo(index)}
+                      aria-current={active ? 'step' : undefined}
+                      className="group flex min-h-11 w-full items-center gap-3.5 rounded-lg text-left"
+                    >
+                      <span
+                        className={`size-5 shrink-0 rounded-full border-2 transition-[background-color,border-color,box-shadow] ${
+                          reached
+                            ? 'border-primary bg-primary'
+                            : 'border-line-strong bg-surface-raised'
+                        } ${active ? 'shadow-[0_0_0_5px] shadow-primary-pill' : ''}`}
+                      />
+                      <span
+                        className={
+                          active
+                            ? 'font-extrabold text-heading'
+                            : 'font-medium text-ink-muted group-hover:text-heading'
+                        }
+                      >
+                        {item.title}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+
+          <StackedCards>
+            <BrowserFrame path={current.path}>
+              {/* 들어오는 장면과 나가는 장면을 같은 칸에 겹쳐 둔다. 높이를 고정해 장면마다 창이 들썩이지 않게 한다 */}
+              <div className="grid h-110 overflow-hidden p-6.5">
+                <AnimatePresence initial={false} custom={direction}>
+                  <m.div
+                    key={step}
+                    custom={direction}
+                    variants={SCENE_VARIANTS}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    transition={SWEEP_TRANSITION}
+                    className="[grid-area:1/1]"
+                  >
+                    <current.Scene />
+                  </m.div>
+                </AnimatePresence>
+              </div>
+            </BrowserFrame>
+          </StackedCards>
+        </div>
       </div>
     </div>
   );
@@ -249,6 +253,28 @@ function StackedStory() {
   );
 }
 
+// 소개 머리말. 넓은 화면 무대와 좁은 화면에 한 번씩 그리므로 id는 한쪽에만 붙인다
+// (숨겨진 쪽의 제목이어도 section의 aria-labelledby 이름으로 읽힌다)
+function intro(withId: boolean) {
+  return (
+    <div className="flex flex-col gap-2.5">
+      <p className="text-sm font-extrabold tracking-wide text-primary">
+        이렇게 동작해요
+      </p>
+      <h2
+        id={withId ? 'story-title' : undefined}
+        className="text-3xl font-extrabold tracking-tight text-heading"
+      >
+        대화 기록이 공부 순서가 되기까지
+      </h2>
+      <p className="text-ink-soft">
+        AI 대화 기록이 적어도 괜찮아요. 자료로 시작하면 퀴즈 기록이 쌓이는 대로
+        같은 방식으로 분석해요.
+      </p>
+    </div>
+  );
+}
+
 // 메인 소개 6단계: 대화 가져오기 → 개인정보 가리기 → 강점·약점 → 판단 근거 → 맞춤 순서 → 나아졌는지 확인
 function ScrollStory() {
   const reducedMotion = useReducedMotion();
@@ -256,30 +282,19 @@ function ScrollStory() {
   return (
     <section aria-labelledby="story-title">
       <div className="mx-auto flex max-w-page flex-col gap-10 px-6 pt-24 pb-22">
-        <div className="flex flex-col gap-2.5">
-          <p className="text-sm font-extrabold tracking-wide text-primary">
-            이렇게 동작해요
-          </p>
-          <h2
-            id="story-title"
-            className="text-3xl font-extrabold tracking-tight text-heading"
-          >
-            대화 기록이 공부 순서가 되기까지
-          </h2>
-          <p className="text-ink-soft">
-            AI 대화 기록이 적어도 괜찮아요. 자료로 시작하면 퀴즈 기록이 쌓이는
-            대로 같은 방식으로 분석해요.
-          </p>
-        </div>
-
         {reducedMotion ? (
-          <StackedStory />
+          <div className="flex flex-col gap-10">
+            {intro(true)}
+            <StackedStory />
+          </div>
         ) : (
           <>
+            {/* 넓은 화면: 머리말이 장면 무대 안에 들어가 장면과 함께 고정된다 */}
             <div className="max-lg:hidden">
-              <PinnedStory />
+              <PinnedStory header={intro(true)} />
             </div>
-            <div className="lg:hidden">
+            <div className="flex flex-col gap-10 lg:hidden">
+              {intro(false)}
               <StackedStory />
             </div>
           </>

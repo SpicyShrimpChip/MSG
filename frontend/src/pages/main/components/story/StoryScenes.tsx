@@ -450,7 +450,7 @@ export const STORY_STEPS: {
   {
     title: '판단 근거',
     headline: '왜 그렇게 판단했는지\n함께 보여 줘요',
-    body: 'GPT·Claude·Gemini가 같은 기준으로 따로 판단한 결과를 나란히 보여 주고, 어떤 대화와 퀴즈를 보고 판단했는지 날짜와 함께 남겨요. 설명은 AI 표시로 구분해요.',
+    body: 'GPT·Claude·Gemini가 같은 기준으로 따로 판단한 결과와, 판단에 쓴 대화·퀴즈를 날짜와 함께 보여 줘요.',
     path: '/analysis',
     Scene: EvidenceScene,
   },
