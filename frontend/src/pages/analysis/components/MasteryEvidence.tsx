@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
 import type { ConceptMastery } from '@/types';
-import { UNDERSTANDING_LABEL } from '@/utils';
+import { UNDERSTANDING_LABEL, describeLevelTrend } from '@/utils';
 import MasteryMeter from './MasteryMeter';
+import MasteryTrend from './MasteryTrend';
 
 interface MasteryEvidenceProps {
   courseId: number;
@@ -13,6 +14,7 @@ interface MasteryEvidenceProps {
 function MasteryEvidence({ courseId, concept, mastery }: MasteryEvidenceProps) {
   const insufficient = mastery.level === 'insufficient_evidence';
   const hasQuiz = mastery.quizGradedCount > 0;
+  const trend = describeLevelTrend(mastery.history);
   const hasConversation =
     mastery.conversationCount > 0 && mastery.conversationStatus !== null;
 
@@ -25,8 +27,13 @@ function MasteryEvidence({ courseId, concept, mastery }: MasteryEvidenceProps) {
         </p>
       </div>
 
-      <div className="rounded-xl bg-primary-soft px-4 py-3.5">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-primary-soft px-4 py-3.5">
         <MasteryMeter level={mastery.level} size="lg" />
+        {trend && (
+          <span className="rounded-full bg-surface-raised px-2.5 py-1 text-caption font-bold text-primary">
+            {trend}
+          </span>
+        )}
       </div>
 
       <div className="flex flex-col gap-2">
@@ -84,6 +91,8 @@ function MasteryEvidence({ courseId, concept, mastery }: MasteryEvidenceProps) {
         퀴즈 결과를 대화보다 무겁게 반영해요. 반영 비율과 기준은 초기값이라
         사용자 테스트 뒤 조정해요. (산식 버전 {mastery.formulaVersion})
       </p>
+
+      <MasteryTrend history={mastery.history} />
     </div>
   );
 }

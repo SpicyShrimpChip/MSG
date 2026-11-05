@@ -111,6 +111,19 @@ export interface ConceptMastery {
   formulaVersion: string;
   // 근거 부족일 때 단계가 나오려면 더 풀어야 하는 퀴즈 문제 수. 근거가 충분하면 null
   quizNeeded: number | null;
+  // 이 개념의 숙련도 기록 (오래된 것부터, 최근 30개까지). 단계나 근거가 바뀌었을 때만 한 줄씩 남는다
+  history: MasteryRecord[];
+}
+
+// 숙련도 기록 한 줄 (변화 추이, 서버 규칙 계산 값)
+export interface MasteryRecord {
+  recordedAt: string;
+  level: MasteryStage;
+  quizGradedCount: number;
+  quizRate: number | null;
+  conversationCount: number;
+  conversationStatus: 'understood' | 'partial' | 'not_understood' | null;
+  formulaVersion: string;
 }
 
 export type ModelRunStatus =

@@ -313,6 +313,7 @@ class AnalysisApiTest {
 		assertThat(count("analysis_model_result")).isZero();
 		assertThat(count("analysis_concept_judgment")).isZero();
 		assertThat(count("analysis_concept_consensus")).isZero();
+		assertThat(count("concept_mastery")).isZero();
 		assertThat(count("concept_feedback")).isEqualTo(1);
 		assertThat(jdbcTemplate.queryForObject("select analysis_run_id from concept_feedback", Long.class)).isNull();
 	}
@@ -329,6 +330,38 @@ class AnalysisApiTest {
 
 		assertThat(count("analysis_run")).isZero();
 		assertThat(count("analysis_judgment_evidence")).isZero();
+		assertThat(count("concept_mastery")).isZero();
+	}
+
+	// ---------- 숙련도 기록 (변화 추이) ----------
+
+	@Test
+	void 숙련도는_바뀌었을_때만_기록하고_응답에_기록을_붙인다() throws Exception {
+		models.get(LlmProvider.GPT).answer(answer(
+				concept("교착 상태", "understood", evidence(m.get(0), "user_explanation"))));
+		run(token, courseId)
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.concepts[?(@.concept == '교착 상태')].mastery.history[*]", hasSize(1)));
+		int first = count("concept_mastery");
+		assertThat(first).isEqualTo(3); // 과목 키워드 3개마다 첫 기록
+
+		// 다시 열어도 값이 같으면 새로 쌓지 않는다
+		mockMvc.perform(get("/api/analysis/courses/" + courseId + "/runs/latest")
+						.header(HttpHeaders.AUTHORIZATION, bearer(token)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.concepts[?(@.concept == '교착 상태')].mastery.history[*].level")
+						.value(contains("insufficient_evidence")))
+				.andExpect(jsonPath("$.data.concepts[?(@.concept == '교착 상태')].mastery.history[*].conversationCount")
+						.value(contains(1)));
+		assertThat(count("concept_mastery")).isEqualTo(first);
+
+		// 근거가 바뀌면(여기서는 기록의 대화 수를 직접 바꿔 다른 값으로 만든다) 한 줄 더 남긴다
+		jdbcTemplate.update("update concept_mastery set conversation_count = 0 where concept_key = '교착 상태'");
+		mockMvc.perform(get("/api/analysis/courses/" + courseId + "/runs/latest")
+						.header(HttpHeaders.AUTHORIZATION, bearer(token)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.concepts[?(@.concept == '교착 상태')].mastery.history[*]", hasSize(2)));
+		assertThat(count("concept_mastery")).isEqualTo(first + 1);
 	}
 
 	// ---------- 학습 피드백 ----------

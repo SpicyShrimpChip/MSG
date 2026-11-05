@@ -21,6 +21,10 @@ public record AnalysisRunResponse(
 		List<ModelResult> models,
 		@Schema(description = "개념별 결과. studyOrder 순서로 정렬돼 있다") List<ConceptResult> concepts) {
 
+	public AnalysisRunResponse withConcepts(List<ConceptResult> next) {
+		return new AnalysisRunResponse(id, courseId, status, promptVersion, createdAt, completedAt, input, models, next);
+	}
+
 	public record Input(
 			int conversationCount,
 			@Schema(description = "모델로 보낸 메시지 수 (키워드 앞뒤 메시지만 보낸다)") int messageCount,
@@ -47,6 +51,11 @@ public record AnalysisRunResponse(
 			ConceptQuizStatsResponse quiz,
 			@Schema(description = "숙련도 단계와 근거 (코드 계산, AI 판단·점수와 따로). 화면은 숫자 대신 단계와 근거를 보여 준다")
 			Mastery mastery) {
+
+		public ConceptResult withMastery(Mastery next) {
+			return new ConceptResult(concept, comparison, judgments, feedback, studyOrder, recommendConfirmQuiz, quiz,
+					next);
+		}
 	}
 
 	@Schema(description = "개념 하나의 숙련도. 점수는 LLM이 아니라 규칙(app.mastery)으로 계산한 값이고 정확도가 아니다. 설계: docs/frontend-requests.md 5-10절")
@@ -62,7 +71,25 @@ public record AnalysisRunResponse(
 					description = "대화에 적용한 상태. 대화 근거를 세지 않았으면 null") String conversationStatus,
 			@Schema(description = "산식 버전") String formulaVersion,
 			@Schema(description = "근거 부족일 때 단계가 나오려면 더 풀어야 하는 퀴즈 문제 수 (모두 채점된다고 보고 셈). 근거가 충분하면 null")
-			Integer quizNeeded) {
+			Integer quizNeeded,
+			@Schema(description = "이 개념의 숙련도 기록 (오래된 것부터, 최근 30개까지). 단계나 근거가 바뀌었을 때만 한 줄씩 남는다")
+			List<MasteryRecord> history) {
+
+		public Mastery withHistory(List<MasteryRecord> next) {
+			return new Mastery(level, score, evidenceWeight, quizGradedCount, quizRate, conversationCount,
+					conversationStatus, formulaVersion, quizNeeded, next);
+		}
+	}
+
+	@Schema(description = "숙련도 기록 한 줄 (변화 추이). 규칙으로 계산한 값이고 정확도가 아니다")
+	public record MasteryRecord(
+			LocalDateTime recordedAt,
+			@Schema(allowableValues = {"insufficient_evidence", "needs_work", "normal", "strong"}) String level,
+			int quizGradedCount,
+			@Schema(description = "퀴즈 득점률 (0~1). 퀴즈 근거가 없으면 null") Double quizRate,
+			int conversationCount,
+			@Schema(allowableValues = {"understood", "partial", "not_understood"}) String conversationStatus,
+			String formulaVersion) {
 	}
 
 	public record Comparison(

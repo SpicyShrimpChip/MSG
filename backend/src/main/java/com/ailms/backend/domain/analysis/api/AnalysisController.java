@@ -3,6 +3,7 @@ package com.ailms.backend.domain.analysis.api;
 import com.ailms.backend.domain.analysis.application.AnalysisQueryService;
 import com.ailms.backend.domain.analysis.application.AnalysisService;
 import com.ailms.backend.domain.analysis.application.FeedbackService;
+import com.ailms.backend.domain.analysis.application.MasteryHistoryService;
 import com.ailms.backend.domain.analysis.dto.AnalysisRunResponse;
 import com.ailms.backend.domain.analysis.dto.FeedbackRequest;
 import com.ailms.backend.domain.analysis.dto.FeedbackResponse;
@@ -36,6 +37,7 @@ public class AnalysisController {
 	private final AnalysisService analysisService;
 	private final AnalysisQueryService queryService;
 	private final FeedbackService feedbackService;
+	private final MasteryHistoryService masteryHistoryService;
 
 	@Operation(summary = "AI 모델 연결 상태", description = "GPT·Claude·Gemini 각각 API 키와 모델 이름이 설정됐는지. 키 값은 내보내지 않는다.")
 	@GetMapping("/providers")
@@ -50,21 +52,24 @@ public class AnalysisController {
 	public ResponseEntity<ApiResponse<AnalysisRunResponse>> run(@AuthenticationPrincipal AuthUser authUser,
 			@PathVariable Long courseId) {
 		return ResponseEntity.status(HttpStatus.CREATED)
-				.body(ApiResponse.success(analysisService.run(authUser.userId(), courseId)));
+				.body(ApiResponse.success(masteryHistoryService.recordAndAttach(authUser.userId(),
+						analysisService.run(authUser.userId(), courseId))));
 	}
 
 	@Operation(summary = "과목의 최근 분석 결과", description = "가장 최근에 끝난 분석. 없으면 404.")
 	@GetMapping("/courses/{courseId}/runs/latest")
 	public ApiResponse<AnalysisRunResponse> latest(@AuthenticationPrincipal AuthUser authUser,
 			@PathVariable Long courseId) {
-		return ApiResponse.success(queryService.getLatest(authUser.userId(), courseId));
+		return ApiResponse.success(masteryHistoryService.recordAndAttach(authUser.userId(),
+				queryService.getLatest(authUser.userId(), courseId)));
 	}
 
 	@Operation(summary = "분석 결과 하나")
 	@GetMapping("/runs/{runId}")
 	public ApiResponse<AnalysisRunResponse> getRun(@AuthenticationPrincipal AuthUser authUser,
 			@PathVariable Long runId) {
-		return ApiResponse.success(queryService.getRun(authUser.userId(), runId));
+		return ApiResponse.success(masteryHistoryService.attachOnly(authUser.userId(),
+				queryService.getRun(authUser.userId(), runId)));
 	}
 
 	@Operation(summary = "과목의 학습 피드백 목록")
