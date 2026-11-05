@@ -42,9 +42,9 @@
 <table>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/images/screen-dashboard.png" alt="학습 대시보드의 개념별 판단 표: 개념마다 모델들의 판단(이해 부족, 의견이 갈렸어요, 판단 근거 부족, 부분 이해, 이해)과 같은 판단을 한 모델 수" width="100%"><br>
+      <img src="docs/images/screen-dashboard.png" alt="학습 대시보드의 개념별 판단 표: 개념마다 숙련도 단계(보완 필요, 근거 부족, 보통, 강점), 모델들의 판단(이해 부족, 의견이 갈렸어요, 판단 근거 부족, 부분 이해, 이해)과 같은 판단을 한 모델 수" width="100%"><br>
       <b>학습 대시보드</b><br>
-      개념마다 모델들의 판단과, 몇 개 모델이 같은 판단을 했는지 보여 줍니다.
+      개념마다 규칙으로 계산한 숙련도 단계와 모델들의 판단, 몇 개 모델이 같은 판단을 했는지 보여 줍니다.
     </td>
     <td width="50%" valign="top">
       <img src="docs/images/screen-import-select.png" alt="공부한 대화 고르기: 내 과목 키워드로 대화를 과목별로 나눈 목록" width="100%"><br>
