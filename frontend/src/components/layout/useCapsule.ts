@@ -19,6 +19,8 @@ const CAPSULE_SPACING = {
 };
 // 주 메뉴 칸 사이 (Gnb의 gap-1)
 const MENU_GAP = 4;
+// 상단바 검색 칸 폭(px). Header의 검색 form 클래스(w-9 / w-42)와 같게 맞춘다
+export const SEARCH_WIDTH = { collapsed: 36, open: 168 };
 
 function subscribeScroll(onChange: () => void) {
   window.addEventListener('scroll', onChange, { passive: true });
@@ -47,11 +49,15 @@ export function useCapsuleMode() {
 }
 
 // 알약 폭: width:auto는 전환이 안 되므로 로고·메뉴 칸·오른쪽 묶음의 실제 너비를 더해 숫자로 만든다.
-// 글꼴이 늦게 불러와지거나 로그인해서 이름이 생기면 너비가 바뀌므로 크기 변화를 지켜본다
+// 글꼴이 늦게 불러와지거나 로그인해서 이름이 생기면 너비가 바뀌므로 크기 변화를 지켜본다.
+// 검색 칸은 접히고 펼쳐지는 동안 폭이 프레임마다 바뀌므로, 지금 폭 대신 도착할 폭(searchWidth)으로 계산한다.
+// (지금 폭을 그대로 쓰면 알약의 목표 폭이 계속 바뀌어 전환이 매번 다시 시작되며 끊겨 보였다)
 export function useCapsuleWidth(
   logoRef: RefObject<HTMLElement | null>,
   menuRef: RefObject<HTMLElement | null>,
   rightRef: RefObject<HTMLElement | null>,
+  searchRef: RefObject<HTMLElement | null>,
+  searchWidth: number,
 ) {
   const [width, setWidth] = useState(0);
 
@@ -59,7 +65,8 @@ export function useCapsuleWidth(
     const logo = logoRef.current;
     const list = menuRef.current?.querySelector('ul');
     const right = rightRef.current;
-    if (!logo || !list || !right) return;
+    const search = searchRef.current;
+    if (!logo || !list || !right || !search) return;
     const items = [...list.children] as HTMLElement[];
 
     const measure = () => {
@@ -74,7 +81,9 @@ export function useCapsuleWidth(
         Math.ceil(
           logo.getBoundingClientRect().width +
             menuWidth +
-            right.getBoundingClientRect().width +
+            right.getBoundingClientRect().width -
+            search.getBoundingClientRect().width +
+            searchWidth +
             gap * 2 +
             paddingLeft +
             paddingRight +
@@ -87,7 +96,7 @@ export function useCapsuleWidth(
     const observer = new ResizeObserver(measure);
     [logo, right, ...items].forEach((element) => observer.observe(element));
     return () => observer.disconnect();
-  }, [logoRef, menuRef, rightRef]);
+  }, [logoRef, menuRef, rightRef, searchRef, searchWidth]);
 
   return width;
 }
