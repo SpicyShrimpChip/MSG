@@ -22,7 +22,7 @@ import {
   EmptyState,
   FormRow,
   LearningProfileFields,
-  TextInput,
+  PasswordInput,
   SubPage,
   ErrorText,
   type LearningProfileValue,
@@ -362,9 +362,8 @@ function DeleteAccountSection({ me }: { me: User }) {
         공지사항이 있으면 글은 남고 작성자만 지워져요.
       </p>
       <FormRow label="지금 비밀번호" htmlFor="mypage-delete-password" required>
-        <TextInput
+        <PasswordInput
           id="mypage-delete-password"
-          type="password"
           autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
