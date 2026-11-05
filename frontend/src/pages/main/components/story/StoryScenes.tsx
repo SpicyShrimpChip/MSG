@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { Check, FileText, Lock } from 'lucide-react';
-import { AiNote, Chip, LevelBadge, ScoreBar } from '@/components';
-import type { MasteryLevel } from '@/types';
+import { AiNote, Chip, LevelBadge } from '@/components';
+import MasteryMeter from '@/pages/analysis/components/MasteryMeter';
+import type { MasteryStage } from '@/types';
 import { Dim, MaskSwap, Reveal, SlotItem } from './SceneMotion';
 
 // 스크롤 소개의 오른쪽 장면들 (브라우저 창 틀 안에 들어간다). 모두 화면 소개용 예시라서 끝에 "예시" 표시를 붙인다
@@ -104,15 +105,28 @@ function MaskScene() {
           나
         </span>
         <p className="flex-1 rounded-tl-sm rounded-tr-2xl rounded-b-2xl bg-surface-muted px-4.5 py-4 leading-loose text-heading">
-          과제는{' '}
-          <MaskSwap
-            original="student@example.com"
-            masked="[이메일]"
-            delay={0.65}
-          />
-          으로 냈고, 조원 번호는{' '}
-          <MaskSwap original="010-0000-0000" masked="[전화번호]" delay={1.1} />
-          이야. 그런데 공개키로 암호화하면 누가 열 수 있어?
+          {/* 줄을 미리 나눠 둔다: 긴 원래 글자가 짧은 표시로 바뀌어도 줄바꿈 자리가 바뀌지 않게 */}
+          <span className="block">
+            과제는{' '}
+            <MaskSwap
+              original="student@example.com"
+              masked="[이메일]"
+              delay={0.65}
+            />
+            으로 냈고,
+          </span>
+          <span className="block">
+            조원 번호는{' '}
+            <MaskSwap
+              original="010-0000-0000"
+              masked="[전화번호]"
+              delay={1.1}
+            />
+            이야.
+          </span>
+          <span className="block">
+            그런데 공개키로 암호화하면 누가 열 수 있어?
+          </span>
         </p>
       </Reveal>
       <div className="flex flex-wrap gap-2 pl-11">
@@ -133,12 +147,13 @@ function MaskScene() {
   );
 }
 
-const SAMPLE_MASTERY: { name: string; score: number; level: MasteryLevel }[] = [
-  { name: '접근 통제', score: 76, level: 'strength' },
-  { name: '해시 함수', score: 63, level: 'normal' },
-  { name: '인증서(PKI)', score: 55, level: 'normal' },
-  { name: '공개키 암호', score: 41, level: 'weakness' },
-  { name: '전자서명', score: 38, level: 'weakness' },
+// 대시보드처럼 숫자 점수 없이 숙련도 단계만 보여 준다 (근거가 모자란 개념은 "근거 부족")
+const SAMPLE_MASTERY: { name: string; level: MasteryStage }[] = [
+  { name: '접근 통제', level: 'strong' },
+  { name: '해시 함수', level: 'normal' },
+  { name: '인증서(PKI)', level: 'insufficient_evidence' },
+  { name: '공개키 암호', level: 'needs_work' },
+  { name: '전자서명', level: 'needs_work' },
 ];
 
 function MasteryScene() {
@@ -153,37 +168,24 @@ function MasteryScene() {
           정보보호개론 · 대화 9건 · 퀴즈 22문제
         </p>
       </Reveal>
-      <ul className="flex flex-col gap-4">
+      <ul className="flex flex-col divide-y divide-line">
         {SAMPLE_MASTERY.map((concept, index) => (
           <Reveal
             as="li"
             key={concept.name}
-            delay={0.16 + index * 0.08}
-            className="flex flex-col gap-2"
+            delay={0.16 + index * 0.1}
+            className="flex flex-wrap items-center justify-between gap-2 py-3 text-body"
           >
-            <div className="flex items-center justify-between gap-2 text-body">
-              <span className="font-medium text-heading">{concept.name}</span>
-              <span className="flex items-center gap-2">
-                {/* 보완 필요는 막대가 다 차오른 뒤에 톡 나타난다 */}
-                <Reveal
-                  as="span"
-                  effect="pop"
-                  delay={concept.level === 'weakness' ? 1.3 + index * 0.05 : 0}
-                >
-                  <LevelBadge level={concept.level} />
-                </Reveal>
-                <span className="font-bold text-heading">{concept.score}</span>
-              </span>
-            </div>
-            <ScoreBar
-              value={concept.score}
-              level={concept.level}
-              delay={0.3 + index * 0.12}
-            />
+            <span className="font-medium text-heading">{concept.name}</span>
+            <Reveal as="span" effect="pop" delay={0.5 + index * 0.12}>
+              <MasteryMeter level={concept.level} size="lg" />
+            </Reveal>
           </Reveal>
         ))}
       </ul>
-      <Caption delay={1.5}>예시 점수 · 정해진 규칙으로 계산해요</Caption>
+      <Caption delay={1.3}>
+        예시 · 퀴즈와 대화를 정해진 규칙으로 계산해 단계로 보여 줘요
+      </Caption>
     </div>
   );
 }
@@ -196,13 +198,28 @@ const SAMPLE_EVIDENCE = [
   },
   { date: '10/22', source: '퀴즈', summary: '2문제 모두 오답' },
 ];
+const SAMPLE_MODELS = ['GPT', 'Claude', 'Gemini'];
 
 function EvidenceScene() {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3.5">
       <Reveal delay={0.08} className="flex items-center justify-between gap-2">
-        <p className="text-lg font-bold text-heading">전자서명 · 38점</p>
+        <p className="text-lg font-bold text-heading">전자서명</p>
         <LevelBadge level="weakness" />
+      </Reveal>
+      {/* 세 모델이 같은 기준으로 따로 판단한 결과를 나란히 둔다 (정확도가 아니라 몇 개가 같은지만) */}
+      <Reveal
+        delay={0.14}
+        className="flex flex-wrap items-center gap-1.5 rounded-xl bg-surface-muted px-3.5 py-2"
+      >
+        {SAMPLE_MODELS.map((model) => (
+          <Chip key={model} className="shrink-0">
+            {model}
+          </Chip>
+        ))}
+        <span className="text-caption text-ink-soft">
+          모두 이해 부족 · 3개 모두 같음
+        </span>
       </Reveal>
       <Reveal
         as="p"
@@ -239,7 +256,7 @@ function EvidenceScene() {
         </AiNote>
       </Reveal>
       <Caption delay={0.95}>
-        예시 · 점수는 규칙 코드가, 설명은 AI가 써요
+        예시 · 단계는 규칙 코드가, 설명은 AI가 써요
       </Caption>
     </div>
   );
@@ -247,9 +264,9 @@ function EvidenceScene() {
 
 // from: 처음 섞여 있던 자리, 배열 순서가 추천 순서다
 const SAMPLE_ORDER = [
-  { name: '공개키 암호', action: '요약 → 퀴즈 5문제', from: 2 },
+  { name: '공개키 암호', action: '핵심 개념 → 확인 퀴즈', from: 2 },
   { name: '전자서명', action: '퀴즈 다시 풀기', from: 0 },
-  { name: '인증서(PKI)', action: '챗봇에게 묻기', from: 1 },
+  { name: '인증서(PKI)', action: '확인 퀴즈로 근거 쌓기', from: 1 },
 ];
 // 한 칸 높이(h-14 = 56px) + 칸 사이(10px)
 const ORDER_SLOT = 66;
@@ -311,6 +328,95 @@ function OrderScene() {
   );
 }
 
+// 사전평가(주황)와 사후평가(파랑) 정답 비율. 대시보드 맨 위 비교 그래프와 같은 색이다
+const SAMPLE_CHECK = [
+  { name: '공개키 암호', pre: 33, post: 83, stage: 'normal' as MasteryStage },
+  { name: '전자서명', pre: 25, post: 50, stage: 'needs_work' as MasteryStage },
+];
+
+function CheckBar({
+  value,
+  tone,
+  delay,
+}: {
+  value: number;
+  tone: 'pre' | 'post';
+  delay: number;
+}) {
+  return (
+    <span className="flex items-center gap-2">
+      <span className="w-8 shrink-0 text-caption text-ink-muted">
+        {tone === 'pre' ? '사전' : '사후'}
+      </span>
+      <span className="h-2 flex-1 overflow-hidden rounded-full bg-surface-muted">
+        <span className="block h-full" style={{ width: `${value}%` }}>
+          <Reveal
+            as="span"
+            delay={delay}
+            className={`block h-full rounded-full ${tone === 'pre' ? 'bg-chart-pre' : 'bg-chart-post'}`}
+          >
+            {null}
+          </Reveal>
+        </span>
+      </span>
+      <span className="w-10 shrink-0 text-right text-caption font-bold text-heading">
+        {value}%
+      </span>
+    </span>
+  );
+}
+
+function CheckScene() {
+  return (
+    <div className="flex flex-col gap-4">
+      <Reveal delay={0.08} className="flex items-center justify-between gap-2">
+        <p className="text-lg font-bold text-heading">사전·사후평가 비교</p>
+        <span className="text-caption text-ink-muted">
+          같은 개념·같은 난이도
+        </span>
+      </Reveal>
+      <ul className="flex flex-col gap-4">
+        {SAMPLE_CHECK.map((concept, index) => (
+          <Reveal
+            as="li"
+            key={concept.name}
+            delay={0.2 + index * 0.2}
+            className="flex flex-col gap-2 rounded-xl border border-line px-4 py-3"
+          >
+            <span className="flex flex-wrap items-center justify-between gap-2 text-body">
+              <span className="font-bold text-heading">{concept.name}</span>
+              <MasteryMeter level={concept.stage} />
+            </span>
+            <CheckBar
+              value={concept.pre}
+              tone="pre"
+              delay={0.35 + index * 0.2}
+            />
+            <CheckBar
+              value={concept.post}
+              tone="post"
+              delay={0.6 + index * 0.2}
+            />
+            <Reveal
+              as="span"
+              effect="pop"
+              delay={1.1 + index * 0.15}
+              className="text-caption font-bold text-primary"
+            >
+              {concept.stage === 'normal'
+                ? '보완 필요에서 한 단계 올랐어요'
+                : '아직 부족해요 · 복습 퀴즈로 이어서'}
+            </Reveal>
+          </Reveal>
+        ))}
+      </ul>
+      <Caption delay={1.4}>
+        예시 · 결과는 다시 숙련도 계산과 공부 순서에 반영돼요
+      </Caption>
+    </div>
+  );
+}
+
 export const STORY_STEPS: {
   title: string;
   // 왼쪽 큰 제목. 줄바꿈 자리는 \n
@@ -337,22 +443,29 @@ export const STORY_STEPS: {
   {
     title: '개념별 강점·약점',
     headline: '개념마다 어디까지\n아는지 보여 줘요',
-    body: '대화에서 다시 물어본 것과 퀴즈 결과를 정해진 규칙으로 계산해 개념별 점수를 매겨요.',
+    body: '대화에서 다시 물어본 것과 퀴즈 결과를 정해진 규칙으로 계산해, 개념마다 강점·보통·보완 필요·근거 부족 중 하나로 보여 줘요.',
     path: '/analysis',
     Scene: MasteryScene,
   },
   {
     title: '판단 근거',
     headline: '왜 그렇게 판단했는지\n함께 보여 줘요',
-    body: '점수 옆에 어떤 대화와 퀴즈를 보고 판단했는지 날짜와 함께 남겨요. 설명은 AI 표시로 구분해요.',
+    body: 'GPT·Claude·Gemini가 같은 기준으로 따로 판단한 결과를 나란히 보여 주고, 어떤 대화와 퀴즈를 보고 판단했는지 날짜와 함께 남겨요. 설명은 AI 표시로 구분해요.',
     path: '/analysis',
     Scene: EvidenceScene,
   },
   {
     title: '맞춤 순서',
     headline: '보완할 개념부터\n공부 순서를 다시 짜요',
-    body: '요약·퀴즈·챗봇으로 이어서 공부하고, 결과가 쌓이면 순서를 다시 계산해요.',
+    body: '보완할 개념부터 핵심 개념을 보고 확인 퀴즈로 이어서 공부해요. 결과가 쌓이면 순서를 다시 계산해요.',
     path: '/curriculum',
     Scene: OrderScene,
+  },
+  {
+    title: '나아졌는지 확인',
+    headline: '공부한 뒤\n얼마나 나아졌는지 확인해요',
+    body: '사전평가와 같은 개념·같은 난이도로 사후평가를 보고 비교해요. 결과는 다시 숙련도와 공부 순서에 반영돼요.',
+    path: '/assessments',
+    Scene: CheckScene,
   },
 ];

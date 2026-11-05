@@ -21,20 +21,20 @@ const LINKS: {
     icon: <MessageSquare size={22} aria-hidden="true" />,
   },
   {
-    to: '/quizzes',
-    title: '퀴즈 풀기',
-    description: '보완할 개념부터',
-    icon: <ListChecks size={22} aria-hidden="true" />,
-  },
-  {
     to: '/analysis',
     title: '학습 분석',
     description: '숙련도와 근거 보기',
     icon: <ChartColumn size={22} aria-hidden="true" />,
   },
+  {
+    to: '/curriculum',
+    title: '맞춤 커리큘럼',
+    description: '보완할 개념부터',
+    icon: <ListChecks size={22} aria-hidden="true" />,
+  },
 ];
 
-// 첫 화면 띠 아래쪽에 겹쳐 놓는 바로가기 4칸
+// 첫 화면 띠 아래쪽에 겹쳐 놓는 바로가기 4칸 (주 메뉴와 같은 학습 흐름 순서: 모으기 → 진단 → 공부)
 function QuickLinks() {
   return (
     <nav

@@ -1,4 +1,11 @@
-import { use, useEffect, useState, type ReactNode } from 'react';
+import {
+  use,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import * as m from 'motion/react-m';
 import { MOTION_DURATION, SWEEP_TRANSITION } from '@/constants';
 import { cn } from '@/utils';
@@ -108,19 +115,37 @@ export function MaskSwap({
     return () => window.clearTimeout(timer);
   }, [animated, delay]);
 
+  // 바뀐 뒤 폭을 재서 상자 폭을 서서히 줄인다 (뒤의 글자가 한 번에 툭 당겨지지 않게)
+  const labelRef = useRef<HTMLSpanElement>(null);
+  const [width, setWidth] = useState<number>();
+  useLayoutEffect(() => {
+    if (animated && labelRef.current) setWidth(labelRef.current.offsetWidth);
+  }, [animated, swapped]);
+
   const label = swapped ? (
-    <span className="rounded-md bg-primary-pill px-2 font-bold text-heading">
+    <span
+      ref={labelRef}
+      className="inline-block rounded-md bg-primary-pill px-2 font-bold whitespace-nowrap text-heading"
+    >
       {masked}
     </span>
   ) : (
-    <span aria-hidden="true" className="px-1">
+    <span
+      ref={labelRef}
+      aria-hidden="true"
+      className="inline-block px-1 whitespace-nowrap"
+    >
       {original}
     </span>
   );
 
   if (!animated) return label;
   return (
-    <span className="relative inline-block overflow-hidden rounded-md align-bottom leading-relaxed">
+    // 줄 높이를 본문과 같게(inherit) 두고 위에 맞춰, 바뀌는 순간 위아래로 들썩이지 않게 한다
+    <span
+      className="relative inline-block overflow-hidden rounded-md align-top leading-[inherit] whitespace-nowrap transition-[width] duration-300 ease-out"
+      style={width === undefined ? undefined : { width }}
+    >
       {label}
       <m.span
         aria-hidden="true"

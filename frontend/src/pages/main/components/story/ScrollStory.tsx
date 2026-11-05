@@ -14,6 +14,8 @@ import StartPaths from './StartPaths';
 import { STORY_STEPS } from './StoryScenes';
 
 const TOTAL = STORY_STEPS.length;
+// 다음 장면으로 넘어가기까지 스크롤할 양 (화면 높이 대비). 11/6: 76vh → 55vh로 줄임
+const STEP_SCROLL_VH = 55;
 const pad = (n: number) => String(n).padStart(2, '0');
 
 // 다음 장면은 진행 방향 쪽에서 가림막을 걷듯 들어오고, 이전 장면은 반대쪽으로 밀려나며 흐려진다
@@ -114,7 +116,11 @@ function PinnedStory() {
   const current = STORY_STEPS[step];
 
   return (
-    <div ref={trackRef} className="h-[480vh]">
+    <div
+      ref={trackRef}
+      // 고정된 무대 한 화면 + 단계마다 STEP_SCROLL_VH만큼
+      style={{ height: `calc(100svh + ${TOTAL * STEP_SCROLL_VH}vh)` }}
+    >
       <div className="sticky top-0 grid h-svh grid-cols-[minmax(0,5fr)_minmax(0,6fr)] items-center gap-16 py-12">
         <div className="flex flex-col gap-10">
           {/* 큰 단계 번호 + 제목 + 설명 */}
@@ -210,7 +216,7 @@ function PinnedStory() {
   );
 }
 
-// 좁은 화면이나 "동작 줄이기": 고정 없이 다섯 단계를 차례로 쌓고, 장면은 마지막 모습으로 보여 준다
+// 좁은 화면이나 "동작 줄이기": 고정 없이 단계를 차례로 쌓고, 장면은 마지막 모습으로 보여 준다
 function StackedStory() {
   return (
     <SceneMotionContext value={false}>
@@ -243,7 +249,7 @@ function StackedStory() {
   );
 }
 
-// 메인 소개 5단계: 대화 가져오기 → 개인정보 가리기 → 강점·약점 → 판단 근거 → 맞춤 순서
+// 메인 소개 6단계: 대화 가져오기 → 개인정보 가리기 → 강점·약점 → 판단 근거 → 맞춤 순서 → 나아졌는지 확인
 function ScrollStory() {
   const reducedMotion = useReducedMotion();
 
@@ -252,7 +258,7 @@ function ScrollStory() {
       <div className="mx-auto flex max-w-page flex-col gap-10 px-6 pt-24 pb-22">
         <div className="flex flex-col gap-2.5">
           <p className="text-sm font-extrabold tracking-wide text-primary">
-            HOW IT WORKS
+            이렇게 동작해요
           </p>
           <h2
             id="story-title"
@@ -261,8 +267,8 @@ function ScrollStory() {
             대화 기록이 공부 순서가 되기까지
           </h2>
           <p className="text-ink-soft">
-            AI 대화 기록이 적어도 괜찮아요. 자료로 시작하면 퀴즈·챗봇 기록이
-            쌓이는 대로 같은 방식으로 분석해요.
+            AI 대화 기록이 적어도 괜찮아요. 자료로 시작하면 퀴즈 기록이 쌓이는
+            대로 같은 방식으로 분석해요.
           </p>
         </div>
 
