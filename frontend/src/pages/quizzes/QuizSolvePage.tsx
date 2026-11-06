@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type SubmitEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   useMutation,
@@ -179,7 +179,7 @@ function QuizForm({ quizId }: { quizId: number }) {
   const modeLabel = quizModeLabel(quiz.mode);
   const job = jobFieldLabel(quiz.jobField, quiz.jobFieldOther);
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (answered === 0) return;
     setConfirming(true);

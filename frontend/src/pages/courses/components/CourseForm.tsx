@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { COURSES_QUERY_KEY, createCourse, updateCourse } from '@/api';
 import {
@@ -55,7 +55,7 @@ function CourseForm({
     },
   });
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     const trimmed = normalizeKeyword(name);
     if (!trimmed) {

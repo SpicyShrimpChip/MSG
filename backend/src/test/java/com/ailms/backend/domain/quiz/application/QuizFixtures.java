@@ -37,7 +37,7 @@ public final class QuizFixtures {
 			StringBuilder out = new StringBuilder("{\"questions\":[");
 			int n = 0;
 			java.util.Iterator<java.util.Map.Entry<String, com.fasterxml.jackson.databind.JsonNode>> types =
-					root.get("typeCounts").fields();
+					root.get("typeCounts").properties().iterator();
 			while (types.hasNext()) {
 				var entry = types.next();
 				for (int i = 0; i < entry.getValue().asInt(); i++) {
