@@ -159,9 +159,9 @@ function buildFlow(courseId: number, keywords: string[]): CurriculumFlow {
         title: '사전 테스트',
         status: status(0),
         summary: sample
-          ? `예시 데이터예요. 사전 테스트 7/12점. 기준(60%)보다 낮은 개념 ${weakNames.length}개.`
+          ? `사전 테스트 7/12점. 기준(60%)보다 낮은 개념 ${weakNames.length}개.`
           : material
-            ? '예시 데이터예요. 아직 사전 테스트를 보지 않았어요. 공부하기 전에 지금 이해 수준을 먼저 확인해요.'
+            ? '아직 사전 테스트를 보지 않았어요. 공부하기 전에 지금 이해 수준을 먼저 확인해요.'
             : '이 과목에 올린 자료가 없어요. 자료를 올리면 그 자료로 사전 테스트를 볼 수 있어요.',
       },
       {
@@ -232,38 +232,43 @@ export async function mockGetCurriculum(courseId: number): Promise<Curriculum> {
     courseName: course.name,
     learningPurpose: 'undecided',
     recommendedMode: 'self_development',
-    steps: [
-      {
-        order: 1,
-        conceptId: 'hash',
-        concept: '해시 함수',
-        stage: 'review',
-        reasons: [
-          '예시 데이터예요. 퀴즈에서 채점이 끝난 2문제의 득점은 0/2점(0%)이에요.',
-          '득점률이 보완 기준(60%)보다 낮아요.',
-        ],
-        evidence: {
-          questionCount: 2,
-          gradedCount: 2,
-          correctCount: 0,
-          score: 0,
-          maxScore: 2,
-          pendingCount: 0,
-          reviewCount: 0,
-          analysisStatus: null,
-          analysisOutcome: null,
-          feedback: null,
-          confirmation: null,
-        },
-        actions: [
-          {
-            type: 'review_quiz',
-            label: '복습 퀴즈 풀기',
-            quizMode: 'self_development',
-          },
-        ],
-      },
-    ],
+    // 정보보호개론 예시만 복습 우선순위가 있다 (사전 테스트 1/3점 + 확인 퀴즈 1/3점, 대화 분석은 세 모델 모두 이해 부족)
+    steps:
+      courseId !== 1
+        ? []
+        : [
+            {
+              order: 1,
+              conceptId: 'public-key',
+              concept: '공개키 암호',
+              stage: 'review',
+              reasons: [
+                '퀴즈에서 채점이 끝난 6문제의 득점은 2/6점(33%)이에요.',
+                '득점률이 보완 기준(60%)보다 낮아요.',
+                '대화 분석에서 세 모델 모두 이해 부족으로 봤어요.',
+              ],
+              evidence: {
+                questionCount: 6,
+                gradedCount: 6,
+                correctCount: 2,
+                score: 2,
+                maxScore: 6,
+                pendingCount: 0,
+                reviewCount: 0,
+                analysisStatus: 'not_understood',
+                analysisOutcome: 'unanimous',
+                feedback: null,
+                confirmation: null,
+              },
+              actions: [
+                {
+                  type: 'review_quiz',
+                  label: '복습 퀴즈 풀기',
+                  quizMode: 'self_development',
+                },
+              ],
+            },
+          ],
     materials: mockMaterialsSnapshot()
       .filter((material) => material.courseId === courseId)
       .map((material) => ({ id: material.id, title: material.title })),

@@ -11,13 +11,15 @@ function DemoBanner() {
   return (
     <div
       role="status"
-      className="flex items-center gap-3 border-b border-line bg-primary-soft px-6 py-2 text-body text-heading-soft print:hidden"
+      className="flex items-center gap-3 border-b border-line bg-primary-soft px-6 py-2 text-body text-heading-soft max-sm:gap-2 max-sm:px-4 print:hidden"
     >
       <span className="shrink-0 rounded bg-primary px-2 py-0.5 text-caption font-bold text-on-primary">
         체험 모드
       </span>
-      <span className="min-w-0">
-        예시 데이터를 보여 드려요. 저장되지 않아요.
+      {/* 휴대폰 폭(375px)에서는 한 줄에 들어가게 뒷문장을 뺀다 */}
+      <span className="min-w-0 truncate">
+        예시 데이터를 보여 드려요.
+        <span className="max-sm:hidden"> 저장되지 않아요.</span>
       </span>
       <button
         type="button"

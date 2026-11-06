@@ -83,7 +83,7 @@ src/
 - **토큰 갱신(`api/axios.ts`):** 요청 인터셉터가 `Authorization: Bearer`를 붙인다. 401이 오면 `refreshAccessToken()`으로 한 번 갱신하고 원래 요청을 다시 보낸다. 여러 요청이 동시에 401을 받아도 갱신은 한 번만 보낸다(Refresh Token은 한 번 쓰면 폐기돼서, 두 번 보내면 서버가 재사용으로 보고 세션을 끊는다). `/auth/*` 요청은 갱신하지 않고, 갱신이 실패하면 `clearSession()`으로 로그아웃 상태가 된다. `X-Requested-With` 헤더는 CSRF 방어라 지우지 않는다.
 - **화면 가드:** `router/RequireAuth.tsx`는 로그인이 필요한 화면을 감싼다(`unknown`이면 로딩, `anonymous`면 `/login`으로 보내고 `state.from`으로 원래 화면에 돌아온다). `router/RequireAdmin.tsx`는 반드시 `RequireAuth` 안에 두고 `useMe()`의 `role`이 `ADMIN`이 아니면 안내 화면을 보여 준다. 가드는 안내용일 뿐이고 진짜 권한은 서버가 요청마다 확인한다. 내 데이터를 보여 주는 새 화면은 `RequireAuth` 아래에 넣는다.
 - **내 정보**는 스토어가 아니라 `hooks/useMe.ts`(React Query `['me']`)로 읽고, 로그인했을 때만 불러온다.
-- **목업 모드(`VITE_USE_MOCK=true`, Vercel 배포)에는 로그인이 없어서 "체험 모드"로 가드를 통과한다(11/4).** `store/useDemoStore.ts`의 `active`(탭 `sessionStorage`)가 켜져 있어야 `RequireAuth`가 화면을 열고, 아니면 `/login`으로 보낸다. 켜는 곳은 `DemoStartButton`("로그인 없이 체험해 보기": 메인 첫 화면·시작 안내·로그인/가입 화면의 안내 상자 `MockAuthNotice`)이고, 체험 중에는 `DemoBanner`(`Layout` 맨 위 띠)가 "예시 데이터"라고 알리며 "체험 끝내기"로 끈다. 끝낼 때는 가드가 먼저 `/login`으로 보내 버리지 않게 `window.location.assign('/')`로 메인을 새로 불러온다. 관리자 화면(`RequireAdmin`)은 체험에서도 열지 않는다. 서버와 연결된 실제 모드(`VITE_USE_MOCK=false`)에서는 체험 상태·버튼·띠가 모두 없다.
+- **목업 모드(`VITE_USE_MOCK=true`, Vercel 배포)에는 로그인이 없어서 "체험 모드"로 가드를 통과한다(11/4).** `store/useDemoStore.ts`의 `active`(탭 `sessionStorage`)가 켜져 있어야 `RequireAuth`가 화면을 열고, 아니면 `/login`으로 보낸다. 켜는 곳은 `DemoStartButton`("로그인 없이 체험해 보기": 메인 첫 화면·시작 안내·로그인/가입 화면의 안내 상자 `MockAuthNotice`)이고, 체험 중에는 `DemoBanner`(`Layout` 맨 위 띠, 상단바와 한 묶음으로 화면 위에 고정)가 "예시 데이터"라고 알리며 "체험 끝내기"로 끈다. 체험을 시작·끝낼 때 목업 기록(`ai-lms-mock-*`, 공지 제외)을 지우고, 체험 중에는 계정 메뉴를 숨기며 마이페이지는 "체험에서는 보여 드리지 않아요" 안내를 보여 준다. 끝낼 때는 가드가 먼저 `/login`으로 보내 버리지 않게 `window.location.assign('/')`로 메인을 새로 불러온다. 관리자 화면(`RequireAdmin`)은 체험에서도 열지 않는다. 서버와 연결된 실제 모드(`VITE_USE_MOCK=false`)에서는 체험 상태·버튼·띠가 모두 없다.
 - 개발 중 매번 체험 버튼을 누르기 번거로우면 `.env.development.local`에 `VITE_MOCK_OPEN_ACCESS=true`를 넣는다(목업 모드에서 가드를 모두 연다, 관리자 포함. 공개 배포에는 넣지 않는다). 실제 로그인으로 확인하려면 `VITE_USE_MOCK=false`를 넣고 백엔드를 켠다(`docs/setup.md`).
 
 ## 주요 화면 (GNB 4개 + 드롭다운)
@@ -121,7 +121,7 @@ src/
 
 - `/analysis`는 과목을 골라 백엔드 학습 분석 API(`api/analysis.api.ts`: `providers`, `runs/latest`(없으면 404 → `null`), `runs` 시작)로 그린다. 타입은 백엔드 `AnalysisRun` 그대로(`types/analysis.ts`). GPT·Claude·Gemini가 따로 판단한 결과를 개념마다 비교해 보여 준다.
 - **비교는 정확도·숙련도가 아니다.** "2개 모두 같음", "3개 중 2개 같음"처럼 모델 개수로만 보여 준다(`describeComparison`, 퍼센트 금지). 판단 근거 부족은 이해 부족과 다른 모양(회색 점선, 물음표)으로 그린다(`UnderstandingBadge`). 연결 안 된 모델은 "연결 안 됨"으로 숨기지 않고 보여 준다.
-- 모델이 하나도 연결되지 않았거나 과목 키워드가 없으면 분석 버튼을 막고 이유를 보여 준다. 분석 오류는 서버 `message`를 그대로 보여 준다. 목업에서는 "예시 데이터예요"를 표시한다.
+- 모델이 하나도 연결되지 않았거나 과목 키워드가 없으면 분석 버튼을 막고 이유를 보여 준다. 분석 오류는 서버 `message`를 그대로 보여 준다. 목업에서는 화면마다 "예시 데이터"를 붙이지 않고 맨 위 체험 띠(`DemoBanner`) 하나로 알린다.
 - **숙련도(코드 계산, `concepts[].mastery`):** 개념 표의 "숙련도" 칸(`MasteryMeter`: 세 칸 막대 + 아이콘 + 근거 부족·보완 필요·보통·강점)과 모델별 판단 위 근거(`MasteryEvidence`: 반영한 퀴즈 문제 수·얻은 점수 비율, 대화 수·모델 판단, 근거 부족이면 `quizNeeded`로 "퀴즈 N문제 더"). 그 아래 "이 개념의 변화"(`MasteryTrend`: 단계×날짜 점 그림 최근 6개 + 기록 목록, 문장은 `utils/mastery.ts`)와 바로 앞 기록 대비 "한 단계 올랐어요"(근거 부족·산식 변경이 끼면 표시 안 함). 숫자 점수는 보여 주지 않고, 코드 값이라 AI 보라색을 쓰지 않는다. 방사형 그래프·과목별 비중은 아직 없다.
 - "이 판단, 내 생각과 맞나요?"(`ConceptFeedbackBox`, 모델별 판단 아래): 이미 알아요 / 더 공부할래요 / 선택 취소를 피드백 API(`PUT·DELETE`)로 저장하고 최근 분석을 다시 불러온다. 내 선택은 AI 판단을 바꾸지 않고 "더 공부할래요"만 추천 순서 맨 앞으로 옮긴다(순서는 서버가 매긴다). "이미 알아요"를 고르면 "확인 퀴즈 만들기"(`/quizzes/new?mode=self_development&concept=`)로 가고, 그 뒤에 푼 결과(`concepts[].quiz.confirmation`, 서버 코드 규칙)를 같은 상자에 보여 준다.
 

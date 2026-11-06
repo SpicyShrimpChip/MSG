@@ -11,10 +11,10 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Menu, Search, X } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
-import { logout } from '@/api';
+import { USE_MOCK, logout } from '@/api';
 import { MOTION_DURATION } from '@/constants';
 import { useMe } from '@/hooks';
-import { useAuthStore } from '@/store';
+import { useAuthStore, useDemoStore } from '@/store';
 import { cn } from '@/utils';
 import Gnb from './Gnb';
 import MobileMenu, { MOBILE_MENU_ID } from './MobileMenu';
@@ -37,6 +37,10 @@ function useAccountItems(): { key: string; node: ReactNode }[] {
     (state) => state.status === 'authenticated',
   );
   const { data: me } = useMe();
+  const demoActive = useDemoStore((state) => state.active);
+
+  // 체험 중에는 로그인·가입이 열려 있지 않으니 계정 칸을 비운다 (체험 중이라는 건 맨 위 띠가 알린다)
+  if (USE_MOCK && demoActive) return [];
 
   if (!authenticated) {
     return [
