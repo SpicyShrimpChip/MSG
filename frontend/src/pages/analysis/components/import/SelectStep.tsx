@@ -1,6 +1,5 @@
 import { useDeferredValue, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { BookMarked, ChevronDown, Info, Search, SearchX } from 'lucide-react';
+import { ChevronDown, Info, Plus, Search, SearchX, X } from 'lucide-react';
 import {
   Button,
   Card,
@@ -27,6 +26,7 @@ import {
   type ParsedConversation,
 } from '@/utils';
 import ConversationView from './ConversationView';
+import CourseQuickForm from './CourseQuickForm';
 
 // 대화마다 들어갈 과목과 보낼지 여부 (키: conversationKey)
 export type ConversationChoices = Record<
@@ -64,9 +64,24 @@ function SelectStep({
     () => assignToCourses(conversations, courses),
     [conversations, courses],
   );
-  const [choices, setChoices] = useState<ConversationChoices>(
-    () => initialChoices ?? defaultChoices(assigned),
+  // 사용자가 바꾼 값만 들고, 나머지는 기본값(키워드가 걸린 첫 과목, 선택)으로 채운다.
+  // 이 화면에서 키워드를 더하면 새로 걸린 대화가 생기므로 처음 한 번만 정해 두지 않는다
+  const [edited, setEdited] = useState<ConversationChoices>(
+    () => initialChoices ?? {},
   );
+  const choices = useMemo(() => {
+    const merged = defaultChoices(assigned);
+    for (const { conversation, matches } of assigned) {
+      const key = conversationKey(conversation);
+      const choice = edited[key];
+      // 키워드를 지워 그 과목에 더는 안 걸리면 기본 과목으로 돌린다
+      if (choice && matches.some((match) => match.courseId === choice.courseId))
+        merged[key] = choice;
+    }
+    return merged;
+  }, [assigned, edited]);
+  // 이 자리에서 과목을 추가하거나 키워드를 더하는 폼 (화면을 나가면 읽은 파일이 사라진다)
+  const [courseFormOpen, setCourseFormOpen] = useState(false);
   const [query, setQuery] = useState('');
   // 본문까지 찾으므로 입력이 밀리지 않게 검색은 한 박자 늦게 따라간다
   const deferredQuery = useDeferredValue(query);
@@ -79,14 +94,23 @@ function SelectStep({
   );
 
   const hasKeywords = courses.some((course) => course.keywords.length > 0);
+  // 파일 고르기 전에 과목을 등록하게 하지만, 다른 창에서 키워드를 모두 지웠을 때를 대비해 남겨 둔다
   if (!hasKeywords) {
     return (
-      <EmptyState
-        icon={<BookMarked size={24} aria-hidden="true" />}
-        title="먼저 과목과 키워드를 등록해 주세요"
-        description="내 과목에 등록한 키워드가 들어 있는 대화만 골라서 가져와요. 공부와 상관없는 대화는 보내지 않아요."
-        action={{ label: '내 과목 등록하기', to: '/courses' }}
-      />
+      <Card
+        as="section"
+        aria-labelledby="import-select"
+        className="flex flex-col gap-5 p-6 md:p-8"
+      >
+        <h2 id="import-select" className="text-xl font-extrabold text-heading">
+          먼저 과목과 키워드를 등록해 주세요
+        </h2>
+        <p className="text-body text-ink-soft">
+          내 과목에 등록한 키워드가 들어 있는 대화만 골라서 가져와요. 읽은
+          파일은 그대로 두니 다시 올리지 않아도 돼요.
+        </p>
+        <CourseQuickForm courses={courses} />
+      </Card>
     );
   }
 
@@ -95,7 +119,10 @@ function SelectStep({
   ).length;
 
   const update = (key: string, patch: Partial<ConversationChoices[string]>) =>
-    setChoices((prev) => ({ ...prev, [key]: { ...prev[key], ...patch } }));
+    setEdited((prev) => ({
+      ...prev,
+      [key]: { ...(prev[key] ?? choices[key]), ...patch },
+    }));
 
   // 제목이나 본문에 검색어가 있는 대화만, 고른 순서로
   const hits = new Map<string, SearchHit>();
@@ -139,8 +166,7 @@ function SelectStep({
         <EmptyState
           icon={<SearchX size={24} aria-hidden="true" />}
           title="공부한 대화를 찾지 못했어요"
-          description="등록한 키워드가 들어 있는 대화가 없어요. 내 과목에 키워드를 더하거나, 다른 내보내기 파일을 골라 보세요."
-          action={{ label: '내 과목에서 키워드 더하기', to: '/courses' }}
+          description="등록한 키워드가 들어 있는 대화가 없어요. 아래에서 키워드를 더하거나, 다른 내보내기 파일을 골라 보세요."
         />
       ) : (
         <>
@@ -198,10 +224,10 @@ function SelectStep({
               onToggleOpen={(key) => setOpenKey(openKey === key ? null : key)}
               onUpdate={update}
               onToggleAll={(keys, selected) =>
-                setChoices((prev) => {
+                setEdited((prev) => {
                   const next = { ...prev };
                   for (const key of keys)
-                    next[key] = { ...next[key], selected };
+                    next[key] = { ...(next[key] ?? choices[key]), selected };
                   return next;
                 })
               }
@@ -218,12 +244,37 @@ function SelectStep({
       {unmatchedCount > 0 && (
         <p className="text-body text-ink-muted">
           키워드가 들어 있지 않은 대화 {unmatchedCount}개는 목록에 넣지
-          않았어요. 빠진 대화가 있다면{' '}
-          <Link to="/courses" className="text-primary underline">
-            내 과목에 키워드를 더해 보세요
-          </Link>
-          .
+          않았어요. 빠진 대화가 있다면 과목에 키워드를 더해 보세요. 읽은 파일은
+          그대로 두고 다시 나눠요.
         </p>
+      )}
+
+      {courseFormOpen ? (
+        <div className="flex flex-col gap-4 rounded-xl border border-line-strong p-5">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="font-bold text-heading">과목·키워드 더하기</h3>
+            <Button
+              variant="secondary"
+              onClick={() => setCourseFormOpen(false)}
+            >
+              <X size={16} aria-hidden="true" />
+              닫기
+            </Button>
+          </div>
+          <CourseQuickForm
+            courses={courses}
+            onDone={() => setCourseFormOpen(false)}
+          />
+        </div>
+      ) : (
+        (unmatchedCount > 0 || assigned.length === 0) && (
+          <div>
+            <Button variant="secondary" onClick={() => setCourseFormOpen(true)}>
+              <Plus size={18} aria-hidden="true" />
+              과목·키워드 더하기
+            </Button>
+          </div>
+        )
       )}
 
       <div className="flex flex-wrap justify-between gap-3">
