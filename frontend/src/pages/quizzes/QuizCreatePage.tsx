@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type SubmitEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   useMutation,
@@ -205,7 +205,7 @@ function QuizCreateForm({ me }: { me: User | null }) {
     pendingKey !== null ||
     (!USE_MOCK && (configured.length === 0 || !me?.aiQuizConsent));
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (blocked || mutation.isPending || !course) return;
     mutation.mutate({

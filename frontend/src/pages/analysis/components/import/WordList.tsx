@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { useState, type SubmitEvent, type ReactNode } from 'react';
 import { Button, Chip, TextInput } from '@/components';
 
 interface WordListProps {
@@ -24,7 +24,7 @@ function WordList({
 }: WordListProps) {
   const [draft, setDraft] = useState('');
 
-  const add = (e: FormEvent) => {
+  const add = (e: SubmitEvent) => {
     e.preventDefault();
     const word = draft.trim();
     if (word && !words.includes(word)) onChange([...words, word]);

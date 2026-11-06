@@ -3,7 +3,7 @@ import {
   useEffect,
   useRef,
   useState,
-  type FormEvent,
+  type SubmitEvent,
   type ReactNode,
 } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -166,7 +166,7 @@ function Header() {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [menuOpen]);
 
-  const handleSearch = (e: FormEvent<HTMLFormElement>) => {
+  const handleSearch = (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     const trimmed = keyword.trim();
     if (!trimmed) return;
