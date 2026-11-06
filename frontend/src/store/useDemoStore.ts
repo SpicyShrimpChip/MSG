@@ -72,3 +72,17 @@ export const useDemoStore = create<DemoState>()((set) => ({
     set({ active: false });
   },
 }));
+
+// 주소 끝에 `?demo=1`이 있으면 "로그인 없이 체험해 보기"와 같게 체험을 시작하고 학습 대시보드로 보낸다.
+// 목업 모드가 아니면 아무 일도 하지 않는다(start()의 확인과 같은 기준). 라우터를 만들기 전에 불러야 한다.
+export const enterDemoFromUrl = () => {
+  if (!IS_MOCK) return;
+  try {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('demo') !== '1') return;
+    useDemoStore.getState().start();
+    window.history.replaceState(null, '', '/analysis');
+  } catch {
+    // 주소를 읽을 수 없는 환경이면 평소처럼 시작한다
+  }
+};
