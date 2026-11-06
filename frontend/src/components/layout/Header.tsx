@@ -21,7 +21,7 @@ import MobileMenu, { MOBILE_MENU_ID } from './MobileMenu';
 import ThemeToggle from './ThemeToggle';
 import { usePhone } from './usePhone';
 import { useScrolled } from './useScrolled';
-import { GlassSurface } from '../common';
+import { GlassSurface, LogoMark } from '../common';
 import { FIELD_CLASS } from '../common/fieldClass';
 
 // 넓은 화면 상단바 알약 높이(px): 맨 위 64(h-16), 스크롤하면 56(h-14). 유리 바탕(GlassSurface)에도 같은 값을 넘긴다
@@ -191,14 +191,11 @@ function Header() {
         />
         {/* 배치: [로고 + 메뉴] ……… [검색·계정·화면 모드]. 메뉴는 로고 옆(48px)에 붙이고 빈 공간은 가운데에 둔다
             (메뉴를 정가운데에 두면 넓은 오른쪽 묶음 때문에 메뉴가 검색칸에 붙어 오른쪽으로 쏠려 보였다, 11/6).
-            min-w-max: 내용 폭 아래로는 줄지 않게 (없으면 "ai-lms"가 하이픈에서 끊긴다) */}
+            min-w-max: 내용 폭 아래로는 줄지 않게 (없으면 로고 글자가 줄바꿈된다) */}
         <div className="flex items-center max-lg:mr-auto lg:min-w-max lg:shrink-0">
           <Link to="/" className="flex items-center gap-2.5 text-heading">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-on-primary">
-              AI
-            </span>
-            {/* TODO(미결): 서비스 이름 확정 후 교체 */}
-            <span className="text-xl font-bold whitespace-nowrap">ai-lms</span>
+            <LogoMark />
+            <span className="text-xl font-bold whitespace-nowrap">MSG</span>
           </Link>
         </div>
 
