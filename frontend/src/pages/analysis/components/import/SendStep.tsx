@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { CircleCheck, Info, TriangleAlert } from 'lucide-react';
-import { ApiError, importConversations } from '@/api';
+import { ApiError, importConversations, USE_MOCK } from '@/api';
 import { Button, Card, ErrorText, Notice } from '@/components';
 import { useCourses } from '@/hooks';
 import type { ConversationImportRejection } from '@/types';
@@ -137,8 +137,10 @@ function SendStep({ items, onBack, onRestart }: SendStepProps) {
               대화 {importedCount}개를 보냈어요
             </h2>
             <p className="text-body text-ink-soft">
-              분석이 끝나면 학습 분석에서 개념별 강점과 보완할 점을 볼 수
-              있어요.
+              {/* 체험(목업)에서는 보낸 대화를 분석하지 않으므로, 내 대화의 결과로 오해하지 않게 알린다 */}
+              {USE_MOCK
+                ? '체험에서는 보낸 대화를 저장하거나 분석하지 않아요. 학습 분석에는 미리 만든 예시 결과가 보여요.'
+                : '분석이 끝나면 학습 분석에서 개념별 강점과 보완할 점을 볼 수 있어요.'}
             </p>
           </div>
         </div>

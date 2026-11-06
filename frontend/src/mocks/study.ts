@@ -84,17 +84,17 @@ function reason(study: Omit<ConceptStudy, 'reason'>): string {
   const latest = study.latestCheck;
   switch (study.status) {
     case 'not_studied':
-      return '예시 데이터예요. 아직 이 개념의 학습 완료 기록이 없어요.';
+      return '아직 이 개념의 학습 완료 기록이 없어요.';
     case 'studied':
       return latest
-        ? `예시 데이터예요. 다시 공부했어요(학습 ${study.studyCount}번째). 확인 퀴즈를 다시 풀어 보세요.`
-        : '예시 데이터예요. 학습을 완료했어요. 확인 퀴즈로 이해했는지 확인해 보세요.';
+        ? `다시 공부했어요(학습 ${study.studyCount}번째). 확인 퀴즈를 다시 풀어 보세요.`
+        : '학습을 완료했어요. 확인 퀴즈로 이해했는지 확인해 보세요.';
     case 'understood':
-      return `예시 데이터예요. 확인 퀴즈 ${latest?.score}/${latest?.maxScore}점(${latest?.rate}%)으로 기준(60%) 이상이에요.`;
+      return `확인 퀴즈 ${latest?.score}/${latest?.maxScore}점(${latest?.rate}%)으로 기준(60%) 이상이에요.`;
     case 'review_needed':
-      return `예시 데이터예요. 확인 퀴즈 ${latest?.score}/${latest?.maxScore}점(${latest?.rate}%)으로 기준(60%)보다 낮아요. 틀린 문제를 확인하고 다시 공부해 보세요.`;
+      return `확인 퀴즈 ${latest?.score}/${latest?.maxScore}점(${latest?.rate}%)으로 기준(60%)보다 낮아요. 틀린 문제를 확인하고 다시 공부해 보세요.`;
     default:
-      return '예시 데이터예요. 채점을 기다리는 답이 있어 아직 판단하지 않았어요.';
+      return '채점을 기다리는 답이 있어 아직 판단하지 않았어요.';
   }
 }
 

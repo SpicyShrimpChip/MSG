@@ -29,6 +29,7 @@ import {
 } from '@/components';
 import { LEARNING_PURPOSES, jobFieldLabel } from '@/constants';
 import { useSavedMaskWords } from '@/hooks';
+import { USE_MOCK } from '@/api';
 import { useAuthStore } from '@/store';
 import type { User } from '@/types';
 import {
@@ -426,6 +427,14 @@ function MyPage() {
         <AsyncBoundary>
           <MyAccount />
         </AsyncBoundary>
+      ) : USE_MOCK ? (
+        // 목업(체험)에는 계정이 없어서 로그인으로 보내지 않는다 (로그인 화면도 아직 열려 있지 않다)
+        <EmptyState
+          icon={<UserRound size={24} aria-hidden="true" />}
+          title="체험에서는 보여 드리지 않아요"
+          description="마이페이지는 가입한 계정의 정보와 동의 상태를 다루는 곳이라 예시 화면이 없어요."
+          action={{ label: '학습 대시보드로 가기', to: '/analysis' }}
+        />
       ) : (
         <EmptyState
           icon={<UserRound size={24} aria-hidden="true" />}

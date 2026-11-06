@@ -468,7 +468,7 @@ export function mockGetAssessmentComparison(target: {
 }): Promise<AssessmentComparison> {
   void target;
   return mockDelay({
-    basis: '예시 데이터예요. 실제로는 최신 사전평가와 그 사후평가를 비교해요.',
+    basis: '최신 사전평가와 그 사후평가를 비교해요.',
     material: { id: 1, title: '예시 자료' },
     pre: {
       quizId: 1,

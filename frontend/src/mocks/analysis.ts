@@ -3,17 +3,20 @@ import type {
   ConceptFeedback,
   ConceptFeedbackInput,
   ConceptJudgment,
+  ConceptResult,
   JudgmentEvidence,
   ProviderStatus,
 } from '@/types';
 import { mockDelay } from './delay';
 
 // 시연 과목(정보보호개론)에 맞춘 샘플 분석 결과. 화면 확인용 예시이고 실제 모델이 판단한 값이 아니다.
-// 강의자료 문장은 넣지 않는다. Gemini는 "연결 안 됨" 상태를 보여 주려고 미설정으로 둔다
+// 강의자료 문장은 넣지 않는다. 핵심 차별점(세 모델이 따로 판단하고 비교)을 보여 주려고 세 모델 모두 판단한 상태로 둔다.
+// 개념 이름은 자료·커리큘럼·퀴즈 목업(공개키 암호·전자서명·인증서(PKI)·해시 함수)과 같게 맞추고,
+// 대칭키 암호는 자료 없이 대화에만 나온 개념이다 (대화만으로는 숙련도를 정하지 않는다는 예시)
 const PROVIDERS: ProviderStatus[] = [
   { provider: 'gpt', model: null, configured: true },
   { provider: 'claude', model: null, configured: true },
-  { provider: 'gemini', model: null, configured: false },
+  { provider: 'gemini', model: null, configured: true },
 ];
 
 const question = (
@@ -63,10 +66,37 @@ const judgment = (
   ...extra,
 });
 
+type Mastery = NonNullable<ConceptResult['mastery']>;
+type MasteryRecord = Mastery['history'][number];
+
+// 숙련도 기록 한 줄 (서버 concept_mastery 모양)
+const record = (
+  recordedAt: string,
+  level: MasteryRecord['level'],
+  quizGradedCount: number,
+  quizRate: number | null,
+  conversationCount = 0,
+  conversationStatus: MasteryRecord['conversationStatus'] = null,
+): MasteryRecord => ({
+  recordedAt,
+  level,
+  quizGradedCount,
+  quizRate,
+  conversationCount,
+  conversationStatus,
+  formulaVersion: '1',
+});
+
+// 숙련도 예시. 값은 서버 MasteryCalculator 규칙(퀴즈 1문제 1.0, 대화 1건 0.5, 점수 = (Σw·s + 1) ÷ (Σw + 2),
+// 근거 무게 3.0 미만이면 근거 부족, 0.4 미만 보완 필요, 0.7 이상 강점)으로 직접 계산한 값이다.
+// 퀴즈 근거는 커리큘럼 목업의 사전 테스트(SAMPLE_PRE)와 확인 퀴즈(mocks/study.ts SAMPLE_CHECKS)를 더한 것
+const PRE_TEST = '2026-11-01T10:30:00';
+const ANALYZED = '2026-11-02T16:20:00';
+
 const RUN: AnalysisRun = {
   id: 1,
   courseId: 1,
-  status: 'partial',
+  status: 'completed',
   promptVersion: 'example',
   createdAt: '2026-11-02T16:19:00+09:00',
   completedAt: '2026-11-02T16:20:00+09:00',
@@ -85,27 +115,28 @@ const RUN: AnalysisRun = {
       model: null,
       status: 'succeeded',
       message: null,
-      judgedConceptCount: 4,
+      judgedConceptCount: 5,
       droppedEvidenceCount: 1,
     },
     {
       provider: 'gemini',
       model: null,
-      status: 'not_configured',
-      message: '이 모델은 연결되어 있지 않아요.',
-      judgedConceptCount: 0,
+      status: 'succeeded',
+      message: null,
+      judgedConceptCount: 5,
       droppedEvidenceCount: 0,
     },
   ],
   concepts: [
     {
-      concept: '공개키',
+      // 세 모델 모두 이해 부족 + 퀴즈 6문제 중 2문제 → 보완 필요
+      concept: '공개키 암호',
       comparison: {
         outcome: 'unanimous',
         status: 'not_understood',
-        judgedCount: 2,
-        agreeCount: 2,
-        calledCount: 2,
+        judgedCount: 3,
+        agreeCount: 3,
+        calledCount: 3,
       },
       judgments: [
         judgment(
@@ -129,60 +160,46 @@ const RUN: AnalysisRun = {
           '키 쌍의 역할을 스스로 설명한 메시지가 없고, 같은 질문을 다시 했어요.',
           [question(104, '다시 설명해 줘. 서명할 때도 공개키를 쓰는 거지?')],
         ),
+        judgment(
+          'gemini',
+          'not_understood',
+          '받는 사람의 공개키로 잠근다는 설명을 들은 뒤에도 내 공개키로 잠그는 것으로 다시 물었어요.',
+          [
+            question(
+              101,
+              '그럼 공개키로 암호화하면 누가 풀 수 있는 거야? 아까랑 반대 아니야?',
+            ),
+          ],
+        ),
       ],
       feedback: null,
       studyOrder: 1,
       recommendConfirmQuiz: false,
-      // 숙련도 예시 (서버 규칙 계산 결과 모양)
       mastery: {
         level: 'needs_work',
-        score: 0.29,
-        evidenceWeight: 5,
-        quizGradedCount: 4,
-        quizRate: 0.25,
+        score: 0.33,
+        evidenceWeight: 7,
+        quizGradedCount: 6,
+        quizRate: 0.33,
         conversationCount: 2,
         conversationStatus: 'not_understood',
         formulaVersion: '1',
         quizNeeded: null,
         history: [
-          {
-            recordedAt: '2026-10-29T20:10:00',
-            level: 'insufficient_evidence',
-            quizGradedCount: 1,
-            quizRate: 0,
-            conversationCount: 0,
-            conversationStatus: null,
-            formulaVersion: '1',
-          },
-          {
-            recordedAt: '2026-11-01T21:30:00',
-            level: 'insufficient_evidence',
-            quizGradedCount: 1,
-            quizRate: 0,
-            conversationCount: 2,
-            conversationStatus: 'not_understood',
-            formulaVersion: '1',
-          },
-          {
-            recordedAt: '2026-11-03T19:05:00',
-            level: 'needs_work',
-            quizGradedCount: 4,
-            quizRate: 0.25,
-            conversationCount: 2,
-            conversationStatus: 'not_understood',
-            formulaVersion: '1',
-          },
+          record(PRE_TEST, 'normal', 3, 0.33),
+          record(ANALYZED, 'needs_work', 6, 0.33, 2, 'not_understood'),
         ],
       },
     },
     {
-      concept: '해시',
+      // 세 모델 판단이 모두 달라 대화는 숙련도에 넣지 않음, 퀴즈 5문제 중 3문제 → 보통
+      concept: '해시 함수',
       comparison: {
         outcome: 'disagreement',
         status: null,
-        judgedCount: 2,
+        judgedCount: 3,
         agreeCount: 1,
-        calledCount: 2,
+        calledCount: 3,
       },
       judgments: [
         judgment(
@@ -210,155 +227,46 @@ const RUN: AnalysisRun = {
             ),
           ],
         ),
-      ],
-      feedback: null,
-      studyOrder: 2,
-      recommendConfirmQuiz: false,
-      // 숙련도 예시 (서버 규칙 계산 결과 모양)
-      mastery: {
-        level: 'insufficient_evidence',
-        score: null,
-        evidenceWeight: 1,
-        quizGradedCount: 1,
-        quizRate: 1,
-        conversationCount: 0,
-        conversationStatus: null,
-        formulaVersion: '1',
-        quizNeeded: 2,
-        history: [
-          {
-            recordedAt: '2026-11-05T09:40:00',
-            level: 'insufficient_evidence',
-            quizGradedCount: 1,
-            quizRate: 1,
-            conversationCount: 0,
-            conversationStatus: null,
-            formulaVersion: '1',
-          },
-        ],
-      },
-    },
-    {
-      concept: '방화벽',
-      comparison: {
-        outcome: 'unanimous',
-        status: 'insufficient_evidence',
-        judgedCount: 2,
-        agreeCount: 2,
-        calledCount: 2,
-      },
-      judgments: [
         judgment(
-          'gpt',
-          'insufficient_evidence',
-          '방화벽을 다룬 메시지가 거의 없어요.',
-          [],
-        ),
-        judgment(
-          'claude',
-          'insufficient_evidence',
-          'AI 설명만 있고 내가 쓴 메시지가 없어요.',
-          [],
-          {
-            reportedStatus: 'understood',
-            adjustedReason:
-              '사용자가 쓴 메시지 근거가 없어 판단 근거 부족으로 봤어요.',
-          },
-        ),
-      ],
-      feedback: null,
-      studyOrder: 3,
-      recommendConfirmQuiz: false,
-      // 숙련도 예시 (서버 규칙 계산 결과 모양)
-      mastery: {
-        level: 'insufficient_evidence',
-        score: null,
-        evidenceWeight: 0,
-        quizGradedCount: 0,
-        quizRate: null,
-        conversationCount: 0,
-        conversationStatus: null,
-        formulaVersion: '1',
-        quizNeeded: 3,
-        history: [
-          {
-            recordedAt: '2026-11-02T18:00:00',
-            level: 'insufficient_evidence',
-            quizGradedCount: 0,
-            quizRate: null,
-            conversationCount: 0,
-            conversationStatus: null,
-            formulaVersion: '1',
-          },
-        ],
-      },
-    },
-    {
-      concept: '접근 제어',
-      comparison: {
-        outcome: 'single_model',
-        status: 'partial',
-        judgedCount: 1,
-        agreeCount: 1,
-        calledCount: 2,
-      },
-      judgments: [
-        judgment(
-          'gpt',
-          'partial',
-          '역할 기반 접근 제어 예시는 들었지만 다른 방식과 비교하지는 않았어요.',
+          'gemini',
+          'understood',
+          '한 방향이라는 성질을 자기 말로 설명했고, 솔트를 쓰는 이유도 물었어요.',
           [
             explanation(
-              301,
-              '학생은 성적 조회만, 교수는 입력까지 되는 게 역할 기반이지',
+              201,
+              '해시는 한 방향이라 원래 값을 다시 구할 수 없다고 이해했어',
             ),
           ],
         ),
       ],
       feedback: null,
-      studyOrder: 4,
+      studyOrder: 2,
       recommendConfirmQuiz: false,
-      // 숙련도 예시 (서버 규칙 계산 결과 모양)
       mastery: {
         level: 'normal',
-        score: 0.58,
-        evidenceWeight: 4,
-        quizGradedCount: 3,
-        quizRate: 0.67,
-        conversationCount: 2,
-        conversationStatus: 'partial',
+        score: 0.57,
+        evidenceWeight: 5,
+        quizGradedCount: 5,
+        quizRate: 0.6,
+        conversationCount: 0,
+        conversationStatus: null,
         formulaVersion: '1',
         quizNeeded: null,
         history: [
-          {
-            recordedAt: '2026-11-02T18:00:00',
-            level: 'insufficient_evidence',
-            quizGradedCount: 0,
-            quizRate: null,
-            conversationCount: 2,
-            conversationStatus: 'partial',
-            formulaVersion: '1',
-          },
-          {
-            recordedAt: '2026-11-04T20:20:00',
-            level: 'normal',
-            quizGradedCount: 3,
-            quizRate: 0.67,
-            conversationCount: 2,
-            conversationStatus: 'partial',
-            formulaVersion: '1',
-          },
+          record(PRE_TEST, 'normal', 3, 0.33),
+          record(ANALYZED, 'normal', 5, 0.6),
         ],
       },
     },
     {
+      // 대화에서는 세 모델 모두 이해로 봤지만 퀴즈 근거가 없어 근거 부족 (대화만으로 단정하지 않음)
       concept: '대칭키 암호',
       comparison: {
         outcome: 'unanimous',
         status: 'understood',
-        judgedCount: 2,
-        agreeCount: 2,
-        calledCount: 2,
+        judgedCount: 3,
+        agreeCount: 3,
+        calledCount: 3,
       },
       judgments: [
         judgment(
@@ -378,49 +286,148 @@ const RUN: AnalysisRun = {
             '보내는 쪽과 받는 쪽이 같은 키를 써서 빠르지만 키를 나누는 게 문제야',
           ),
         ]),
+        judgment(
+          'gemini',
+          'understood',
+          '공개키 암호와 섞어 쓰는 이유(속도)를 스스로 연결했어요.',
+          [
+            explanation(
+              402,
+              '그래서 실제로는 대칭키를 공개키로 감싸서 보내는 거구나',
+            ),
+          ],
+        ),
       ],
       feedback: null,
       studyOrder: 5,
       recommendConfirmQuiz: false,
-      // 숙련도 예시 (서버 규칙 계산 결과 모양)
       mastery: {
-        level: 'strong',
-        score: 0.76,
-        evidenceWeight: 6.5,
-        quizGradedCount: 5,
-        quizRate: 0.8,
+        level: 'insufficient_evidence',
+        score: null,
+        evidenceWeight: 1.5,
+        quizGradedCount: 0,
+        quizRate: null,
         conversationCount: 3,
         conversationStatus: 'understood',
         formulaVersion: '1',
+        quizNeeded: 2,
+        history: [
+          record(ANALYZED, 'insufficient_evidence', 0, null, 3, 'understood'),
+        ],
+      },
+    },
+    {
+      // 세 모델 모두 판단 근거 부족이라 대화는 넣지 않음, 사전 테스트 3문제 중 2문제 → 보통
+      concept: '인증서(PKI)',
+      comparison: {
+        outcome: 'unanimous',
+        status: 'insufficient_evidence',
+        judgedCount: 3,
+        agreeCount: 3,
+        calledCount: 3,
+      },
+      judgments: [
+        judgment(
+          'gpt',
+          'insufficient_evidence',
+          '인증서를 다룬 메시지가 거의 없어요.',
+          [],
+        ),
+        judgment(
+          'claude',
+          'insufficient_evidence',
+          'AI 설명만 있고 내가 쓴 메시지가 없어요.',
+          [],
+          {
+            reportedStatus: 'understood',
+            adjustedReason:
+              '사용자가 쓴 메시지 근거가 없어 판단 근거 부족으로 봤어요.',
+          },
+        ),
+        judgment(
+          'gemini',
+          'insufficient_evidence',
+          '인증 기관이 무엇인지 한 번 물은 것 말고는 근거가 없어요.',
+          [],
+        ),
+      ],
+      feedback: null,
+      studyOrder: 3,
+      recommendConfirmQuiz: false,
+      mastery: {
+        level: 'normal',
+        score: 0.6,
+        evidenceWeight: 3,
+        quizGradedCount: 3,
+        quizRate: 0.67,
+        conversationCount: 0,
+        conversationStatus: null,
+        formulaVersion: '1',
+        quizNeeded: null,
+        history: [record(PRE_TEST, 'normal', 3, 0.67)],
+      },
+    },
+    {
+      // 3개 중 2개가 부분 이해 + 사전 테스트 3문제 모두 정답 → 강점
+      concept: '전자서명',
+      comparison: {
+        outcome: 'majority',
+        status: 'partial',
+        judgedCount: 3,
+        agreeCount: 2,
+        calledCount: 3,
+      },
+      judgments: [
+        judgment(
+          'gpt',
+          'partial',
+          '개인키로 서명한다는 점은 설명했지만, 해시와 함께 쓰는 이유는 묻기만 했어요.',
+          [
+            explanation(
+              501,
+              '서명은 내 개인키로 하고 남이 내 공개키로 확인하는 거지',
+            ),
+          ],
+        ),
+        judgment(
+          'claude',
+          'partial',
+          '키 방향은 맞게 썼지만 위조를 막는 원리까지는 설명하지 않았어요.',
+          [
+            explanation(
+              501,
+              '서명은 내 개인키로 하고 남이 내 공개키로 확인하는 거지',
+            ),
+          ],
+        ),
+        judgment(
+          'gemini',
+          'understood',
+          '서명과 암호화의 키 방향 차이를 스스로 비교했어요.',
+          [
+            explanation(
+              501,
+              '서명은 내 개인키로 하고 남이 내 공개키로 확인하는 거지',
+            ),
+          ],
+        ),
+      ],
+      feedback: null,
+      studyOrder: 4,
+      recommendConfirmQuiz: false,
+      mastery: {
+        level: 'strong',
+        score: 0.75,
+        evidenceWeight: 3.5,
+        quizGradedCount: 3,
+        quizRate: 1,
+        conversationCount: 1,
+        conversationStatus: 'partial',
+        formulaVersion: '1',
         quizNeeded: null,
         history: [
-          {
-            recordedAt: '2026-10-30T19:00:00',
-            level: 'insufficient_evidence',
-            quizGradedCount: 1,
-            quizRate: 1,
-            conversationCount: 0,
-            conversationStatus: null,
-            formulaVersion: '1',
-          },
-          {
-            recordedAt: '2026-11-02T18:00:00',
-            level: 'normal',
-            quizGradedCount: 3,
-            quizRate: 0.67,
-            conversationCount: 3,
-            conversationStatus: 'understood',
-            formulaVersion: '1',
-          },
-          {
-            recordedAt: '2026-11-05T09:40:00',
-            level: 'strong',
-            quizGradedCount: 5,
-            quizRate: 0.8,
-            conversationCount: 3,
-            conversationStatus: 'understood',
-            formulaVersion: '1',
-          },
+          record(PRE_TEST, 'strong', 3, 1),
+          record(ANALYZED, 'strong', 3, 1, 1, 'partial'),
         ],
       },
     },

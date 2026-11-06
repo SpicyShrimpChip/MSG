@@ -30,6 +30,28 @@ const writeDemo = (on: boolean) => {
   }
 };
 
+// 체험 중 바꾼 예시 데이터(자료·과목·퀴즈 결과·학습 기록)는 mocks/가 localStorage(`ai-lms-mock-*`)에 둔다.
+// 체험을 시작할 때와 끝낼 때 지워서 다음 체험이 늘 처음 예시 상태에서 시작하게 한다 (탭을 그냥 닫아도 다음 시작 때 지워진다).
+// 공지(`ai-lms-mock-notices`)는 체험에서 쓰지 않는 관리자 기능(개발 중 VITE_MOCK_OPEN_ACCESS)이라 남긴다.
+// 체험이 켜진 뒤에만 mocks/가 저장소를 읽으므로, 시작할 때 지우면 메모리에 남은 옛 값도 없다
+const MOCK_DATA_PREFIX = 'ai-lms-mock-';
+const KEEP_MOCK_KEYS = new Set(['ai-lms-mock-notices']);
+
+const clearMockData = () => {
+  try {
+    const keys = Array.from({ length: localStorage.length }, (_, index) =>
+      localStorage.key(index),
+    );
+    for (const key of keys) {
+      if (key?.startsWith(MOCK_DATA_PREFIX) && !KEEP_MOCK_KEYS.has(key)) {
+        localStorage.removeItem(key);
+      }
+    }
+  } catch {
+    // 저장소를 쓸 수 없는 환경이면 남은 기록도 없다
+  }
+};
+
 interface DemoState {
   active: boolean;
   start: () => void;
@@ -40,10 +62,12 @@ export const useDemoStore = create<DemoState>()((set) => ({
   active: readDemo(),
   start: () => {
     if (!IS_MOCK) return;
+    clearMockData();
     writeDemo(true);
     set({ active: true });
   },
   end: () => {
+    clearMockData();
     writeDemo(false);
     set({ active: false });
   },

@@ -9,11 +9,7 @@ import {
   Info,
   Table2,
 } from 'lucide-react';
-import {
-  ASSESSMENTS_QUERY_KEY,
-  USE_MOCK,
-  getAssessmentComparison,
-} from '@/api';
+import { ASSESSMENTS_QUERY_KEY, getAssessmentComparison } from '@/api';
 import { Button, Card, Notice } from '@/components';
 import { cn } from '@/utils';
 import type { ConceptDeltaStatus } from '@/types';
@@ -157,7 +153,6 @@ function AssessmentComparisonPanel({ courseId }: { courseId: number }) {
           <p className="text-caption text-ink-muted">
             {data.material ? `${data.material.title} · ` : ''}
             {data.basis}
-            {USE_MOCK && ' (예시 데이터)'}
           </p>
         </div>
         <Legend />
@@ -258,11 +253,11 @@ function AssessmentComparisonPanel({ courseId }: { courseId: number }) {
         </table>
       ) : (
         <div className="flex flex-col gap-1">
-          {/* 마우스를 올리거나 키보드로 고른 줄의 값을 한 줄로 */}
+          {/* 마우스를 올리거나 누르거나(포커스) 키보드로 고른 줄의 값을 한 줄로 */}
           <p className="min-h-5 text-caption text-ink-soft" aria-live="polite">
             {focus
               ? `${focus.label}: 사전 ${focus.pre === null ? focus.preText : `${focus.pre}% (${focus.preText})`} → 사후 ${focus.post === null ? focus.postText : `${focus.post}% (${focus.postText})`}${focus.delta === null ? '' : ` · ${deltaText(focus.delta)}`}`
-              : '줄에 마우스를 올리면 점수를 자세히 보여 줘요'}
+              : '줄을 누르면 점수를 자세히 보여 줘요'}
           </p>
           <ul className="flex flex-col">
             {all.map((row) => (
