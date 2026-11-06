@@ -101,8 +101,10 @@ function Gnb() {
               >
                 {group.label}
               </Link>
-              {/* 상단바 알약과 같은 유리 재질(styles/glass.css). 살짝 아래에서 올라오며 나타난다 */}
-              <ul className="glass invisible absolute top-full left-0 z-10 mt-2 min-w-44 translate-y-1 rounded-2xl p-1.5 opacity-0 transition-[opacity,translate] group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-has-[:focus-visible]:visible group-has-[:focus-visible]:translate-y-0 group-has-[:focus-visible]:opacity-100 motion-reduce:transition-none">
+              {/* 상단바 알약과 같은 유리 그림자·선(styles/glass.css). 흐림(backdrop-filter)은 걸지 않는다:
+                  상단바 유리 조각의 흐림 위에 겹쳐 걸면 크롬이 파란 네모를 그렸다(11/7). 대신 거의 불투명한 바탕을 깐다.
+                  살짝 아래에서 올라오며 나타난다 */}
+              <ul className="glass invisible absolute top-full left-0 z-10 mt-2 min-w-44 translate-y-1 rounded-2xl bg-surface-raised/95 p-1.5 opacity-0 backdrop-filter-none transition-[opacity,translate,visibility] group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-has-[:focus-visible]:visible group-has-[:focus-visible]:translate-y-0 group-has-[:focus-visible]:opacity-100 motion-reduce:transition-none">
                 {group.children.map((child) => (
                   <li key={child.path}>
                     <Link
