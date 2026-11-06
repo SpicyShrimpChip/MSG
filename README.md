@@ -20,9 +20,7 @@
 학습 자료와 ChatGPT, Claude에서 나눈 공부 대화를 분석해 개념별 강점과 보완할 점을 보여 주고,
 다음에 공부할 순서를 계속 다시 짜 주는 개인 맞춤형 LMS입니다.
 
-<!-- TODO: 시연 영상이 나오면 링크를 연다
-[시연 영상 보기 (3분)](https://...)
--->
+**[체험 바로 시작 (예시 데이터)](https://lms-seven-tawny.vercel.app/?demo=1)** · **[시연 영상 보기 (YouTube)](https://youtu.be/cMIesU6opUY)** · **[문서·발표자료 (Notion)](https://heliotrope-danthus-56e.notion.site/MSG-My-Study-Guide-40f9aac9e83581b096e2cd04f7a6de40)**
 
 <table>
   <tr>
@@ -38,7 +36,7 @@
 </table>
 
 > [!TIP]
-> [체험 링크](https://lms-seven-tawny.vercel.app/)에서 **로그인 없이 체험해 보기**를 누르면 가입 없이 모든 화면을 예시 데이터로 볼 수 있습니다. 체험 중 입력한 내용은 브라우저에만 저장됩니다.
+> [체험 링크](https://lms-seven-tawny.vercel.app/?demo=1)에서 **로그인 없이 체험해 보기**를 누르면 가입 없이 모든 화면을 예시 데이터로 볼 수 있습니다. 체험 중 입력한 내용은 브라우저에만 저장됩니다.
 
 > [!IMPORTANT]
 > 설문에서 찾은 문제가 어떤 기능과 설계로 이어졌는지는 중간보고서 본문에 자세히 적었습니다. 이 README는 화면과 진행 현황을 빠르게 훑어보는 용도입니다.
