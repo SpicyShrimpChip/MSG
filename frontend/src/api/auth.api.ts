@@ -6,7 +6,7 @@ import type {
   User,
 } from '@/types';
 import { hasSessionHint, useAuthStore } from '@/store/useAuthStore';
-import { refreshAccessToken } from './axios';
+import { USE_MOCK, refreshAccessToken } from './axios';
 import { request } from './request';
 
 // 인증은 목업 없이 항상 실제 백엔드를 부른다 (가짜 로그인은 보안 흐름을 검증할 수 없다)
@@ -86,7 +86,9 @@ export async function deleteAccount(password: string): Promise<void> {
 // 새로고침 뒤 Refresh Token 쿠키로 로그인 상태를 되살린다. 로그인한 적이 없으면 요청하지 않는다
 export async function restoreSession(): Promise<void> {
   const { clearSession } = useAuthStore.getState();
-  if (!hasSessionHint()) {
+  // 목업 모드는 로그인이 없다(체험 모드로만 연다). 쿠키는 포트를 가리지 않아서, 같은 PC에서 실제 모드(다른 포트)로
+  // 로그인해 둔 세션을 되살리면 상단바만 로그인 상태가 되고 화면은 로그인으로 보내는 어긋남이 생긴다
+  if (USE_MOCK || !hasSessionHint()) {
     clearSession();
     return;
   }
