@@ -7,9 +7,14 @@ const PRINCIPLES = [
       '내 브라우저에서 학습 관련 대화만 고르고 개인정보를 가린 뒤, 내가 선택한 대화만 보내요.',
   },
   {
-    title: '점수는 정해진 규칙으로 계산해요',
+    title: '숙련도는 정해진 규칙으로 계산해요',
     description:
-      '개념별 숙련도는 대화 분류 결과와 퀴즈 정답률을 정해진 규칙으로 계산해요. AI는 점수를 매기지 않고 근거를 설명해요.',
+      '개념별 숙련도는 대화 분류 결과와 퀴즈 결과를 정해진 규칙으로 계산해 네 단계로 보여 줘요. AI는 숙련도를 정하지 않고 근거를 설명해요.',
+  },
+  {
+    title: 'AI 세 곳의 판단을 비교해요',
+    description:
+      'GPT, Claude, Gemini가 서로의 답을 보지 않고 따로 판단해요. 의견이 갈린 개념은 하나로 정하지 않고 갈렸다고 보여 드려요.',
   },
   {
     title: '판단 근거를 함께 보여 드려요',
@@ -32,11 +37,16 @@ function AboutPage() {
           부족한지는 알기 어려워요. 흩어진 학습 기록을 모아 개념별 이해 정도를
           보여 주고, 부족한 부분부터 다시 공부할 수 있게 학습 순서를 제안해요.
         </p>
+        <p className="leading-relaxed text-ink-soft">
+          2026년 11월에 AI로 공부하는 50명에게 물어보니, 답한 49명 중 41명이 새
+          대화를 열 때마다 어디까지 배웠는지 다시 설명한다고 답했고, 35명은
+          다음에 무엇을 공부할지 막막했던 적이 있었어요.
+        </p>
       </section>
 
       <section className="flex flex-col gap-4">
         <h2 className="text-xl font-extrabold text-heading">이렇게 지켜요</h2>
-        <ul className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <ul className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {PRINCIPLES.map((item) => (
             <li
               key={item.title}
