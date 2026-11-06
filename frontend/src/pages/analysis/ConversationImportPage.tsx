@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Info } from 'lucide-react';
-import { AsyncBoundary, Notice, SubPage } from '@/components';
-import { useMe, useSavedMaskWords } from '@/hooks';
+import { AsyncBoundary, Card, Notice, SubPage } from '@/components';
+import { useCourses, useMe, useSavedMaskWords } from '@/hooks';
 import {
   conversationKey,
   maskConversation,
@@ -10,6 +10,7 @@ import {
   type MaskOptions,
   type MergedImport,
 } from '@/utils';
+import CourseQuickForm from './components/import/CourseQuickForm';
 import FileStep from './components/import/FileStep';
 import ImportSteps from './components/import/ImportSteps';
 import MaskStep from './components/import/MaskStep';
@@ -17,6 +18,32 @@ import SelectStep, {
   type ConversationChoices,
 } from './components/import/SelectStep';
 import SendStep from './components/import/SendStep';
+
+// 키워드가 있는 과목이 없으면 파일을 고르기 전에 과목부터 등록하게 한다.
+// 파일을 읽은 뒤에 알려 주면 과목을 등록하러 나갔다가 파일을 다시 올려야 했다
+function CourseGate({ children }: { children: ReactNode }) {
+  const { data: courses } = useCourses();
+  if (courses.some((course) => course.keywords.length > 0)) return children;
+
+  return (
+    <Card
+      as="section"
+      aria-labelledby="import-course"
+      className="flex flex-col gap-5 p-6 md:p-8"
+    >
+      <div className="flex flex-col gap-2">
+        <h2 id="import-course" className="text-xl font-extrabold text-heading">
+          먼저 과목과 키워드를 등록해 주세요
+        </h2>
+        <p className="text-body text-ink-soft">
+          내 과목에 등록한 키워드가 들어 있는 대화만 골라서 가져와요. 공부와
+          상관없는 대화는 보내지 않아요. 등록하면 바로 파일 고르기로 넘어가요.
+        </p>
+      </div>
+      <CourseQuickForm courses={courses} />
+    </Card>
+  );
+}
 
 // 읽은 대화는 이 화면의 메모리에만 둔다. 새로고침하거나 화면을 나가면 사라진다 (서버·브라우저 저장소에 남기지 않음)
 function ConversationImportPage() {
@@ -93,15 +120,19 @@ function ConversationImportPage() {
       )}
 
       {step === 0 && (
-        <FileStep
-          imported={imported}
-          onLoaded={(next) => {
-            setImported(next);
-            // 파일을 다시 고르면 이전 선택은 버린다
-            setChoices(null);
-          }}
-          onNext={() => goToStep(1)}
-        />
+        <AsyncBoundary>
+          <CourseGate>
+            <FileStep
+              imported={imported}
+              onLoaded={(next) => {
+                setImported(next);
+                // 파일을 다시 고르면 이전 선택은 버린다
+                setChoices(null);
+              }}
+              onNext={() => goToStep(1)}
+            />
+          </CourseGate>
+        </AsyncBoundary>
       )}
 
       {step === 1 && imported && (

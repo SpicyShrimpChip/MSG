@@ -24,10 +24,17 @@ interface CourseFormProps {
   // 수정 중인 과목. 없으면 새 과목 추가
   editing: Course | null;
   onDone: () => void;
+  // 다른 화면 안에 넣을 때처럼 부모가 제목을 따로 둘 때 false
+  showTitle?: boolean;
 }
 
 // 과목 추가·수정 폼. 수정할 과목이 바뀌면 부모가 key를 바꿔 새로 그린다
-function CourseForm({ courses, editing, onDone }: CourseFormProps) {
+function CourseForm({
+  courses,
+  editing,
+  onDone,
+  showTitle = true,
+}: CourseFormProps) {
   const queryClient = useQueryClient();
   const [name, setName] = useState(editing?.name ?? '');
   const [semester, setSemester] = useState(
@@ -79,9 +86,11 @@ function CourseForm({ courses, editing, onDone }: CourseFormProps) {
       aria-label={editing ? '과목 수정' : '과목 추가'}
       className="flex max-w-2xl flex-col gap-5"
     >
-      <h2 className="text-xl font-extrabold text-heading">
-        {editing ? `'${editing.name}' 수정하기` : '과목 추가'}
-      </h2>
+      {showTitle && (
+        <h2 className="text-xl font-extrabold text-heading">
+          {editing ? `'${editing.name}' 수정하기` : '과목 추가'}
+        </h2>
+      )}
       <div className="flex flex-col gap-6">
         <FormRow
           label="과목 이름"
