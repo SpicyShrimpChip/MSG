@@ -62,34 +62,55 @@ function ManifestNotice({
     <div className="flex flex-col gap-2 rounded-xl border border-line-strong bg-surface-raised p-4">
       <FileName name={fileName} />
       <p className="font-bold text-heading">{title}</p>
-      {expired ? (
-        <p className="text-body text-ink-soft">
-          이 목록의 링크는 만든 지 24시간이 지나 쓸 수 없어요. claude.ai 설정의
-          개인정보 보호에서 데이터 내보내기를 다시 요청해 주세요.
-        </p>
-      ) : manifest.downloadUrl ? (
-        <>
-          <p className="text-body text-ink-soft">{message}</p>
-          <div className="flex flex-col items-start gap-1.5 pt-1">
-            <Button href={manifest.downloadUrl}>
-              <Download size={18} aria-hidden="true" />
-              {manifest.fileName} 받기
-            </Button>
-            <p className="text-caption text-ink-muted">
-              {manifest.expiresAt &&
-                `${formatDateTime(manifest.expiresAt)}까지 받을 수 있어요 · `}
-              한 번 열면 다시 안 열릴 수 있으니 받기가 끝날 때까지 기다려
-              주세요. 링크는 claude.ai로 바로 연결돼요.
-            </p>
-          </div>
-        </>
-      ) : (
-        <p className="text-body text-ink-soft">
-          이 파일에서 대화 기록 링크를 찾지 못했어요. 내보내기 메일의 링크를
-          열어 {manifest.fileName}을 받은 뒤 그 zip을 올려 주세요.
-        </p>
-      )}
+      <ManifestBody expired={expired} message={message} manifest={manifest} />
     </div>
+  );
+}
+
+// 만료 → 받기 버튼 → 링크 없음 순서로 한 가지만 보여 준다
+function ManifestBody({
+  expired,
+  message,
+  manifest,
+}: {
+  expired: boolean;
+  message: string;
+  manifest: ClaudeManifest;
+}) {
+  if (expired) {
+    return (
+      <p className="text-body text-ink-soft">
+        이 목록의 링크는 만든 지 24시간이 지나 쓸 수 없어요. claude.ai 설정의
+        개인정보 보호에서 데이터 내보내기를 다시 요청해 주세요.
+      </p>
+    );
+  }
+
+  if (!manifest.downloadUrl) {
+    return (
+      <p className="text-body text-ink-soft">
+        이 파일에서 대화 기록 링크를 찾지 못했어요. 내보내기 메일의 링크를 열어{' '}
+        {manifest.fileName}을 받은 뒤 그 zip을 올려 주세요.
+      </p>
+    );
+  }
+
+  return (
+    <>
+      <p className="text-body text-ink-soft">{message}</p>
+      <div className="flex flex-col items-start gap-1.5 pt-1">
+        <Button href={manifest.downloadUrl}>
+          <Download size={18} aria-hidden="true" />
+          {manifest.fileName} 받기
+        </Button>
+        <p className="text-caption text-ink-muted">
+          {manifest.expiresAt &&
+            `${formatDateTime(manifest.expiresAt)}까지 받을 수 있어요 · `}
+          한 번 열면 다시 안 열릴 수 있으니 받기가 끝날 때까지 기다려 주세요.
+          링크는 claude.ai로 바로 연결돼요.
+        </p>
+      </div>
+    </>
   );
 }
 
