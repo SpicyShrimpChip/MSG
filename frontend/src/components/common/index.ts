@@ -29,3 +29,4 @@ export {
   default as LearningProfileFields,
   type LearningProfileValue,
 } from './LearningProfileFields';
+export { default as LogoMark } from './LogoMark';
