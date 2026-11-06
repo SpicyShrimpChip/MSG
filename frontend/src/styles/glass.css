@@ -7,18 +7,19 @@
   색은 화면 모드별로 아래 변수에서 정한다 (컴포넌트에 dark: 클래스를 붙이지 않는다)
 */
 :root {
-  --glass-tint: rgb(255 255 255 / 0.55);
+  --glass-tint: rgb(255 255 255 / 0.68);
   --glass-rim-top: rgb(255 255 255 / 0.6);
   /* 머리카락 선: 흰 바탕 위에서도 유리 가장자리가 보이게 하는 아주 옅은 어두운 선 (파란 바탕 위에서는 거의 안 보인다) */
   --glass-hairline: rgb(15 27 51 / 0.08);
   /* 그림자 두 겹: 가장자리 바로 아래 짧고 진한 것 + 멀리 퍼지는 옅은 것 */
   --glass-shadow-near: rgb(15 27 51 / 0.06);
   --glass-shadow: rgb(19 59 158 / 0.16);
-  --glass-blur: blur(6px) saturate(1.7) brightness(1.04);
+  /* 흐림이 약하면(6px) 아래 카드의 아이콘 상자·글자가 알약 안에 네모로 비쳐 보였다(11/6). 굴절 조각도 같은 값을 쓴다 */
+  --glass-blur: blur(16px) saturate(1.7) brightness(1.04);
 }
 
 :root.dark {
-  --glass-tint: rgb(22 29 43 / 0.55);
+  --glass-tint: rgb(22 29 43 / 0.72);
   --glass-rim-top: rgb(255 255 255 / 0.08);
   --glass-hairline: rgb(255 255 255 / 0.07);
   --glass-shadow-near: rgb(0 0 0 / 0.3);

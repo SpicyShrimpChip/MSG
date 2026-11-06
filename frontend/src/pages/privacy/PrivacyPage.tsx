@@ -25,7 +25,8 @@ interface Section {
 
 const PENDING = '(확정 후 기재 예정)';
 
-const AI_PROVIDERS = 'OpenAI(GPT)·Anthropic(Claude)·Google(Gemini)';
+// 가운뎃점으로 이으면 한 단어로 취급돼 휴대폰 폭에서 줄이 안 바뀌고 화면 밖으로 넘친다(11/6). 쉼표와 띄어쓰기로 잇는다
+const AI_PROVIDERS = 'OpenAI(GPT), Anthropic(Claude), Google(Gemini)';
 
 // 처리방침을 처음 보는 이용자를 위한 요약. 본문과 어긋나지 않게 함께 고친다
 const SUMMARY = [
