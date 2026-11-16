@@ -22,3 +22,10 @@ export function validateMaterialFile(
   }
   return undefined;
 }
+
+// 본문을 읽을 수 있는 형식인지 (서버 MaterialTextExtractor와 같다). 올릴 수 있는 형식은 모두 읽지만,
+// PDF는 글이 들어 있는 PDF만 읽고 스캔본은 OCR이 없어 서버가 "본문 없음"으로 알려 준다
+export function isReadable(fileName: string): boolean {
+  const ext = fileName.split('.').pop()?.toLowerCase() ?? '';
+  return (MATERIAL_EXTENSIONS as readonly string[]).includes(ext);
+}

@@ -1,21 +1,12 @@
 import { useEffect, useMemo, useState, type SubmitEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-  useSuspenseQuery,
-} from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FileText, LoaderCircle, Lock, Sparkles, Target } from 'lucide-react';
 import {
-  ANALYSIS_QUERY_KEY,
-  ME_QUERY_KEY,
   QUIZZES_QUERY_KEY,
   USE_MOCK,
   createQuiz,
   getGenerationStatus,
-  getMe,
-  getProviders,
 } from '@/api';
 import {
   AsyncBoundary,
@@ -38,7 +29,7 @@ import {
   QUIZ_MAX_QUESTIONS,
   QUIZ_MODES,
 } from '@/constants';
-import { useCourses } from '@/hooks';
+import { useCourses, useProviders, useSuspenseMe } from '@/hooks';
 import type { JobField, QuizDifficulty, QuizMode, User } from '@/types';
 import { cn, conceptStudyLink, formatSemester } from '@/utils';
 
@@ -112,10 +103,7 @@ function QuizCreateForm({ me }: { me: User | null }) {
   const { data: courses } = useCourses();
   const [pendingKey, setPendingKey] = useState(loadPendingKey);
   const [recoveredMessage, setRecoveredMessage] = useState<string | null>(null);
-  const { data: providers } = useSuspenseQuery({
-    queryKey: [...ANALYSIS_QUERY_KEY, 'providers'],
-    queryFn: getProviders,
-  });
+  const { data: providers } = useProviders();
 
   // 확인 퀴즈 링크(대시보드 "이미 알아요")는 과목·모드·개념을 주소로 넘긴다
   const paramMode = params.get('mode');
@@ -568,10 +556,7 @@ function QuizCreateForm({ me }: { me: User | null }) {
 
 // 내 정보(학습 목적·직무·동의)를 다 불러온 뒤에 기본값을 정한다 (불러오기 전 값으로 시작하지 않게)
 function QuizCreateWithProfile() {
-  const { data: me } = useSuspenseQuery({
-    queryKey: ME_QUERY_KEY,
-    queryFn: getMe,
-  });
+  const { data: me } = useSuspenseMe();
   return <QuizCreateForm me={me} />;
 }
 

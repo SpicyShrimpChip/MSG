@@ -8,7 +8,7 @@ import {
 } from '@/api';
 import type { ConceptFeedbackType, ConceptResult } from '@/types';
 import { Button } from '@/components';
-import { cn } from '@/utils';
+import { cn, conceptQuizLink } from '@/utils';
 
 interface ConceptFeedbackBoxProps {
   courseId: number;
@@ -112,7 +112,7 @@ function ConceptFeedbackBox({
               </p>
             )}
             <Button
-              to={`/quizzes/new?courseId=${courseId}&mode=self_development&concept=${encodeURIComponent(concept.concept)}`}
+              to={conceptQuizLink(courseId, concept.concept)}
               variant="secondary"
               className="self-start"
             >

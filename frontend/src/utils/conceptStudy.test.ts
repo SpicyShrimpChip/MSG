@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { CheckAttempt } from '@/types';
-import { checkQuizLink, judgeCheck, resolveStudyStatus } from './conceptStudy';
+import {
+  checkQuizLink,
+  conceptQuizLink,
+  judgeCheck,
+  resolveStudyStatus,
+} from './conceptStudy';
 
 const attempt = (
   submittedAt: string,
@@ -51,6 +56,18 @@ describe('resolveStudyStatus', () => {
       'review_needed',
     );
     expect(resolveStudyStatus('2026-11-05T10:30:00', failed)).toBe('studied');
+  });
+});
+
+describe('conceptQuizLink', () => {
+  it('과목·모드·개념을 넘기고, 모드를 빼면 자기개발 모드다', () => {
+    const params = new URLSearchParams(
+      conceptQuizLink(3, 'TCP & UDP 비교').split('?')[1],
+    );
+    expect(params.get('courseId')).toBe('3');
+    expect(params.get('mode')).toBe('self_development');
+    expect(params.get('concept')).toBe('TCP & UDP 비교');
+    expect(conceptQuizLink(3, 'DNS', 'exam_prep')).toContain('mode=exam_prep');
   });
 });
 

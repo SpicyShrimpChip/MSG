@@ -18,7 +18,7 @@ import {
   SubPage,
 } from '@/components';
 import { MOCK_OPEN_ACCESS, useAuthStore, useDemoStore } from '@/store';
-import { SEARCH_MAX_LENGTH, formatSemester } from '@/utils';
+import { SEARCH_MAX_LENGTH, conceptStudyLink, formatSemester } from '@/utils';
 
 function Section({
   icon,
@@ -176,7 +176,7 @@ function SearchResults({ keyword }: { keyword: string }) {
           {data.concepts.map((concept) => (
             <ResultRow
               key={`${concept.materialId}-${concept.conceptId}`}
-              to={`/materials/${concept.materialId}?tab=concepts&concept=${encodeURIComponent(concept.conceptId)}`}
+              to={conceptStudyLink(concept.materialId, concept.conceptId)}
               title={concept.name}
               meta={`${concept.materialTitle}에서 뽑은 개념`}
             >
