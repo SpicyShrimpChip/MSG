@@ -1,5 +1,4 @@
 import type {
-  ConceptQuizStats,
   Quiz,
   QuizAnswer,
   QuizCreateInput,
@@ -9,7 +8,6 @@ import type {
 } from '@/types';
 import {
   mockCreateQuiz,
-  mockGetConceptQuizStats,
   mockGetGenerationStatus,
   mockGetLatestQuizResult,
   mockGetQuiz,
@@ -90,17 +88,5 @@ export function getLatestQuizResult(id: number): Promise<QuizResult | null> {
   return request<QuizResult | null>({
     method: 'GET',
     url: `/quizzes/${id}/submissions/latest`,
-  });
-}
-
-// 과목의 개념별 퀴즈 결과 (퀴즈마다 가장 최근 제출, 코드 집계)
-export function getConceptQuizStats(
-  courseId: number,
-): Promise<ConceptQuizStats[]> {
-  if (USE_MOCK) return mockGetConceptQuizStats(courseId);
-  return request<ConceptQuizStats[]>({
-    method: 'GET',
-    url: '/quizzes/concept-stats',
-    params: { courseId },
   });
 }

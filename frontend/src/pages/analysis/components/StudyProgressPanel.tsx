@@ -1,5 +1,4 @@
-import { useSuspenseQuery } from '@tanstack/react-query';
-import { CURRICULUM_QUERY_KEY, getCurriculum } from '@/api';
+import { useCurriculum } from '@/hooks';
 import { Button, ScoreBar } from '@/components';
 import { formatDate } from '@/utils';
 import Panel from './Panel';
@@ -7,10 +6,7 @@ import Panel from './Panel';
 // 개념별 학습 진도 (맞춤 커리큘럼 응답의 flow.progress를 그대로 쓴다). 학습 완료 기록·확인 퀴즈 결과로 서버가 센 값이고,
 // 대화 분석 판단·내 피드백과 섞지 않는다. "학습 완료"는 공부했다는 기록일 뿐 숙련도가 아니다
 function StudyProgressPanel({ courseId }: { courseId: number }) {
-  const { data } = useSuspenseQuery({
-    queryKey: [...CURRICULUM_QUERY_KEY, courseId],
-    queryFn: () => getCurriculum(courseId),
-  });
+  const { data } = useCurriculum(courseId);
   const { progress } = data.flow;
   const stats = [
     { label: '학습 완료', value: progress.studiedConcepts },

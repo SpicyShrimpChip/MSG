@@ -1,15 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  useMutation,
-  useQueryClient,
-  useSuspenseQuery,
-} from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Lock, UserRound } from 'lucide-react';
 import {
   ME_QUERY_KEY,
   deleteAccount,
-  getMe,
   updateAiConsent,
   updateAiQuizConsent,
   updateLearningProfile,
@@ -28,7 +23,7 @@ import {
   type LearningProfileValue,
 } from '@/components';
 import { LEARNING_PURPOSES, jobFieldLabel } from '@/constants';
-import { useSavedMaskWords } from '@/hooks';
+import { useSavedMaskWords, useSuspenseMe } from '@/hooks';
 import { USE_MOCK } from '@/api';
 import { useAuthStore } from '@/store';
 import type { User } from '@/types';
@@ -396,10 +391,7 @@ function DeleteAccountSection({ me }: { me: User }) {
 }
 
 function MyAccount() {
-  const { data: me } = useSuspenseQuery({
-    queryKey: ME_QUERY_KEY,
-    queryFn: getMe,
-  });
+  const { data: me } = useSuspenseMe();
   return (
     <div className="flex flex-col gap-6">
       <AccountInfo me={me} />

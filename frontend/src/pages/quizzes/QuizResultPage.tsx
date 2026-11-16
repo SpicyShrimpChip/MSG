@@ -32,7 +32,7 @@ import type {
   QuizResult,
   SuggestionKind,
 } from '@/types';
-import { conceptStudyLink, formatDate } from '@/utils';
+import { conceptQuizLink, conceptStudyLink, formatDate } from '@/utils';
 import QuestionResultCard from './components/QuestionResultCard';
 
 const percentOf = (score: number, max: number) =>
@@ -111,7 +111,11 @@ function Assessment({ quiz, result }: { quiz: Quiz; result: QuizResult }) {
               <Button
                 key={concept.conceptId}
                 variant="secondary"
-                to={`/quizzes/new?courseId=${quiz.courseId}&mode=${quiz.mode ?? 'exam_prep'}&concept=${encodeURIComponent(concept.name)}`}
+                to={conceptQuizLink(
+                  quiz.courseId,
+                  concept.name,
+                  quiz.mode ?? 'exam_prep',
+                )}
               >
                 {concept.name} 다시 풀기
               </Button>

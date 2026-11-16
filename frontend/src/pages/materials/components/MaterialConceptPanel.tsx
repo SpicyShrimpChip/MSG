@@ -6,7 +6,6 @@ import {
 } from '@tanstack/react-query';
 import { BookOpen, ChevronDown, LoaderCircle, Lock, Quote } from 'lucide-react';
 import {
-  ASSESSMENTS_QUERY_KEY,
   CURRICULUM_QUERY_KEY,
   MATERIALS_QUERY_KEY,
   STUDY_QUERY_KEY,
@@ -15,7 +14,6 @@ import {
   extractMaterialConcepts,
   getConceptStudies,
   getMaterialConcepts,
-  getQuizAiStatus,
 } from '@/api';
 import {
   AiNote,
@@ -26,18 +24,11 @@ import {
   Notice,
   StudyStatusBadge,
 } from '@/components';
-import { useMe } from '@/hooks';
+import { useMe, useQuizAiStatus } from '@/hooks';
 import type { ConceptStudy, MaterialConcept, QuizAiStatus } from '@/types';
-import { cn } from '@/utils';
+import { CONTENT_DISABLED_MESSAGE } from '@/constants';
+import { cn, isReadable } from '@/utils';
 import ConceptStudyActions from './ConceptStudyActions';
-
-// 본문을 읽을 수 있는 형식 (서버 MaterialTextExtractor와 같다). PDF는 글이 들어 있는 PDF만, 스캔본은 OCR이 없어 못 읽는다
-export const READABLE_EXTENSIONS = ['txt', 'md', 'pptx', 'pdf'];
-export const isReadable = (fileName: string) =>
-  READABLE_EXTENSIONS.includes(fileName.split('.').pop()?.toLowerCase() ?? '');
-
-export const CONTENT_DISABLED_MESSAGE =
-  '학습자료 본문을 외부 AI로 보내는 기능은 운영 설정으로 꺼져 있어요. 처리 근거와 안내가 준비되면 켜져요. 지금은 과목 키워드로만 평가를 만들어요.';
 
 // 자료 원문 인용 (서버가 본문에 있는지 확인한 문장, AI 글 아님 → 회색)
 function SourceQuote({
@@ -314,10 +305,7 @@ function MaterialConceptPanel({
     queryKey: [...MATERIALS_QUERY_KEY, materialId, 'concepts'],
     queryFn: () => getMaterialConcepts(materialId),
   });
-  const { data: ai } = useSuspenseQuery({
-    queryKey: [...ASSESSMENTS_QUERY_KEY, 'ai-status'],
-    queryFn: getQuizAiStatus,
-  });
+  const { data: ai } = useQuizAiStatus();
   // 개념별 학습 기록·확인 퀴즈 결과 (실제 모드는 서버 DB, 체험 모드는 이 브라우저)
   const { data: studies } = useSuspenseQuery({
     queryKey: [...STUDY_QUERY_KEY, materialId],

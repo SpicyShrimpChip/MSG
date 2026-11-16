@@ -9,15 +9,13 @@ import { ClipboardCheck, FileText, LoaderCircle, Lock } from 'lucide-react';
 import {
   ASSESSMENTS_QUERY_KEY,
   MATERIALS_QUERY_KEY,
-  ME_QUERY_KEY,
   QUIZZES_QUERY_KEY,
   USE_MOCK,
   createAssessment,
   getAssessmentComparison,
   getMaterials,
-  getMe,
-  getQuizAiStatus,
 } from '@/api';
+import { useQuizAiStatus, useSuspenseMe } from '@/hooks';
 import {
   AsyncBoundary,
   Button,
@@ -29,11 +27,14 @@ import {
   SelectInput,
   SubPage,
 } from '@/components';
-import { DIFFICULTIES, QUESTION_TYPE_SETS } from '@/constants';
-import MaterialConceptPanel, {
+import {
   CONTENT_DISABLED_MESSAGE,
-  isReadable,
-} from '@/pages/materials/components/MaterialConceptPanel';
+  DIFFICULTIES,
+  QUESTION_TYPE_SETS,
+  QUIZ_MAX_QUESTIONS,
+} from '@/constants';
+import MaterialConceptPanel from '@/pages/materials/components/MaterialConceptPanel';
+import { isReadable } from '@/utils';
 import type {
   AssessmentKind,
   AssessmentSnapshot,
@@ -112,10 +113,7 @@ function MaterialAssessment({
     queryKey: [...ASSESSMENTS_QUERY_KEY, 'comparison', 'material', material.id],
     queryFn: () => getAssessmentComparison({ materialId: material.id }),
   });
-  const { data: ai } = useSuspenseQuery({
-    queryKey: [...ASSESSMENTS_QUERY_KEY, 'ai-status'],
-    queryFn: getQuizAiStatus,
-  });
+  const { data: ai } = useQuizAiStatus();
   const [typeSet, setTypeSet] = useState(3); // 객관식 + 주관식
   const [count, setCount] = useState(6);
   const [difficulty, setDifficulty] = useState<QuizDifficulty>('medium');
@@ -215,11 +213,13 @@ function MaterialAssessment({
               value={count}
               onChange={(e) => setCount(Number(e.target.value))}
             >
-              {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-                <option key={n} value={n}>
-                  {n}문제
-                </option>
-              ))}
+              {Array.from({ length: QUIZ_MAX_QUESTIONS }, (_, i) => i + 1).map(
+                (n) => (
+                  <option key={n} value={n}>
+                    {n}문제
+                  </option>
+                ),
+              )}
             </SelectInput>
           </FormRow>
           <FormRow label="난이도" htmlFor="assess-difficulty">
@@ -412,10 +412,7 @@ function MaterialPicker({ me }: { me: User | null }) {
 }
 
 function WithProfile() {
-  const { data: me } = useSuspenseQuery({
-    queryKey: ME_QUERY_KEY,
-    queryFn: getMe,
-  });
+  const { data: me } = useSuspenseMe();
   return <MaterialPicker me={me} />;
 }
 

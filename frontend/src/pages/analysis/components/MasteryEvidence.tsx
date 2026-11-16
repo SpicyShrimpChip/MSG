@@ -1,6 +1,10 @@
 import { Link } from 'react-router-dom';
 import type { ConceptMastery } from '@/types';
-import { UNDERSTANDING_LABEL, describeLevelTrend } from '@/utils';
+import {
+  UNDERSTANDING_LABEL,
+  conceptQuizLink,
+  describeLevelTrend,
+} from '@/utils';
 import MasteryMeter from './MasteryMeter';
 import MasteryTrend from './MasteryTrend';
 
@@ -77,7 +81,7 @@ function MasteryEvidence({ courseId, concept, mastery }: MasteryEvidenceProps) {
             <>
               {' '}
               <Link
-                to={`/quizzes/new?courseId=${courseId}&mode=self_development&concept=${encodeURIComponent(concept)}`}
+                to={conceptQuizLink(courseId, concept)}
                 className="font-bold text-primary underline-offset-4 hover:underline"
               >
                 퀴즈 {mastery.quizNeeded}문제 더 풀면 단계가 나와요

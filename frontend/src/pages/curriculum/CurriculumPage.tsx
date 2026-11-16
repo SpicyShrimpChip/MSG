@@ -1,6 +1,5 @@
 import { useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useSuspenseQuery } from '@tanstack/react-query';
 import {
   ArrowLeft,
   ArrowRight,
@@ -13,7 +12,7 @@ import {
   Route,
   Trophy,
 } from 'lucide-react';
-import { CURRICULUM_QUERY_KEY, USE_MOCK, getCurriculum } from '@/api';
+import { USE_MOCK } from '@/api';
 import {
   AiNote,
   AsyncBoundary,
@@ -28,7 +27,7 @@ import {
   StudyStatusBadge,
   SubPage,
 } from '@/components';
-import { useCourses } from '@/hooks';
+import { useCourses, useCurriculum } from '@/hooks';
 import type {
   Curriculum,
   CurriculumFlow,
@@ -41,6 +40,7 @@ import type {
 import {
   checkQuizLink,
   cn,
+  conceptQuizLink,
   conceptStudyLink,
   formatDate,
   formatSemester,
@@ -80,10 +80,7 @@ const anchor = (key: FlowStepKey) => `curriculum-step-${key}`;
 const conceptLink = (concept: FlowConcept) =>
   concept.materialId === null
     ? null
-    : `/materials/${concept.materialId}?tab=concepts&concept=${encodeURIComponent(concept.conceptId)}`;
-
-const quizLink = (courseId: number, mode: string, concept: string) =>
-  `/quizzes/new?courseId=${courseId}&mode=${mode}&concept=${encodeURIComponent(concept)}`;
+    : conceptStudyLink(concept.materialId, concept.conceptId);
 
 // ---------- 단계 표시 (맨 위) ----------
 
@@ -507,7 +504,10 @@ function KeywordConceptRow({
           </div>
         )}
       </div>
-      <Button variant="secondary" to={quizLink(courseId, mode, concept.name)}>
+      <Button
+        variant="secondary"
+        to={conceptQuizLink(courseId, concept.name, mode)}
+      >
         <ListChecks size={16} aria-hidden="true" />
         {concept.practiceGradedCount > 0 ? '다시 풀기' : '퀴즈 풀기'}
       </Button>
@@ -708,7 +708,7 @@ function StepCard({
               <Button
                 key={action.type}
                 variant="secondary"
-                to={quizLink(courseId, action.quizMode!, step.concept)}
+                to={conceptQuizLink(courseId, step.concept, action.quizMode!)}
               >
                 {action.label}
               </Button>
@@ -752,10 +752,7 @@ function PriorityDetails({ data }: { data: Curriculum }) {
 // ---------- 과목 하나 ----------
 
 function CourseCurriculum({ courseId }: { courseId: number }) {
-  const { data } = useSuspenseQuery({
-    queryKey: [...CURRICULUM_QUERY_KEY, courseId],
-    queryFn: () => getCurriculum(courseId),
-  });
+  const { data } = useCurriculum(courseId);
   const { flow } = data;
   if (flow.concepts.length === 0 && data.steps.length === 0) {
     return (

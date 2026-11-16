@@ -1,7 +1,6 @@
 import type {
   AssessmentComparison,
   AssessmentCreateInput,
-  ConceptQuizStats,
   Quiz,
   QuizAnswer,
   QuizCreateInput,
@@ -432,13 +431,6 @@ export function mockCreateQuiz(input: QuizCreateInput): Promise<Quiz> {
     questions: input.questionTypes.map((type) => samples[type]),
   });
   return mockGetQuiz(id);
-}
-
-export function mockGetConceptQuizStats(
-  courseId: number,
-): Promise<ConceptQuizStats[]> {
-  void courseId;
-  return mockDelay([]);
 }
 
 // 목업은 AI를 부르지 않으므로 만들기 요청은 바로 끝난 것으로 본다

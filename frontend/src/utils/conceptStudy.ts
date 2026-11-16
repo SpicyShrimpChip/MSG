@@ -60,6 +60,20 @@ export function checkQuizLink(
   return `/quizzes/new?${params.toString()}`;
 }
 
+// 개념 하나로 퀴즈 만들기 화면 주소 (과목 키워드 개념, 기본은 자기개발 모드)
+export function conceptQuizLink(
+  courseId: number,
+  concept: string,
+  mode = 'self_development',
+): string {
+  const params = new URLSearchParams({
+    courseId: String(courseId),
+    mode,
+    concept,
+  });
+  return `/quizzes/new?${params.toString()}`;
+}
+
 // 자료 상세 "핵심 개념" 탭의 그 개념 (펼쳐서 보여 준다)
 export function conceptStudyLink(materialId: number, conceptId: string) {
   return `/materials/${materialId}?tab=concepts&concept=${encodeURIComponent(conceptId)}`;

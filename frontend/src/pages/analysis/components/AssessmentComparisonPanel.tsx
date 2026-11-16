@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { ASSESSMENTS_QUERY_KEY, getAssessmentComparison } from '@/api';
 import { Button, Card, Notice } from '@/components';
-import { cn } from '@/utils';
+import { cn, conceptQuizLink } from '@/utils';
 import type { ConceptDeltaStatus } from '@/types';
 import {
   comparisonRows as rows,
@@ -127,8 +127,7 @@ function AssessmentComparisonPanel({ courseId }: { courseId: number }) {
   const all = rows(data);
   const groups = groupConcepts(data);
   const postDone = submitted(data.post);
-  const reviewLink = (name: string) =>
-    `/quizzes/new?courseId=${courseId}&mode=self_development&concept=${encodeURIComponent(name)}`;
+  const reviewLink = (name: string) => conceptQuizLink(courseId, name);
   const focus = all.find((row) => row.key === hovered);
   const unsettled =
     (data.pre.pendingCount ?? 0) +

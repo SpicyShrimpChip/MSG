@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { validateMaterialFile } from './material';
+import { isReadable, validateMaterialFile } from './material';
 
 const MB = 1024 * 1024;
 
@@ -21,5 +21,18 @@ describe('validateMaterialFile', () => {
     expect(validateMaterialFile({ name: 'a.txt', size: 21 * MB })).toMatch(
       /MB/,
     );
+  });
+});
+
+describe('isReadable', () => {
+  it('올릴 수 있는 형식은 대소문자와 상관없이 본문을 읽는다', () => {
+    expect(isReadable('강의노트.PDF')).toBe(true);
+    expect(isReadable('정리.md')).toBe(true);
+    expect(isReadable('발표.pptx')).toBe(true);
+  });
+
+  it('지원하지 않는 형식이나 확장자가 없으면 읽지 않는다', () => {
+    expect(isReadable('과제.hwp')).toBe(false);
+    expect(isReadable('README')).toBe(false);
   });
 });

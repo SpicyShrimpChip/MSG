@@ -7,10 +7,8 @@ import {
 import { ChartColumn, Download, LoaderCircle, Sparkles } from 'lucide-react';
 import * as m from 'motion/react-m';
 import {
-  ANALYSIS_QUERY_KEY,
   analysisLatestKey,
   getLatestAnalysis,
-  getProviders,
   startAnalysis,
   USE_MOCK,
 } from '@/api';
@@ -22,7 +20,7 @@ import {
   SelectInput,
   SubPage,
 } from '@/components';
-import { useCourses } from '@/hooks';
+import { useCourses, useProviders } from '@/hooks';
 import type { AnalysisRun, Course, DashboardComponentId } from '@/types';
 import {
   DEFAULT_LAYOUT,
@@ -135,10 +133,7 @@ function CourseAnalysis({ course }: { course: Course }) {
     queryKey: analysisLatestKey(course.id),
     queryFn: () => getLatestAnalysis(course.id),
   });
-  const { data: providers } = useSuspenseQuery({
-    queryKey: [...ANALYSIS_QUERY_KEY, 'providers'],
-    queryFn: getProviders,
-  });
+  const { data: providers } = useProviders();
   const mutation = useMutation({
     mutationFn: () => startAnalysis(course.id),
     onSuccess: (next) =>
