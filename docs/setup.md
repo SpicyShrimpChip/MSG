@@ -28,8 +28,8 @@
 ## 1. 화면만 보기
 
 ```bash
-git clone https://github.com/SpicyShrimpChip/lms.git
-cd lms/frontend
+git clone https://github.com/SpicyShrimpChip/MSG.git
+cd MSG/frontend
 npm ci          # Git 훅도 함께 설치돼요. 패키지가 바뀐 뒤에는 다시 실행해요
 npm run dev     # http://localhost:5173
 ```
@@ -43,7 +43,7 @@ PostgreSQL(pgvector 포함)은 도커로 켜요. `docker-compose.yml`이 있는 
 **① PostgreSQL 컨테이너 켜기 (처음 한 번)**
 
 ```bash
-cd lms/backend/db
+cd MSG/backend/db
 POSTGRES_PASSWORD='<관리자 비밀번호>' docker compose up -d
 ```
 

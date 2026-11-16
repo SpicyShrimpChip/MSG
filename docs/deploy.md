@@ -5,7 +5,7 @@
 ## 지금 연결 상태
 
 - 운영 주소: https://lms-seven-tawny.vercel.app/ (목업 모드)
-- GitHub `SpicyShrimpChip/lms`의 `main`에 연결되어 있다. main에 머지되면 운영 주소가 자동으로 새로 배포되고, PR마다 미리보기 주소가 달린다(PR 화면에 Vercel 봇이 링크를 단다)
+- GitHub `SpicyShrimpChip/MSG`의 `main`에 연결되어 있다. main에 머지되면 운영 주소가 자동으로 새로 배포되고, PR마다 미리보기 주소가 달린다(PR 화면에 Vercel 봇이 링크를 단다)
 - 목업의 퀴즈 결과·자료 목록 변경은 보는 사람 브라우저(localStorage)에만 남는다. 다른 사람이 링크로 들어오면 처음 상태부터 보인다
 - **주의:** 무료 플랜은 조직의 비공개 레포를 배포하지 못한다. 레포를 다시 비공개로 바꾸면 자동 배포가 멈춘다
 - 서비스 이름이 정해지면: 프로젝트 이름은 Settings → General에서 바꾸고, 주소는 자동으로 바뀌지 않으므로 Settings → Domains에서 `<새 이름>.vercel.app`을 추가한다

@@ -6,14 +6,14 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/banner-dark.svg">
-  <img src="docs/images/banner-light.svg" alt="ai-lms 학습 대시보드 예시 화면: 개념마다 GPT, Claude, Gemini가 따로 내린 판단과 같은 판단 수, AI가 쓴 설명" width="100%">
+  <img src="docs/images/banner-light.svg" alt="MSG 학습 대시보드 예시 화면: 개념마다 GPT, Claude, Gemini가 따로 내린 판단과 같은 판단 수, AI가 쓴 설명" width="100%">
 </picture>
 
 <div align="center">
 
 ![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black) ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?style=flat-square&logo=typescript&logoColor=white) ![Vite](https://img.shields.io/badge/Vite-8-646CFF?style=flat-square&logo=vite&logoColor=white) ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white) ![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.5-6DB33F?style=flat-square&logo=springboot&logoColor=white) ![Java](https://img.shields.io/badge/Java-17-ED8B00?style=flat-square&logo=openjdk&logoColor=white) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat-square&logo=postgresql&logoColor=white) ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white) ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-CI-2088FF?style=flat-square&logo=githubactions&logoColor=white) ![Claude](https://img.shields.io/badge/Claude-Code-D97757?style=flat-square&logo=claude&logoColor=white)
 
-**[화면 둘러보기 (예시 데이터)](https://lms-seven-tawny.vercel.app/)** · **[주요 화면](#주요-화면)** · **[진행 현황](#진행-현황)** · **[로컬 실행](#로컬-실행)**
+**[화면 둘러보기 (예시 데이터)](https://lms-seven-tawny.vercel.app/?demo=1)** · **[주요 화면](#주요-화면)** · **[진행 현황](#진행-현황)** · **[로컬 실행](#로컬-실행)**
 
 </div>
 
@@ -36,10 +36,10 @@
 </table>
 
 > [!TIP]
-> [체험 링크](https://lms-seven-tawny.vercel.app/?demo=1)에서 **로그인 없이 체험해 보기**를 누르면 가입 없이 모든 화면을 예시 데이터로 볼 수 있습니다. 체험 중 입력한 내용은 브라우저에만 저장됩니다.
+> [체험 링크](https://lms-seven-tawny.vercel.app/?demo=1)로 들어가면 가입 없이 바로 모든 화면을 예시 데이터로 볼 수 있습니다. 첫 화면에서 **로그인 없이 체험해 보기**를 눌러도 됩니다. 체험 중 입력한 내용은 브라우저에만 저장됩니다.
 
 > [!IMPORTANT]
-> 설문에서 찾은 문제가 어떤 기능과 설계로 이어졌는지는 중간보고서 본문에 자세히 적었습니다. 이 README는 화면과 진행 현황을 빠르게 훑어보는 용도입니다.
+> 설문에서 찾은 문제가 어떤 기능과 설계로 이어졌는지는 [프로젝트 문서 (Notion)](https://heliotrope-danthus-56e.notion.site/MSG-My-Study-Guide-40f9aac9e83581b096e2cd04f7a6de40)에 자세히 적었습니다. 이 README는 화면과 진행 현황을 빠르게 훑어보는 용도입니다.
 
 ## 이렇게 공부합니다
 
@@ -116,11 +116,11 @@ flowchart LR
 | **AI 대화 가져오기**<br>🟢 동작 | ChatGPT, Claude 내보내기 파일 읽기, 대화 고르기, 개인정보 가리기, 서버 재검사 |
 | **퀴즈**<br>🟢 동작 | 목록, 풀기, 서버 채점, 결과 |
 | **회원, 내 과목**<br>🟢 동작 | 가입, 로그인 유지, 분석 동의, 과목과 키워드, 회원 탈퇴 |
-| **학습 자료**<br>🔵 API 연결 | 올리기·목록·상세·삭제, 본문 읽기(TXT·MD·PPTX·글자가 있는 PDF). 실제 PDF·PPTX 파일 올리기는 점검 전 |
+| **학습 자료**<br>🔵 API 연결 | 올리기·목록·상세·삭제, 본문 읽기(TXT·MD·PPTX·글자가 있는 PDF). 실제 PDF·PPTX 파일로 점검 완료 |
 | **학습 대시보드**<br>🔵 API 연결 | 모델별 판단과 근거, 개념별 숙련도 단계와 변화, 추천 순서, "이 판단, 내 생각과 맞나요?" 피드백, 사전·사후평가 비교 |
 | **맞춤 커리큘럼, 사전·사후평가, 검색**<br>🔵 API 연결 | 사전 테스트 → 핵심 개념 학습 → 개념별 확인 퀴즈 → 사후 평가 4단계와 학습 진도, 통합 검색 |
 | **숙련도**<br>🟠 로직 구현 | 퀴즈 결과와 대화 판단을 규칙으로 계산(숫자는 초기값), 단계·근거·변화 추이 표시 |
-| **AI 분석, 퀴즈 만들기, AI 채점 (LLM 호출)**<br>🟠 로직 구현 | 세 모델 판단과 비교, 학습 모드별 퀴즈 만들기, 주관식·서술형 다수결 채점 코드 완성. API 키를 넣고 실제 호출 예정 |
+| **AI 분석, 퀴즈 만들기, AI 채점 (LLM 호출)**<br>🔵 API 연결 | 세 모델 판단과 비교, 학습 모드별 퀴즈 만들기, 주관식·서술형 다수결 채점. GPT·Gemini는 실제 호출로 동작 확인, Claude는 코드는 연결했고 API 크레딧 충전 전이라 동작 미확인 |
 | **자료 요약, 챗봇**<br>⚪ 예정 | 대화 기록이 적은 사용자의 시작 경로로 2단계에 만듭니다 |
 
 <details>
@@ -137,7 +137,7 @@ flowchart LR
 
 </details>
 
-[![Frontend CI](https://github.com/SpicyShrimpChip/lms/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/SpicyShrimpChip/lms/actions/workflows/frontend-ci.yml) [![Backend CI](https://github.com/SpicyShrimpChip/lms/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/SpicyShrimpChip/lms/actions/workflows/backend-ci.yml)
+[![Frontend CI](https://github.com/SpicyShrimpChip/MSG/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/SpicyShrimpChip/MSG/actions/workflows/frontend-ci.yml) [![Backend CI](https://github.com/SpicyShrimpChip/MSG/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/SpicyShrimpChip/MSG/actions/workflows/backend-ci.yml)
 
 프론트와 백엔드 테스트가 해당 코드가 바뀐 PR마다 GitHub Actions에서 실행됩니다. 백엔드는 H2와 실제 PostgreSQL 16(pgvector) 두 환경에서 같은 테스트를 돌립니다.
 
@@ -195,13 +195,12 @@ flowchart LR
 - **개발에도 AI를 씁니다:** Claude Code로 설계, 구현, 테스트를 진행하고, 사람이 PR 단위로 확인한 뒤 합칩니다.
 - **개발 교훈 위키:** 에러를 해결하거나 시행착오를 겪으면 [`docs/wiki/`](docs/wiki/README.md)에 한 건씩 남기고, 비슷한 작업을 시작하기 전에 먼저 읽습니다.
 
-- **멘토링 피드백과 반영:** 10/28·11/5 두 차례 멘토링을 받았습니다. 11/5에는 기능을 더 늘리기보다 남은 시간을 설명에 쓰라는 조언을 받아 커뮤니티 메뉴를 2단계로 미루고, 메뉴를 모으기 → 진단 → 공부 → 확인 순서로 바꾸고, 토큰 비용을 줄이려 Claude 프롬프트 캐싱을 넣고, 개인정보 처리방침을 다시 썼습니다. 설계 이유와 근거는 중간보고서에 정리합니다.
+- **멘토링 피드백과 반영:** 10/28·11/5 두 차례 멘토링을 받았습니다. 11/5에는 기능을 더 늘리기보다 남은 시간을 설명에 쓰라는 조언을 받아 커뮤니티 메뉴를 2단계로 미루고, 메뉴를 모으기 → 진단 → 공부 → 확인 순서로 바꾸고, 토큰 비용을 줄이려 Claude 프롬프트 캐싱을 넣고, 개인정보 처리방침을 다시 썼습니다. 피드백별 반영 내용은 프로젝트 문서(Notion)에 정리했습니다.
 
 ## 다음 계획
 
-- **중간 심사까지:** 실제 LLM으로 개념 분석과 퀴즈 만들기를 한 번 돌려 대시보드와 피드백까지 확인, 실제 PDF·PPTX 자료 올리기 점검
-- **2단계:** 자료 요약과 자료 기반 챗봇(대화 기록이 적은 사용자의 시작 경로), 커뮤니티 기능, 사용자 테스트로 숙련도 규칙의 숫자 조정, 배포
-- **이후 후보:** Gemini 대화 가져오기, 오픈소스 모델을 직접 띄운 개인정보 가리기, 판단 근거 출처
+- **2단계 (진행 중, 12월 초 본선 발표):** 백엔드 배포와 Claude API 크레딧 충전 뒤 세 모델 동작 확인, 사용자 테스트로 숙련도 규칙의 숫자 조정, 자료 요약과 자료 기반 챗봇(대화 기록이 적은 사용자의 시작 경로), 시연·발표 준비
+- **이후 후보:** 작업 난이도에 따른 모델 등급 나눠 쓰기, Gemini 대화 가져오기, 오픈소스 모델을 직접 띄운 개인정보 가리기, 판단 근거 출처, 커뮤니티 기능 재검토
 
 ## 폴더 구조
 
@@ -220,8 +219,8 @@ flowchart LR
 > Node.js 24가 필요합니다.
 
 ```bash
-git clone https://github.com/SpicyShrimpChip/lms.git
-cd lms/frontend
+git clone https://github.com/SpicyShrimpChip/MSG.git
+cd MSG/frontend
 npm ci
 npm run dev   # http://localhost:5173
 ```
@@ -234,7 +233,7 @@ npm run dev   # http://localhost:5173
 > JDK 17과 PostgreSQL 16(pgvector 포함, `backend/db/docker-compose.yml`로 띄울 수 있음)이 필요합니다. 새 컴퓨터 세팅 순서와 막힐 때 대처는 [`docs/setup.md`](docs/setup.md), 설계는 [`docs/backend-design.md`](docs/backend-design.md)를 참고하세요.
 
 ```bash
-cd lms/backend
+cd MSG/backend
 ./db/setup-local-postgres.sh # 처음 한 번: DB·계정을 만들고 backend/.env 생성 (관리자 비밀번호 필요, psql이 없으면 도커 컨테이너 안의 psql을 써서 묻지 않음)
 ./gradlew bootRun           # http://localhost:8080 (로컬 PostgreSQL, 테이블은 Flyway가 자동 생성)
 ./gradlew test              # H2 메모리 DB로 테스트

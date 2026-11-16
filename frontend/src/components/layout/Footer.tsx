@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { ExternalLink } from 'lucide-react';
 
 // 소스 저장소(공개 레포). 체험 링크로 들어온 사람이 코드·PR 기록으로 바로 갈 수 있게 둔다
-const REPOSITORY_URL = 'https://github.com/SpicyShrimpChip/lms';
+const REPOSITORY_URL = 'https://github.com/SpicyShrimpChip/MSG';
 
 function Footer() {
   return (

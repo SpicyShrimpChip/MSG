@@ -35,7 +35,7 @@ Swagger UI: `/swagger-ui/index.html` — 프론트와 API를 맞출 때 이 문�
     ├── config/            CORS, Swagger, 웹 설정
     ├── error/             전역 예외 처리 (@RestControllerAdvice)
     ├── security/          Security 설정, JWT
-    ├── llm/               LLM 클라이언트 인터페이스 (제공사 미정, 아래 참고)
+    ├── llm/               LLM 클라이언트 인터페이스 (OpenAI·Anthropic·Gemini, 11/6 확정, 아래 참고)
     └── storage/           파일 저장 인터페이스 FileStorage (지금은 LocalFileStorage, S3는 구현 추가), 파일 삭제 작업(FileCleanupService)
 ```
 
