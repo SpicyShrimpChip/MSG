@@ -46,3 +46,28 @@ React Router로 화면을 나누기 때문에 `/analysis`처럼 바로 들어오
 ```
 
 - TODO(미결): 백엔드 배포 주소 (`docs/frontend-requests.md` 5번 "배포")
+
+# 백엔드 이미지 (Docker)
+
+호스팅을 어디로 정하든(서버·데스크탑·PaaS) `backend/Dockerfile`로 만든 같은 이미지를 실행한다. 호스팅은 아직 미결이다(루트 `CLAUDE.md` "AWS 세부 서비스").
+
+```bash
+docker build -t msg-backend backend
+docker run -d -p 8080:8080 --env-file <운영 환경변수 파일> -v msg-uploads:/data/uploads msg-backend
+```
+
+- 이미지는 `prod` 프로필로 뜬다. 비밀값은 이미지에 넣지 않고(`backend/.dockerignore`가 `.env`를 뺀다) 실행할 때 환경변수로만 넘긴다. 환경변수 파일도 커밋하지 않는다.
+- root가 아닌 계정으로 실행한다. 쓸 수 있는 곳은 업로드 원본 폴더 `/data/uploads`뿐이고, **다시 배포해도 남도록 볼륨이나 호스트 폴더에 연결한다.**
+- 테스트는 이미지를 만들 때 돌리지 않는다(CI의 `build-and-test`·`postgres-test`가 맡는다). CI의 `docker-build`는 이미지가 만들어지는지만 확인하고 어디에도 올리지 않는다.
+- 메모리는 컨테이너 한도의 75%까지 JVM이 쓴다(`-XX:MaxRAMPercentage=75`). 같은 서버에 DB도 띄우면 2GB 이상을 권한다.
+
+| 묶음 | 환경변수 (값은 쓰지 않는다)                                                                                                                          |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DB   | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`(앱 계정), `DB_MIGRATION_USERNAME`, `DB_MIGRATION_PASSWORD`(테이블 변경 계정)                                  |
+| 보안 | `JWT_SECRET`, `CORS_ALLOWED_ORIGINS`                                                                                                                 |
+| AI   | `OPENAI_API_KEY`·`OPENAI_MODEL`, `ANTHROPIC_API_KEY`·`ANTHROPIC_MODEL`, `GEMINI_API_KEY`·`GEMINI_MODEL` (키나 모델 이름이 없으면 그 모델은 "미설정") |
+| 선택 | `MATERIAL_CONTENT_ENABLED` (기본 꺼짐. 처리방침에 확정한 뒤에만 켠다)                                                                                |
+
+- DB는 PostgreSQL 16 + pgvector이고 계정 두 개가 필요하다. 만드는 SQL은 `.github/workflows/backend-ci.yml`의 "테스트 DB·계정 만들기"와 `backend/db/setup-local-postgres.sh`가 같은 구성이다. `vector` 확장은 관리자 계정으로 미리 설치한다. 테이블은 서버가 처음 뜰 때 Flyway가 만들고, 운영 프로필은 샘플 데이터를 넣지 않는다.
+- 로그인·갱신·로그아웃 API는 `X-Requested-With: XMLHttpRequest` 헤더가 있어야 받는다(프론트 axios가 붙인다). curl로 확인할 때도 이 헤더를 넣는다.
+- TODO(미결): 프록시 뒤의 실제 접속 IP(`server.forward-headers-strategy`, `AuthController`)는 배포 구성을 정한 뒤 설정한다.

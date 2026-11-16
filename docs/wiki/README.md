@@ -55,6 +55,7 @@
 - Vercel 환경변수가 빠지면 화면이 `/api`를 실제로 부른다
 - 빌드 폴더에 `파일 2.sql` 같은 복사본이 생기면 테스트가 깨진다
 - `bootRun`이 MySQL 드라이버를 찾으며 뜨지 않는다
+- Windows Git Bash에서 curl로 한글 JSON을 보내면 400이 난다
 
 ### [process.md](process.md): 문서·진행 방식
 

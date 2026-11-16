@@ -23,6 +23,16 @@ permissions:
   contents: read
 
 jobs:
+  # 운영 이미지(backend/Dockerfile)가 만들어지는지만 확인한다. 어디에도 올리지 않는다
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 코드 가져오기
+        uses: actions/checkout@v4
+
+      - name: 이미지 만들기
+        run: docker build -t msg-backend:ci backend
+
   # H2 메모리 DB로 빌드·전체 테스트
   build-and-test:
     runs-on: ubuntu-latest
