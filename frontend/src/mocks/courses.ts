@@ -7,13 +7,21 @@ import { removeMockMaterialsOfCourse } from './materials';
 const STORAGE_KEY = 'ai-lms-mock-courses';
 
 // 처음 열었을 때 보여 줄 시연 과목 (mocks/analysis.ts·materials.ts의 courseId 1·2와 같다).
+// 키워드는 대시보드·자료·커리큘럼·퀴즈 목업의 개념 이름과 같게 쓴다. 대시보드·퀴즈 결과의 "확인 퀴즈 만들기"가
+// 개념 이름으로 퀴즈 만들기 화면을 열고, 그 화면은 과목 키워드에 있는 개념만 미리 골라 주기 때문이다.
 // 한 번이라도 과목을 바꾸면 저장된 목록을 쓴다
 const SAMPLE: Course[] = [
   {
     id: 1,
     name: '정보보호개론',
     semester: '2026-2',
-    keywords: ['암호', '공개키', '해시', '전자서명', '인증서'],
+    keywords: [
+      '공개키 암호',
+      '대칭키 암호',
+      '해시 함수',
+      '전자서명',
+      '인증서(PKI)',
+    ],
   },
   {
     id: 2,
