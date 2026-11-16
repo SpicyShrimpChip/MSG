@@ -16,7 +16,6 @@ import com.ailms.backend.global.error.BusinessException;
 import com.ailms.backend.global.llm.LlmClient;
 import com.ailms.backend.global.llm.LlmClients;
 import com.ailms.backend.global.llm.LlmJson;
-import com.ailms.backend.global.llm.LlmProvider;
 import com.ailms.backend.global.llm.LlmRequest;
 import com.ailms.backend.global.llm.ModelInvoker;
 import com.ailms.backend.global.security.ApiErrorResponder;
@@ -34,7 +33,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -88,10 +86,7 @@ public class MaterialConceptService {
 			- example: 이해를 돕는 짧은 예시나 비유 1~3문장, 300자 이내
 			JSON 객체 하나만 출력한다: {"explanation":"","materialContext":"","contextQuote":"","importance":"","example":""}
 			""";
-	static final int NOTE_MAX_OUTPUT_TOKENS = 3000;
 	static final int MIN_EXPLANATION_LENGTH = 20;
-	// 개념 설명은 개념마다 한 번씩 부르므로 개념 뽑기보다 넉넉히 둔다 (모델 요청 수 상한 app.quiz.daily-model-call-limit도 함께 적용)
-	static final int DAILY_NOTE_LIMIT = 40;
 	static final String CONCEPT_NOT_FOUND_MESSAGE = "이 자료에서 그 개념을 찾을 수 없어요. 핵심 개념을 먼저 뽑아 주세요.";
 	static final String CONCEPT_CHANGED_MESSAGE = "그 사이 핵심 개념을 다시 뽑아 설명을 저장하지 않았어요. 새 개념에서 다시 시도해 주세요.";
 	static final String NOTE_INVALID_MESSAGE = "AI가 쓴 개념 설명의 형식이 맞지 않아 저장하지 않았어요. 다시 시도해 주세요.";
@@ -156,7 +151,7 @@ public class MaterialConceptService {
 		ArrayNode keywords = input.putArray("courseKeywords");
 		prepared.keywords().forEach(keywords::add);
 		input.put("materialExcerpt", prepared.text());
-		LlmRequest request = new LlmRequest(SYSTEM, input.toString(), 2000);
+		LlmRequest request = new LlmRequest(SYSTEM, input.toString(), properties.conceptMaxOutputTokens());
 		Instant deadline = clock.instant().plus(properties.generationDeadline());
 		boolean anyResponse = false;
 		for (LlmClient client : prepared.clients()) {
@@ -196,7 +191,7 @@ public class MaterialConceptService {
 			MaterialConcept concept = findConcept(userId, materialId, conceptId);
 			List<String> others = conceptRepository.findAllByMaterialIdAndUserIdOrderBySortOrderAsc(materialId, userId)
 					.stream().map(MaterialConcept::getName).filter(name -> !name.equals(concept.getName())).toList();
-			return new NotePrepared(prepare(userId, materialId, confirmed, QuizAiCall.CONCEPT_NOTE, DAILY_NOTE_LIMIT,
+			return new NotePrepared(prepare(userId, materialId, confirmed, QuizAiCall.CONCEPT_NOTE, properties.conceptNoteDailyLimit(),
 					"개념 설명을 만들"), concept, others);
 		});
 		Prepared prepared = note.prepared();
@@ -208,7 +203,7 @@ public class MaterialConceptService {
 		ArrayNode others = input.putArray("otherConcepts");
 		note.otherConcepts().forEach(others::add);
 		input.put("materialExcerpt", prepared.text());
-		LlmRequest request = new LlmRequest(NOTE_SYSTEM, input.toString(), NOTE_MAX_OUTPUT_TOKENS);
+		LlmRequest request = new LlmRequest(NOTE_SYSTEM, input.toString(), properties.conceptNoteMaxOutputTokens());
 		Instant deadline = clock.instant().plus(properties.generationDeadline());
 		boolean anyResponse = false;
 		for (LlmClient client : prepared.clients()) {
@@ -424,10 +419,6 @@ public class MaterialConceptService {
 	}
 
 	private List<LlmClient> orderedClients() {
-		Map<LlmProvider, LlmClient> byProvider = llmClients.all().stream().filter(LlmClient::isConfigured)
-				.collect(Collectors.toMap(LlmClient::provider, Function.identity()));
-		List<LlmProvider> order = properties.generationProviders() == null ? List.of(LlmProvider.values())
-				: properties.generationProviders();
-		return order.stream().map(byProvider::get).filter(java.util.Objects::nonNull).distinct().toList();
+		return llmClients.configuredInOrder(properties.generationProviders());
 	}
 }

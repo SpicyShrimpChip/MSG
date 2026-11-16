@@ -23,12 +23,16 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param runningTimeout            마감 시각이 없는 옛(V7) 만들기 기록을 끝난 것으로 볼 시간
  * @param generationMaxOutputTokens 퀴즈 만들기 응답 길이 상한
  * @param gradingMaxOutputTokens    AI 채점 응답 길이 상한
+ * @param conceptMaxOutputTokens    학습자료 핵심 개념 뽑기 응답 길이 상한
+ * @param conceptNoteMaxOutputTokens 개념 설명 응답 길이 상한
+ * @param conceptNoteDailyLimit     24시간 동안 보낼 수 있는 개념 설명 요청 수 (개념마다 한 번씩 부르므로 따로 둔다)
  * @param assessment                결과 판단 기준 (코드 규칙, 숙련도 점수가 아님)
  */
 @ConfigurationProperties(prefix = "app.quiz")
 public record QuizProperties(List<LlmProvider> generationProviders, int maxQuestionCount, int mockExamMaxQuestionCount,
 		int dailyGenerationLimit, int dailyGradingLimit, int dailyModelCallLimit, Duration generationDeadline,
 		Duration gradingDeadline, Duration runningTimeout, int generationMaxOutputTokens, int gradingMaxOutputTokens,
+		int conceptMaxOutputTokens, int conceptNoteMaxOutputTokens, int conceptNoteDailyLimit,
 		Assessment assessment) {
 
 	/**

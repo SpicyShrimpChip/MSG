@@ -20,7 +20,6 @@ import com.ailms.backend.domain.quiz.entity.QuizSubmission;
 import com.ailms.backend.global.error.BusinessException;
 import com.ailms.backend.global.llm.LlmClient;
 import com.ailms.backend.global.llm.LlmClients;
-import com.ailms.backend.global.llm.LlmProvider;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -214,12 +213,8 @@ public class AssessmentService {
 	// 문제 만들기·채점에 쓸 AI (키 값 없이)
 	public QuizAiStatusResponse aiStatus() {
 		List<LlmClient> configured = llmClients.all().stream().filter(LlmClient::isConfigured).toList();
-		Map<LlmProvider, LlmClient> byProvider = configured.stream()
-				.collect(Collectors.toMap(LlmClient::provider, Function.identity()));
-		List<LlmProvider> order = properties.generationProviders() == null ? List.of(LlmProvider.values())
-				: properties.generationProviders();
-		QuizAiStatusResponse.Model generation = order.stream().map(byProvider::get)
-				.filter(java.util.Objects::nonNull).findFirst()
+		QuizAiStatusResponse.Model generation = llmClients.configuredInOrder(properties.generationProviders()).stream()
+				.findFirst()
 				.map(client -> new QuizAiStatusResponse.Model(client.provider().apiValue(), client.model()))
 				.orElse(null);
 		List<QuizAiStatusResponse.Model> grading = configured.stream()

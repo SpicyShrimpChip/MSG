@@ -32,7 +32,6 @@ import com.ailms.backend.domain.user.entity.User;
 import com.ailms.backend.global.error.BusinessException;
 import com.ailms.backend.global.llm.LlmClient;
 import com.ailms.backend.global.llm.LlmClients;
-import com.ailms.backend.global.llm.LlmProvider;
 import com.ailms.backend.global.llm.LlmRequest;
 import com.ailms.backend.global.llm.ModelInvoker;
 import com.ailms.backend.global.security.ApiErrorResponder;
@@ -63,7 +62,8 @@ import org.springframework.util.StringUtils;
  * → (4) 검증을 통과한 퀴즈만 저장하고 기록을 SUCCEEDED로, 아니면 FAILED로 남기고 오류를 돌려준다.
  *
  * <p>외부로 보내는 것: 과목 이름, 개념(과목 키워드), 사용자가 적은 시험 범위, 직무 분야 이름, 코드가 요약한 개념별 참고 상태.
- * 사용자 대화 원문과 학습자료 본문은 보내지 않는다(자료 본문 추출이 아직 없어 자료를 골라도 본문은 쓰지 않는다).
+ * 사용자 대화 원문은 보내지 않는다. 학습자료 본문은 app.material-content.enabled가 켜져 있고 요청에서 확인(materialContentConsent)한
+ * 경우에만 발췌(app.material-content.max-chars까지)를 보낸다.
  * AI 퀴즈 처리 동의(대화 분석 동의와 별도)를 한 사용자만 쓸 수 있다. 키가 없으면 가짜 문제를 만들지 않고 503.
  *
  * <p>시간: 전체 예산(app.quiz.generation-deadline) 안에서만 모델을 부르고 기다린다. 기록에 마감 시각을 두고, 저장할 때
@@ -102,8 +102,6 @@ public class QuizGenerationService {
 	static final String MODEL_BUDGET_MESSAGE = "오늘 AI 호출 한도를 다 써서 지금은 퀴즈를 만들 수 없어요. 내일 다시 시도해 주세요.";
 	static final String MOCK_EXAM_MODE_MESSAGE = "모의시험은 시험 대비 모드에서만 만들 수 있어요.";
 	static final int MAX_CONCEPTS = 10;
-	// 자료 본문은 이만큼까지만 보낸다 (비용·개인정보 노출 최소화)
-	static final int MAX_MATERIAL_EXCERPT = 12_000;
 	static final int MAX_AVOID_QUESTIONS = 20;
 	static final String ASSESSMENT_KIND_MESSAGE = "평가 종류를 다시 골라 주세요.";
 	static final String ASSESSMENT_MATERIAL_MESSAGE = "사전·사후평가는 과목에 연결된 학습자료를 골라야 해요.";
@@ -299,14 +297,7 @@ public class QuizGenerationService {
 
 	// 설정 순서대로, 설정된 모델만
 	private List<LlmClient> orderedClients() {
-		Map<LlmProvider, LlmClient> byProvider = llmClients.all().stream()
-				.filter(LlmClient::isConfigured)
-				.collect(Collectors.toMap(LlmClient::provider, Function.identity()));
-		List<LlmClient> ordered = new ArrayList<>();
-		List<LlmProvider> order = properties.generationProviders() == null ? List.of(LlmProvider.values())
-				: properties.generationProviders();
-		order.stream().map(byProvider::get).filter(java.util.Objects::nonNull).distinct().forEach(ordered::add);
-		return ordered;
+		return llmClients.configuredInOrder(properties.generationProviders());
 	}
 
 	private Started start(Long userId, QuizCreateRequest request, List<LlmClient> clients) {
