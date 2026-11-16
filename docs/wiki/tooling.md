@@ -75,3 +75,10 @@
 - 원인: `application.yaml`은 `backend/.env`(커밋 안 됨)를 읽어 DB 접속 값을 덮는다. MySQL 시절의 접속 값이 로컬 `.env`(또는 셸 환경변수)에 남아 있던 것으로 보인다(`.env`는 열어 보지 않았다). `./gradlew test`는 영향을 받지 않았다.
 - 해결: `.env`를 `backend/.env.example`(PostgreSQL)에 맞춰 다시 만든다. 잠깐 H2로만 띄울 때는 `SPRING_DATASOURCE_URL`·`SPRING_DATASOURCE_USERNAME`·`SPRING_DATASOURCE_PASSWORD`·`SPRING_DATASOURCE_DRIVER_CLASS_NAME` 환경변수로 덮는다(환경변수가 `.env`보다 우선).
 - 다음에는: DB를 바꾸는 PR 뒤에는 각자 `.env`도 `.env.example`과 비교한다.
+
+## Windows Git Bash에서 curl로 한글 JSON을 보내면 400이 난다 (2026-11-16, #PR)
+
+- 상황: 백엔드 Docker 이미지를 띄우고 curl로 회원가입을 확인했더니 "요청 형식이 올바르지 않아요"(400)가 났다.
+- 원인: `-d '{"name":"테스트"}'`처럼 명령줄에 직접 쓴 한글이 UTF-8이 아닌 코드 페이지로 넘어갔다. 응답 JSON을 파이썬 `open()`으로 읽을 때도 기본 인코딩(cp949) 때문에 깨졌다.
+- 해결: 요청 본문을 UTF-8 파일로 저장하고 `--data-binary @파일`로 보낸다. 응답은 `open(..., encoding='utf-8')`로 읽는다.
+- 다음에는: 로그인·갱신 API는 `X-Requested-With: XMLHttpRequest` 헤더가 없으면 403이니 같이 넣는다(`docs/deploy.md`).
