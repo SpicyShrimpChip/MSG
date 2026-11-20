@@ -1,9 +1,17 @@
-import { strFromU8 } from 'fflate';
 import { coreCrc32, coreInflateEntry } from './core';
 
 // zip을 통째로 메모리에 올리지 않고 Blob.slice로 필요한 부분만 읽는 작은 리더.
-// ChatGPT 내보내기는 첨부 파일 때문에 3GB를 넘을 수 있어서 fflate의 unzip(전체를 메모리에)을 쓰지 않는다.
+// ChatGPT 내보내기는 첨부 파일 때문에 3GB를 넘을 수 있어서 zip 전체를 메모리에 올리는 방식은 쓰지 않는다.
 // 압축 풀기(deflate)와 CRC 확인은 러스트 WebAssembly(core.ts)가 한다. 서버로는 아무것도 보내지 않는다
+
+// 파일 이름 글자: 바이트 하나를 글자 하나로 (Latin-1, 예전과 같다). 긴 이름도 인자 수 제한에 걸리지 않게 나눠 바꾼다
+function latin1(bytes: Uint8Array): string {
+  let text = '';
+  for (let i = 0; i < bytes.length; i += 0x2000) {
+    text += String.fromCharCode(...bytes.subarray(i, i + 0x2000));
+  }
+  return text;
+}
 
 const LOCAL_SIGNATURE = 0x04034b50;
 const CENTRAL_SIGNATURE = 0x02014b50;
@@ -199,7 +207,7 @@ export async function readCentralDirectory(
       localOffset = big.offset ?? localOffset;
     }
     entries.push({
-      name: strFromU8(bytes.subarray(nameStart, extraStart), true),
+      name: latin1(bytes.subarray(nameStart, extraStart)),
       method,
       compressedSize,
       uncompressedSize,
@@ -334,7 +342,7 @@ export async function* scanLocalEntries(
     const dataStart = position + LOCAL_HEADER_SIZE + nameLength + extraLength;
     const dataEnd = dataStart + compressedSize;
     const entry: ZipEntry = {
-      name: strFromU8(variable.subarray(0, nameLength), true),
+      name: latin1(variable.subarray(0, nameLength)),
       method,
       compressedSize,
       uncompressedSize,
