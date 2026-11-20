@@ -1,5 +1,8 @@
 package com.ailms.backend.domain.quiz.application;
 
+import com.ailms.backend.domain.material.application.MaterialContentProperties;
+import com.ailms.backend.domain.material.application.MaterialTextExtractor;
+
 import com.ailms.backend.domain.conversation.application.PersonalInfoDetector;
 import com.ailms.backend.domain.course.dao.CourseRepository;
 import com.ailms.backend.domain.course.entity.Course;
@@ -274,7 +277,7 @@ class QuizSpecResolver {
 		boolean requested = Boolean.TRUE.equals(request.useMaterialContent());
 		if (requested && !contentProperties.enabled()) {
 			// 운영 설정·처리방침 확정 전에는 자료 본문을 외부로 보내지 않는다
-			throw new BusinessException(HttpStatus.FORBIDDEN, MaterialConceptService.DISABLED_MESSAGE);
+			throw new BusinessException(HttpStatus.FORBIDDEN, MaterialContentProperties.DISABLED_MESSAGE);
 		}
 		boolean wantContent = contentProperties.enabled() && (requested || (pre != null && pre.isMaterialContentUsed()));
 		String note = pre != null && pre.isMaterialContentUsed() && !contentProperties.enabled() ? "DISABLED" : null;

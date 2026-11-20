@@ -1,4 +1,4 @@
-package com.ailms.backend.domain.quiz.application;
+package com.ailms.backend.domain.material.application;
 
 import com.ailms.backend.domain.conversation.application.PersonalInfoDetector;
 import com.ailms.backend.domain.course.dao.CourseRepository;
@@ -8,7 +8,10 @@ import com.ailms.backend.domain.material.dao.MaterialRepository;
 import com.ailms.backend.domain.material.entity.Material;
 import com.ailms.backend.domain.material.entity.MaterialConcept;
 import com.ailms.backend.domain.quiz.dao.QuizAiCallRepository;
-import com.ailms.backend.domain.quiz.dto.MaterialConceptResponse;
+import com.ailms.backend.domain.material.dto.MaterialConceptResponse;
+import com.ailms.backend.domain.quiz.application.QuizAiUsage;
+import com.ailms.backend.domain.quiz.application.QuizModelFallback;
+import com.ailms.backend.domain.quiz.application.QuizProperties;
 import com.ailms.backend.domain.quiz.entity.QuizAiCall;
 import com.ailms.backend.domain.user.dao.UserRepository;
 import com.ailms.backend.domain.user.entity.User;
@@ -67,7 +70,6 @@ public class MaterialConceptService {
 			""";
 	static final int MIN_QUOTE_LENGTH = 4;
 	static final int MAX_CONCEPTS = 10;
-	static final String DISABLED_MESSAGE = "학습자료 본문을 외부 AI로 보내는 기능은 아직 꺼져 있어요(운영 설정·처리방침 확정 전). 과목 개념으로 평가를 만들 수 있어요.";
 	static final String CONSENT_MESSAGE = "자료 본문을 외부 AI로 보내려면 확인에 체크해 주세요.";
 	static final String QUIZ_CONSENT_MESSAGE = "AI로 핵심 개념을 뽑으려면 AI 퀴즈 처리 동의가 필요해요. 마이페이지에서 동의할 수 있어요.";
 	static final String NO_MODEL_MESSAGE = "연결된 AI 모델이 없어 지금은 핵심 개념을 뽑을 수 없어요.";
@@ -285,7 +287,7 @@ public class MaterialConceptService {
 				.orElseThrow(() -> new BusinessException(HttpStatus.UNAUTHORIZED, ApiErrorResponder.UNAUTHORIZED_MESSAGE));
 		Material material = findMaterial(userId, materialId);
 		if (!contentProperties.enabled()) {
-			throw new BusinessException(HttpStatus.FORBIDDEN, DISABLED_MESSAGE);
+			throw new BusinessException(HttpStatus.FORBIDDEN, MaterialContentProperties.DISABLED_MESSAGE);
 		}
 		if (!user.isAiQuizConsent()) {
 			throw new BusinessException(HttpStatus.FORBIDDEN, QUIZ_CONSENT_MESSAGE);

@@ -1,5 +1,7 @@
 package com.ailms.backend.domain.quiz.application;
 
+import com.ailms.backend.domain.material.application.MaterialContentProperties;
+
 import com.ailms.backend.domain.course.dao.CourseRepository;
 import com.ailms.backend.domain.material.dao.MaterialRepository;
 import com.ailms.backend.domain.material.entity.Material;

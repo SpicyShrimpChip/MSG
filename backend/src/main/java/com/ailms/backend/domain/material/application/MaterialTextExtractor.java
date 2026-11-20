@@ -1,4 +1,4 @@
-package com.ailms.backend.domain.quiz.application;
+package com.ailms.backend.domain.material.application;
 
 import com.ailms.backend.domain.material.entity.Material;
 import com.ailms.backend.domain.material.entity.MaterialFileFormat;

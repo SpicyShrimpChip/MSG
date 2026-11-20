@@ -1,9 +1,9 @@
-package com.ailms.backend.domain.quiz.api;
+package com.ailms.backend.domain.material.api;
 
-import com.ailms.backend.domain.quiz.application.MaterialConceptService;
-import com.ailms.backend.domain.quiz.dto.ConceptExtractRequest;
-import com.ailms.backend.domain.quiz.dto.ConceptStudyNoteRequest;
-import com.ailms.backend.domain.quiz.dto.MaterialConceptResponse;
+import com.ailms.backend.domain.material.application.MaterialConceptService;
+import com.ailms.backend.domain.material.dto.ConceptExtractRequest;
+import com.ailms.backend.domain.material.dto.ConceptStudyNoteRequest;
+import com.ailms.backend.domain.material.dto.MaterialConceptResponse;
 import com.ailms.backend.global.common.ApiResponse;
 import com.ailms.backend.global.security.AuthUser;
 import io.swagger.v3.oas.annotations.Operation;
