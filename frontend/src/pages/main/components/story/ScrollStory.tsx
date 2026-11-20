@@ -56,7 +56,7 @@ function BrowserFrame({
         ))}
         <span className="mx-auto flex h-6.5 items-center gap-1.5 rounded-full border border-line bg-surface-raised px-3.5 text-xs text-ink-muted">
           <Lock size={11} strokeWidth={2.4} aria-hidden="true" />
-          ai-lms{path}
+          msg{path}
         </span>
         <span aria-hidden="true" className="w-11.5" />
       </div>

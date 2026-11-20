@@ -496,7 +496,7 @@ export function mockGetAssessmentComparison(target: {
   courseId?: number;
   materialId?: number;
 }): Promise<AssessmentComparison> {
-  // 예시 비교(해시 함수·인증서)는 정보보호개론 과목의 것이라 다른 과목·자료에는 "아직 사전평가가 없어요"로 보여 준다
+  // 예시 비교는 정보보호개론 과목의 것이라 다른 과목·자료에는 "아직 사전평가가 없어요"로 보여 준다
   const courseId =
     target.courseId ??
     mockMaterialsSnapshot().find(
@@ -513,67 +513,114 @@ export function mockGetAssessmentComparison(target: {
       comparability: null,
     });
   }
-  return mockDelay({
-    basis: '최신 사전평가와 그 사후평가를 비교해요.',
-    material: { id: 1, title: '예시 자료' },
-    pre: {
-      quizId: 1,
-      title: '예시 자료 · 사전평가',
-      submissionId: 1,
-      submittedAt: '2026-11-01T10:00:00',
-      questionCount: 6,
-      gradedCount: 6,
-      score: 3,
-      maxScore: 6,
-      pendingCount: 0,
-      reviewCount: 0,
-    },
-    post: {
-      quizId: 2,
-      title: '예시 자료 · 사후평가',
-      submissionId: 2,
-      submittedAt: '2026-11-03T10:00:00',
-      questionCount: 6,
-      gradedCount: 6,
-      score: 5,
-      maxScore: 6,
-      pendingCount: 0,
-      reviewCount: 0,
-    },
-    overallDelta: 33,
-    comparability: {
-      sameConcepts: true,
-      sameQuestionCount: true,
-      sameQuestionTypes: true,
-      sameDifficulty: true,
-      notes: [
-        '사후평가 문제는 같은 개념으로 새로 만든 문제라 문제 자체는 달라요.',
-      ],
-    },
-    concepts: [
-      {
-        conceptId: 'hash',
-        name: '해시 함수',
-        preScore: 1,
-        preMaxScore: 3,
-        postScore: 3,
-        postMaxScore: 3,
-        delta: 67,
-        status: 'improved',
-      },
-      {
-        conceptId: 'pki',
-        name: '인증서(PKI)',
-        preScore: 2,
-        preMaxScore: 3,
-        postScore: 2,
-        postMaxScore: 3,
-        delta: 0,
-        status: 'unchanged',
-      },
-    ],
-  });
+  // 공개키 암호 정리 노트(자료 1)는 사전평가만 본 상태다 (커리큘럼 STEP 1 "7/12점", STEP 4 "사후평가 아직"과 같다)
+  if (target.materialId === CURRICULUM_MATERIAL_ID) {
+    return mockDelay(CURRICULUM_PRE_ONLY);
+  }
+  // 과목 전체(대시보드)는 가장 최근 사전평가인 해시 함수 연습문제 풀이(자료 2)의 사전·사후 비교를 보여 준다
+  return mockDelay(HASH_COMPARISON);
 }
+
+// 커리큘럼이 기준으로 삼는 자료 (mocks/curriculum.ts의 첫 자료, 사전평가 11/1)
+const CURRICULUM_MATERIAL_ID = 1;
+
+const CURRICULUM_PRE_ONLY: AssessmentComparison = {
+  basis: '최신 사전평가와 그 사후평가를 비교해요.',
+  material: { id: 1, title: '공개키 암호 정리 노트' },
+  pre: {
+    quizId: 1,
+    title: '공개키 암호 정리 노트 · 사전평가',
+    submissionId: 1,
+    submittedAt: '2026-11-01T10:00:00',
+    questionCount: 6,
+    gradedCount: 6,
+    score: 7,
+    maxScore: 12,
+    pendingCount: 0,
+    reviewCount: 0,
+  },
+  post: null,
+  overallDelta: null,
+  comparability: {
+    sameConcepts: true,
+    sameQuestionCount: true,
+    sameQuestionTypes: true,
+    sameDifficulty: true,
+    notes: [],
+  },
+  // 개념마다 3점, 기준 60% (mocks/curriculum.ts SAMPLE_PRE와 같다)
+  concepts: [
+    preOnly('public-key', '공개키 암호', 1),
+    preOnly('digital-signature', '전자서명', 3),
+    preOnly('pki', '인증서(PKI)', 2),
+    preOnly('hash', '해시 함수', 1),
+  ],
+};
+
+function preOnly(conceptId: string, name: string, score: number) {
+  return {
+    conceptId,
+    name,
+    preScore: score,
+    preMaxScore: 3,
+    postScore: null,
+    postMaxScore: null,
+    delta: null,
+    status: score / 3 >= 0.6 ? ('ok' as const) : ('weak' as const),
+  };
+}
+
+// 해시 함수 연습문제 풀이(자료 2): 11/2 사전평가 → 11/3 사후평가. 커리큘럼(자료 1)보다 뒤에 본 평가라 과목 비교의 기준이 된다
+const HASH_COMPARISON: AssessmentComparison = {
+  basis: '최신 사전평가와 그 사후평가를 비교해요.',
+  material: { id: 2, title: '해시 함수 연습문제 풀이' },
+  pre: {
+    quizId: 1,
+    title: '해시 함수 연습문제 풀이 · 사전평가',
+    submissionId: 2,
+    submittedAt: '2026-11-02T10:00:00',
+    questionCount: 6,
+    gradedCount: 6,
+    score: 3,
+    maxScore: 6,
+    pendingCount: 0,
+    reviewCount: 0,
+  },
+  post: {
+    quizId: 2,
+    title: '해시 함수 연습문제 풀이 · 사후평가',
+    submissionId: 3,
+    submittedAt: '2026-11-03T10:00:00',
+    questionCount: 6,
+    gradedCount: 6,
+    score: 5,
+    maxScore: 6,
+    pendingCount: 0,
+    reviewCount: 0,
+  },
+  overallDelta: 33,
+  comparability: {
+    sameConcepts: true,
+    sameQuestionCount: true,
+    sameQuestionTypes: true,
+    sameDifficulty: true,
+    notes: [
+      '사후평가 문제는 같은 개념으로 새로 만든 문제라 문제 자체는 달라요.',
+    ],
+  },
+  concepts: [
+    {
+      conceptId: 'hash',
+      name: '해시 함수',
+      preScore: 3,
+      preMaxScore: 6,
+      postScore: 5,
+      postMaxScore: 6,
+      delta: 33,
+      status: 'improved',
+    },
+  ],
+};
 
 export function mockGetQuizAiStatus() {
   return mockDelay({

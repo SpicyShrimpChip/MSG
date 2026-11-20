@@ -116,12 +116,17 @@ function ManifestBody({
 
 function FileStep({ imported, onLoaded, onNext }: FileStepProps) {
   const [reading, setReading] = useState(false);
+  // 파일별 오류(형식이 다름 등)는 결과에 담겨 오고, 이건 읽기 자체가 멈춘 경우(브라우저가 파일을 못 엶·메모리 부족 등)다
+  const [readFailed, setReadFailed] = useState(false);
 
   const handleFiles = async (files: File[]) => {
     if (files.length === 0) return;
     setReading(true);
+    setReadFailed(false);
     try {
       onLoaded(await readExportFiles(files));
+    } catch {
+      setReadFailed(true);
     } finally {
       setReading(false);
     }
@@ -174,6 +179,27 @@ function FileStep({ imported, onLoaded, onNext }: FileStepProps) {
       </p>
 
       <div aria-live="polite" className="flex flex-col gap-3">
+        {readFailed && (
+          <div
+            role="alert"
+            className="flex flex-col gap-1.5 rounded-xl border border-danger p-4"
+          >
+            <p className="flex items-center gap-2 font-bold text-heading">
+              <CircleAlert
+                size={18}
+                className="shrink-0 text-danger"
+                aria-hidden="true"
+              />
+              파일을 끝까지 읽지 못했어요
+            </p>
+            <p className="text-body text-ink-soft">
+              브라우저가 파일을 여는 중에 멈췄어요. 파일이 다른 곳으로
+              옮겨지거나 바뀌지 않았는지 확인하고 다시 골라 주세요. 아주 큰
+              zip이면 다른 창을 닫고 다시 시도하거나, 압축을 푼
+              conversations.json만 올려 주세요.
+            </p>
+          </div>
+        )}
         {imported?.errors.map((error) =>
           error.manifest ? (
             <ManifestNotice
