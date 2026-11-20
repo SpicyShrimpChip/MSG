@@ -1,7 +1,8 @@
 import { useMutation } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { CircleCheck, Info, TriangleAlert } from 'lucide-react';
-import { ApiError, importConversations, USE_MOCK } from '@/api';
+import { ApiError, importConversations } from '@/api';
+import { useMockData } from '@/store';
 import { Button, Card, ErrorText, Notice } from '@/components';
 import { useCourses } from '@/hooks';
 import type { ConversationImportRejection } from '@/types';
@@ -91,6 +92,7 @@ async function sendAll({
 }
 
 function SendStep({ items, onBack, onRestart }: SendStepProps) {
+  const mockData = useMockData();
   const { data: courses } = useCourses();
   // 보내기 한 번 = 가져오기 작업 하나. 고른 대화가 바뀌면 이 화면이 새로 열려 새 id를 만든다
   const [importId] = useState(() => crypto.randomUUID());
@@ -138,7 +140,7 @@ function SendStep({ items, onBack, onRestart }: SendStepProps) {
             </h2>
             <p className="text-body text-ink-soft">
               {/* 체험(목업)에서는 보낸 대화를 분석하지 않으므로, 내 대화의 결과로 오해하지 않게 알린다 */}
-              {USE_MOCK
+              {mockData
                 ? '체험에서는 보낸 대화를 저장하거나 분석하지 않아요. 학습 분석에는 미리 만든 예시 결과가 보여요.'
                 : '분석이 끝나면 학습 분석에서 개념별 강점과 보완할 점을 볼 수 있어요.'}
             </p>

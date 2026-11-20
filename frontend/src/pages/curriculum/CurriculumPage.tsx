@@ -12,7 +12,6 @@ import {
   Route,
   Trophy,
 } from 'lucide-react';
-import { USE_MOCK } from '@/api';
 import {
   AiNote,
   AsyncBoundary,
@@ -27,6 +26,7 @@ import {
   StudyStatusBadge,
   SubPage,
 } from '@/components';
+import { useMockData } from '@/store';
 import { useCourses, useCurriculum } from '@/hooks';
 import type {
   Curriculum,
@@ -752,6 +752,7 @@ function PriorityDetails({ data }: { data: Curriculum }) {
 // ---------- 과목 하나 ----------
 
 function CourseCurriculum({ courseId }: { courseId: number }) {
+  const mockData = useMockData();
   const { data } = useCurriculum(courseId);
   const { flow } = data;
   if (flow.concepts.length === 0 && data.steps.length === 0) {
@@ -770,7 +771,7 @@ function CourseCurriculum({ courseId }: { courseId: number }) {
         사전 테스트 → 핵심 개념 학습 → 개념별 확인 퀴즈 → 사후 평가 순서로
         공부해요. 지금 단계는 제출·채점 기록으로 서버가 정한 것이고, 어느
         단계로든 바로 갈 수 있어요.
-        {USE_MOCK && ' 지금은 예시 데이터예요.'}
+        {mockData && ' 지금은 예시 데이터예요.'}
       </p>
       <FlowStepper flow={flow} />
       {flow.currentStep === 'done' && (

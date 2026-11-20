@@ -9,14 +9,15 @@ import {
   mockGetAssessmentComparison,
   mockGetQuizAiStatus,
 } from '@/mocks';
-import { USE_MOCK } from './axios';
+// 스토어 배럴(화면 모드 등 window 사용)까지 불러오지 않도록 파일을 직접 가져온다
+import { isMockData } from '@/store/useDemoStore';
 import { request } from './request';
 
 export const ASSESSMENTS_QUERY_KEY = ['assessments'] as const;
 
 // 사전·사후평가 만들기 (백엔드 11/3, Swagger `사전·사후평가`). 퀴즈 만들기와 같은 시간 예산(150초)
 export function createAssessment(input: AssessmentCreateInput): Promise<Quiz> {
-  if (USE_MOCK) return mockCreateAssessment(input);
+  if (isMockData()) return mockCreateAssessment(input);
   return request<Quiz>({
     method: 'POST',
     url: '/assessments',
@@ -30,7 +31,7 @@ export function getAssessmentComparison(target: {
   courseId?: number;
   materialId?: number;
 }): Promise<AssessmentComparison> {
-  if (USE_MOCK) return mockGetAssessmentComparison(target);
+  if (isMockData()) return mockGetAssessmentComparison(target);
   return request<AssessmentComparison>({
     method: 'GET',
     url: '/assessments/comparison',
@@ -39,7 +40,7 @@ export function getAssessmentComparison(target: {
 }
 
 export function getQuizAiStatus(): Promise<QuizAiStatus> {
-  if (USE_MOCK) return mockGetQuizAiStatus();
+  if (isMockData()) return mockGetQuizAiStatus();
   return request<QuizAiStatus>({
     method: 'GET',
     url: '/assessments/ai-status',

@@ -6,12 +6,8 @@ import {
 } from '@tanstack/react-query';
 import { ChartColumn, Download, LoaderCircle, Sparkles } from 'lucide-react';
 import * as m from 'motion/react-m';
-import {
-  analysisLatestKey,
-  getLatestAnalysis,
-  startAnalysis,
-  USE_MOCK,
-} from '@/api';
+import { analysisLatestKey, getLatestAnalysis, startAnalysis } from '@/api';
+import { useMockData } from '@/store';
 import { FADE_UP } from '@/constants';
 import {
   AsyncBoundary,
@@ -128,6 +124,7 @@ function AnalysisResult({ run }: { run: AnalysisRun }) {
 
 // 과목 하나의 최근 분석과 분석 시작
 function CourseAnalysis({ course }: { course: Course }) {
+  const mockData = useMockData();
   const queryClient = useQueryClient();
   const { data: run } = useSuspenseQuery({
     queryKey: analysisLatestKey(course.id),
@@ -188,7 +185,7 @@ function CourseAnalysis({ course }: { course: Course }) {
       </div>
 
       {/* 목업(배포 미리보기 등)에서는 실제 판단처럼 보이지 않게 알린다 */}
-      {USE_MOCK && (
+      {mockData && (
         <p className="rounded-xl bg-surface-muted px-4 py-3 text-body text-ink-soft">
           예시 데이터예요. 실제 AI 모델이 판단한 결과가 아니에요.
         </p>

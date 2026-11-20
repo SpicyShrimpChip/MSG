@@ -10,11 +10,11 @@ import {
   ASSESSMENTS_QUERY_KEY,
   MATERIALS_QUERY_KEY,
   QUIZZES_QUERY_KEY,
-  USE_MOCK,
   createAssessment,
   getAssessmentComparison,
   getMaterials,
 } from '@/api';
+import { useMockData } from '@/store';
 import { useQuizAiStatus, useSuspenseMe } from '@/hooks';
 import {
   AsyncBoundary,
@@ -107,6 +107,7 @@ function MaterialAssessment({
   material: MaterialSummary;
   me: User | null;
 }) {
+  const mockData = useMockData();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: comparison } = useSuspenseQuery({
@@ -150,7 +151,7 @@ function MaterialAssessment({
   });
 
   const preReady = comparison.pre !== null;
-  const blockedReason = USE_MOCK
+  const blockedReason = mockData
     ? null
     : !ai.available
       ? ai.message
@@ -418,6 +419,7 @@ function WithProfile() {
 
 // 학습자료 기반 사전평가(학습 전 수준 파악) → 공부 → 사후평가(같은 개념으로 향상 확인)
 function AssessmentPage() {
+  const mockData = useMockData();
   return (
     <SubPage
       narrow="reading"
@@ -425,7 +427,7 @@ function AssessmentPage() {
       description="학습자료로 공부 전 수준을 확인하고, 공부한 뒤 같은 개념으로 다시 평가해 얼마나 나아졌는지 비교해요"
     >
       <AsyncBoundary>
-        {USE_MOCK ? <MaterialPicker me={null} /> : <WithProfile />}
+        {mockData ? <MaterialPicker me={null} /> : <WithProfile />}
       </AsyncBoundary>
     </SubPage>
   );

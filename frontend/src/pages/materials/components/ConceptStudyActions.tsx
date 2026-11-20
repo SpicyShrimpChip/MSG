@@ -9,9 +9,9 @@ import {
 import {
   CURRICULUM_QUERY_KEY,
   STUDY_QUERY_KEY,
-  USE_MOCK,
   completeConceptStudy,
 } from '@/api';
+import { useMockData } from '@/store';
 import { Button, ErrorText, StudyStatusBadge } from '@/components';
 import type { ConceptStudy } from '@/types';
 import { STUDY_STATUS_LABEL, checkQuizLink, formatDate } from '@/utils';
@@ -30,6 +30,7 @@ function ConceptStudyActions({
   // "다시 학습하기": 설명을 펼친다
   onRestudy: () => void;
 }) {
+  const mockData = useMockData();
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: () => completeConceptStudy(materialId, study.conceptId),
@@ -158,7 +159,7 @@ function ConceptStudyActions({
       <p className="text-caption text-ink-muted">
         "학습 완료"는 공부했다는 기록이에요. 이해했는지는 확인 퀴즈 결과로만
         판단해요.
-        {USE_MOCK && ' 체험 모드 기록은 이 브라우저에만 저장돼요.'}
+        {mockData && ' 체험 모드 기록은 이 브라우저에만 저장돼요.'}
       </p>
     </div>
   );

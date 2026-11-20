@@ -11,7 +11,8 @@ import {
   mockSaveConceptFeedback,
   mockStartAnalysis,
 } from '@/mocks';
-import { USE_MOCK } from './axios';
+// 스토어 배럴(화면 모드 등 window 사용)까지 불러오지 않도록 파일을 직접 가져온다
+import { isMockData } from '@/store/useDemoStore';
 import { ApiError, request } from './request';
 
 export const ANALYSIS_QUERY_KEY = ['analysis'] as const;
@@ -22,7 +23,7 @@ export const analysisLatestKey = (courseId: number) =>
 
 // 모델별 설정 여부
 export function getProviders(): Promise<ProviderStatus[]> {
-  if (USE_MOCK) return mockGetProviders();
+  if (isMockData()) return mockGetProviders();
   return request<ProviderStatus[]>({
     method: 'GET',
     url: '/analysis/providers',
@@ -33,7 +34,7 @@ export function getProviders(): Promise<ProviderStatus[]> {
 export async function getLatestAnalysis(
   courseId: number,
 ): Promise<AnalysisRun | null> {
-  if (USE_MOCK) return mockGetLatestAnalysis(courseId);
+  if (isMockData()) return mockGetLatestAnalysis(courseId);
   try {
     return await request<AnalysisRun>({
       method: 'GET',
@@ -50,7 +51,7 @@ export function saveConceptFeedback(
   courseId: number,
   input: ConceptFeedbackInput,
 ): Promise<ConceptFeedback> {
-  if (USE_MOCK) return mockSaveConceptFeedback(courseId, input);
+  if (isMockData()) return mockSaveConceptFeedback(courseId, input);
   return request<ConceptFeedback>({
     method: 'PUT',
     url: `/analysis/courses/${courseId}/feedback`,
@@ -60,13 +61,13 @@ export function saveConceptFeedback(
 
 // 내 생각 취소
 export function deleteConceptFeedback(id: number): Promise<void> {
-  if (USE_MOCK) return mockDeleteConceptFeedback(id);
+  if (isMockData()) return mockDeleteConceptFeedback(id);
   return request<void>({ method: 'DELETE', url: `/analysis/feedback/${id}` });
 }
 
 // 분석 시작. 모델을 기다리므로 길면 2분쯤 걸린다
 export function startAnalysis(courseId: number): Promise<AnalysisRun> {
-  if (USE_MOCK) return mockStartAnalysis(courseId);
+  if (isMockData()) return mockStartAnalysis(courseId);
   return request<AnalysisRun>({
     method: 'POST',
     url: `/analysis/courses/${courseId}/runs`,

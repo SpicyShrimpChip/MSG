@@ -3,9 +3,6 @@ import type { ApiResponse } from '@/types';
 // 화면 모드 스토어(window 사용)까지 불러오지 않도록 배럴 대신 파일을 직접 가져온다
 import { useAuthStore } from '@/store/useAuthStore';
 
-// .env의 VITE_USE_MOCK이 'true'면 API 함수가 src/mocks/ 데이터를 돌려준다
-export const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
-
 // 1. Axios 인스턴스 생성 (통신 고속도로)
 export const api = axios.create({
   // 기본은 같은 출처의 /api (개발: Vite 프록시, 배포: Vercel rewrite가 백엔드로 넘김)

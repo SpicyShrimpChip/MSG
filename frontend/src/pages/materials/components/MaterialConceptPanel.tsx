@@ -9,12 +9,12 @@ import {
   CURRICULUM_QUERY_KEY,
   MATERIALS_QUERY_KEY,
   STUDY_QUERY_KEY,
-  USE_MOCK,
   createConceptStudyNote,
   extractMaterialConcepts,
   getConceptStudies,
   getMaterialConcepts,
 } from '@/api';
+import { useMockData } from '@/store';
 import {
   AiNote,
   Button,
@@ -299,6 +299,7 @@ function MaterialConceptPanel({
   courseId?: number | null;
   focusConceptId?: string | null;
 }) {
+  const mockData = useMockData();
   const queryClient = useQueryClient();
   const { data: me } = useMe();
   const { data: concepts } = useSuspenseQuery({
@@ -421,7 +422,7 @@ function MaterialConceptPanel({
               AI가 개념을 찾는 중이에요. 최대 2분 30초 걸릴 수 있어요.
             </span>
           )}
-          {USE_MOCK && (
+          {mockData && (
             <span className="text-caption text-ink-muted">
               목업에서는 AI를 부르지 않아요. 예시 개념의 설명은 미리 써 둔
               예시예요.

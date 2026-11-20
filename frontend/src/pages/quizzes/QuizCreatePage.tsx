@@ -2,12 +2,8 @@ import { useEffect, useMemo, useState, type SubmitEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FileText, LoaderCircle, Lock, Sparkles, Target } from 'lucide-react';
-import {
-  QUIZZES_QUERY_KEY,
-  USE_MOCK,
-  createQuiz,
-  getGenerationStatus,
-} from '@/api';
+import { QUIZZES_QUERY_KEY, createQuiz, getGenerationStatus } from '@/api';
+import { useMockData } from '@/store';
 import {
   AsyncBoundary,
   Button,
@@ -97,6 +93,7 @@ function PendingGeneration({
 }
 
 function QuizCreateForm({ me }: { me: User | null }) {
+  const mockData = useMockData();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [params] = useSearchParams();
@@ -191,7 +188,7 @@ function QuizCreateForm({ me }: { me: User | null }) {
     tooFew ||
     count > maxCount ||
     pendingKey !== null ||
-    (!USE_MOCK && (configured.length === 0 || !me?.aiQuizConsent));
+    (!mockData && (configured.length === 0 || !me?.aiQuizConsent));
 
   const handleSubmit = (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -485,12 +482,12 @@ function QuizCreateForm({ me }: { me: User | null }) {
         만드는 기능은 아직 없어서, 과목과 개념으로만 문제를 만들어요.
       </Notice>
 
-      {!USE_MOCK && configured.length === 0 && (
+      {!mockData && configured.length === 0 && (
         <p role="alert" className="text-body text-danger">
           연결된 AI 모델이 없어 지금은 퀴즈를 만들 수 없어요.
         </p>
       )}
-      {!USE_MOCK && !me?.aiQuizConsent && (
+      {!mockData && !me?.aiQuizConsent && (
         <p role="alert" className="text-body text-danger">
           AI로 퀴즈를 만들려면 AI 퀴즈 처리 동의가 필요해요(대화 분석 동의와
           별도). 마이페이지에서 동의할 수 있어요.
@@ -510,7 +507,7 @@ function QuizCreateForm({ me }: { me: User | null }) {
           {recoveredMessage}
         </p>
       )}
-      {USE_MOCK && (
+      {mockData && (
         <p className="text-body text-ink-soft">
           예시 데이터예요. 목업에서는 AI를 부르지 않고 예시 문제를 보여 줘요.
         </p>
@@ -561,6 +558,7 @@ function QuizCreateWithProfile() {
 }
 
 function QuizCreatePage() {
+  const mockData = useMockData();
   return (
     <SubPage
       narrow="reading"
@@ -568,7 +566,7 @@ function QuizCreatePage() {
       description="공부하는 목적에 맞춰 AI가 문제를 만들고, 채점은 서버가 기준대로 해요"
     >
       <AsyncBoundary>
-        {USE_MOCK ? <QuizCreateForm me={null} /> : <QuizCreateWithProfile />}
+        {mockData ? <QuizCreateForm me={null} /> : <QuizCreateWithProfile />}
       </AsyncBoundary>
     </SubPage>
   );

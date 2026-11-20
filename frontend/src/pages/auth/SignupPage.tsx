@@ -2,7 +2,7 @@ import { useState, type SubmitEvent } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { signup } from '@/api';
-import { USE_MOCK } from '@/api/axios';
+import { NO_BACKEND } from '@/store';
 import {
   Button,
   FormRow,
@@ -21,8 +21,8 @@ import TurnstileWidget, {
   TURNSTILE_SITE_KEY,
 } from './components/TurnstileWidget';
 
-// 자동 가입 방지는 사이트 키가 있고 실제 서버와 연결된 모드에서만 (체험 모드에는 가입이 없다)
-const BOT_CHECK_ON = TURNSTILE_SITE_KEY !== '' && !USE_MOCK;
+// 자동 가입 방지는 사이트 키가 있고 실제 서버와 연결된 모드에서만 (백엔드가 없는 빌드에는 가입이 없다)
+const BOT_CHECK_ON = TURNSTILE_SITE_KEY !== '' && !NO_BACKEND;
 
 interface SignupLocationState {
   // 가입 뒤 이어서 갈 화면 (메인 시작 안내·로그인 화면이 넘겨 준다)

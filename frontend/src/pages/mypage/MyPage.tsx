@@ -24,8 +24,7 @@ import {
 } from '@/components';
 import { LEARNING_PURPOSES, jobFieldLabel } from '@/constants';
 import { useSavedMaskWords, useSuspenseMe } from '@/hooks';
-import { USE_MOCK } from '@/api';
-import { useAuthStore } from '@/store';
+import { useAuthStore, useMockData } from '@/store';
 import type { User } from '@/types';
 import {
   AI_CONSENT_NOTICE,
@@ -405,6 +404,7 @@ function MyAccount() {
 }
 
 function MyPage() {
+  const mockData = useMockData();
   const authenticated = useAuthStore(
     (state) => state.status === 'authenticated',
   );
@@ -419,7 +419,7 @@ function MyPage() {
         <AsyncBoundary>
           <MyAccount />
         </AsyncBoundary>
-      ) : USE_MOCK ? (
+      ) : mockData ? (
         // 목업(체험)에는 계정이 없어서 로그인으로 보내지 않는다 (로그인 화면도 아직 열려 있지 않다)
         <EmptyState
           icon={<UserRound size={24} aria-hidden="true" />}

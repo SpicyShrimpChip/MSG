@@ -11,7 +11,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Menu, Search, X } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
-import { USE_MOCK, logout } from '@/api';
+import { logout } from '@/api';
 import { MOTION_DURATION } from '@/constants';
 import { useMe } from '@/hooks';
 import { useAuthStore, useDemoStore } from '@/store';
@@ -40,7 +40,7 @@ function useAccountItems(): { key: string; node: ReactNode }[] {
   const demoActive = useDemoStore((state) => state.active);
 
   // 체험 중에는 로그인·가입이 열려 있지 않으니 계정 칸을 비운다 (체험 중이라는 건 맨 위 띠가 알린다)
-  if (USE_MOCK && demoActive) return [];
+  if (demoActive) return [];
 
   if (!authenticated) {
     return [
