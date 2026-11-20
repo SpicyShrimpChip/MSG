@@ -252,35 +252,63 @@ const LABEL_PATTERN = new RegExp(
 
 const countLabels = (text: string) => text.match(LABEL_PATTERN)?.length ?? 0;
 
+// 가린 결과 글 하나에서 가린 곳 목록을 만든다 (messageIndex: 제목이면 -1)
+function spotsOf(
+  masked: string,
+  matches: MaskMatch[],
+  messageIndex: number,
+): MaskedSpot[] {
+  return matches.map((match) => ({
+    messageIndex,
+    kind: match.kind,
+    original: match.original,
+    before: oneLine(
+      masked.slice(Math.max(0, match.start - SPOT_CONTEXT_LENGTH), match.start),
+    ).trimStart(),
+    after: oneLine(
+      masked.slice(match.end, match.end + SPOT_CONTEXT_LENGTH),
+    ).trimEnd(),
+    labelIndex: countLabels(masked.slice(0, match.start)),
+  }));
+}
+
 // 대화의 제목과 모든 메시지에서 가린 곳을 순서대로 모은다 (메시지 위치와 상관없이 전부)
 export function collectMaskedSpots(
   conversation: ParsedConversation,
   options: MaskOptions = {},
 ): MaskedSpot[] {
+  return maskConversationWithSpots(conversation, options).spots;
+}
+
+export interface MaskedConversationWithSpots extends MaskedConversation {
+  // 가린 곳 목록 (미리 보기 화면용). original이 들어 있어 서버로 보내지 않는다
+  spots: MaskedSpot[];
+}
+
+// 가리기와 가린 곳 목록을 한 번에 만든다 (Web Worker에서 대화 여러 개를 한꺼번에 처리할 때 쓴다)
+export function maskConversationWithSpots(
+  conversation: ParsedConversation,
+  options: MaskOptions = {},
+): MaskedConversationWithSpots {
+  const counts: Partial<Record<MaskKind, number>> = {};
   const spots: MaskedSpot[] = [];
-  const texts = [
-    conversation.title,
-    ...conversation.messages.map((m) => m.text),
-  ];
-  texts.forEach((text, i) => {
+  let totalCount = 0;
+  const run = (text: string, messageIndex: number): string => {
     const { text: masked, matches } = maskText(text, options);
     for (const match of matches) {
-      spots.push({
-        messageIndex: i - 1,
-        kind: match.kind,
-        original: match.original,
-        before: oneLine(
-          masked.slice(
-            Math.max(0, match.start - SPOT_CONTEXT_LENGTH),
-            match.start,
-          ),
-        ).trimStart(),
-        after: oneLine(
-          masked.slice(match.end, match.end + SPOT_CONTEXT_LENGTH),
-        ).trimEnd(),
-        labelIndex: countLabels(masked.slice(0, match.start)),
-      });
+      counts[match.kind] = (counts[match.kind] ?? 0) + 1;
+      totalCount += 1;
     }
-  });
-  return spots;
+    spots.push(...spotsOf(masked, matches, messageIndex));
+    return masked;
+  };
+  const masked: ParsedConversation = {
+    ...conversation,
+    title: run(conversation.title, -1),
+    messages: conversation.messages.map((message, index) => ({
+      ...message,
+      text: run(message.text, index),
+    })),
+  };
+  return { conversation: masked, counts, totalCount, spots };
 }

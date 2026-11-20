@@ -1,18 +1,16 @@
+// Web Worker에서도 읽으므로 '@/utils' 묶음 대신 필요한 파일만 가져온다
+import { isKnownNonConversationFile, readExportZip } from './archive';
 import {
   mergeParseResults,
-  parseConversationExport,
   type FileParseResult,
   type MergedImport,
-} from '@/utils';
-import {
-  isKnownNonConversationFile,
-  readExportZip,
-} from '@/utils/conversation/archive';
+} from './merge';
+import { parseConversationExport } from './parse';
 
 // 고른 파일들을 브라우저 안에서만 읽는다. 서버로는 아무것도 보내지 않는다.
 // zip은 압축을 풀지 않고 올려도 되고, 안에서 대화 기록 파일만 꺼내 읽는다.
 // 큰 zip도 필요한 부분만 잘라 읽어서 통째로 메모리에 올리지 않는다
-// TODO: 파일이 수십 MB를 넘으면 화면이 잠깐 멈출 수 있다. 실제 파일로 확인한 뒤 필요하면 Web Worker로 옮긴다
+// 화면에서는 worker/client.ts의 readExportFilesOffThread로 Web Worker에서 부른다(큰 파일도 화면이 멈추지 않게)
 export async function readExportFiles(files: File[]): Promise<MergedImport> {
   const results: FileParseResult[] = [];
   // 대화가 없다고 알려진 파일 (조용히 건너뛴다)

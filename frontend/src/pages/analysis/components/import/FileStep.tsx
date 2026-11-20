@@ -10,7 +10,7 @@ import {
 import { Link } from 'react-router-dom';
 import { Button, Card, FileDropZone, Notice } from '@/components';
 import type { ClaudeManifest, MergedImport } from '@/utils';
-import { readExportFiles } from './readExportFiles';
+import { readExportFilesOffThread } from '@/utils/conversation/worker/client';
 
 interface FileStepProps {
   imported: MergedImport | null;
@@ -124,7 +124,7 @@ function FileStep({ imported, onLoaded, onNext }: FileStepProps) {
     setReading(true);
     setReadFailed(false);
     try {
-      onLoaded(await readExportFiles(files));
+      onLoaded(await readExportFilesOffThread(files));
     } catch {
       setReadFailed(true);
     } finally {

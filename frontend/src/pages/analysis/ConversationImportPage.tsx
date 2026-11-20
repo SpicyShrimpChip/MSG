@@ -5,7 +5,6 @@ import { AsyncBoundary, Card, Notice, SubPage } from '@/components';
 import { useCourses, useMe, useSavedMaskWords } from '@/hooks';
 import {
   conversationKey,
-  maskConversation,
   type ConversationToSend,
   type MaskOptions,
   type MergedImport,
@@ -18,6 +17,7 @@ import SelectStep, {
   type ConversationChoices,
 } from './components/import/SelectStep';
 import SendStep from './components/import/SendStep';
+import { useMaskedConversations } from './components/import/useMaskedConversations';
 
 // 키워드가 있는 과목이 없으면 파일을 고르기 전에 과목부터 등록하게 한다.
 // 파일을 읽은 뒤에 알려 주면 과목을 등록하러 나갔다가 파일을 다시 올려야 했다
@@ -74,17 +74,25 @@ function ConversationImportPage() {
     });
   }, [imported, choices]);
 
-  const toSend = useMemo<ConversationToSend[]>(
-    () =>
-      step === 3
-        ? selected.map(({ courseId, conversation }) => ({
-            courseId,
-            conversation: maskConversation(conversation, maskOptions)
-              .conversation,
-          }))
-        : [],
-    [step, selected, maskOptions],
+  const selectedConversations = useMemo(
+    () => selected.map(({ conversation }) => conversation),
+    [selected],
   );
+  // 가리기는 Web Worker에서 한다 (3단계에서 확인하고 4단계에서 그 결과를 보낸다)
+  const masking = useMaskedConversations(
+    selectedConversations,
+    maskOptions,
+    step >= 2,
+  );
+  const toSend = useMemo<ConversationToSend[] | null>(() => {
+    if (step !== 3) return [];
+    if (!masking.current || !masking.items) return null;
+    const items = masking.items;
+    return selected.map(({ courseId }, index) => ({
+      courseId,
+      conversation: items[index].conversation,
+    }));
+  }, [step, selected, masking]);
 
   // 다음 버튼이 화면 아래에 있어서, 단계를 바꾸면 단계 표시가 보이도록 맨 위로 올린다
   const goToStep = (next: number) => {
@@ -151,7 +159,8 @@ function ConversationImportPage() {
 
       {step === 2 && (
         <MaskStep
-          conversations={selected.map(({ conversation }) => conversation)}
+          conversationCount={selected.length}
+          masking={masking}
           options={maskOptions}
           onChangeOptions={setEditedOptions}
           savedTerms={me ? savedTerms : null}
@@ -167,7 +176,7 @@ function ConversationImportPage() {
         />
       )}
 
-      {step === 3 && (
+      {step === 3 && toSend && (
         <AsyncBoundary>
           <SendStep
             items={toSend}
