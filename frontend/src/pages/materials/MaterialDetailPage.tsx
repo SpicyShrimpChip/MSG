@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { MATERIALS_QUERY_KEY, getMaterial } from '@/api';
 import {
+  AiLegend,
   AiNote,
   AsyncBoundary,
   Button,
@@ -160,10 +161,7 @@ function MaterialDetailContent({ materialId }: { materialId: number }) {
             {date && <span>{date}</span>}
           </p>
         </div>
-        <p className="flex items-center gap-1.5 text-caption text-ai">
-          <Sparkles size={14} aria-hidden="true" />
-          AI 표시가 있는 내용은 AI가 작성했어요
-        </p>
+        <AiLegend />
       </div>
       <Tabs
         label="자료 상세 보기"

@@ -14,6 +14,10 @@ export function scorePercent(
   return Math.round((score / max) * 100);
 }
 
+// 0~100 반올림, 만점이 0이면 0 (막대를 늘 그리는 곳에서 쓴다)
+export const percentOf = (score: number, max: number) =>
+  max === 0 ? 0 : Math.round((score / max) * 100);
+
 export const submitted = (snapshot: AssessmentSnapshot | null) =>
   snapshot !== null && snapshot.submissionId !== null;
 

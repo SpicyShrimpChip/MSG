@@ -4,6 +4,7 @@ export { default as Skeleton } from './Skeleton';
 export { default as ErrorFallback } from './ErrorFallback';
 export { default as AiBadge } from './AiBadge';
 export { default as AiNote } from './AiNote';
+export { default as AiLegend } from './AiLegend';
 export { default as Button } from './Button';
 export { default as Card } from './Card';
 export { default as ConfirmDialog } from './ConfirmDialog';

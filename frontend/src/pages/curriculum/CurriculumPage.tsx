@@ -45,6 +45,7 @@ import {
   formatDate,
   formatSemester,
 } from '@/utils';
+import { percentOf } from '@/utils/assessment';
 
 const STAGE_LABEL: Record<CurriculumStage, string> = {
   priority_study: '더 공부할래요',
@@ -471,10 +472,7 @@ function KeywordConceptRow({
   courseId: number;
   mode: string;
 }) {
-  const rate =
-    concept.practiceMaxScore === 0
-      ? 0
-      : Math.round((concept.practiceScore / concept.practiceMaxScore) * 100);
+  const rate = percentOf(concept.practiceScore, concept.practiceMaxScore);
   return (
     <li className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
@@ -668,10 +666,7 @@ function StepCard({
   courseId: number;
 }) {
   const { evidence } = step;
-  const percent =
-    evidence.maxScore === 0
-      ? 0
-      : Math.round((evidence.score / evidence.maxScore) * 100);
+  const percent = percentOf(evidence.score, evidence.maxScore);
   return (
     <Card as="li" className="flex flex-col gap-3 p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
