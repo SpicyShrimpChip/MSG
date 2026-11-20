@@ -1,5 +1,6 @@
 package com.ailms.backend.domain.material.api;
 
+import static com.ailms.backend.support.TestApi.bearer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
@@ -20,6 +21,7 @@ import com.ailms.backend.global.llm.LlmRequest;
 import com.ailms.backend.global.llm.LlmResponse;
 import com.ailms.backend.support.FakeLlmClients;
 import com.ailms.backend.support.IntegrationTest;
+import com.ailms.backend.support.TestApi;
 import com.ailms.backend.support.TestFiles;
 import com.ailms.backend.support.TestPdfs;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -46,7 +48,6 @@ import org.springframework.test.web.servlet.ResultActions;
 @TestPropertySource(properties = "app.material-content.enabled=true")
 class MaterialConceptApiTest {
 
-	private static final String PASSWORD = "Passw0rd!";
 	// 가짜 모델 답: 하나는 본문에 있고, 하나는 지어낸 근거, 하나는 본문에 없는 개념
 	private static final String CONCEPTS = "{\"concepts\":["
 			+ "{\"name\":\"VLAN\",\"description\":\"망을 논리적으로 나눔\",\"quote\":\"VLAN은 브로드캐스트 도메인을 나눈다\"},"
@@ -255,30 +256,11 @@ class MaterialConceptApiTest {
 	}
 
 	private long createCourse(List<String> keywords) throws Exception {
-		String response = mockMvc.perform(post("/api/courses").header(HttpHeaders.AUTHORIZATION, bearer(token))
-						.contentType(MediaType.APPLICATION_JSON)
-						.content(objectMapper.writeValueAsString(
-								Map.of("name", "네트워크", "semester", "2026-2", "keywords", keywords))))
-				.andExpect(status().isCreated())
-				.andReturn().getResponse().getContentAsString();
-		return ((Number) JsonPath.read(response, "$.data.id")).longValue();
-	}
-
-	private static String bearer(String token) {
-		return "Bearer " + token;
+		return TestApi.createCourse(mockMvc, objectMapper, token, "네트워크", keywords);
 	}
 
 	private String signupAndLogin(String email) throws Exception {
-		mockMvc.perform(post("/api/auth/signup").contentType(MediaType.APPLICATION_JSON)
-						.content(objectMapper.writeValueAsString(Map.of("email", email, "name", "테스터", "password",
-								PASSWORD, "passwordConfirm", PASSWORD, "agreedTerms", true, "agreedPrivacy", true,
-								"agreedAiAnalysis", false, "agreedAiQuiz", true))))
-				.andExpect(status().isCreated());
-		String response = mockMvc.perform(post("/api/auth/login").header("X-Requested-With", "XMLHttpRequest")
-						.contentType(MediaType.APPLICATION_JSON)
-						.content(objectMapper.writeValueAsString(Map.of("email", email, "password", PASSWORD))))
-				.andExpect(status().isOk())
-				.andReturn().getResponse().getContentAsString();
-		return JsonPath.read(response, "$.data.accessToken");
+		return TestApi.signupAndLogin(mockMvc, objectMapper, email,
+				Map.of("agreedAiAnalysis", false, "agreedAiQuiz", true));
 	}
 }

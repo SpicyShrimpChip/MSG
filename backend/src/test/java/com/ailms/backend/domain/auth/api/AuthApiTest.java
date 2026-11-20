@@ -1,5 +1,6 @@
 package com.ailms.backend.domain.auth.api;
 
+import static com.ailms.backend.support.TestApi.bearer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -314,7 +315,4 @@ class AuthApiTest {
 		return value;
 	}
 
-	private static String bearer(String token) {
-		return "Bearer " + token;
-	}
 }

@@ -1,5 +1,6 @@
 package com.ailms.backend.domain.analysis.api;
 
+import static com.ailms.backend.support.TestApi.bearer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasSize;
@@ -18,6 +19,7 @@ import com.ailms.backend.global.llm.LlmProvider;
 import com.ailms.backend.global.llm.LlmRequest;
 import com.ailms.backend.support.FakeLlmClients;
 import com.ailms.backend.support.IntegrationTest;
+import com.ailms.backend.support.TestApi;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
 import java.util.HashMap;
@@ -39,8 +41,6 @@ import org.springframework.test.web.servlet.ResultActions;
  */
 @IntegrationTest
 class AnalysisApiTest {
-
-	private static final String PASSWORD = "Passw0rd!";
 
 	@Autowired
 	private MockMvc mockMvc;
@@ -520,14 +520,7 @@ class AnalysisApiTest {
 	}
 
 	private long createCourse(String accessToken, String name, List<String> keywords) throws Exception {
-		String response = mockMvc.perform(post("/api/courses")
-						.header(HttpHeaders.AUTHORIZATION, bearer(accessToken))
-						.contentType(MediaType.APPLICATION_JSON)
-						.content(objectMapper.writeValueAsString(
-								Map.of("name", name, "semester", "2026-2", "keywords", keywords))))
-				.andExpect(status().isCreated())
-				.andReturn().getResponse().getContentAsString();
-		return ((Number) JsonPath.read(response, "$.data.id")).longValue();
+		return TestApi.createCourse(mockMvc, objectMapper, accessToken, name, keywords);
 	}
 
 	private Long userId(String email) {
@@ -538,28 +531,7 @@ class AnalysisApiTest {
 		return jdbcTemplate.queryForObject("select count(*) from " + table, Integer.class);
 	}
 
-	private static String bearer(String accessToken) {
-		return "Bearer " + accessToken;
-	}
-
 	private String signupAndLogin(String email, boolean agreedAiAnalysis) throws Exception {
-		mockMvc.perform(post("/api/auth/signup")
-						.contentType(MediaType.APPLICATION_JSON)
-						.content(objectMapper.writeValueAsString(Map.of(
-								"email", email,
-								"name", "테스터",
-								"password", PASSWORD,
-								"passwordConfirm", PASSWORD,
-								"agreedTerms", true,
-								"agreedPrivacy", true,
-								"agreedAiAnalysis", agreedAiAnalysis))))
-				.andExpect(status().isCreated());
-		String response = mockMvc.perform(post("/api/auth/login")
-						.header("X-Requested-With", "XMLHttpRequest")
-						.contentType(MediaType.APPLICATION_JSON)
-						.content(objectMapper.writeValueAsString(Map.of("email", email, "password", PASSWORD))))
-				.andExpect(status().isOk())
-				.andReturn().getResponse().getContentAsString();
-		return JsonPath.read(response, "$.data.accessToken");
+		return TestApi.signupAndLogin(mockMvc, objectMapper, email, Map.of("agreedAiAnalysis", agreedAiAnalysis));
 	}
 }

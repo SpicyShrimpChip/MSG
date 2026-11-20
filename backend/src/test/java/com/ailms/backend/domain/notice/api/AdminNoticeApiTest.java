@@ -1,5 +1,6 @@
 package com.ailms.backend.domain.notice.api;
 
+import static com.ailms.backend.support.TestApi.bearer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.nullValue;
@@ -13,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.ailms.backend.domain.auth.dao.RefreshTokenRepository;
 import com.ailms.backend.domain.user.dao.UserRepository;
 import com.ailms.backend.support.IntegrationTest;
+import com.ailms.backend.support.TestApi;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
 import java.util.Map;
@@ -33,7 +35,6 @@ import org.springframework.test.web.servlet.ResultActions;
 @IntegrationTest
 class AdminNoticeApiTest {
 
-	private static final String PASSWORD = "Passw0rd!";
 	private static final long LAST_SEED_ID = 3;
 
 	@Autowired
@@ -218,28 +219,7 @@ class AdminNoticeApiTest {
 		return jdbcTemplate.queryForObject("select count(*) from notice", Integer.class);
 	}
 
-	private static String bearer(String token) {
-		return "Bearer " + token;
-	}
-
 	private String signupAndLogin(String email) throws Exception {
-		mockMvc.perform(post("/api/auth/signup")
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(Map.of(
-						"email", email,
-						"name", "테스터",
-						"password", PASSWORD,
-						"passwordConfirm", PASSWORD,
-						"agreedTerms", true,
-						"agreedPrivacy", true,
-						"agreedAiAnalysis", false))))
-				.andExpect(status().isCreated());
-		String response = mockMvc.perform(post("/api/auth/login")
-				.header("X-Requested-With", "XMLHttpRequest")
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(Map.of("email", email, "password", PASSWORD))))
-				.andExpect(status().isOk())
-				.andReturn().getResponse().getContentAsString();
-		return JsonPath.read(response, "$.data.accessToken");
+		return TestApi.signupAndLogin(mockMvc, objectMapper, email, Map.of("agreedAiAnalysis", false));
 	}
 }
