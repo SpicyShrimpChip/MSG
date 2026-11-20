@@ -95,4 +95,4 @@
 - 상황: #175 → #176 → #177을 앞 브랜치 위에 쌓아 올렸다. #176·#177에는 백엔드 CI가 없었고, #175를 squash 머지한 뒤 #176의 base를 main으로 바꾸자 "충돌"이 났다.
 - 원인: `backend-ci.yml`은 `branches: ["main"]`인 PR에서만 돈다. squash 머지는 앞 PR 커밋을 새 커밋 하나로 main에 넣어, 다음 브랜치의 원래 커밋과 기록이 달라진다(내용은 같다).
 - 해결: `git diff origin/main <앞 브랜치> -- backend`가 비어 있는지(내용이 같은지) 확인하고, `origin/main`을 다음 브랜치에 병합하며 충돌 파일은 다음 브랜치 쪽으로 정했다. 강제 푸시 없이 일반 푸시로 끝났다(위 "Claude는 강제 푸시가 막혀 있다").
-- 다음에는: 앞 PR을 머지한 뒤 다음 PR의 base를 main으로 바꾸고, 그 CI가 통과한 걸 보고 머지한다. 쌓은 PR은 로컬 `./gradlew test`로만 확인된 상태임을 PR에 적는다.
+- 다음에는: 앞 PR을 머지한 뒤 다음 PR의 base를 main으로 바꾸고, 그 CI가 통과한 걸 보고 머지한다. 쌓은 PR은 로컬 `./gradlew test`로만 확인된 상태임을 PR에 적는다. 프론트 CI(`frontend-ci.yml`)도 base가 main인 PR에서만 돈다(11/21 #186도 같은 방법으로 해결).
