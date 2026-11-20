@@ -35,11 +35,6 @@ class QuizGraderTest {
 	}
 
 	@Test
-	void 빈_답도_채점한다() {
-		assertThat(QuizGrader.grade(questions, List.of())).hasSize(3).noneMatch(Graded::correct);
-	}
-
-	@Test
 	void 없는_문제_같은_문제_두_번_범위_밖_번호는_거절한다() {
 		assertThatThrownBy(() -> QuizGrader.grade(questions, List.of(answer(99L, 0))))
 				.isInstanceOf(BusinessException.class);

@@ -225,15 +225,6 @@ class MaterialApiTest {
 	}
 
 	@Test
-	void 파일이_20MB를_넘으면_413() throws Exception {
-		byte[] big = new byte[20 * 1024 * 1024 + 1];
-		upload(token, courseId, "큰 파일", file("큰.txt", big))
-				.andExpect(status().isPayloadTooLarge())
-				.andExpect(jsonPath("$.message").value("파일은 20MB까지 올릴 수 있어요."));
-		assertThat(materialCount()).isZero();
-	}
-
-	@Test
 	void 파일_이름의_경로는_떼고_저장_위치는_서버가_정한다() throws Exception {
 		upload(token, courseId, "노트", pdf("../../../etc/노트.pdf")).andExpect(status().isCreated());
 

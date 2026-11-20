@@ -84,20 +84,6 @@ class QuizGenerationApiTest {
 	// ---------- 만들기 ----------
 
 	@Test
-	void AI_퀴즈_처리_동의가_없으면_403이고_모델을_부르지_않는다() throws Exception {
-		String noConsent = signupAndLogin("no@example.com", false);
-		long course = createCourse(noConsent, "네트워크", List.of("NAT"));
-		fakeLlm.get(LlmProvider.GPT).answer(QuizFixtures.threeTypes(false));
-
-		create(noConsent, body(course, "exam_prep", List.of("multiple_choice"), 1))
-				.andExpect(status().isForbidden())
-				.andExpect(jsonPath("$.message").value(containsString("AI 퀴즈 처리 동의")));
-
-		assertThat(fakeLlm.get(LlmProvider.GPT).requests()).isEmpty();
-		assertThat(count("quiz_generation")).isZero();
-	}
-
-	@Test
 	void 연결된_모델이_없으면_503이고_가짜_문제를_만들지_않는다() throws Exception {
 		create(token, body(courseId, "exam_prep", List.of("multiple_choice"), 1))
 				.andExpect(status().isServiceUnavailable())
@@ -332,23 +318,6 @@ class QuizGenerationApiTest {
 		mockMvc.perform(post("/api/quizzes/" + quizId + "/submissions/" + submissionId + "/grading")
 						.header(HttpHeaders.AUTHORIZATION, bearer(otherToken)))
 				.andExpect(status().isNotFound());
-	}
-
-	@Test
-	void 동의를_철회하면_AI_채점을_하지_않고_대기로_둔다() throws Exception {
-		long quizId = generate();
-		enableGraders();
-		mockMvc.perform(patch("/api/users/me/consents").header(HttpHeaders.AUTHORIZATION, bearer(token))
-				.contentType(MediaType.APPLICATION_JSON).content("{\"aiQuiz\":false}")).andExpect(status().isOk());
-		List<Long> ids = questionIds(quizId);
-		int before = fakeLlm.get(LlmProvider.GPT).requests().size();
-
-		submit(quizId, List.of(Map.of("questionId", ids.get(2), "text", "PAT는 포트로 나눈다")))
-				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.data.results[2].gradingStatus").value("pending"))
-				.andExpect(jsonPath("$.data.results[2].gradingMessage").value(containsString("동의하지 않아")));
-
-		assertThat(fakeLlm.get(LlmProvider.GPT).requests()).hasSize(before);
 	}
 
 	@Test

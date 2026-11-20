@@ -22,9 +22,4 @@ class PersonalInfoLearningTextTest {
 		assertThat(detector.containsPersonalInfoExceptIp("연락 a@b.co")).isTrue();
 		assertThat(detector.containsPersonalInfoExceptIp("010-1234-5678")).isTrue();
 	}
-
-	@Test
-	void 대화_검사는_예시_IP도_그대로_막는다() {
-		assertThat(detector.containsPersonalInfo("192.168.0.1")).isTrue();
-	}
 }

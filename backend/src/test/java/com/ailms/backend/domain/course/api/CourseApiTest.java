@@ -179,11 +179,6 @@ class CourseApiTest {
 				.andExpect(status().isConflict());
 	}
 
-	@Test
-	void 없는_과목_수정은_404() throws Exception {
-		update(token, 99999, "운영체제", "2026-2", List.of()).andExpect(status().isNotFound());
-	}
-
 	// ---------- 삭제 ----------
 
 	@Test

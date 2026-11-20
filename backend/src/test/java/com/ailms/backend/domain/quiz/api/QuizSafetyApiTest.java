@@ -89,7 +89,7 @@ class QuizSafetyApiTest {
 	// ---------- AI 퀴즈 처리 동의 ----------
 
 	@Test
-	void 대화_분석에만_동의하면_퀴즈_만들기는_403_AI_채점은_대기_객관식은_채점된다() throws Exception {
+	void 대화_분석에만_동의하면_퀴즈_만들기는_403이고_모델을_부르지_않는다() throws Exception {
 		String analysisOnly = signupAndLogin("analysis@example.com", true, false);
 		long course = createCourse(analysisOnly, List.of("NAT", "VLAN"));
 		fakeLlm.get(LlmProvider.GPT).answer(QuizFixtures.threeTypes(false));
@@ -98,6 +98,7 @@ class QuizSafetyApiTest {
 				.andExpect(status().isForbidden())
 				.andExpect(jsonPath("$.message").value(containsString("AI 퀴즈 처리 동의")));
 		assertThat(fakeLlm.get(LlmProvider.GPT).requests()).isEmpty();
+		assertThat(jdbcTemplate.queryForObject("select count(*) from quiz_generation", Integer.class)).isZero();
 
 		mockMvc.perform(get("/api/users/me").header(HttpHeaders.AUTHORIZATION, bearer(analysisOnly)))
 				.andExpect(jsonPath("$.data.aiAnalysisConsent").value(true))
