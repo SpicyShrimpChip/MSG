@@ -11,10 +11,7 @@ import com.ailms.backend.domain.quiz.dao.QuizAnswerRepository;
 import com.ailms.backend.domain.quiz.dao.QuizQuestionRepository;
 import com.ailms.backend.domain.quiz.dao.QuizRepository;
 import com.ailms.backend.domain.quiz.dao.QuizSubmissionRepository;
-import com.ailms.backend.domain.quiz.entity.GradingStatus;
 import com.ailms.backend.domain.quiz.entity.Quiz;
-import com.ailms.backend.domain.quiz.entity.QuizAnswer;
-import com.ailms.backend.domain.quiz.entity.QuizQuestion;
 import com.ailms.backend.domain.quiz.entity.QuizSubmission;
 import com.ailms.backend.domain.study.dao.ConceptStudyProgressRepository;
 import com.ailms.backend.domain.study.dto.ConceptStudyResponse;
@@ -163,16 +160,9 @@ public class ConceptStudyService {
 				}
 				continue;
 			}
-			Map<Long, QuizAnswer> answers = answerRepository.findAllBySubmissionId(submission.getId()).stream()
-					.collect(Collectors.toMap(QuizAnswer::getQuestionId, Function.identity(), (a, b) -> a));
-			List<QuizAssessor.Graded> graded = new ArrayList<>();
-			for (QuizQuestion question : questionRepository.findAllByQuizIdOrderBySortOrderAsc(quiz.getId())) {
-				QuizAnswer answer = answers.get(question.getId());
-				graded.add(answer == null
-						? new QuizAssessor.Graded(question, GradingStatus.GRADED, 0, question.maxScore(), null)
-						: new QuizAssessor.Graded(question, answer.getGradingStatus(), answer.getScore(),
-								answer.getMaxScore(), answer.getGradingNote()));
-			}
+			List<QuizAssessor.Graded> graded = QuizAssessor.graded(
+					questionRepository.findAllByQuizIdOrderBySortOrderAsc(quiz.getId()),
+					QuizAssessor.answersByQuestion(answerRepository.findAllBySubmissionId(submission.getId())));
 			QuizAssessor.ConceptStat stat = QuizAssessor.byConcept(graded, minRate).stream()
 					.filter(s -> s.conceptKey().equals(quiz.getCheckConceptKey())).findFirst().orElse(null);
 			ConceptStudyRules.CheckResult result = stat == null

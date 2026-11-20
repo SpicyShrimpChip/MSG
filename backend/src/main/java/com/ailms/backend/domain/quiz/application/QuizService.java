@@ -379,17 +379,9 @@ public class QuizService {
 	private QuizResultResponse result(Long userId, Long quizId, QuizSubmission submission) {
 		Quiz quiz = find(userId, quizId);
 		List<QuizQuestion> questions = questionRepository.findAllByQuizIdOrderBySortOrderAsc(quizId);
-		Map<Long, QuizAnswer> answers = answerRepository.findAllBySubmissionId(submission.getId()).stream()
-				.collect(Collectors.toMap(QuizAnswer::getQuestionId, Function.identity(), (a, b) -> a));
-		List<QuizAssessor.Graded> graded = questions.stream()
-				.map(question -> {
-					QuizAnswer answer = answers.get(question.getId());
-					return answer == null
-							? new QuizAssessor.Graded(question, GradingStatus.GRADED, 0, question.maxScore(), null)
-							: new QuizAssessor.Graded(question, answer.getGradingStatus(), answer.getScore(),
-									answer.getMaxScore(), answer.getGradingNote());
-				})
-				.toList();
+		Map<Long, QuizAnswer> answers = QuizAssessor
+				.answersByQuestion(answerRepository.findAllBySubmissionId(submission.getId()));
+		List<QuizAssessor.Graded> graded = QuizAssessor.graded(questions, answers);
 		return QuizResultResponse.of(quiz, submission, questions, answers,
 				QuizAssessor.assess(graded, properties.assessment()));
 	}
