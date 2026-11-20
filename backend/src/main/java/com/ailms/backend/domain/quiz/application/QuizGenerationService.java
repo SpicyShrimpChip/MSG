@@ -30,6 +30,7 @@ import com.ailms.backend.domain.user.dao.UserRepository;
 import com.ailms.backend.domain.user.entity.JobField;
 import com.ailms.backend.domain.user.entity.User;
 import com.ailms.backend.global.error.BusinessException;
+import com.ailms.backend.global.llm.AiCallQuota;
 import com.ailms.backend.global.llm.LlmClient;
 import com.ailms.backend.global.llm.LlmClients;
 import com.ailms.backend.global.llm.LlmRequest;
@@ -120,6 +121,7 @@ public class QuizGenerationService {
 	private final QuizStatsService statsService;
 	private final LlmClients llmClients;
 	private final ModelInvoker modelInvoker;
+	private final AiCallQuota aiCallQuota;
 	private final QuizGenerationParser parser;
 	private final LearningProfileValidator profileValidator;
 	private final PersonalInfoDetector personalInfoDetector;
@@ -136,7 +138,7 @@ public class QuizGenerationService {
 			MaterialRepository materialRepository, QuizRepository quizRepository,
 			QuizQuestionRepository questionRepository, QuizGenerationRepository generationRepository,
 			AnalysisRunRepository runRepository, ConceptConsensusRepository consensusRepository,
-			QuizStatsService statsService, LlmClients llmClients, ModelInvoker modelInvoker,
+			QuizStatsService statsService, LlmClients llmClients, ModelInvoker modelInvoker, AiCallQuota aiCallQuota,
 			QuizGenerationParser parser, LearningProfileValidator profileValidator,
 			PersonalInfoDetector personalInfoDetector, QuizProperties properties, QuizAiUsage usage,
 			MaterialTextExtractor textExtractor, MaterialContentProperties contentProperties,
@@ -154,6 +156,7 @@ public class QuizGenerationService {
 		this.statsService = statsService;
 		this.llmClients = llmClients;
 		this.modelInvoker = modelInvoker;
+		this.aiCallQuota = aiCallQuota;
 		this.parser = parser;
 		this.profileValidator = profileValidator;
 		this.personalInfoDetector = personalInfoDetector;
@@ -329,6 +332,7 @@ public class QuizGenerationService {
 		if (usage.modelCallBudgetExhausted(userId)) {
 			throw new BusinessException(HttpStatus.TOO_MANY_REQUESTS, MODEL_BUDGET_MESSAGE);
 		}
+		aiCallQuota.ensureRemaining();
 		Instant deadline = clock.instant().plus(properties.generationDeadline());
 		QuizGeneration generation;
 		try {

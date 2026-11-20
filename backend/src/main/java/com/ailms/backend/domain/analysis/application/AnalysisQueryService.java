@@ -232,6 +232,7 @@ public class AnalysisQueryService {
 			case REJECTED -> "요청이 거절됐어요. 모델 이름이나 계정 상태(크레딧·권한)를 확인해 주세요.";
 			case NETWORK -> "제공사에 연결하지 못했어요.";
 			case BAD_RESPONSE -> "응답을 읽지 못했어요.";
+			case DAILY_LIMIT -> "오늘 서비스 전체 AI 사용량이 다 차서 부르지 않았어요.";
 		};
 	}
 }

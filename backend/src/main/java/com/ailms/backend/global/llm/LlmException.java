@@ -22,7 +22,9 @@ public class LlmException extends RuntimeException {
 		/** 응답 형식을 읽을 수 없음 */
 		BAD_RESPONSE(false),
 		/** 연결 실패 */
-		NETWORK(true);
+		NETWORK(true),
+		/** 서비스 전체 하루 호출 상한에 닿아 부르지 않음 (app.ai-daily-limit, 제공사 오류가 아니다) */
+		DAILY_LIMIT(false);
 
 		private final boolean retryable;
 

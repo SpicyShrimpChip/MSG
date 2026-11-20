@@ -61,6 +61,13 @@ app:
     verify-url: https://challenges.cloudflare.com/turnstile/v0/siteverify
     timeout: 5s
 
+  # 서비스 전체 하루 AI 모델 호출 상한 (사용자별 한도와 따로, 계정을 여러 개 만들어도 넘을 수 없는 비용 상한).
+  # 다시 부르기도 한 번으로 센다. 0 이하면 상한 없음. 날짜는 zone 기준으로 나눈다
+  # TODO(미결): 500은 근거 없는 임시값 (분석 1번 = 최대 6번, 퀴즈 만들기 1번 = 최대 6번 호출). 제공사 콘솔 지출 한도와 함께 정한다
+  ai-daily-limit:
+    calls: ${AI_DAILY_CALL_LIMIT:500}
+    zone: Asia/Seoul
+
   # 학습 분석에 쓰는 AI 모델. 키와 모델 이름은 환경변수(또는 backend/.env)로만 넣는다. 둘 중 하나라도 비면 그 모델은 "미설정"으로
   # 부르지 않는다. 모델 이름은 비용·품질을 보고 팀이 정한다 (기본값 없음)
   llm:
