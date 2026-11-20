@@ -34,7 +34,7 @@ const notify = () => {
 };
 
 // 앞뒤 공백을 지우고, 빈 단어와 겹치는 단어를 뺀다
-export const normalizeMaskWords = (words: string[]) => [
+const normalizeMaskWords = (words: string[]) => [
   ...new Set(words.map((word) => word.trim()).filter(Boolean)),
 ];
 

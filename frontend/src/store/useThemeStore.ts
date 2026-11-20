@@ -21,7 +21,7 @@ let viewTransitionId = 0;
 let pendingDark: boolean | null = null;
 
 // 선택값과 기기 설정을 보고 <html>에 dark 클래스를 붙이거나 뗀다
-export const applyTheme = (preference: ThemePreference) => {
+const applyTheme = (preference: ThemePreference) => {
   const dark =
     preference === 'dark' || (preference === 'system' && darkQuery().matches);
   const root = document.documentElement;

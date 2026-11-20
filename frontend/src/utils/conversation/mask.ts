@@ -67,19 +67,6 @@ export interface MaskedConversation {
   totalCount: number;
 }
 
-// 제목과 모든 메시지를 가린 새 대화를 만든다. 원래 대화는 바꾸지 않는다
-export function maskConversation(
-  conversation: ParsedConversation,
-  options: MaskOptions = {},
-): MaskedConversation {
-  const masked = maskConversationWithSpots(conversation, options);
-  return {
-    conversation: masked.conversation,
-    counts: masked.counts,
-    totalCount: masked.totalCount,
-  };
-}
-
 // 가린 곳 하나 (미리보기 화면의 "가린 곳 목록"용). original은 화면에서만 쓰고 서버로 보내지 않는다
 export interface MaskedSpot {
   // 제목이면 -1, 아니면 메시지 순서
@@ -138,20 +125,13 @@ function spotsOf(
   });
 }
 
-// 대화의 제목과 모든 메시지에서 가린 곳을 순서대로 모은다 (메시지 위치와 상관없이 전부)
-export function collectMaskedSpots(
-  conversation: ParsedConversation,
-  options: MaskOptions = {},
-): MaskedSpot[] {
-  return maskConversationWithSpots(conversation, options).spots;
-}
-
 export interface MaskedConversationWithSpots extends MaskedConversation {
   // 가린 곳 목록 (미리 보기 화면용). original이 들어 있어 서버로 보내지 않는다
   spots: MaskedSpot[];
 }
 
-// 가리기와 가린 곳 목록을 한 번에 만든다 (Web Worker에서 대화 여러 개를 한꺼번에 처리할 때 쓴다)
+// 제목과 모든 메시지를 가린 새 대화와 가린 곳 목록을 한 번에 만든다. 원래 대화는 바꾸지 않는다
+// (Web Worker에서 대화 여러 개를 한꺼번에 처리할 때 쓴다)
 export function maskConversationWithSpots(
   conversation: ParsedConversation,
   options: MaskOptions = {},

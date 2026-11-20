@@ -1,7 +1,7 @@
 import { Check } from 'lucide-react';
 
 // 가져오기 단계. 파싱·필터·마스킹은 모두 브라우저에서 하고, 마지막 단계에서 고른 대화만 보낸다
-export const IMPORT_STEPS = [
+const IMPORT_STEPS = [
   '파일 고르기',
   '공부한 대화 고르기',
   '가린 내용 확인',

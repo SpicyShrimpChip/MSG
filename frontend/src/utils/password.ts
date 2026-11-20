@@ -1,11 +1,11 @@
-export interface PasswordRule {
+interface PasswordRule {
   id: string;
   label: string;
   test: (password: string) => boolean;
 }
 
 // 비밀번호 4가지 조건. 백엔드 PasswordPolicy와 같은 규칙이라 바꾸면 두 곳을 함께 고친다 (서버는 72바이트 상한도 검사한다)
-export const PASSWORD_RULES: PasswordRule[] = [
+const PASSWORD_RULES: PasswordRule[] = [
   { id: 'length', label: '8자 이상', test: (pw) => pw.length >= 8 },
   { id: 'letter', label: '영문 포함', test: (pw) => /[A-Za-z]/.test(pw) },
   { id: 'digit', label: '숫자 포함', test: (pw) => /\d/.test(pw) },

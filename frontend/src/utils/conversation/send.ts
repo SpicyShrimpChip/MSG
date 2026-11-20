@@ -6,7 +6,7 @@ import type {
 import type { ConversationMessage, ParsedConversation } from './types';
 
 // 한 번에 보내는 대화 수. 서버 한도(ConversationImportRequest.MAX_CONVERSATIONS)와 같은 값
-export const MAX_CONVERSATIONS_PER_REQUEST = 50;
+const MAX_CONVERSATIONS_PER_REQUEST = 50;
 // 요청 한 번의 최대 크기(바이트). 서버 한도는 2MB(app.conversation-import.max-request-size)이고,
 // 배포 때 거치는 nginx 기본 한도(1MB)에 걸리지 않게 1MB로 나눠 보낸다
 export const MAX_REQUEST_BYTES = 1_000_000;
@@ -76,7 +76,7 @@ export function truncateTitle(title: string): string {
 // 대화 하나를 서버가 받을 모양으로 바꾼다. 요청 한 번에 들어가지 않을 만큼 크면
 // 메시지를 앞에서부터 차례로 담아 조각 여러 개로 만든다. 메시지는 하나도 버리지 않는다.
 // 메시지는 20,000자 이하로 나눈 뒤라 하나가 혼자서 요청 한도(1MB)를 넘지 않는다
-export function toImportedConversations(
+function toImportedConversations(
   { id, source, title, createdAt, messages }: ParsedConversation,
   maxBytes = MAX_REQUEST_BYTES,
 ): ImportedConversation[] {
