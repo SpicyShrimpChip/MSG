@@ -45,7 +45,6 @@ class QuizSpecResolver {
 	static final String CHECK_NEEDS_MATERIAL_MESSAGE = "개념 확인 퀴즈는 그 개념을 뽑은 학습자료를 골라야 만들 수 있어요.";
 	static final String CHECK_COMBINATION_MESSAGE = "개념 확인 퀴즈는 사전·사후평가나 모의시험과 함께 만들 수 없어요.";
 	static final String CHECK_CONCEPT_NOT_FOUND_MESSAGE = "이 자료에서 그 개념을 찾을 수 없어요. 핵심 개념을 먼저 뽑아 주세요.";
-	static final String MATERIAL_NOT_FOUND_MESSAGE = "자료를 찾을 수 없어요.";
 	static final String MATERIAL_COURSE_MESSAGE = "고른 자료가 이 과목에 연결돼 있지 않아요.";
 	static final String MODE_MESSAGE = "학습 모드를 다시 골라 주세요.";
 	static final String TYPE_MESSAGE = "문제 유형을 다시 골라 주세요.";
@@ -168,8 +167,7 @@ class QuizSpecResolver {
 		if (request.materialId() == null) {
 			return null;
 		}
-		Material material = materialRepository.findByIdAndUserId(request.materialId(), userId)
-				.orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, MATERIAL_NOT_FOUND_MESSAGE));
+		Material material = materialRepository.getOwned(request.materialId(), userId);
 		if (!course.getId().equals(material.getCourseId())) {
 			throw badRequest(MATERIAL_COURSE_MESSAGE);
 		}

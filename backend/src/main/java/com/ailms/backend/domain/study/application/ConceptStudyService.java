@@ -45,7 +45,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class ConceptStudyService {
 
 	static final int HISTORY_LIMIT = 5;
-	static final String MATERIAL_NOT_FOUND_MESSAGE = "자료를 찾을 수 없어요.";
 	static final String NO_COURSE_MESSAGE = "과목에 연결된 자료만 학습 기록을 남길 수 있어요.";
 	static final String CONCEPT_NOT_FOUND_MESSAGE = "이 자료에서 그 개념을 찾을 수 없어요. 핵심 개념을 먼저 뽑아 주세요.";
 
@@ -63,7 +62,7 @@ public class ConceptStudyService {
 	/** 자료의 핵심 개념마다 학습 상태 (뽑은 개념 순서) */
 	@Transactional(readOnly = true)
 	public List<ConceptStudyResponse> listForMaterial(Long userId, Long materialId) {
-		Material material = findMaterial(userId, materialId);
+		Material material = materialRepository.getOwned(materialId, userId);
 		Map<String, ConceptStudyProgress> progress = progressRepository.findAllByUserIdAndMaterialId(userId, materialId)
 				.stream().collect(Collectors.toMap(ConceptStudyProgress::getConceptKey, Function.identity()));
 		Map<String, Checks> checks = checks(userId,
@@ -101,7 +100,7 @@ public class ConceptStudyService {
 	public ConceptStudyResponse complete(Long userId, Long materialId, String conceptId) {
 		// 같은 사용자의 동시 요청을 차례로 처리한다 (중복 행 방지, 유니크 키가 한 번 더 막는다)
 		userRepository.lockLoginUser(userId);
-		Material material = findMaterial(userId, materialId);
+		Material material = materialRepository.getOwned(materialId, userId);
 		if (material.getCourseId() == null) {
 			throw new BusinessException(HttpStatus.BAD_REQUEST, NO_COURSE_MESSAGE);
 		}
@@ -206,10 +205,5 @@ public class ConceptStudyService {
 				checks == null ? null : checks.openQuizId(),
 				ConceptStudyRules.reason(status, latest == null ? null : latest.result(),
 						properties.assessment().conceptMinRate(), minGraded(), studyCount));
-	}
-
-	private Material findMaterial(Long userId, Long materialId) {
-		return materialRepository.findByIdAndUserId(materialId, userId)
-				.orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, MATERIAL_NOT_FOUND_MESSAGE));
 	}
 }
