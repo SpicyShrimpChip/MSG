@@ -7,6 +7,7 @@ import type {
   JudgmentEvidence,
   ProviderStatus,
 } from '@/types';
+import { ApiError } from '@/api/request';
 import { mockDelay } from './delay';
 
 // 시연 과목(정보보호개론)에 맞춘 샘플 분석 결과. 화면 확인용 예시이고 실제 모델이 판단한 값이 아니다.
@@ -542,8 +543,19 @@ export function mockDeleteConceptFeedback(id: number): Promise<void> {
   return mockDelay(undefined);
 }
 
-// 목업은 정보보호개론 예시를 그 과목 결과처럼 돌려준다
+// 예시 분석 결과가 있는 과목 (RUN의 개념은 이 과목 키워드다)
+const EXAMPLE_COURSE_ID = RUN.courseId;
+export const NO_EXAMPLE_ANALYSIS_MESSAGE =
+  "체험에서는 '정보보호개론' 과목만 예시 분석 결과가 있어요. 실제 서비스에서는 이 과목의 AI 대화를 가져온 뒤 분석해요.";
+
+// 목업은 예시 과목만 다시 분석할 수 있다. 다른 과목에 정보보호개론 개념을 보여 주지 않고,
+// 실제 서버가 분석할 대화가 없을 때처럼 오류로 알린다
 export function mockStartAnalysis(courseId: number): Promise<AnalysisRun> {
+  if (courseId !== EXAMPLE_COURSE_ID) {
+    return mockDelay(null, 600).then(() => {
+      throw new ApiError(NO_EXAMPLE_ANALYSIS_MESSAGE, 400);
+    });
+  }
   const run: AnalysisRun = {
     ...RUN,
     id: Date.now(),

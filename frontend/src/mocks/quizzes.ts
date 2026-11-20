@@ -182,8 +182,40 @@ const setResult = (quizId: number, result: QuizResult) => {
   }
 };
 
+// 체험 중 만든 퀴즈도 새로고침해도 남도록 브라우저에 저장한다 (최근 것이 앞).
+// 체험을 시작·끝낼 때 결과와 같이 지워진다(store/useDemoStore.ts의 `ai-lms-mock-*`)
+const CREATED_KEY = 'ai-lms-mock-created-quizzes';
+// 저장소를 쓸 수 없을 때만 쓰는 이번 화면 목록
+let createdFallback: MockQuiz[] = [];
+
+function loadCreated(): MockQuiz[] {
+  try {
+    const saved = localStorage.getItem(CREATED_KEY);
+    return saved ? (JSON.parse(saved) as MockQuiz[]) : [];
+  } catch {
+    return createdFallback;
+  }
+}
+
+function saveCreated(list: MockQuiz[]) {
+  createdFallback = list;
+  try {
+    localStorage.setItem(CREATED_KEY, JSON.stringify(list));
+  } catch {
+    // 저장소를 쓸 수 없으면 이번 화면에서만 유지한다
+  }
+}
+
+// 만든 퀴즈 + 예시 퀴즈. 저장소를 매번 읽어서 체험을 새로 시작해 지운 뒤에도 옛 목록이 남지 않는다
+const allQuizzes = (): MockQuiz[] => [...loadCreated(), ...QUIZZES];
+
+// 새 퀴즈 id는 지금 있는 가장 큰 id 다음 (100부터). 새로고침 뒤에도 앞서 만든 퀴즈의 결과를 이어받지 않는다
+export function nextCreatedQuizId(existing: { id: number }[]): number {
+  return Math.max(99, ...existing.map((quiz) => quiz.id)) + 1;
+}
+
 function findQuiz(id: number): MockQuiz {
-  const quiz = QUIZZES.find((item) => item.id === id);
+  const quiz = allQuizzes().find((item) => item.id === id);
   if (!quiz) throw new ApiError('퀴즈를 찾을 수 없어요.', 404);
   return quiz;
 }
@@ -195,23 +227,25 @@ const maxScoreOf = (question: MockQuestion) =>
 export function mockGetQuizzes(): Promise<QuizSummary[]> {
   const results = getResults();
   return mockDelay(
-    QUIZZES.map(({ id, title, courseId, materialId, questions, mode }) => ({
-      id,
-      title,
-      courseId,
-      materialId,
-      questionCount: questions.length,
-      lastCorrectCount: results[id]?.correctCount ?? null,
-      mode: mode ?? null,
-      difficulty: null,
-      aiGenerated: false,
-      lastScore: results[id]?.score ?? null,
-      lastMaxScore: results[id]?.maxScore ?? null,
-      lastPendingCount: results[id]?.pendingCount ?? null,
-      lastReviewCount: results[id]?.reviewCount ?? null,
-      mockExam: false,
-      assessmentKind: null,
-    })),
+    allQuizzes().map(
+      ({ id, title, courseId, materialId, questions, mode }) => ({
+        id,
+        title,
+        courseId,
+        materialId,
+        questionCount: questions.length,
+        lastCorrectCount: results[id]?.correctCount ?? null,
+        mode: mode ?? null,
+        difficulty: null,
+        aiGenerated: false,
+        lastScore: results[id]?.score ?? null,
+        lastMaxScore: results[id]?.maxScore ?? null,
+        lastPendingCount: results[id]?.pendingCount ?? null,
+        lastReviewCount: results[id]?.reviewCount ?? null,
+        mockExam: false,
+        assessmentKind: null,
+      }),
+    ),
   );
 }
 
@@ -364,11 +398,9 @@ export function mockGetLatestQuizResult(
   return mockDelay(getResults()[id] ?? null);
 }
 
-let nextMockId = 100;
-
 // 목업은 AI를 부르지 않는다. 고른 유형으로 예시 문제를 돌려주고 AI가 만든 것처럼 표시하지 않는다
 export function mockCreateQuiz(input: QuizCreateInput): Promise<Quiz> {
-  const id = nextMockId++;
+  const id = nextCreatedQuizId(allQuizzes());
   const samples: Record<string, MockQuestion> = {
     multiple_choice: {
       id: id * 10 + 1,
@@ -414,22 +446,25 @@ export function mockCreateQuiz(input: QuizCreateInput): Promise<Quiz> {
         ?.concepts.find((concept) => concept.conceptId === input.checkConceptId)
         ?.name ?? input.checkConceptId)
     : null;
-  QUIZZES.unshift({
-    id,
-    title: checkName ? `${checkName} 확인 퀴즈 (목업)` : '예시 퀴즈 (목업)',
-    courseId: input.courseId,
-    materialId: input.checkConceptId ? (input.materialId ?? null) : null,
-    mode: input.mode,
-    checkTopic:
-      input.checkConceptId && input.materialId
-        ? {
-            materialId: input.materialId,
-            topicId: input.checkConceptId,
-            name: checkName ?? input.checkConceptId,
-          }
-        : null,
-    questions: input.questionTypes.map((type) => samples[type]),
-  });
+  saveCreated([
+    {
+      id,
+      title: checkName ? `${checkName} 확인 퀴즈 (목업)` : '예시 퀴즈 (목업)',
+      courseId: input.courseId,
+      materialId: input.checkConceptId ? (input.materialId ?? null) : null,
+      mode: input.mode,
+      checkTopic:
+        input.checkConceptId && input.materialId
+          ? {
+              materialId: input.materialId,
+              topicId: input.checkConceptId,
+              name: checkName ?? input.checkConceptId,
+            }
+          : null,
+      questions: input.questionTypes.map((type) => samples[type]),
+    },
+    ...loadCreated(),
+  ]);
   return mockGetQuiz(id);
 }
 
@@ -454,11 +489,30 @@ export function mockCreateAssessment(input: AssessmentCreateInput) {
 }
 
 // 목업 비교 (예시 데이터)
+// 예시 사전·사후평가 비교가 있는 과목
+const EXAMPLE_ASSESSMENT_COURSE_ID = 1;
+
 export function mockGetAssessmentComparison(target: {
   courseId?: number;
   materialId?: number;
 }): Promise<AssessmentComparison> {
-  void target;
+  // 예시 비교(해시 함수·인증서)는 정보보호개론 과목의 것이라 다른 과목·자료에는 "아직 사전평가가 없어요"로 보여 준다
+  const courseId =
+    target.courseId ??
+    mockMaterialsSnapshot().find(
+      (material) => material.id === target.materialId,
+    )?.courseId;
+  if (courseId !== undefined && courseId !== EXAMPLE_ASSESSMENT_COURSE_ID) {
+    return mockDelay({
+      basis: '최신 사전평가와 그 사후평가를 비교해요.',
+      material: null,
+      pre: null,
+      post: null,
+      overallDelta: null,
+      concepts: [],
+      comparability: null,
+    });
+  }
   return mockDelay({
     basis: '최신 사전평가와 그 사후평가를 비교해요.',
     material: { id: 1, title: '예시 자료' },
