@@ -89,3 +89,10 @@
 - 원인: Vite 프록시가 브라우저의 `Origin`(localhost:5175)을 그대로 넘기고, 백엔드 CORS 허용 출처는 5173·5174뿐이라 Spring이 거절했다. CORS 거절은 오류 로그를 남기지 않는다.
 - 해결: 확인용 서버도 5174로 띄웠다.
 - 다음에는: 실제 API 모드는 5173·5174에서만 띄운다. 다른 포트가 꼭 필요하면 `application.yaml`의 `cors.allowed-origins`에 잠깐 더하고 커밋하지 않는다(운영은 `CORS_ALLOWED_ORIGINS`).
+
+## 쌓은 PR을 squash 머지하면 다음 PR이 충돌하고, base가 main이 아니면 백엔드 CI가 돌지 않는다 (2026-11-21, #175·#176·#177)
+
+- 상황: #175 → #176 → #177을 앞 브랜치 위에 쌓아 올렸다. #176·#177에는 백엔드 CI가 없었고, #175를 squash 머지한 뒤 #176의 base를 main으로 바꾸자 "충돌"이 났다.
+- 원인: `backend-ci.yml`은 `branches: ["main"]`인 PR에서만 돈다. squash 머지는 앞 PR 커밋을 새 커밋 하나로 main에 넣어, 다음 브랜치의 원래 커밋과 기록이 달라진다(내용은 같다).
+- 해결: `git diff origin/main <앞 브랜치> -- backend`가 비어 있는지(내용이 같은지) 확인하고, `origin/main`을 다음 브랜치에 병합하며 충돌 파일은 다음 브랜치 쪽으로 정했다. 강제 푸시 없이 일반 푸시로 끝났다(위 "Claude는 강제 푸시가 막혀 있다").
+- 다음에는: 앞 PR을 머지한 뒤 다음 PR의 base를 main으로 바꾸고, 그 CI가 통과한 걸 보고 머지한다. 쌓은 PR은 로컬 `./gradlew test`로만 확인된 상태임을 PR에 적는다.
