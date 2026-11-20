@@ -17,6 +17,8 @@ public class TestLlm implements ApplicationContextInitializer<ConfigurableApplic
 				"app.llm.openai.api-key", "",
 				"app.llm.anthropic.api-key", "",
 				"app.llm.gemini.api-key", "",
-				"app.llm.retry-backoff", "0ms")));
+				"app.llm.retry-backoff", "0ms",
+				// 테스트 전체가 같은 날짜 줄을 같이 쓰므로 상한에 닿지 않게 크게 둔다 (상한 테스트는 줄을 직접 채운다)
+				"app.ai-daily-limit.calls", "1000000")));
 	}
 }

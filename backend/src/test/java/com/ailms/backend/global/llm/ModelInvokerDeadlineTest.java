@@ -15,11 +15,65 @@ class ModelInvokerDeadlineTest {
 
 	private final LlmProperties properties = new LlmProperties(Duration.ofSeconds(60), 3, Duration.ofMillis(1), null,
 			null, null);
-	private final ModelInvoker invoker = new ModelInvoker(properties, Clock.systemUTC());
+	private final ModelInvoker invoker = new ModelInvoker(properties, Clock.systemUTC(), AiCallQuota.UNLIMITED);
 
 	@AfterEach
 	void tearDown() {
 		invoker.shutdown();
+	}
+
+	@Test
+	void 하루_상한에_닿으면_모델을_부르지_않고_DAILY_LIMIT을_돌려준다() {
+		AtomicInteger calls = new AtomicInteger();
+		FakeLlmClient client = new FakeLlmClient(LlmProvider.GPT).respond(request -> {
+			calls.incrementAndGet();
+			return new LlmResponse("{}", 1, 1);
+		});
+		ModelInvoker limited = new ModelInvoker(properties, Clock.systemUTC(), quotaAllowing(0));
+		try {
+			ModelInvoker.Outcome outcome = limited.invoke(client, new LlmRequest("s", "u", 10));
+
+			assertThat(outcome.errorCode()).isEqualTo(LlmException.Code.DAILY_LIMIT);
+			assertThat(outcome.attempts()).isZero();
+			assertThat(calls).hasValue(0);
+		} finally {
+			limited.shutdown();
+		}
+	}
+
+	@Test
+	void 다시_부를_때도_상한에서_받아_가고_닿으면_멈춘다() {
+		AtomicInteger calls = new AtomicInteger();
+		FakeLlmClient failing = new FakeLlmClient(LlmProvider.GPT).respond(request -> {
+			calls.incrementAndGet();
+			throw new LlmException(LlmException.Code.SERVER_ERROR, "실패");
+		});
+		ModelInvoker limited = new ModelInvoker(properties, Clock.systemUTC(), quotaAllowing(2));
+		try {
+			ModelInvoker.Outcome outcome = limited.invoke(failing, new LlmRequest("s", "u", 10));
+
+			assertThat(calls).hasValue(2);
+			assertThat(outcome.attempts()).isEqualTo(2);
+			assertThat(outcome.errorCode()).isEqualTo(LlmException.Code.DAILY_LIMIT);
+		} finally {
+			limited.shutdown();
+		}
+	}
+
+	// n번까지만 받아 가게 해 주는 상한
+	private static AiCallQuota quotaAllowing(int n) {
+		AtomicInteger left = new AtomicInteger(n);
+		return new AiCallQuota() {
+			@Override
+			public boolean tryAcquire() {
+				return left.getAndDecrement() > 0;
+			}
+
+			@Override
+			public boolean hasRemaining() {
+				return left.get() > 0;
+			}
+		};
 	}
 
 	@Test
