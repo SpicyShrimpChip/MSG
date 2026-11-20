@@ -8,6 +8,7 @@ import { useCourses } from '@/hooks';
 import type { ConversationImportRejection } from '@/types';
 import {
   buildImportRequests,
+  createRequestKey,
   partCountOf,
   type ConversationToSend,
 } from '@/utils';
@@ -95,7 +96,7 @@ function SendStep({ items, onBack, onRestart }: SendStepProps) {
   const mockData = useMockData();
   const { data: courses } = useCourses();
   // 보내기 한 번 = 가져오기 작업 하나. 고른 대화가 바뀌면 이 화면이 새로 열려 새 id를 만든다
-  const [importId] = useState(() => crypto.randomUUID());
+  const [importId] = useState(createRequestKey);
   const mutation = useMutation({ mutationFn: sendAll });
   const rejected =
     mutation.error instanceof ConversationRejectedError

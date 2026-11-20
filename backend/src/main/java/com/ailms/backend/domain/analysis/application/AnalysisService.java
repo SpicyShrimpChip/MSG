@@ -33,6 +33,7 @@ import com.ailms.backend.global.llm.LlmRequest;
 import com.ailms.backend.global.llm.ModelInvoker;
 import com.ailms.backend.global.security.ApiErrorResponder;
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -133,14 +134,18 @@ public class AnalysisService {
 		if (configured.isEmpty()) {
 			throw new BusinessException(HttpStatus.SERVICE_UNAVAILABLE, NO_MODEL_MESSAGE);
 		}
+		// 전체 시간 예산은 시작할 때부터 센다 (모델마다 다시 부르기까지 하면 프론트가 먼저 포기하고, 다시 누르면 409가 났다)
+		Instant deadline = clock.instant().plus(properties.deadline());
 		Prepared prepared = transaction.execute(status -> prepare(userId, courseId));
 
 		LlmRequest request = new LlmRequest(AnalysisPrompt.SYSTEM, prepared.input().userPrompt(),
 				properties.maxOutputTokens());
 		Map<LlmProvider, CompletableFuture<ModelInvoker.Outcome>> calls = new EnumMap<>(LlmProvider.class);
-		configured.forEach(client -> calls.put(client.provider(), modelInvoker.invokeAsync(client, request)));
+		configured.forEach(client -> calls.put(client.provider(),
+				modelInvoker.invokeAsync(client, request, ModelInvoker.Lane.ANALYSIS, deadline)));
 		Map<LlmProvider, ModelInvoker.Outcome> outcomes = new EnumMap<>(LlmProvider.class);
-		calls.forEach((provider, call) -> outcomes.put(provider, call.join()));
+		// 마감까지 오지 않은 모델은 시간 초과(실패)로 두고, 그 뒤에 온 답은 쓰지 않는다
+		calls.forEach((provider, call) -> outcomes.put(provider, modelInvoker.await(call, deadline)));
 
 		try {
 			transaction.executeWithoutResult(status -> save(userId, prepared, clients, outcomes));

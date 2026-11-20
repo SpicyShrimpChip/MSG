@@ -68,11 +68,6 @@ public class ModelInvoker {
 		});
 	}
 
-	// 학습 분석 (마감 없음, 예전과 같다)
-	public CompletableFuture<Outcome> invokeAsync(LlmClient client, LlmRequest request) {
-		return invokeAsync(client, request, Lane.ANALYSIS, null);
-	}
-
 	public CompletableFuture<Outcome> invokeAsync(LlmClient client, LlmRequest request, Lane lane, Instant deadline) {
 		return CompletableFuture.supplyAsync(() -> invoke(client, request, deadline),
 				lane == Lane.QUIZ ? quizExecutor : analysisExecutor);
@@ -81,10 +76,14 @@ public class ModelInvoker {
 	/**
 	 * 마감까지만 기다린다. 마감이 지나면 timedOut 결과를 돌려주고, 그 호출이 나중에 끝나도 결과는 쓰지 않는다.
 	 * 이미 보낸 요청은 HTTP 시간 초과(app.llm.timeout)까지 계속될 수 있으니 attempts는 최소 1로 본다(비용 기록용).
+	 * 여러 모델을 차례로 기다릴 때 앞 모델을 기다리다 마감이 지나도, 그 사이 이미 끝난 뒤 모델의 결과는 버리지 않는다.
 	 */
 	public Outcome await(CompletableFuture<Outcome> call, Instant deadline) {
 		long started = System.nanoTime();
 		try {
+			if (call.isDone() && !call.isCompletedExceptionally()) {
+				return call.get();
+			}
 			long remaining = Duration.between(clock.instant(), deadline).toMillis();
 			return remaining <= 0 ? timedOut(started) : call.get(remaining, TimeUnit.MILLISECONDS);
 		} catch (TimeoutException e) {

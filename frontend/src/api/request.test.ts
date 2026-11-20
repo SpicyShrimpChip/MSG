@@ -1,6 +1,6 @@
 import { AxiosError, AxiosHeaders } from 'axios';
 import { describe, expect, it } from 'vitest';
-import { ApiError, toApiError, unwrap } from './request';
+import { ApiError, TIMEOUT_MESSAGE, toApiError, unwrap } from './request';
 
 describe('unwrap', () => {
   it('성공 응답이면 data만 돌려준다', () => {
@@ -41,6 +41,13 @@ describe('toApiError', () => {
   it('응답이 없으면(네트워크 오류) 연결 안내 문구를 쓴다', () => {
     const error = new AxiosError('Network Error', 'ERR_NETWORK', config);
     expect(toApiError(error).message).toMatch(/서버에 연결하지 못했어요/);
+  });
+
+  it('시간 초과는 연결 문제가 아니라 아직 처리 중일 수 있다고 알린다', () => {
+    const error = new AxiosError('timeout', 'ECONNABORTED', config);
+    const result = toApiError(error);
+    expect(result.message).toBe(TIMEOUT_MESSAGE);
+    expect(result.status).toBeUndefined();
   });
 
   it('알 수 없는 오류도 ApiError로 바꾼다', () => {

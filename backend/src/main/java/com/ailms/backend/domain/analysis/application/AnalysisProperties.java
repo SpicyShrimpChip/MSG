@@ -12,8 +12,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param maxOutputTokens 모델 답변 길이 상한
  * @param dailyRunLimit   사용자 한 명이 24시간 안에 시작할 수 있는 분석 수 (분석 한 번에 모델 최대 3번 호출)
  * @param runningTimeout  이보다 오래 RUNNING인 분석은 끝나지 않은 것으로 보고 새 분석을 막지 않는다
+ * @param deadline        분석 한 번에서 모델을 기다리는 전체 시간. 프론트 timeout(180초)보다 짧게 둬서, 화면이 포기하기 전에
+ *                        늦은 모델은 시간 초과로 두고 나머지 결과를 저장해 돌려준다
  */
 @ConfigurationProperties(prefix = "app.analysis")
 public record AnalysisProperties(int maxInputChars, int maxMessageChars, int contextWindow, int maxOutputTokens,
-		int dailyRunLimit, Duration runningTimeout) {
+		int dailyRunLimit, Duration runningTimeout, Duration deadline) {
 }
