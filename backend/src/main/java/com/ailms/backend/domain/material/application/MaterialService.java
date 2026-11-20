@@ -52,7 +52,6 @@ import org.springframework.web.multipart.MultipartFile;
 public class MaterialService {
 
 	static final String NOT_FOUND_MESSAGE = "자료를 찾을 수 없어요.";
-	static final String COURSE_NOT_FOUND_MESSAGE = "과목을 찾을 수 없어요.";
 	static final String STORE_FAILED_MESSAGE = "파일을 저장하지 못했어요. 잠시 뒤 다시 시도해 주세요.";
 
 	private final MaterialRepository materialRepository;
@@ -86,8 +85,8 @@ public class MaterialService {
 	@Transactional
 	public MaterialUploadResponse upload(Long userId, Long courseId, String rawTitle, MultipartFile file) {
 		String title = title(rawTitle);
-		if (courseId != null && !courseRepository.existsByIdAndUserId(courseId, userId)) {
-			throw new BusinessException(HttpStatus.NOT_FOUND, COURSE_NOT_FOUND_MESSAGE);
+		if (courseId != null) {
+			courseRepository.checkOwned(courseId, userId);
 		}
 		Path received = receive(file);
 		try {

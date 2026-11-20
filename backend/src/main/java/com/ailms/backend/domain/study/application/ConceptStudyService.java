@@ -18,7 +18,6 @@ import com.ailms.backend.domain.study.dto.ConceptStudyResponse;
 import com.ailms.backend.domain.study.entity.ConceptStudyProgress;
 import com.ailms.backend.domain.user.dao.UserRepository;
 import com.ailms.backend.global.error.BusinessException;
-import com.ailms.backend.global.security.ApiErrorResponder;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -101,8 +100,7 @@ public class ConceptStudyService {
 	@Transactional
 	public ConceptStudyResponse complete(Long userId, Long materialId, String conceptId) {
 		// 같은 사용자의 동시 요청을 차례로 처리한다 (중복 행 방지, 유니크 키가 한 번 더 막는다)
-		userRepository.findByIdForUpdate(userId)
-				.orElseThrow(() -> new BusinessException(HttpStatus.UNAUTHORIZED, ApiErrorResponder.UNAUTHORIZED_MESSAGE));
+		userRepository.lockLoginUser(userId);
 		Material material = findMaterial(userId, materialId);
 		if (material.getCourseId() == null) {
 			throw new BusinessException(HttpStatus.BAD_REQUEST, NO_COURSE_MESSAGE);

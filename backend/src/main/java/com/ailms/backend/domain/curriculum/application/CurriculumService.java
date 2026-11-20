@@ -19,7 +19,6 @@ import com.ailms.backend.domain.quiz.entity.Quiz;
 import com.ailms.backend.domain.quiz.entity.QuizSuggestion;
 import com.ailms.backend.domain.user.dao.UserRepository;
 import com.ailms.backend.domain.user.entity.LearningPurpose;
-import com.ailms.backend.global.error.BusinessException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -30,7 +29,6 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,7 +45,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class CurriculumService {
 
-	static final String COURSE_NOT_FOUND_MESSAGE = "과목을 찾을 수 없어요.";
 	static final int MAX_AI_SUGGESTIONS = 6;
 	// 이만큼은 채점이 끝나야 "다음 단계 준비"라고 말한다
 	static final int READY_MIN_GRADED = 2;
@@ -71,8 +68,7 @@ public class CurriculumService {
 	private final CurriculumFlowBuilder flowBuilder;
 
 	public CurriculumResponse get(Long userId, Long courseId) {
-		Course course = courseRepository.findByIdAndUserId(courseId, userId)
-				.orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, COURSE_NOT_FOUND_MESSAGE));
+		Course course = courseRepository.getOwned(courseId, userId);
 		LearningPurpose purpose = userRepository.findById(userId).map(user -> user.getLearningPurpose())
 				.orElse(LearningPurpose.UNDECIDED);
 		String mode = switch (purpose) {

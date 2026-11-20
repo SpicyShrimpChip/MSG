@@ -37,8 +37,7 @@ public class UserService {
 	 */
 	@Transactional
 	public UserResponse changeConsents(Long userId, Boolean analysis, Boolean quiz) {
-		var user = userRepository.findByIdForUpdate(userId)
-				.orElseThrow(() -> new BusinessException(HttpStatus.UNAUTHORIZED, ApiErrorResponder.UNAUTHORIZED_MESSAGE));
+		var user = userRepository.lockLoginUser(userId);
 		LocalDateTime now = LocalDateTime.now(clock);
 		if (quiz != null) {
 			// 철회해도 이미 만든 퀴즈·채점 결과는 남긴다 (사용자의 학습 기록). 이후 AI 생성·채점만 멈춘다

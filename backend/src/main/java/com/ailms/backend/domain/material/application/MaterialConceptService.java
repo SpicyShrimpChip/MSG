@@ -21,7 +21,6 @@ import com.ailms.backend.global.llm.LlmClient;
 import com.ailms.backend.global.llm.LlmClients;
 import com.ailms.backend.global.llm.LlmJson;
 import com.ailms.backend.global.llm.LlmRequest;
-import com.ailms.backend.global.security.ApiErrorResponder;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -262,8 +261,7 @@ public class MaterialConceptService {
 
 	private MaterialConceptResponse saveNote(Long userId, Long materialId, String conceptId, Note note,
 			LlmClient client) {
-		userRepository.findByIdForUpdate(userId)
-				.orElseThrow(() -> new BusinessException(HttpStatus.UNAUTHORIZED, ApiErrorResponder.UNAUTHORIZED_MESSAGE));
+		userRepository.lockLoginUser(userId);
 		findMaterial(userId, materialId);
 		// 기다리는 동안 개념을 다시 뽑았으면 그 개념이 없을 수 있다
 		MaterialConcept concept = conceptRepository.findAllByMaterialIdAndUserIdOrderBySortOrderAsc(materialId, userId)
@@ -283,8 +281,7 @@ public class MaterialConceptService {
 
 	private Prepared prepare(Long userId, Long materialId, boolean confirmed, String purpose, int dailyLimit,
 			String action) {
-		User user = userRepository.findByIdForUpdate(userId)
-				.orElseThrow(() -> new BusinessException(HttpStatus.UNAUTHORIZED, ApiErrorResponder.UNAUTHORIZED_MESSAGE));
+		User user = userRepository.lockLoginUser(userId);
 		Material material = findMaterial(userId, materialId);
 		if (!contentProperties.enabled()) {
 			throw new BusinessException(HttpStatus.FORBIDDEN, MaterialContentProperties.DISABLED_MESSAGE);
@@ -389,8 +386,7 @@ public class MaterialConceptService {
 
 	private List<MaterialConceptResponse> save(Long userId, Long materialId, List<Verified> verified,
 			LlmClient client) {
-		userRepository.findByIdForUpdate(userId)
-				.orElseThrow(() -> new BusinessException(HttpStatus.UNAUTHORIZED, ApiErrorResponder.UNAUTHORIZED_MESSAGE));
+		userRepository.lockLoginUser(userId);
 		findMaterial(userId, materialId);
 		conceptRepository.deleteAllOfMaterial(materialId, userId);
 		LocalDateTime now = LocalDateTime.now(clock);
