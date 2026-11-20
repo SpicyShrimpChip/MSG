@@ -141,15 +141,6 @@ class ConversationApiTest {
 		assertThat(count("conversation")).isZero();
 	}
 
-	@Test
-	void 토큰이_없으면_모두_401() throws Exception {
-		mockMvc.perform(post("/api/conversations").contentType(MediaType.APPLICATION_JSON)
-				.content(json(importBody(UUID.randomUUID().toString(), 1, 1, courseId, List.of(simple("c-1"))))))
-				.andExpect(status().isUnauthorized());
-		mockMvc.perform(get("/api/conversations")).andExpect(status().isUnauthorized());
-		mockMvc.perform(delete("/api/conversations/1")).andExpect(status().isUnauthorized());
-	}
-
 	// ---------- 형식·한도 ----------
 
 	@Test

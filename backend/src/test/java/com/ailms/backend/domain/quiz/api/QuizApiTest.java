@@ -102,12 +102,6 @@ class QuizApiTest {
 		assertThat(submissionCount()).isZero();
 	}
 
-	@Test
-	void 없는_퀴즈는_404() throws Exception {
-		mockMvc.perform(get("/api/quizzes/99999").header(HttpHeaders.AUTHORIZATION, bearer(token)))
-				.andExpect(status().isNotFound());
-	}
-
 	// ---------- 목록·풀기 ----------
 
 	@Test

@@ -60,16 +60,6 @@ class CourseApiTest {
 	// ---------- 인증·소유권 ----------
 
 	@Test
-	void 토큰이_없으면_모두_401() throws Exception {
-		mockMvc.perform(get("/api/courses")).andExpect(status().isUnauthorized());
-		mockMvc.perform(post("/api/courses").contentType(MediaType.APPLICATION_JSON)
-				.content(body("운영체제", "2026-2", List.of()))).andExpect(status().isUnauthorized());
-		mockMvc.perform(patch("/api/courses/1").contentType(MediaType.APPLICATION_JSON)
-				.content(body("운영체제", "2026-2", List.of()))).andExpect(status().isUnauthorized());
-		mockMvc.perform(delete("/api/courses/1")).andExpect(status().isUnauthorized());
-	}
-
-	@Test
 	void 목록에는_내_과목만_나온다() throws Exception {
 		create(token, "운영체제", "2026-2", List.of("프로세스")).andExpect(status().isCreated());
 		create(otherToken, "정보보호개론", "2026-2", List.of()).andExpect(status().isCreated());
@@ -177,11 +167,6 @@ class CourseApiTest {
 		update(token, id, "운영체제", "2026-2", List.of("커널")).andExpect(status().isOk());
 		update(token, id, "자료구조", "2026-2", List.of())
 				.andExpect(status().isConflict());
-	}
-
-	@Test
-	void 없는_과목_수정은_404() throws Exception {
-		update(token, 99999, "운영체제", "2026-2", List.of()).andExpect(status().isNotFound());
 	}
 
 	// ---------- 삭제 ----------

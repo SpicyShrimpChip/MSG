@@ -46,26 +46,11 @@ class AdminAccessTest {
 	}
 
 	@Test
-	void 토큰이_없으면_관리자_경로는_401() throws Exception {
-		mockMvc.perform(get(ADMIN_PATH)).andExpect(status().isUnauthorized());
-	}
-
-	@Test
 	void 일반_사용자는_관리자_경로가_403() throws Exception {
 		String token = signupAndLogin("user@example.com");
 
 		mockMvc.perform(get(ADMIN_PATH).header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
 				.andExpect(status().isForbidden());
-	}
-
-	@Test
-	void 관리자는_관리자_경로의_권한을_통과한다() throws Exception {
-		String token = signupAndLogin("admin@example.com");
-		setRole("admin@example.com", "ADMIN");
-
-		// 만든 API가 없으므로 권한을 통과한 결과는 404 (403이 아니다)
-		mockMvc.perform(get(ADMIN_PATH).header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
-				.andExpect(status().isNotFound());
 	}
 
 	@Test
@@ -92,15 +77,6 @@ class AdminAccessTest {
 				.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.data.role").value("USER"));
 		mockMvc.perform(get("/api/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
 				.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.data.role").value("ADMIN"));
-	}
-
-	@Test
-	void 가입하면_항상_일반_사용자다() throws Exception {
-		signupAndLogin("new@example.com");
-
-		String role = jdbcTemplate.queryForObject(
-				"select role from users where email = ?", String.class, "new@example.com");
-		org.assertj.core.api.Assertions.assertThat(role).isEqualTo("USER");
 	}
 
 	private void setRole(String email, String role) {

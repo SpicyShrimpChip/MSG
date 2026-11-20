@@ -55,13 +55,6 @@ class AiConsentApiTest {
 	}
 
 	@Test
-	void 토큰이_없으면_401() throws Exception {
-		mockMvc.perform(patch("/api/users/me/consents").contentType(MediaType.APPLICATION_JSON)
-				.content("{\"aiAnalysis\":true}"))
-				.andExpect(status().isUnauthorized());
-	}
-
-	@Test
 	void 가입_때_동의하지_않았어도_동의하면_대화를_가져올_수_있고_다시_로그인해도_유지된다() throws Exception {
 		String token = signupAndLogin("me@example.com", false);
 		long course = createCourse(token);

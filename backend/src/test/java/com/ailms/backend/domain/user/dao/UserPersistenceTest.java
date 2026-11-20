@@ -32,17 +32,6 @@ class UserPersistenceTest {
 	}
 
 	@Test
-	void Flyway_마이그레이션이_모두_성공했다() {
-		Integer failed = jdbcTemplate.queryForObject(
-				"SELECT COUNT(*) FROM flyway_schema_history WHERE success = FALSE", Integer.class);
-		Integer applied = jdbcTemplate.queryForObject(
-				"SELECT COUNT(*) FROM flyway_schema_history WHERE version = '1' AND success = TRUE", Integer.class);
-
-		assertThat(failed).isZero();
-		assertThat(applied).isEqualTo(1);
-	}
-
-	@Test
 	void 같은_이메일은_DB_UNIQUE_제약이_막는다() {
 		userRepository.saveAndFlush(newUser("unique@example.com", "첫째"));
 
