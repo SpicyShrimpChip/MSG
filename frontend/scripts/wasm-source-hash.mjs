@@ -3,6 +3,7 @@
 import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 export const CRATE_DIR = new URL('../wasm/conversation-core/', import.meta.url);
 export const OUT_DIR = new URL(
@@ -20,7 +21,7 @@ function listFiles(dir) {
 }
 
 export function sourceHash() {
-  const root = CRATE_DIR.pathname.replace(/^\/([A-Za-z]:)/, '$1');
+  const root = fileURLToPath(CRATE_DIR);
   const files = [
     join(root, 'Cargo.toml'),
     join(root, 'Cargo.lock'),
