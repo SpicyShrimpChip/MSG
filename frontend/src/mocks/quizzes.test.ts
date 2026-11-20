@@ -64,4 +64,24 @@ describe('체험 모드 사전·사후평가 비교', () => {
     const example = await mockGetAssessmentComparison({ courseId: 1 });
     expect(example.concepts.length).toBeGreaterThan(0);
   });
+
+  it('커리큘럼 자료는 사후평가 전이고, 과목 비교는 다른 자료(해시 함수 연습문제 풀이)의 평가다', async () => {
+    // 커리큘럼 STEP 4 "아직 사후 평가를 보지 않았어요"와 대시보드 비교가 어긋나지 않게
+    const curriculumMaterial = await mockGetAssessmentComparison({
+      materialId: 1,
+    });
+    expect(curriculumMaterial.pre?.score).toBe(7);
+    expect(curriculumMaterial.pre?.maxScore).toBe(12);
+    expect(curriculumMaterial.post).toBeNull();
+
+    const course = await mockGetAssessmentComparison({ courseId: 1 });
+    expect(course.material).toEqual({
+      id: 2,
+      title: '해시 함수 연습문제 풀이',
+    });
+    expect(course.post).not.toBeNull();
+    expect(await mockGetAssessmentComparison({ materialId: 2 })).toEqual(
+      course,
+    );
+  });
 });

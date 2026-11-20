@@ -59,7 +59,9 @@ function QuestionInput({
           const checked = draft.choices[question.id] === choiceIndex;
           return (
             <label
-              key={choice}
+              // 보기는 순서가 바뀌지 않고, 답도 순서(choiceIndex)로 고른다. 글자가 같은 보기도 겹치지 않게 순서를 key로 쓴다
+              // eslint-disable-next-line react-x/no-array-index-key
+              key={choiceIndex}
               className={cn(
                 'flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-body',
                 checked

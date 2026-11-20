@@ -563,7 +563,7 @@ function SectionBlock({ block }: { block: Block }) {
 function PrivacyPage() {
   return (
     <SubPage
-      title="ai-lms 개인정보 처리방침"
+      title="MSG 개인정보 처리방침"
       description="어떤 정보를 왜 모으고, 얼마나 보관하고, 어떻게 지울 수 있는지 알려 드려요"
     >
       <section
@@ -581,11 +581,11 @@ function PrivacyPage() {
       </section>
 
       <p className="max-w-3xl leading-relaxed text-ink-soft">
-        ai-lms(이하 "서비스")는 「개인정보 보호법」 등 관계 법령을 준수하여
-        이용자의 개인정보를 적법하게 처리하고 안전하게 관리합니다. 서비스는
-        「개인정보 보호법」 제30조에 따라 이용자의 개인정보 처리 및 보호에 관한
-        절차와 기준을 안내하고, 관련 고충을 신속하게 처리하기 위하여 다음과 같이
-        개인정보 처리방침을 수립·공개합니다.
+        MSG(My Study Guide, 이하 "서비스")는 「개인정보 보호법」 등 관계 법령을
+        준수하여 이용자의 개인정보를 적법하게 처리하고 안전하게 관리합니다.
+        서비스는 「개인정보 보호법」 제30조에 따라 이용자의 개인정보 처리 및
+        보호에 관한 절차와 기준을 안내하고, 관련 고충을 신속하게 처리하기 위하여
+        다음과 같이 개인정보 처리방침을 수립·공개합니다.
       </p>
 
       <p className="rounded-xl bg-surface-muted px-4 py-3 text-body text-ink-soft">
