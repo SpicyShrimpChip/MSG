@@ -157,7 +157,7 @@ public class MaterialConceptService {
 		Instant deadline = clock.instant().plus(properties.generationDeadline());
 		QuizModelFallback.Tracker tracker = new QuizModelFallback.Tracker(null);
 		var success = modelFallback.run(prepared.clients(),
-				new QuizModelFallback.Call(userId, QuizAiCall.CONCEPTS, null, request, deadline), raw -> {
+				new QuizModelFallback.Call(userId, QuizAiCall.CONCEPTS, null, request, deadline, false), raw -> {
 					List<Verified> verified = verify(raw, prepared);
 					if (verified.isEmpty()) {
 						log.warn("{} 모델이 고른 개념을 자료에서 확인하지 못했다", tracker.last().provider());
@@ -202,7 +202,7 @@ public class MaterialConceptService {
 		Instant deadline = clock.instant().plus(properties.generationDeadline());
 		QuizModelFallback.Tracker tracker = new QuizModelFallback.Tracker(null);
 		var success = modelFallback.run(prepared.clients(),
-				new QuizModelFallback.Call(userId, QuizAiCall.CONCEPT_NOTE, null, request, deadline), raw -> {
+				new QuizModelFallback.Call(userId, QuizAiCall.CONCEPT_NOTE, null, request, deadline, false), raw -> {
 					Optional<Note> parsed = parseNote(raw, prepared.text());
 					if (parsed.isEmpty()) {
 						log.warn("{} 모델의 개념 설명 형식이 맞지 않았다", tracker.last().provider());

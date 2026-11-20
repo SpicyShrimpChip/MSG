@@ -34,8 +34,12 @@ public class QuizModelFallback {
 		this.clock = clock;
 	}
 
-	/** 호출 기록에 남길 용도와 요청. generationId는 퀴즈 만들기에서만 쓴다. */
-	public record Call(Long userId, String purpose, Long generationId, LlmRequest request, Instant deadline) {
+	/**
+	 * 호출 기록에 남길 용도와 요청. generationId는 퀴즈 만들기에서만 쓴다. stopOnTimeout이 true면 한 모델이 시간 초과일 때 바로 멈추고(퀴즈 만들기),
+	 * false면 다음 모델로 넘어가되 마감이 지났으면 반복 맨 앞의 마감 확인에서 멈춘다(개념 뽑기·설명).
+	 */
+	public record Call(Long userId, String purpose, Long generationId, LlmRequest request, Instant deadline,
+			boolean stopOnTimeout) {
 	}
 
 	/** 검사를 통과한 결과와 그 결과를 낸 모델 */
@@ -107,7 +111,10 @@ public class QuizModelFallback {
 			if (outcome.timedOut()) {
 				record(call, client, outcome, null);
 				tracker.errorCode = TIMED_OUT;
-				break;
+				if (call.stopOnTimeout()) {
+					break;
+				}
+				continue;
 			}
 			if (outcome.response() == null) {
 				record(call, client, outcome, null);
