@@ -8,7 +8,8 @@ import eslintConfigPrettier from 'eslint-config-prettier';
 
 export default tseslint.config(
   // 빌드 결과물 폴더는 린트 검사에서 제외
-  { ignores: ['dist'] },
+  // src/wasm은 wasm-pack이 만든 파일(npm run build:wasm), wasm/*/target은 러스트 빌드 결과
+  { ignores: ['dist', 'src/wasm', 'wasm/*/target'] },
   {
     // JS, TS 공식 권장 규칙 일괄 적용 (배열 전개 구문)
     extends: [

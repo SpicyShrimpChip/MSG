@@ -1,5 +1,6 @@
 import { ApiError } from '@/api/request';
 import type { ConversationImport, ConversationImportResult } from '@/types';
+import { loadConversationCore } from '@/utils/conversation/core';
 import { maskText } from '@/utils/conversation/mask';
 import { mockDelay } from './delay';
 
@@ -8,6 +9,8 @@ import { mockDelay } from './delay';
 export async function mockImportConversations(
   input: ConversationImport,
 ): Promise<ConversationImportResult> {
+  // 가리기 규칙은 러스트 WebAssembly에 있다
+  await loadConversationCore();
   const rejected = input.conversations
     .filter(({ title, messages }) =>
       [title, ...messages.map((message) => message.text)].some(

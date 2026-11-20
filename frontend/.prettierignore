@@ -1,2 +1,7 @@
 # npm이 만드는 파일. npm 버전에 따라 형식이 달라질 수 있어 형식 검사에서 뺀다
 package-lock.json
+
+# wasm-pack이 만드는 파일 (npm run build:wasm)
+src/wasm
+# 러스트 빌드 결과
+wasm/*/target

@@ -1,3 +1,4 @@
+import { loadConversationCore } from '../core';
 import {
   maskConversationWithSpots,
   type MaskOptions,
@@ -97,9 +98,10 @@ export function maskConversationsOffThread(
   conversations: ParsedConversation[],
   options: MaskOptions,
 ): Promise<MaskedConversationWithSpots[]> {
-  return call({ type: 'mask', conversations, options }, async () =>
-    conversations.map((conversation) =>
+  return call({ type: 'mask', conversations, options }, async () => {
+    await loadConversationCore();
+    return conversations.map((conversation) =>
       maskConversationWithSpots(conversation, options),
-    ),
-  );
+    );
+  });
 }

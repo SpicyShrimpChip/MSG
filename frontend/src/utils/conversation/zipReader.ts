@@ -1,8 +1,9 @@
-import { inflateSync, strFromU8 } from 'fflate';
+import { strFromU8 } from 'fflate';
+import { coreCrc32, coreInflateEntry } from './core';
 
 // zip을 통째로 메모리에 올리지 않고 Blob.slice로 필요한 부분만 읽는 작은 리더.
 // ChatGPT 내보내기는 첨부 파일 때문에 3GB를 넘을 수 있어서 fflate의 unzip(전체를 메모리에)을 쓰지 않는다.
-// 압축 풀기(deflate)만 fflate에 맡긴다. 서버로는 아무것도 보내지 않는다
+// 압축 풀기(deflate)와 CRC 확인은 러스트 WebAssembly(core.ts)가 한다. 서버로는 아무것도 보내지 않는다
 
 const LOCAL_SIGNATURE = 0x04034b50;
 const CENTRAL_SIGNATURE = 0x02014b50;
@@ -18,8 +19,6 @@ const EOCD_SEARCH_BYTES = EOCD_SIZE + 0xffff;
 const MAX_32 = 0xffffffff;
 const MAX_16 = 0xffff;
 
-const STORED = 0;
-const DEFLATED = 8;
 const HAS_DATA_DESCRIPTOR = 0x08;
 
 export interface ZipEntry {
@@ -37,22 +36,9 @@ export class ZipFormatError extends Error {}
 // 압축 데이터가 깨졌을 때 (풀리지 않거나 크기·CRC가 다름)
 export class ZipDataError extends Error {}
 
-const CRC_TABLE = (() => {
-  const table = new Uint32Array(256);
-  for (let n = 0; n < 256; n++) {
-    let c = n;
-    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-    table[n] = c >>> 0;
-  }
-  return table;
-})();
-
+// CRC-32는 러스트 WebAssembly(core.ts)로 센다
 export function crc32(data: Uint8Array): number {
-  let crc = 0xffffffff;
-  for (let i = 0; i < data.length; i++) {
-    crc = CRC_TABLE[(crc ^ data[i]) & 0xff] ^ (crc >>> 8);
-  }
-  return (crc ^ 0xffffffff) >>> 0;
+  return coreCrc32(data);
 }
 
 async function readBytes(
@@ -247,27 +233,30 @@ async function readDataStart(blob: Blob, localOffset: number): Promise<number> {
   );
 }
 
-// 압축을 풀고 크기·CRC를 확인한다
+// 압축을 풀고 크기·CRC를 확인한다 (러스트 WebAssembly, core.ts)
+const DATA_ERROR_MESSAGES: Record<string, string> = {
+  INFLATE: '압축을 풀지 못했어요',
+  METHOD: '지원하지 않는 압축 방식이에요',
+  CORRUPT: '파일 내용이 손상됐어요',
+};
+
 function decompress(
   compressed: Uint8Array,
   entry: Pick<ZipEntry, 'method' | 'uncompressedSize' | 'crc'>,
 ): Uint8Array {
-  let data: Uint8Array;
-  if (entry.method === STORED) {
-    data = compressed;
-  } else if (entry.method === DEFLATED) {
-    try {
-      data = inflateSync(compressed);
-    } catch {
-      throw new ZipDataError('압축을 풀지 못했어요');
-    }
-  } else {
-    throw new ZipDataError('지원하지 않는 압축 방식이에요');
+  try {
+    return coreInflateEntry(
+      compressed,
+      entry.method,
+      entry.uncompressedSize,
+      entry.crc,
+    );
+  } catch (error) {
+    const code = error instanceof Error ? error.message : '';
+    throw new ZipDataError(
+      DATA_ERROR_MESSAGES[code] ?? DATA_ERROR_MESSAGES.INFLATE,
+    );
   }
-  if (data.length !== entry.uncompressedSize || crc32(data) !== entry.crc) {
-    throw new ZipDataError('파일 내용이 손상됐어요');
-  }
-  return data;
 }
 
 // 중앙 목차에서 찾은 파일 하나를 꺼낸다
