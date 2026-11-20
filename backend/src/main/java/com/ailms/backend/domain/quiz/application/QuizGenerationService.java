@@ -143,7 +143,7 @@ public class QuizGenerationService {
 		QuizModelFallback.Tracker attempt = new QuizModelFallback.Tracker("UNEXPECTED");
 		try {
 			var success = modelFallback.run(clients,
-					new QuizModelFallback.Call(userId, QuizAiCall.GENERATION, generationId, llmRequest, deadline),
+					new QuizModelFallback.Call(userId, QuizAiCall.GENERATION, generationId, llmRequest, deadline, true),
 					raw -> parse(raw, spec, attempt), attempt);
 			if (success.isEmpty()) {
 				throw new BusinessException(failureStatus(attempt.errorCode()), failureMessage(attempt.errorCode()));
