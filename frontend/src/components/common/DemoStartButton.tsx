@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { USE_MOCK } from '@/api/axios';
-import { useDemoStore } from '@/store';
+import { DEMO_AVAILABLE, useDemoStore } from '@/store';
 
 interface DemoStartButtonProps {
   className?: string;
@@ -21,7 +20,7 @@ function DemoStartButton({
   const active = useDemoStore((state) => state.active);
   const start = useDemoStore((state) => state.start);
 
-  if (!USE_MOCK || active) return null;
+  if (!DEMO_AVAILABLE || active) return null;
 
   return (
     <button

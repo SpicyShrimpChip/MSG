@@ -1,4 +1,3 @@
-import { USE_MOCK } from '@/api/axios';
 import { useDemoStore } from '@/store';
 
 // 체험 모드 중 모든 화면 맨 위에 보이는 얇은 띠. 지금 보는 것이 예시 데이터라는 점을 알려 준다
@@ -6,7 +5,7 @@ function DemoBanner() {
   const active = useDemoStore((state) => state.active);
   const end = useDemoStore((state) => state.end);
 
-  if (!USE_MOCK || !active) return null;
+  if (!active) return null;
 
   return (
     <div

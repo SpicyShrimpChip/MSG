@@ -1,13 +1,14 @@
 import type { ConversationImport, ConversationImportResult } from '@/types';
 import { mockImportConversations } from '@/mocks';
-import { USE_MOCK } from './axios';
+// 스토어 배럴(화면 모드 등 window 사용)까지 불러오지 않도록 파일을 직접 가져온다
+import { isMockData } from '@/store/useDemoStore';
 import { request } from './request';
 
 // 확정: Swagger `대화 가져오기`. 개인정보가 남은 대화가 있으면 422이고, ApiError.data에 ConversationImportRejection이 있다
 export function importConversations(
   input: ConversationImport,
 ): Promise<ConversationImportResult> {
-  if (USE_MOCK) return mockImportConversations(input);
+  if (isMockData()) return mockImportConversations(input);
   return request<ConversationImportResult>({
     method: 'POST',
     url: '/conversations',

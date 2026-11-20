@@ -8,7 +8,7 @@ import {
   Megaphone,
   Search,
 } from 'lucide-react';
-import { SEARCH_QUERY_KEY, USE_MOCK, search } from '@/api';
+import { SEARCH_QUERY_KEY, search } from '@/api';
 import {
   AsyncBoundary,
   Button,
@@ -17,7 +17,13 @@ import {
   EmptyState,
   SubPage,
 } from '@/components';
-import { MOCK_OPEN_ACCESS, useAuthStore, useDemoStore } from '@/store';
+import {
+  MOCK_OPEN_ACCESS,
+  NO_BACKEND,
+  useAuthStore,
+  useDemoStore,
+  useMockData,
+} from '@/store';
 import { SEARCH_MAX_LENGTH, conceptStudyLink, formatSemester } from '@/utils';
 
 function Section({
@@ -77,6 +83,7 @@ function ResultRow({
 }
 
 function SearchResults({ keyword }: { keyword: string }) {
+  const mockData = useMockData();
   const { data } = useSuspenseQuery({
     queryKey: [...SEARCH_QUERY_KEY, keyword],
     queryFn: () => search(keyword),
@@ -102,7 +109,7 @@ function SearchResults({ keyword }: { keyword: string }) {
     <div className="flex flex-col gap-8">
       <p className="text-body text-ink-soft">
         모두 {total}건을 찾았어요. 띄어쓰기와 대소문자는 구분하지 않아요.
-        {USE_MOCK && ' 지금은 예시 데이터에서 찾았어요.'}
+        {mockData && ' 지금은 예시 데이터에서 찾았어요.'}
       </p>
 
       {data.courses.length > 0 && (
@@ -233,24 +240,24 @@ function SearchBody({ keyword }: { keyword: string }) {
       />
     );
   }
-  if (USE_MOCK ? !demoActive && !MOCK_OPEN_ACCESS : status === 'anonymous') {
+  if (NO_BACKEND ? !demoActive && !MOCK_OPEN_ACCESS : status === 'anonymous') {
     return (
       <EmptyState
         icon={<Search size={24} aria-hidden="true" />}
         title={
-          USE_MOCK
+          NO_BACKEND
             ? '체험 모드를 켜면 예시 데이터에서 찾아요'
             : '로그인하면 내 과목과 자료에서 찾아요'
         }
         description="검색은 내 과목·자료·개념에서 찾기 때문에 먼저 들어와야 해요."
         action={{
-          label: USE_MOCK ? '메인으로' : '로그인',
-          to: USE_MOCK ? '/' : '/login',
+          label: NO_BACKEND ? '메인으로' : '로그인',
+          to: NO_BACKEND ? '/' : '/login',
         }}
       />
     );
   }
-  if (!USE_MOCK && status === 'unknown') return null;
+  if (!NO_BACKEND && status === 'unknown') return null;
   return (
     <AsyncBoundary>
       <SearchResults keyword={keyword} />

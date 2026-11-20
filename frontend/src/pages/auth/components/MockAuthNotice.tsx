@@ -1,5 +1,5 @@
 import { Info } from 'lucide-react';
-import { USE_MOCK } from '@/api';
+import { NO_BACKEND } from '@/store';
 import { DemoStartButton, Notice } from '@/components';
 
 interface MockAuthNoticeProps {
@@ -10,7 +10,7 @@ interface MockAuthNoticeProps {
 // 목업 모드(공개 배포)에는 서버가 없어서 로그인·가입이 아직 열려 있지 않다. 그 사실과 체험 모드를 알린다.
 // 서버와 연결된 실제 모드에서는 아무것도 그리지 않는다
 function MockAuthNotice({ from }: MockAuthNoticeProps) {
-  if (!USE_MOCK) return null;
+  if (!NO_BACKEND) return null;
 
   return (
     <Notice icon={Info}>

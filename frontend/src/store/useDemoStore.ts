@@ -1,19 +1,26 @@
 import { create } from 'zustand';
 
-// 체험 모드: 백엔드 없이 목업 데이터로 둘러보는 상태.
-// 목업 모드(VITE_USE_MOCK=true, Vercel 배포)에서만 의미가 있고, 로그인 가드가 이 값으로 화면을 열어 준다.
+// 체험 모드: 로그인 없이 목업 데이터(mocks/)로 둘러보는 상태.
 // 탭 안(sessionStorage)에만 저장해서 탭을 닫으면 사라진다. 서버 데이터가 아니므로 React Query가 아니라 여기 둔다
+//
+// "목업이냐"를 판단하는 곳은 이 파일 하나다. 세 가지를 구분한다.
+// - NO_BACKEND: 연결할 백엔드가 없는 빌드 (VITE_USE_MOCK=true, 지금 Vercel 배포). 로그인·가입이 닫히고 데이터는 늘 목업
+// - DEMO_AVAILABLE: "로그인 없이 체험해 보기"를 켤 수 있는 빌드 (지금은 NO_BACKEND와 같다)
+// - isMockData()/useMockData(): 지금 데이터를 목업에서 읽는지 (백엔드가 없거나 체험 중). API 함수와 "예시 데이터" 문구가 이걸 본다
 const DEMO_KEY = 'ai-lms-demo';
 
-const IS_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
+export const NO_BACKEND = import.meta.env.VITE_USE_MOCK === 'true';
+
+// TODO: 실제 서버 빌드에서도 체험을 켤 수 있게 하면 true로 바꾼다 (체험 중 서버를 부르지 않는지, 캐시 비우기 확인 뒤)
+export const DEMO_AVAILABLE = NO_BACKEND;
 
 // 개발 중에만 쓰는 예외: .env.development.local에 VITE_MOCK_OPEN_ACCESS=true를 넣으면
 // 목업 모드에서도 체험 버튼 없이 모든 화면(관리자 포함)이 열린다. 공개 배포에는 넣지 않는다
 export const MOCK_OPEN_ACCESS =
-  IS_MOCK && import.meta.env.VITE_MOCK_OPEN_ACCESS === 'true';
+  NO_BACKEND && import.meta.env.VITE_MOCK_OPEN_ACCESS === 'true';
 
 const readDemo = () => {
-  if (!IS_MOCK) return false;
+  if (!DEMO_AVAILABLE) return false;
   try {
     return sessionStorage.getItem(DEMO_KEY) === '1';
   } catch {
@@ -61,7 +68,7 @@ interface DemoState {
 export const useDemoStore = create<DemoState>()((set) => ({
   active: readDemo(),
   start: () => {
-    if (!IS_MOCK) return;
+    if (!DEMO_AVAILABLE) return;
     clearMockData();
     writeDemo(true);
     set({ active: true });
@@ -74,9 +81,9 @@ export const useDemoStore = create<DemoState>()((set) => ({
 }));
 
 // 주소 끝에 `?demo=1`이 있으면 "로그인 없이 체험해 보기"와 같게 체험을 시작하고 학습 대시보드로 보낸다.
-// 목업 모드가 아니면 아무 일도 하지 않는다(start()의 확인과 같은 기준). 라우터를 만들기 전에 불러야 한다.
+// 체험을 켤 수 없는 빌드면 아무 일도 하지 않는다(start()의 확인과 같은 기준). 라우터를 만들기 전에 불러야 한다.
 export const enterDemoFromUrl = () => {
-  if (!IS_MOCK) return;
+  if (!DEMO_AVAILABLE) return;
   try {
     const url = new URL(window.location.href);
     if (url.searchParams.get('demo') !== '1') return;
@@ -86,3 +93,10 @@ export const enterDemoFromUrl = () => {
     // 주소를 읽을 수 없는 환경이면 평소처럼 시작한다
   }
 };
+
+// 지금 데이터를 목업에서 읽는지. React 밖(API 함수)에서는 부르는 순간의 값을 읽는다
+export const isMockData = () => NO_BACKEND || useDemoStore.getState().active;
+
+// 화면에서 쓰는 같은 값. 체험을 켜고 끄면 다시 그린다
+export const useMockData = () =>
+  useDemoStore((state) => NO_BACKEND || state.active);

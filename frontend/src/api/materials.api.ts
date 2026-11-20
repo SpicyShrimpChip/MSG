@@ -16,7 +16,8 @@ import {
   mockGetMaterials,
   mockUploadMaterial,
 } from '@/mocks';
-import { USE_MOCK } from './axios';
+// 스토어 배럴(화면 모드 등 window 사용)까지 불러오지 않도록 파일을 직접 가져온다
+import { isMockData } from '@/store/useDemoStore';
 import { request } from './request';
 
 // React Query에서 내 학습자료를 담는 키. 상세는 [...MATERIALS_QUERY_KEY, id]
@@ -27,7 +28,7 @@ const UPLOAD_TIMEOUT_MS = 120_000;
 
 // 확정: Swagger `학습자료`
 export function uploadMaterial(input: MaterialUploadInput): Promise<Material> {
-  if (USE_MOCK) return mockUploadMaterial(input);
+  if (isMockData()) return mockUploadMaterial(input);
   const body = new FormData();
   body.append('courseId', String(input.courseId));
   body.append('title', input.title);
@@ -44,23 +45,23 @@ export function uploadMaterial(input: MaterialUploadInput): Promise<Material> {
 }
 
 export function getMaterials(): Promise<MaterialSummary[]> {
-  if (USE_MOCK) return mockGetMaterials();
+  if (isMockData()) return mockGetMaterials();
   return request<MaterialSummary[]>({ method: 'GET', url: '/materials' });
 }
 
 export function getMaterial(id: number): Promise<MaterialDetail> {
-  if (USE_MOCK) return mockGetMaterial(id);
+  if (isMockData()) return mockGetMaterial(id);
   return request<MaterialDetail>({ method: 'GET', url: `/materials/${id}` });
 }
 
 export function deleteMaterial(id: number): Promise<void> {
-  if (USE_MOCK) return mockDeleteMaterial(id);
+  if (isMockData()) return mockDeleteMaterial(id);
   return request<void>({ method: 'DELETE', url: `/materials/${id}` });
 }
 
 // 자료에서 뽑아 근거를 확인한 핵심 개념 (안 뽑았으면 빈 목록)
 export function getMaterialConcepts(id: number): Promise<MaterialConcept[]> {
-  if (USE_MOCK) return mockGetMaterialConcepts(id);
+  if (isMockData()) return mockGetMaterialConcepts(id);
   return request<MaterialConcept[]>({
     method: 'GET',
     url: `/materials/${id}/concepts`,
@@ -72,7 +73,7 @@ export function extractMaterialConcepts(
   id: number,
   input: ConceptExtractInput,
 ): Promise<MaterialConcept[]> {
-  if (USE_MOCK) return mockExtractMaterialConcepts(id);
+  if (isMockData()) return mockExtractMaterialConcepts(id);
   return request<MaterialConcept[]>({
     method: 'POST',
     url: `/materials/${id}/concepts`,
@@ -86,7 +87,7 @@ export function createConceptStudyNote(
   id: number,
   input: ConceptStudyNoteInput,
 ): Promise<MaterialConcept> {
-  if (USE_MOCK) return mockCreateConceptStudyNote(id, input);
+  if (isMockData()) return mockCreateConceptStudyNote(id, input);
   return request<MaterialConcept>({
     method: 'POST',
     url: `/materials/${id}/concepts/study-notes`,
