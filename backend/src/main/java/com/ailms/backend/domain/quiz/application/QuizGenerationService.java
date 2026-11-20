@@ -4,11 +4,7 @@ import com.ailms.backend.domain.analysis.dao.AnalysisRunRepository;
 import com.ailms.backend.domain.analysis.dao.ConceptConsensusRepository;
 import com.ailms.backend.domain.analysis.entity.AnalysisRunStatus;
 import com.ailms.backend.domain.analysis.entity.ConceptConsensus;
-import com.ailms.backend.domain.conversation.application.PersonalInfoDetector;
-import com.ailms.backend.domain.course.dao.CourseRepository;
 import com.ailms.backend.domain.course.entity.Course;
-import com.ailms.backend.domain.material.dao.MaterialRepository;
-import com.ailms.backend.domain.material.entity.Material;
 import com.ailms.backend.domain.quiz.dao.QuizGenerationRepository;
 import com.ailms.backend.domain.quiz.dao.QuizQuestionRepository;
 import com.ailms.backend.domain.quiz.dao.QuizRepository;
@@ -18,16 +14,11 @@ import com.ailms.backend.domain.quiz.entity.QuizAiCall;
 import com.ailms.backend.domain.quiz.dto.QuizCreateRequest;
 import com.ailms.backend.domain.quiz.dto.QuizResponse;
 import com.ailms.backend.domain.quiz.entity.AssessmentKind;
-import com.ailms.backend.domain.quiz.entity.QuestionType;
 import com.ailms.backend.domain.quiz.entity.Quiz;
-import com.ailms.backend.domain.quiz.entity.QuizDifficulty;
 import com.ailms.backend.domain.quiz.entity.QuizGeneration;
 import com.ailms.backend.domain.quiz.entity.QuizGenerationStatus;
-import com.ailms.backend.domain.quiz.entity.QuizMode;
 import com.ailms.backend.domain.quiz.entity.QuizQuestion;
-import com.ailms.backend.domain.user.application.LearningProfileValidator;
 import com.ailms.backend.domain.user.dao.UserRepository;
-import com.ailms.backend.domain.user.entity.JobField;
 import com.ailms.backend.domain.user.entity.User;
 import com.ailms.backend.global.error.BusinessException;
 import com.ailms.backend.global.llm.AiCallQuota;
@@ -40,8 +31,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -54,12 +43,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.springframework.util.StringUtils;
 
 /**
  * 학습 모드(시험 대비·자기개발·업무 활용)에 맞춰 AI로 퀴즈를 만든다.
  *
- * <p>순서: (1) 요청 검사 → (2) 동의·한도·중복을 확인하고 만들기 기록(RUNNING)을 커밋 → (3) DB 트랜잭션 밖에서 모델 호출
+ * <p>순서: (1) 요청 검사(QuizSpecResolver) → (2) 동의·한도·중복을 확인하고 만들기 기록(RUNNING)을 커밋 → (3) DB 트랜잭션 밖에서 모델 호출
  * → (4) 검증을 통과한 퀴즈만 저장하고 기록을 SUCCEEDED로, 아니면 FAILED로 남기고 오류를 돌려준다.
  *
  * <p>외부로 보내는 것: 과목 이름, 개념(과목 키워드), 사용자가 적은 시험 범위, 직무 분야 이름, 코드가 요약한 개념별 참고 상태.
@@ -79,19 +67,6 @@ import org.springframework.util.StringUtils;
 public class QuizGenerationService {
 
 	static final String CONSENT_REQUIRED_MESSAGE = "AI로 퀴즈를 만들려면 AI 퀴즈 처리 동의가 필요해요. 마이페이지에서 동의할 수 있어요.";
-	static final String CHECK_NEEDS_MATERIAL_MESSAGE = "개념 확인 퀴즈는 그 개념을 뽑은 학습자료를 골라야 만들 수 있어요.";
-	static final String CHECK_COMBINATION_MESSAGE = "개념 확인 퀴즈는 사전·사후평가나 모의시험과 함께 만들 수 없어요.";
-	static final String CHECK_CONCEPT_NOT_FOUND_MESSAGE = "이 자료에서 그 개념을 찾을 수 없어요. 핵심 개념을 먼저 뽑아 주세요.";
-	static final String COURSE_NOT_FOUND_MESSAGE = "과목을 찾을 수 없어요.";
-	static final String MATERIAL_NOT_FOUND_MESSAGE = "자료를 찾을 수 없어요.";
-	static final String MATERIAL_COURSE_MESSAGE = "고른 자료가 이 과목에 연결돼 있지 않아요.";
-	static final String MODE_MESSAGE = "학습 모드를 다시 골라 주세요.";
-	static final String TYPE_MESSAGE = "문제 유형을 다시 골라 주세요.";
-	static final String DIFFICULTY_MESSAGE = "난이도를 다시 골라 주세요.";
-	static final String NO_CONCEPTS_MESSAGE = "과목에 키워드를 먼저 넣어 주세요. 키워드가 퀴즈의 개념이 돼요.";
-	static final String UNKNOWN_CONCEPT_MESSAGE = "과목 키워드에 없는 개념이 있어요. 과목 키워드에서 골라 주세요.";
-	static final String SCOPE_TOO_LONG_MESSAGE = "시험 범위는 " + Quiz.EXAM_SCOPE_MAX_LENGTH + "자까지 적을 수 있어요.";
-	static final String SCOPE_PERSONAL_INFO_MESSAGE = "시험 범위에 이메일·전화번호 같은 개인정보는 적지 말아 주세요.";
 	static final String GENERATION_NOT_FOUND_MESSAGE = "퀴즈 만들기 요청을 찾을 수 없어요.";
 	static final String NO_MODEL_MESSAGE = "연결된 AI 모델이 없어 지금은 퀴즈를 만들 수 없어요.";
 	static final String RUNNING_MESSAGE = "퀴즈를 만들고 있어요. 끝난 뒤 다시 시도해 주세요.";
@@ -101,91 +76,52 @@ public class QuizGenerationService {
 	static final String TIMED_OUT_MESSAGE = "AI가 정해진 시간 안에 문제를 만들지 못했어요. 잠시 뒤 다시 시도해 주세요.";
 	static final String UNEXPECTED_MESSAGE = "퀴즈를 만들다가 문제가 생겨 저장하지 않았어요. 다시 시도해 주세요.";
 	static final String MODEL_BUDGET_MESSAGE = "오늘 AI 호출 한도를 다 써서 지금은 퀴즈를 만들 수 없어요. 내일 다시 시도해 주세요.";
-	static final String MOCK_EXAM_MODE_MESSAGE = "모의시험은 시험 대비 모드에서만 만들 수 있어요.";
-	static final int MAX_CONCEPTS = 10;
-	static final int MAX_AVOID_QUESTIONS = 20;
-	static final String ASSESSMENT_KIND_MESSAGE = "평가 종류를 다시 골라 주세요.";
-	static final String ASSESSMENT_MATERIAL_MESSAGE = "사전·사후평가는 과목에 연결된 학습자료를 골라야 해요.";
-	static final String NO_PRE_ASSESSMENT_MESSAGE = "이 자료로 먼저 사전평가를 만들어 주세요. 사후평가는 사전평가와 같은 개념으로 만들어요.";
-	static final String CONTENT_NEEDS_MATERIAL_MESSAGE = "자료 본문을 쓰려면 학습자료를 골라 주세요.";
-	static final String CONTENT_CONSENT_MESSAGE = "자료 본문을 외부 AI로 보내려면 확인에 체크해 주세요.";
 
 	private final UserRepository userRepository;
-	private final CourseRepository courseRepository;
-	private final MaterialRepository materialRepository;
 	private final QuizRepository quizRepository;
 	private final QuizQuestionRepository questionRepository;
 	private final QuizGenerationRepository generationRepository;
 	private final AnalysisRunRepository runRepository;
 	private final ConceptConsensusRepository consensusRepository;
 	private final QuizStatsService statsService;
+	private final QuizSpecResolver specResolver;
 	private final LlmClients llmClients;
 	private final QuizModelFallback modelFallback;
 	private final AiCallQuota aiCallQuota;
 	private final QuizGenerationParser parser;
-	private final LearningProfileValidator profileValidator;
-	private final PersonalInfoDetector personalInfoDetector;
 	private final QuizProperties properties;
 	private final QuizAiUsage usage;
-	private final MaterialTextExtractor textExtractor;
-	private final MaterialContentProperties contentProperties;
-	private final com.ailms.backend.domain.material.dao.MaterialConceptRepository materialConceptRepository;
 	private final ObjectMapper objectMapper;
 	private final TransactionTemplate transaction;
 	private final Clock clock;
 
-	public QuizGenerationService(UserRepository userRepository, CourseRepository courseRepository,
-			MaterialRepository materialRepository, QuizRepository quizRepository,
+	public QuizGenerationService(UserRepository userRepository, QuizRepository quizRepository,
 			QuizQuestionRepository questionRepository, QuizGenerationRepository generationRepository,
 			AnalysisRunRepository runRepository, ConceptConsensusRepository consensusRepository,
-			QuizStatsService statsService, LlmClients llmClients, QuizModelFallback modelFallback, AiCallQuota aiCallQuota,
-			QuizGenerationParser parser, LearningProfileValidator profileValidator,
-			PersonalInfoDetector personalInfoDetector, QuizProperties properties, QuizAiUsage usage,
-			MaterialTextExtractor textExtractor, MaterialContentProperties contentProperties,
-			com.ailms.backend.domain.material.dao.MaterialConceptRepository materialConceptRepository,
-			ObjectMapper objectMapper,
+			QuizStatsService statsService, QuizSpecResolver specResolver, LlmClients llmClients,
+			QuizModelFallback modelFallback, AiCallQuota aiCallQuota, QuizGenerationParser parser,
+			QuizProperties properties, QuizAiUsage usage, ObjectMapper objectMapper,
 			PlatformTransactionManager transactionManager, Clock clock) {
 		this.userRepository = userRepository;
-		this.courseRepository = courseRepository;
-		this.materialRepository = materialRepository;
 		this.quizRepository = quizRepository;
 		this.questionRepository = questionRepository;
 		this.generationRepository = generationRepository;
 		this.runRepository = runRepository;
 		this.consensusRepository = consensusRepository;
 		this.statsService = statsService;
+		this.specResolver = specResolver;
 		this.llmClients = llmClients;
 		this.modelFallback = modelFallback;
 		this.aiCallQuota = aiCallQuota;
 		this.parser = parser;
-		this.profileValidator = profileValidator;
-		this.personalInfoDetector = personalInfoDetector;
 		this.properties = properties;
 		this.usage = usage;
-		this.textExtractor = textExtractor;
-		this.contentProperties = contentProperties;
-		this.materialConceptRepository = materialConceptRepository;
 		this.objectMapper = objectMapper;
 		this.transaction = new TransactionTemplate(transactionManager);
 		this.clock = clock;
 	}
 
-	// 검사를 마친 요청
-	private record Spec(Course course, Long materialId, String materialTitle, QuizMode mode,
-			List<QuestionType> types, Map<QuestionType, Integer> plan, QuizDifficulty difficulty, List<String> concepts,
-			String examScope, JobField jobField, String jobFieldOther, boolean mockExam, AssessmentKind assessmentKind,
-			Long preAssessmentId, List<String> avoidQuestions, String materialExcerpt, String materialContentNote,
-			String conceptSource, String checkConceptKey, String checkConceptName) {
-
-		String jobLabel() {
-			if (jobField == null) {
-				return null;
-			}
-			return jobField == JobField.OTHER ? jobFieldOther : jobField.label();
-		}
-	}
-
-	private record Started(Long generationId, QuizResponse existing, QuizPrompt.Input input, Spec spec,
+	private record Started(Long generationId, QuizResponse existing, QuizPrompt.Input input, QuizSpec spec,
 			Instant deadline) {
 	}
 
@@ -199,7 +135,7 @@ public class QuizGenerationService {
 			return new Created(started.existing(), true);
 		}
 		Long generationId = started.generationId();
-		Spec spec = started.spec();
+		QuizSpec spec = started.spec();
 		Instant deadline = started.deadline();
 		LlmRequest llmRequest = new LlmRequest(QuizPrompt.SYSTEM, QuizPrompt.user(objectMapper, started.input()),
 				properties.generationMaxOutputTokens());
@@ -226,7 +162,7 @@ public class QuizGenerationService {
 	}
 
 	// 모델이 만든 퀴즈를 검사한다. 형식이 맞지 않으면 빈 값 (다음 모델로 넘어간다)
-	private Optional<QuizGenerationParser.ParsedQuiz> parse(String raw, Spec spec, QuizModelFallback.Tracker attempt) {
+	private Optional<QuizGenerationParser.ParsedQuiz> parse(String raw, QuizSpec spec, QuizModelFallback.Tracker attempt) {
 		try {
 			return Optional.of(parser.parse(raw, spec.mode(), spec.plan(), spec.concepts()));
 		} catch (QuizGenerationParser.InvalidOutputException e) {
@@ -288,7 +224,7 @@ public class QuizGenerationService {
 		if (existing.isPresent()) {
 			return reuse(userId, existing.get());
 		}
-		Spec spec = spec(userId, request);
+		QuizSpec spec = specResolver.resolve(userId, request);
 		if (!user.isAiQuizConsent()) {
 			throw new BusinessException(HttpStatus.FORBIDDEN, CONSENT_REQUIRED_MESSAGE);
 		}
@@ -365,197 +301,8 @@ public class QuizGenerationService {
 				generation.getStatus() == QuizGenerationStatus.RUNNING ? RUNNING_MESSAGE : FAILED_KEY_MESSAGE);
 	}
 
-	private Spec spec(Long userId, QuizCreateRequest request) {
-		Course course = courseRepository.findByIdAndUserId(request.courseId(), userId)
-				.orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, COURSE_NOT_FOUND_MESSAGE));
-		Material material = null;
-		if (request.materialId() != null) {
-			material = materialRepository.findByIdAndUserId(request.materialId(), userId)
-					.orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, MATERIAL_NOT_FOUND_MESSAGE));
-			if (!course.getId().equals(material.getCourseId())) {
-				throw badRequest(MATERIAL_COURSE_MESSAGE);
-			}
-		}
-		AssessmentKind kind = null;
-		if (StringUtils.hasText(request.assessmentKind())) {
-			kind = AssessmentKind.fromApiValue(request.assessmentKind())
-					.orElseThrow(() -> badRequest(ASSESSMENT_KIND_MESSAGE));
-			if (material == null) {
-				throw badRequest(ASSESSMENT_MATERIAL_MESSAGE);
-			}
-		}
-		// 개념 확인 퀴즈: 자료에서 뽑은 개념 하나만 다룬다(다른 개념 문제는 파서가 거절). 평가·모의시험과 함께 쓰지 않는다
-		com.ailms.backend.domain.material.entity.MaterialConcept checkConcept = null;
-		if (StringUtils.hasText(request.checkConceptId())) {
-			if (material == null) {
-				throw badRequest(CHECK_NEEDS_MATERIAL_MESSAGE);
-			}
-			if (kind != null || Boolean.TRUE.equals(request.mockExam())) {
-				throw badRequest(CHECK_COMBINATION_MESSAGE);
-			}
-			String key = request.checkConceptId().strip();
-			checkConcept = materialConceptRepository
-					.findAllByMaterialIdAndUserIdOrderBySortOrderAsc(material.getId(), userId).stream()
-					.filter(concept -> concept.getConceptKey().equals(key))
-					.findFirst()
-					.orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, CHECK_CONCEPT_NOT_FOUND_MESSAGE));
-		}
-		// 사후평가: 같은 자료의 최신 사전평가와 개념·유형·문항 수·난이도·모드를 맞춘다(요청 값은 쓰지 않는다)
-		Quiz pre = null;
-		List<QuizQuestion> preQuestions = List.of();
-		if (kind == AssessmentKind.POST) {
-			pre = quizRepository.findFirstByUserIdAndMaterialIdAndAssessmentKindOrderByIdDesc(userId,
-					material.getId(), AssessmentKind.PRE)
-					.orElseThrow(() -> new BusinessException(HttpStatus.CONFLICT, NO_PRE_ASSESSMENT_MESSAGE));
-			preQuestions = questionRepository.findAllByQuizIdOrderBySortOrderAsc(pre.getId());
-		}
-		QuizMode mode = pre != null && pre.getMode() != null ? pre.getMode()
-				: QuizMode.fromApiValue(request.mode()).orElseThrow(() -> badRequest(MODE_MESSAGE));
-		Set<QuestionType> types = new LinkedHashSet<>();
-		if (pre != null && !preQuestions.isEmpty()) {
-			preQuestions.forEach(question -> types.add(question.getType()));
-		} else {
-			for (String value : request.questionTypes()) {
-				if (!types.add(QuestionType.fromApiValue(value).orElseThrow(() -> badRequest(TYPE_MESSAGE)))) {
-					throw badRequest(TYPE_MESSAGE);
-				}
-			}
-		}
-		int count = pre != null && !preQuestions.isEmpty() ? preQuestions.size() : request.questionCount();
-		boolean mockExam = Boolean.TRUE.equals(request.mockExam()) && kind == null;
-		if (Boolean.TRUE.equals(request.mockExam()) && mode != QuizMode.EXAM_PREP) {
-			throw badRequest(MOCK_EXAM_MODE_MESSAGE);
-		}
-		int max = mockExam ? properties.mockExamMaxQuestionCount() : properties.maxQuestionCount();
-		if (count > max) {
-			throw badRequest((mockExam ? "모의시험 문제는 " : "문제는 ") + max + "개까지 만들 수 있어요.");
-		}
-		if (count < types.size()) {
-			throw badRequest("고른 유형이 " + types.size() + "가지라 문제 수는 " + types.size() + "개 이상이어야 해요.");
-		}
-		QuizDifficulty difficulty = pre != null && pre.getDifficulty() != null ? pre.getDifficulty()
-				: StringUtils.hasText(request.difficulty())
-						? QuizDifficulty.fromApiValue(request.difficulty()).orElseThrow(() -> badRequest(DIFFICULTY_MESSAGE))
-						: QuizDifficulty.MEDIUM;
-		// 개념 체계: 사후평가는 사전평가 문제의 개념 그대로, 평가는 자료에서 뽑은 개념이 있으면 그것, 아니면 과목 키워드
-		String conceptSource = null;
-		List<String> concepts;
-		if (pre != null && !preQuestions.isEmpty()) {
-			concepts = preConcepts(course, preQuestions);
-			conceptSource = pre.getConceptSource();
-		} else if (checkConcept != null) {
-			concepts = List.of(checkConcept.getName());
-		} else if (kind != null) {
-			List<String> fromMaterial = materialConceptRepository
-					.findAllByMaterialIdAndUserIdOrderBySortOrderAsc(material.getId(), userId).stream()
-					.map(com.ailms.backend.domain.material.entity.MaterialConcept::getName)
-					.limit(MAX_CONCEPTS)
-					.toList();
-			concepts = fromMaterial.isEmpty() ? concepts(course, request.concepts()) : fromMaterial;
-			conceptSource = fromMaterial.isEmpty() ? "COURSE" : "MATERIAL";
-		} else {
-			concepts = concepts(course, request.concepts());
-		}
-		String examScope = null;
-		if (mode == QuizMode.EXAM_PREP && StringUtils.hasText(request.examScope())) {
-			examScope = request.examScope().strip();
-			if (examScope.length() > Quiz.EXAM_SCOPE_MAX_LENGTH) {
-				throw badRequest(SCOPE_TOO_LONG_MESSAGE);
-			}
-			if (personalInfoDetector.containsPersonalInfoExceptIp(examScope)) {
-				throw badRequest(SCOPE_PERSONAL_INFO_MESSAGE);
-			}
-		}
-		JobField jobField = null;
-		String jobFieldOther = null;
-		if (mode == QuizMode.WORK) {
-			if (StringUtils.hasText(request.jobField())) {
-				var profile = profileValidator.validate(null, request.jobField(), request.jobFieldOther());
-				jobField = profile.jobField();
-				jobFieldOther = profile.jobFieldOther();
-			} else {
-				User user = userRepository.findById(userId).orElseThrow();
-				jobField = user.getJobField();
-				jobFieldOther = user.getJobFieldOther();
-			}
-		}
-		// 학습자료 본문: 사용자가 이 요청에서 보내기를 고르고 확인한 경우에만 읽는다. 사후평가는 사전평가가 본문을 썼으면 같게
-		boolean requested = Boolean.TRUE.equals(request.useMaterialContent());
-		if (requested && !contentProperties.enabled()) {
-			// 운영 설정·처리방침 확정 전에는 자료 본문을 외부로 보내지 않는다
-			throw new BusinessException(HttpStatus.FORBIDDEN, MaterialConceptService.DISABLED_MESSAGE);
-		}
-		boolean wantContent = contentProperties.enabled()
-				&& (requested || (pre != null && pre.isMaterialContentUsed()));
-		String excerpt = null;
-		String contentNote = pre != null && pre.isMaterialContentUsed() && !contentProperties.enabled() ? "DISABLED"
-				: null;
-		if (wantContent) {
-			if (material == null) {
-				throw badRequest(CONTENT_NEEDS_MATERIAL_MESSAGE);
-			}
-			if (!Boolean.TRUE.equals(request.materialContentConsent())) {
-				throw badRequest(CONTENT_CONSENT_MESSAGE);
-			}
-			MaterialTextExtractor.Extracted extracted = textExtractor.extract(material);
-			if (extracted.status() != MaterialTextExtractor.Status.OK) {
-				contentNote = extracted.status().name();
-			} else if (personalInfoDetector.containsPersonalInfoExceptIp(extracted.text())) {
-				// 자료 본문에 개인정보 패턴이 있으면 보내지 않고 과목·개념으로만 만든다
-				contentNote = "PERSONAL_INFO";
-			} else {
-				excerpt = extracted.text();
-			}
-		}
-		return new Spec(course, material == null ? null : material.getId(), material == null ? null : material.getTitle(),
-				mode, List.copyOf(types), QuizTypePlan.plan(mode, types, count), difficulty, concepts, examScope,
-				jobField, jobFieldOther, mockExam, kind, pre == null ? null : pre.getId(),
-				preQuestions.stream().map(QuizQuestion::getContent).limit(MAX_AVOID_QUESTIONS).toList(), excerpt,
-				contentNote, conceptSource, checkConcept == null ? null : checkConcept.getConceptKey(),
-				checkConcept == null ? null : checkConcept.getName());
-	}
-
-	// 사전평가 문제들이 다룬 개념 (과목 키워드 이름으로, 처음 나온 순서)
-	private static List<String> preConcepts(Course course, List<QuizQuestion> questions) {
-		Map<String, String> chosenByKey = new LinkedHashMap<>();
-		questions.forEach(question -> question.getConcepts()
-				.forEach(concept -> chosenByKey.putIfAbsent(concept.getConceptKey(), concept.getConceptName())));
-		Set<String> chosen = new LinkedHashSet<>(chosenByKey.values());
-		if (chosen.isEmpty()) {
-			return concepts(course, null);
-		}
-		return List.copyOf(chosen);
-	}
-
-	// 요청 개념은 과목 키워드 안에서만 (대소문자 무시). 비었으면 과목 키워드 앞에서부터 MAX_CONCEPTS개
-	private static List<String> concepts(Course course, List<String> requested) {
-		Map<String, String> keywords = new LinkedHashMap<>();
-		course.getKeywords().forEach(keyword -> keywords.putIfAbsent(Course.nameKey(keyword), keyword));
-		if (keywords.isEmpty()) {
-			throw badRequest(NO_CONCEPTS_MESSAGE);
-		}
-		if (requested == null || requested.stream().noneMatch(StringUtils::hasText)) {
-			return keywords.values().stream().limit(MAX_CONCEPTS).toList();
-		}
-		Set<String> chosen = new LinkedHashSet<>();
-		for (String concept : requested) {
-			if (!StringUtils.hasText(concept)) {
-				continue;
-			}
-			String name = keywords.get(Course.nameKey(concept.strip()));
-			if (name == null) {
-				throw badRequest(UNKNOWN_CONCEPT_MESSAGE);
-			}
-			chosen.add(name);
-		}
-		if (chosen.size() > MAX_CONCEPTS) {
-			throw badRequest("개념은 한 번에 " + MAX_CONCEPTS + "개까지 고를 수 있어요.");
-		}
-		return List.copyOf(chosen);
-	}
-
 	// 개념별 참고 상태: 최근 대화 분석의 다수 의견, 지난 퀴즈 점수, 내 피드백 (모두 코드가 만든 값)
-	private List<QuizPrompt.ConceptHint> hints(Long userId, Spec spec, boolean includeAnalysis) {
+	private List<QuizPrompt.ConceptHint> hints(Long userId, QuizSpec spec, boolean includeAnalysis) {
 		Map<String, ConceptConsensus> consensus = !includeAnalysis ? Map.of() : runRepository
 				.findFirstByUserIdAndCourseIdAndStatusInOrderByIdDesc(userId, spec.course().getId(),
 						Set.of(AnalysisRunStatus.COMPLETED, AnalysisRunStatus.PARTIAL))
@@ -579,7 +326,7 @@ public class QuizGenerationService {
 	}
 
 	// 이 요청이 아직 진행 중이고 마감 전일 때만 저장한다. 아니면 null (늦게 온 결과·다른 요청이 끝낸 기록)
-	private QuizResponse save(Long userId, Long generationId, Spec spec, QuizGenerationParser.ParsedQuiz parsed,
+	private QuizResponse save(Long userId, Long generationId, QuizSpec spec, QuizGenerationParser.ParsedQuiz parsed,
 			LlmClient client, QuizModelFallback.Tracker attempt) {
 		userRepository.findByIdForUpdate(userId)
 				.orElseThrow(() -> new BusinessException(HttpStatus.UNAUTHORIZED, ApiErrorResponder.UNAUTHORIZED_MESSAGE));
@@ -610,7 +357,7 @@ public class QuizGenerationService {
 	}
 
 	// 제목은 코드가 만든다 (출제 보장처럼 읽히는 제목이 생기지 않게)
-	private static String title(Spec spec) {
+	private static String title(QuizSpec spec) {
 		if (spec.checkConceptName() != null) {
 			String title = spec.checkConceptName() + " 확인 퀴즈";
 			return title.length() <= Quiz.TITLE_MAX_LENGTH ? title : title.substring(0, Quiz.TITLE_MAX_LENGTH);
@@ -626,9 +373,5 @@ public class QuizGenerationService {
 		};
 		String title = spec.course().getName() + " · " + label;
 		return title.length() <= Quiz.TITLE_MAX_LENGTH ? title : title.substring(0, Quiz.TITLE_MAX_LENGTH);
-	}
-
-	private static BusinessException badRequest(String message) {
-		return new BusinessException(HttpStatus.BAD_REQUEST, message);
 	}
 }
