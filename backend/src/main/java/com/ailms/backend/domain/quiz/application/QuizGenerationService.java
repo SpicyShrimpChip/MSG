@@ -34,7 +34,6 @@ import com.ailms.backend.global.llm.AiCallQuota;
 import com.ailms.backend.global.llm.LlmClient;
 import com.ailms.backend.global.llm.LlmClients;
 import com.ailms.backend.global.llm.LlmRequest;
-import com.ailms.backend.global.llm.ModelInvoker;
 import com.ailms.backend.global.security.ApiErrorResponder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
@@ -45,6 +44,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -120,7 +120,7 @@ public class QuizGenerationService {
 	private final ConceptConsensusRepository consensusRepository;
 	private final QuizStatsService statsService;
 	private final LlmClients llmClients;
-	private final ModelInvoker modelInvoker;
+	private final QuizModelFallback modelFallback;
 	private final AiCallQuota aiCallQuota;
 	private final QuizGenerationParser parser;
 	private final LearningProfileValidator profileValidator;
@@ -138,7 +138,7 @@ public class QuizGenerationService {
 			MaterialRepository materialRepository, QuizRepository quizRepository,
 			QuizQuestionRepository questionRepository, QuizGenerationRepository generationRepository,
 			AnalysisRunRepository runRepository, ConceptConsensusRepository consensusRepository,
-			QuizStatsService statsService, LlmClients llmClients, ModelInvoker modelInvoker, AiCallQuota aiCallQuota,
+			QuizStatsService statsService, LlmClients llmClients, QuizModelFallback modelFallback, AiCallQuota aiCallQuota,
 			QuizGenerationParser parser, LearningProfileValidator profileValidator,
 			PersonalInfoDetector personalInfoDetector, QuizProperties properties, QuizAiUsage usage,
 			MaterialTextExtractor textExtractor, MaterialContentProperties contentProperties,
@@ -155,7 +155,7 @@ public class QuizGenerationService {
 		this.consensusRepository = consensusRepository;
 		this.statsService = statsService;
 		this.llmClients = llmClients;
-		this.modelInvoker = modelInvoker;
+		this.modelFallback = modelFallback;
 		this.aiCallQuota = aiCallQuota;
 		this.parser = parser;
 		this.profileValidator = profileValidator;
@@ -203,77 +203,51 @@ public class QuizGenerationService {
 		Instant deadline = started.deadline();
 		LlmRequest llmRequest = new LlmRequest(QuizPrompt.SYSTEM, QuizPrompt.user(objectMapper, started.input()),
 				properties.generationMaxOutputTokens());
-		Attempt attempt = new Attempt();
+		// 실패 기록용 호출 상태. 예상하지 못한 예외로 끝나면 UNEXPECTED로 남는다
+		QuizModelFallback.Tracker attempt = new QuizModelFallback.Tracker("UNEXPECTED");
 		try {
-			for (LlmClient client : clients) {
-				if (!clock.instant().isBefore(deadline)) {
-					attempt.errorCode = "TIMED_OUT";
-					break;
-				}
-				attempt.last = client;
-				ModelInvoker.Outcome outcome = modelInvoker.await(
-						modelInvoker.invokeAsync(client, llmRequest, ModelInvoker.Lane.QUIZ, deadline), deadline);
-				attempt.attempts += Math.max(outcome.attempts(), outcome.timedOut() ? 1 : 0);
-				if (outcome.timedOut()) {
-					usage.record(userId, QuizAiCall.GENERATION, generationId, null, client, outcome, null);
-					attempt.errorCode = "TIMED_OUT";
-					break;
-				}
-				if (outcome.response() == null) {
-					usage.record(userId, QuizAiCall.GENERATION, generationId, null, client, outcome, null);
-					attempt.errorCode = "MODEL_FAILED";
-					continue;
-				}
-				attempt.inputTokens = outcome.response().inputTokens();
-				attempt.outputTokens = outcome.response().outputTokens();
-				QuizGenerationParser.ParsedQuiz parsed;
-				try {
-					parsed = parser.parse(outcome.response().text(), spec.mode(), spec.plan(), spec.concepts());
-				} catch (QuizGenerationParser.InvalidOutputException e) {
-					log.warn("{} 모델이 만든 퀴즈가 형식에 맞지 않다: {}", client.provider(), e.getMessage());
-					usage.record(userId, QuizAiCall.GENERATION, generationId, null, client, outcome, "INVALID_OUTPUT");
-					attempt.errorCode = "INVALID_OUTPUT";
-					continue;
-				}
-				usage.record(userId, QuizAiCall.GENERATION, generationId, null, client, outcome, null);
-				LlmClient used = client;
-				QuizResponse saved = transaction.execute(status -> save(userId, generationId, spec, parsed, used,
-						attempt));
-				if (saved == null) {
-					// 마감이 지났거나 다른 요청이 이 기록을 끝냈다: 늦게 온 결과는 저장하지 않는다
-					throw new BusinessException(HttpStatus.GATEWAY_TIMEOUT, TIMED_OUT_MESSAGE);
-				}
-				return new Created(saved, false);
+			var success = modelFallback.run(clients,
+					new QuizModelFallback.Call(userId, QuizAiCall.GENERATION, generationId, llmRequest, deadline),
+					raw -> parse(raw, spec, attempt), attempt);
+			if (success.isEmpty()) {
+				throw new BusinessException(failureStatus(attempt.errorCode()), failureMessage(attempt.errorCode()));
 			}
-			throw new BusinessException(failureStatus(attempt.errorCode), failureMessage(attempt.errorCode));
+			QuizResponse saved = transaction.execute(status -> save(userId, generationId, spec, success.get().value(),
+					success.get().client(), attempt));
+			if (saved == null) {
+				// 마감이 지났거나 다른 요청이 이 기록을 끝냈다: 늦게 온 결과는 저장하지 않는다
+				throw new BusinessException(HttpStatus.GATEWAY_TIMEOUT, TIMED_OUT_MESSAGE);
+			}
+			return new Created(saved, false);
 		} finally {
 			// 성공했으면 SUCCEEDED라 바뀌지 않는다. 그 밖(실패·시간 초과·예상하지 못한 예외)은 진행 중으로 남기지 않는다
 			finishIfRunning(generationId, attempt);
 		}
 	}
 
-	// 이번 요청의 모델 호출 상태 (실패 기록용)
-	private static final class Attempt {
-		private int attempts;
-		private String errorCode = "UNEXPECTED";
-		private LlmClient last;
-		private Integer inputTokens;
-		private Integer outputTokens;
+	// 모델이 만든 퀴즈를 검사한다. 형식이 맞지 않으면 빈 값 (다음 모델로 넘어간다)
+	private Optional<QuizGenerationParser.ParsedQuiz> parse(String raw, Spec spec, QuizModelFallback.Tracker attempt) {
+		try {
+			return Optional.of(parser.parse(raw, spec.mode(), spec.plan(), spec.concepts()));
+		} catch (QuizGenerationParser.InvalidOutputException e) {
+			log.warn("{} 모델이 만든 퀴즈가 형식에 맞지 않다: {}", attempt.last().provider(), e.getMessage());
+			return Optional.empty();
+		}
 	}
 
-	private void finishIfRunning(Long generationId, Attempt attempt) {
+	private void finishIfRunning(Long generationId, QuizModelFallback.Tracker attempt) {
 		try {
 			transaction.executeWithoutResult(status -> generationRepository.findById(generationId)
 					.filter(generation -> generation.getStatus() == QuizGenerationStatus.RUNNING)
 					.ifPresent(generation -> {
 						LocalDateTime now = LocalDateTime.now(clock);
-						if ("TIMED_OUT".equals(attempt.errorCode)) {
+						if (QuizModelFallback.TIMED_OUT.equals(attempt.errorCode())) {
 							generation.timeOut(now);
 						} else {
-							generation.fail(attempt.errorCode,
-									attempt.last == null ? null : attempt.last.provider().apiValue(),
-									attempt.last == null ? null : attempt.last.model(), attempt.inputTokens,
-									attempt.outputTokens, attempt.attempts, now);
+							LlmClient last = attempt.last();
+							generation.fail(attempt.errorCode(), last == null ? null : last.provider().apiValue(),
+									last == null ? null : last.model(), attempt.inputTokens(), attempt.outputTokens(),
+									attempt.attempts(), now);
 						}
 					}));
 		} catch (RuntimeException e) {
@@ -606,7 +580,7 @@ public class QuizGenerationService {
 
 	// 이 요청이 아직 진행 중이고 마감 전일 때만 저장한다. 아니면 null (늦게 온 결과·다른 요청이 끝낸 기록)
 	private QuizResponse save(Long userId, Long generationId, Spec spec, QuizGenerationParser.ParsedQuiz parsed,
-			LlmClient client, Attempt attempt) {
+			LlmClient client, QuizModelFallback.Tracker attempt) {
 		userRepository.findByIdForUpdate(userId)
 				.orElseThrow(() -> new BusinessException(HttpStatus.UNAUTHORIZED, ApiErrorResponder.UNAUTHORIZED_MESSAGE));
 		LocalDateTime now = LocalDateTime.now(clock);
@@ -615,7 +589,7 @@ public class QuizGenerationService {
 			if (generation != null) {
 				generation.timeOut(now);
 			}
-			attempt.errorCode = "TIMED_OUT";
+			attempt.timeOut();
 			return null;
 		}
 		Quiz quiz = quizRepository.save(Quiz.generated(userId, spec.course().getId(), spec.materialId(), title(spec),
@@ -630,8 +604,8 @@ public class QuizGenerationService {
 			questions.add(parsed.questions().get(i).toEntity(quiz.getId(), i));
 		}
 		List<QuizQuestion> saved = questionRepository.saveAll(questions);
-		generation.succeed(quiz.getId(), client.provider().apiValue(), client.model(), attempt.inputTokens,
-				attempt.outputTokens, attempt.attempts, now);
+		generation.succeed(quiz.getId(), client.provider().apiValue(), client.model(), attempt.inputTokens(),
+				attempt.outputTokens(), attempt.attempts(), now);
 		return QuizResponse.of(quiz, saved).withMaterialContentNote(spec.materialContentNote());
 	}
 
