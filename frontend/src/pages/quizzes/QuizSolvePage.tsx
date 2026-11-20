@@ -5,7 +5,7 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from '@tanstack/react-query';
-import { Briefcase, LoaderCircle, Sparkles } from 'lucide-react';
+import { Briefcase, Sparkles } from 'lucide-react';
 import {
   CURRICULUM_QUERY_KEY,
   QUIZZES_QUERY_KEY,
@@ -23,11 +23,12 @@ import {
   FIELD_CLASS,
   Notice,
   SubPage,
+  Spinner,
 } from '@/components';
 import {
   QUESTION_TYPE_LABELS,
   jobFieldLabel,
-  quizModeLabel,
+  quizKindLabel,
 } from '@/constants';
 import type { QuizAnswer, QuizQuestion } from '@/types';
 import { cn } from '@/utils';
@@ -178,7 +179,7 @@ function QuizForm({ quizId }: { quizId: number }) {
   const answered = answeredCount(quiz.questions, draft);
   const total = quiz.questions.length;
   const needsAi = quiz.questions.some((q) => q.type !== 'multiple_choice');
-  const modeLabel = quizModeLabel(quiz.mode);
+  const kindLabel = quizKindLabel(quiz);
   const job = jobFieldLabel(quiz.jobField, quiz.jobFieldOther);
 
   const handleSubmit = (e: SubmitEvent<HTMLFormElement>) => {
@@ -192,17 +193,7 @@ function QuizForm({ quizId }: { quizId: number }) {
       <div className="flex flex-col gap-2">
         <h2 className="text-2xl font-extrabold text-heading">{quiz.title}</h2>
         <p className="flex flex-wrap items-center gap-2 text-caption text-ink-muted">
-          {modeLabel && (
-            <Chip tone="primary">
-              {quiz.assessmentKind === 'pre'
-                ? '사전평가'
-                : quiz.assessmentKind === 'post'
-                  ? '사후평가'
-                  : quiz.mockExam
-                    ? '모의시험'
-                    : modeLabel}
-            </Chip>
-          )}
+          {kindLabel && <Chip tone="primary">{kindLabel}</Chip>}
           {quiz.mockExam && <ElapsedTime />}
           {quiz.mode === 'work' && <Chip>{job ?? '일반 실무'}</Chip>}
           {quiz.examScope && <Chip>시험 범위: {quiz.examScope}</Chip>}
@@ -301,13 +292,7 @@ function QuizForm({ quizId }: { quizId: number }) {
           size="lg"
           disabled={answered === 0 || mutation.isPending}
         >
-          {mutation.isPending && (
-            <LoaderCircle
-              size={18}
-              aria-hidden="true"
-              className="animate-spin"
-            />
-          )}
+          {mutation.isPending && <Spinner size={18} />}
           {mutation.isPending ? '채점하는 중…' : '제출하고 채점하기'}
         </Button>
       </div>

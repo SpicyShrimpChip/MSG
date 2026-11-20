@@ -1,11 +1,12 @@
 import { Sparkles } from 'lucide-react';
 import { Button, Card, Chip } from '@/components';
-import { quizModeLabel } from '@/constants';
+import { quizKindLabel } from '@/constants';
 import type { QuizSummary } from '@/types';
 
 // 퀴즈 목록·자료 상세 퀴즈 탭이 함께 쓰는 한 줄 카드
 function QuizCard({ quiz }: { quiz: QuizSummary }) {
   const solved = quiz.lastCorrectCount !== null;
+  const kindLabel = quizKindLabel(quiz);
   return (
     <Card
       as="li"
@@ -14,17 +15,7 @@ function QuizCard({ quiz }: { quiz: QuizSummary }) {
       <div className="flex flex-col gap-1.5">
         <p className="font-bold text-heading">{quiz.title}</p>
         <p className="flex flex-wrap items-center gap-2 text-caption text-ink-muted">
-          {quizModeLabel(quiz.mode) && (
-            <Chip>
-              {quiz.assessmentKind === 'pre'
-                ? '사전평가'
-                : quiz.assessmentKind === 'post'
-                  ? '사후평가'
-                  : quiz.mockExam
-                    ? '모의시험'
-                    : quizModeLabel(quiz.mode)}
-            </Chip>
-          )}
+          {kindLabel && <Chip>{kindLabel}</Chip>}
           <span>{quiz.questionCount}문제</span>
           {quiz.aiGenerated && (
             <span className="inline-flex items-center gap-1 text-ai">

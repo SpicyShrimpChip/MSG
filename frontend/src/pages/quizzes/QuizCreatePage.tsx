@@ -16,6 +16,7 @@ import {
   SelectInput,
   SubPage,
   TextInput,
+  Spinner,
 } from '@/components';
 import {
   DIFFICULTIES,
@@ -530,11 +531,7 @@ function QuizCreateForm({ me }: { me: User | null }) {
           disabled={blocked || mutation.isPending}
         >
           {mutation.isPending ? (
-            <LoaderCircle
-              size={18}
-              aria-hidden="true"
-              className="animate-spin"
-            />
+            <Spinner size={18} />
           ) : (
             <Sparkles size={18} aria-hidden="true" />
           )}

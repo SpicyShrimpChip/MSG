@@ -5,7 +5,7 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from '@tanstack/react-query';
-import { ClipboardCheck, FileText, LoaderCircle, Lock } from 'lucide-react';
+import { ClipboardCheck, FileText, Lock } from 'lucide-react';
 import {
   ASSESSMENTS_QUERY_KEY,
   MATERIALS_QUERY_KEY,
@@ -26,6 +26,7 @@ import {
   Notice,
   SelectInput,
   SubPage,
+  Spinner,
 } from '@/components';
 import {
   CONTENT_DISABLED_MESSAGE,
@@ -328,13 +329,7 @@ function MaterialAssessment({
             }
             onClick={() => mutation.mutate('pre')}
           >
-            {mutation.isPending && mutation.variables === 'pre' && (
-              <LoaderCircle
-                size={16}
-                className="animate-spin"
-                aria-hidden="true"
-              />
-            )}
+            {mutation.isPending && mutation.variables === 'pre' && <Spinner />}
             사전평가 만들기
           </Button>
           <Button
@@ -347,13 +342,7 @@ function MaterialAssessment({
             }
             onClick={() => mutation.mutate('post')}
           >
-            {mutation.isPending && mutation.variables === 'post' && (
-              <LoaderCircle
-                size={16}
-                className="animate-spin"
-                aria-hidden="true"
-              />
-            )}
+            {mutation.isPending && mutation.variables === 'post' && <Spinner />}
             사후평가 만들기
           </Button>
           {mutation.isPending && (

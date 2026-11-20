@@ -4,7 +4,7 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from '@tanstack/react-query';
-import { ChartColumn, Download, LoaderCircle, Sparkles } from 'lucide-react';
+import { ChartColumn, Download, Sparkles } from 'lucide-react';
 import * as m from 'motion/react-m';
 import {
   ApiError,
@@ -20,6 +20,7 @@ import {
   EmptyState,
   SelectInput,
   SubPage,
+  Spinner,
 } from '@/components';
 import { useCourses, useProviders } from '@/hooks';
 import type { AnalysisRun, Course, DashboardComponentId } from '@/types';
@@ -207,13 +208,7 @@ function CourseAnalysis({ course }: { course: Course }) {
             disabled={mutation.isPending || blockedReason !== null}
             className="print:hidden"
           >
-            {mutation.isPending && (
-              <LoaderCircle
-                size={16}
-                className="animate-spin"
-                aria-hidden="true"
-              />
-            )}
+            {mutation.isPending && <Spinner />}
             {mutation.isPending
               ? '분석 중이에요'
               : run

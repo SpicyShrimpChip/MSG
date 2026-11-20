@@ -1,18 +1,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  BookCheck,
-  CircleAlert,
-  ListChecks,
-  LoaderCircle,
-  RotateCcw,
-} from 'lucide-react';
+import { BookCheck, CircleAlert, ListChecks, RotateCcw } from 'lucide-react';
 import {
   CURRICULUM_QUERY_KEY,
   STUDY_QUERY_KEY,
   completeConceptStudy,
 } from '@/api';
 import { useMockData } from '@/store';
-import { Button, ErrorText, StudyStatusBadge } from '@/components';
+import { Button, ErrorText, StudyStatusBadge, Spinner } from '@/components';
 import type { ConceptStudy } from '@/types';
 import { STUDY_STATUS_LABEL, checkQuizLink, formatDate } from '@/utils';
 
@@ -104,11 +98,7 @@ function ConceptStudyActions({
             onClick={() => mutation.mutate()}
           >
             {mutation.isPending ? (
-              <LoaderCircle
-                size={16}
-                className="animate-spin"
-                aria-hidden="true"
-              />
+              <Spinner />
             ) : (
               <BookCheck size={16} aria-hidden="true" />
             )}

@@ -21,6 +21,7 @@ export { default as PasswordInput } from './PasswordInput';
 export { FIELD_CLASS } from './fieldClass';
 export { default as SelectInput } from './SelectInput';
 export { default as ScoreBar } from './ScoreBar';
+export { default as Spinner } from './Spinner';
 export { default as BoardTable, type BoardColumn } from './BoardTable';
 export { default as GlassSurface } from './GlassSurface';
 export { default as Notice } from './Notice';

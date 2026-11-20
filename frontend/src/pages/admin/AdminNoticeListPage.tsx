@@ -13,6 +13,7 @@ import {
   ErrorText,
 } from '@/components';
 import type { Notice } from '@/types';
+import { NOTICE_COLUMNS } from '@/pages/notices/components/noticeColumns';
 
 function NoticeAdminTable() {
   const queryClient = useQueryClient();
@@ -27,22 +28,7 @@ function NoticeAdminTable() {
   });
 
   const columns: BoardColumn<Notice>[] = [
-    { key: 'id', label: '번호', widthClass: 'w-18', render: (row) => row.id },
-    {
-      key: 'title',
-      label: '제목',
-      render: (row) => (
-        <Link to={`/notices/${row.id}`} className="hover:underline">
-          {row.title}
-        </Link>
-      ),
-    },
-    {
-      key: 'createdAt',
-      label: '작성일',
-      widthClass: 'w-36',
-      render: (row) => row.createdAt,
-    },
+    ...NOTICE_COLUMNS,
     {
       key: 'actions',
       label: '관리',
