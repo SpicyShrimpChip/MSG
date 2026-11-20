@@ -18,7 +18,6 @@ import com.ailms.backend.global.llm.LlmClient;
 import com.ailms.backend.global.llm.LlmClients;
 import com.ailms.backend.global.llm.LlmJson;
 import com.ailms.backend.global.llm.LlmRequest;
-import com.ailms.backend.global.llm.ModelInvoker;
 import com.ailms.backend.global.security.ApiErrorResponder;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -103,7 +102,7 @@ public class MaterialConceptService {
 	private final MaterialContentProperties contentProperties;
 	private final PersonalInfoDetector personalInfoDetector;
 	private final LlmClients llmClients;
-	private final ModelInvoker modelInvoker;
+	private final QuizModelFallback modelFallback;
 	private final AiCallQuota aiCallQuota;
 	private final QuizAiUsage usage;
 	private final QuizProperties properties;
@@ -115,7 +114,7 @@ public class MaterialConceptService {
 			CourseRepository courseRepository, MaterialConceptRepository conceptRepository,
 			QuizAiCallRepository callRepository, MaterialTextExtractor extractor,
 			MaterialContentProperties contentProperties, PersonalInfoDetector personalInfoDetector,
-			LlmClients llmClients, ModelInvoker modelInvoker, AiCallQuota aiCallQuota, QuizAiUsage usage, QuizProperties properties,
+			LlmClients llmClients, QuizModelFallback modelFallback, AiCallQuota aiCallQuota, QuizAiUsage usage, QuizProperties properties,
 			ObjectMapper objectMapper, PlatformTransactionManager transactionManager, Clock clock) {
 		this.userRepository = userRepository;
 		this.materialRepository = materialRepository;
@@ -126,7 +125,7 @@ public class MaterialConceptService {
 		this.contentProperties = contentProperties;
 		this.personalInfoDetector = personalInfoDetector;
 		this.llmClients = llmClients;
-		this.modelInvoker = modelInvoker;
+		this.modelFallback = modelFallback;
 		this.aiCallQuota = aiCallQuota;
 		this.usage = usage;
 		this.properties = properties;
@@ -156,27 +155,20 @@ public class MaterialConceptService {
 		input.put("materialExcerpt", prepared.text());
 		LlmRequest request = new LlmRequest(SYSTEM, input.toString(), properties.conceptMaxOutputTokens());
 		Instant deadline = clock.instant().plus(properties.generationDeadline());
-		boolean anyResponse = false;
-		for (LlmClient client : prepared.clients()) {
-			if (!clock.instant().isBefore(deadline)) {
-				break;
-			}
-			ModelInvoker.Outcome outcome = modelInvoker.await(
-					modelInvoker.invokeAsync(client, request, ModelInvoker.Lane.QUIZ, deadline), deadline);
-			if (outcome.response() == null) {
-				usage.record(userId, QuizAiCall.CONCEPTS, null, null, client, outcome, null);
-				continue;
-			}
-			anyResponse = true;
-			List<Verified> verified = verify(outcome.response().text(), prepared);
-			usage.record(userId, QuizAiCall.CONCEPTS, null, null, client, outcome,
-					verified.isEmpty() ? "INVALID_OUTPUT" : null);
-			if (!verified.isEmpty()) {
-				return transaction.execute(status -> save(userId, materialId, verified, client));
-			}
-			log.warn("{} 모델이 고른 개념을 자료에서 확인하지 못했다", client.provider());
+		QuizModelFallback.Tracker tracker = new QuizModelFallback.Tracker(null);
+		var success = modelFallback.run(prepared.clients(),
+				new QuizModelFallback.Call(userId, QuizAiCall.CONCEPTS, null, request, deadline, false), raw -> {
+					List<Verified> verified = verify(raw, prepared);
+					if (verified.isEmpty()) {
+						log.warn("{} 모델이 고른 개념을 자료에서 확인하지 못했다", tracker.last().provider());
+						return Optional.empty();
+					}
+					return Optional.of(verified);
+				}, tracker);
+		if (success.isPresent()) {
+			return transaction.execute(status -> save(userId, materialId, success.get().value(), success.get().client()));
 		}
-		throw new BusinessException(HttpStatus.BAD_GATEWAY, anyResponse ? NO_VALID_MESSAGE : MODEL_FAILED_MESSAGE);
+		throw new BusinessException(HttpStatus.BAD_GATEWAY, tracker.anyResponse() ? NO_VALID_MESSAGE : MODEL_FAILED_MESSAGE);
 	}
 
 	// 학습용 설명 하나에 필요한 것: 저장된 개념, 자료 본문 발췌 (보내기 조건은 개념 뽑기와 같다)
@@ -208,27 +200,20 @@ public class MaterialConceptService {
 		input.put("materialExcerpt", prepared.text());
 		LlmRequest request = new LlmRequest(NOTE_SYSTEM, input.toString(), properties.conceptNoteMaxOutputTokens());
 		Instant deadline = clock.instant().plus(properties.generationDeadline());
-		boolean anyResponse = false;
-		for (LlmClient client : prepared.clients()) {
-			if (!clock.instant().isBefore(deadline)) {
-				break;
-			}
-			ModelInvoker.Outcome outcome = modelInvoker.await(
-					modelInvoker.invokeAsync(client, request, ModelInvoker.Lane.QUIZ, deadline), deadline);
-			if (outcome.response() == null) {
-				usage.record(userId, QuizAiCall.CONCEPT_NOTE, null, null, client, outcome, null);
-				continue;
-			}
-			anyResponse = true;
-			Optional<Note> parsed = parseNote(outcome.response().text(), prepared.text());
-			usage.record(userId, QuizAiCall.CONCEPT_NOTE, null, null, client, outcome,
-					parsed.isEmpty() ? "INVALID_OUTPUT" : null);
-			if (parsed.isPresent()) {
-				return transaction.execute(status -> saveNote(userId, materialId, conceptId, parsed.get(), client));
-			}
-			log.warn("{} 모델의 개념 설명 형식이 맞지 않았다", client.provider());
+		QuizModelFallback.Tracker tracker = new QuizModelFallback.Tracker(null);
+		var success = modelFallback.run(prepared.clients(),
+				new QuizModelFallback.Call(userId, QuizAiCall.CONCEPT_NOTE, null, request, deadline, false), raw -> {
+					Optional<Note> parsed = parseNote(raw, prepared.text());
+					if (parsed.isEmpty()) {
+						log.warn("{} 모델의 개념 설명 형식이 맞지 않았다", tracker.last().provider());
+					}
+					return parsed;
+				}, tracker);
+		if (success.isPresent()) {
+			return transaction.execute(status -> saveNote(userId, materialId, conceptId, success.get().value(),
+					success.get().client()));
 		}
-		throw new BusinessException(HttpStatus.BAD_GATEWAY, anyResponse ? NOTE_INVALID_MESSAGE : NOTE_FAILED_MESSAGE);
+		throw new BusinessException(HttpStatus.BAD_GATEWAY, tracker.anyResponse() ? NOTE_INVALID_MESSAGE : NOTE_FAILED_MESSAGE);
 	}
 
 	record Note(String explanation, String materialContext, String contextQuote, String contextLocation,
