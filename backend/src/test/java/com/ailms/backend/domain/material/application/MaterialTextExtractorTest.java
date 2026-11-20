@@ -1,4 +1,4 @@
-package com.ailms.backend.domain.quiz.application;
+package com.ailms.backend.domain.material.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

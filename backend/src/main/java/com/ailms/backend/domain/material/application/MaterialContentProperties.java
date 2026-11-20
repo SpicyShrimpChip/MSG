@@ -1,4 +1,4 @@
-package com.ailms.backend.domain.quiz.application;
+package com.ailms.backend.domain.material.application;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -16,4 +16,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  */
 @ConfigurationProperties(prefix = "app.material-content")
 public record MaterialContentProperties(boolean enabled, int maxChars, int maxPdfPages) {
+
+	/** 자료 본문 전송 기능이 꺼져 있을 때 (개념 뽑기·설명, 자료 본문을 쓰는 퀴즈 만들기) */
+	public static final String DISABLED_MESSAGE = "학습자료 본문을 외부 AI로 보내는 기능은 아직 꺼져 있어요(운영 설정·처리방침 확정 전). 과목 개념으로 평가를 만들 수 있어요.";
 }

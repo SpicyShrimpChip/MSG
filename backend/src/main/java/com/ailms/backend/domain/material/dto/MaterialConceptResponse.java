@@ -1,4 +1,4 @@
-package com.ailms.backend.domain.quiz.dto;
+package com.ailms.backend.domain.material.dto;
 
 import com.ailms.backend.domain.material.dto.ConceptStudyNoteResponse;
 import com.ailms.backend.domain.material.entity.MaterialConcept;

@@ -1,4 +1,4 @@
-package com.ailms.backend.domain.quiz.api;
+package com.ailms.backend.domain.material.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
