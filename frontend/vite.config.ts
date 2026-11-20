@@ -10,6 +10,10 @@ export default defineConfig({
     // tsconfig의 paths(@/ → src/)를 그대로 쓴다 (Vite 8 내장 기능)
     tsconfigPaths: true,
   },
+  // 대화 처리 Web Worker(utils/conversation/worker)를 ES 모듈로 묶는다 (Worker 안에서도 코드 나누기가 되게)
+  worker: {
+    format: 'es',
+  },
   server: {
     // /api 요청은 로컬 스프링 서버로 넘긴다. 배포 때는 Vercel rewrite가 같은 역할을 한다
     proxy: {

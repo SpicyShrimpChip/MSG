@@ -4,19 +4,20 @@ import { Button, Card, Chip } from '@/components';
 import { cn } from '@/utils/cn';
 import {
   MASK_LABELS,
-  collectMaskedSpots,
   conversationKey,
-  maskConversation,
   type MaskKind,
   type MaskOptions,
   type MaskedSpot,
   type ParsedConversation,
 } from '@/utils';
 import ConversationView from './ConversationView';
+import type { useMaskedConversations } from './useMaskedConversations';
 import WordList from './WordList';
 
 interface MaskStepProps {
-  conversations: ParsedConversation[];
+  conversationCount: number;
+  // Web Worker에서 가린 결과 (useMaskedConversations)
+  masking: ReturnType<typeof useMaskedConversations>;
   options: MaskOptions;
   onChangeOptions: (options: MaskOptions) => void;
   // 마이페이지에서 이 브라우저에 저장한 가릴 단어. 로그인 전이면 null (기억하기를 숨긴다)
@@ -32,18 +33,14 @@ const withoutMarkdown = (text: string) => text.replace(/[*_`#>~]+/g, '');
 
 interface MaskPreviewProps {
   id: string;
-  original: ParsedConversation;
   // 가린 뒤의 대화
   masked: ParsedConversation;
-  options: MaskOptions;
+  // 가린 곳 목록 (가리기와 함께 Worker에서 만든다)
+  spots: MaskedSpot[];
 }
 
 // 대화 하나를 펼쳤을 때: 가린 곳 목록(원래 글자는 눌러야 보임) + 채팅창 모양 미리 보기
-function MaskPreview({ id, original, masked, options }: MaskPreviewProps) {
-  const spots = useMemo(
-    () => collectMaskedSpots(original, options),
-    [original, options],
-  );
+function MaskPreview({ id, masked, spots }: MaskPreviewProps) {
   const [showOriginal, setShowOriginal] = useState(false);
   // "보기"로 고른 줄 하나. 가리는 규칙이 바뀌어 목록이 다시 만들어지면 고른 줄은 풀린다
   const [selected, setSelected] = useState<{
@@ -153,7 +150,8 @@ function MaskPreview({ id, original, masked, options }: MaskPreviewProps) {
 }
 
 function MaskStep({
-  conversations,
+  conversationCount,
+  masking,
   options,
   onChangeOptions,
   savedTerms,
@@ -164,14 +162,7 @@ function MaskStep({
 }: MaskStepProps) {
   const [openId, setOpenId] = useState<string | null>(null);
 
-  const masked = useMemo(
-    () =>
-      conversations.map((conversation) => ({
-        original: conversation,
-        ...maskConversation(conversation, options),
-      })),
-    [conversations, options],
-  );
+  const masked = useMemo(() => masking.items ?? [], [masking.items]);
 
   const totals = useMemo(() => {
     const counts: Partial<Record<MaskKind, number>> = {};
@@ -243,8 +234,21 @@ function MaskStep({
         className="flex flex-col gap-2 rounded-xl bg-primary-soft p-4"
       >
         <p className="font-bold text-heading">
-          대화 {conversations.length}개에서 {totalCount}곳을 가렸어요.
+          {masking.items
+            ? `대화 ${conversationCount}개에서 ${totalCount}곳을 가렸어요.`
+            : `대화 ${conversationCount}개를 가리고 있어요.`}
         </p>
+        {masking.items && !masking.current && !masking.failed && (
+          <p className="text-caption text-ink-soft">
+            바뀐 단어로 다시 가리고 있어요.
+          </p>
+        )}
+        {masking.failed && (
+          <p role="alert" className="text-body text-heading">
+            가리는 중에 문제가 생겼어요. 단어를 한 번 더 고치거나 이전 단계로
+            갔다가 다시 와 주세요.
+          </p>
+        )}
         {totalCount > 0 && (
           <ul aria-label="가린 종류" className="flex flex-wrap gap-1.5">
             {(Object.keys(MASK_LABELS) as MaskKind[])
@@ -261,7 +265,7 @@ function MaskStep({
       </div>
 
       <ul className="flex flex-col divide-y divide-line border-y border-line">
-        {masked.map(({ original, conversation, totalCount: count }) => {
+        {masked.map(({ original, conversation, totalCount: count, spots }) => {
           const key = conversationKey(original);
           const open = openId === key;
           const panelId = `mask-preview-${key}`;
@@ -293,12 +297,7 @@ function MaskStep({
                 </span>
               </button>
               {open && (
-                <MaskPreview
-                  id={panelId}
-                  original={original}
-                  masked={conversation}
-                  options={options}
-                />
+                <MaskPreview id={panelId} masked={conversation} spots={spots} />
               )}
             </li>
           );
@@ -314,7 +313,10 @@ function MaskStep({
         <Button variant="secondary" onClick={onBack}>
           이전
         </Button>
-        <Button onClick={onNext}>다음: 보내기</Button>
+        {/* 보낼 글은 지금 단어로 가린 결과여야 해서, 다시 가리는 동안에는 넘어가지 않는다 */}
+        <Button onClick={onNext} disabled={!masking.current}>
+          다음: 보내기
+        </Button>
       </div>
     </Card>
   );
