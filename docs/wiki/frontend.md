@@ -70,3 +70,17 @@
 - 원인: 쿠키는 포트를 가리지 않아 두 서버가 Refresh Token 쿠키를 같이 쓴다. 목업 모드도 시작할 때 `restoreSession()`이 실제 백엔드(프록시)로 갱신을 요청해 성공했고, 상단바는 로그인 상태가 됐지만 목업 가드(`RequireAuth`)는 체험 모드만 봐서 로그인 화면으로 보냈다.
 - 해결: `USE_MOCK`이면 `restoreSession()`이 세션을 되살리지 않는다(`api/auth.api.ts`).
 - 다음에는: 목업·실제 모드를 동시에 띄울 때 localhost 쿠키·localStorage를 같이 쓴다는 점을 먼저 의심한다(포트가 달라도 쿠키는 공유, localStorage는 포트별).
+
+## 오류 화면의 "다시 시도"를 눌러도 같은 오류 화면이 남는다 (2026-11-20)
+
+- 상황: 퀴즈 목록 요청을 일부러 실패시킨 뒤 서버를 되살리고 "다시 시도"를 두 번 눌러도 "내용을 불러오지 못했어요"가 그대로였다. 전체 새로고침만 풀렸다.
+- 원인: `useSuspenseQuery`의 오류는 `QueryErrorResetBoundary`의 `reset`을 불러야 지워진다. `AsyncBoundary`의 `ErrorBoundary`만 다시 그리면 React Query가 실패한 조회를 다시 부르지 않고 같은 오류를 또 던진다.
+- 해결: `AsyncBoundary`를 `QueryErrorResetBoundary`로 감싸 `onReset={reset}`을 넘기고, 주소가 바뀌면 오류 화면을 지우도록 `resetKeys`에 경로를 넣었다.
+- 다음에는: 오류 복구는 이미 불러온 데이터가 캐시에 있으면 재현되지 않는다(1분 `staleTime`). 처음 여는 화면에서 요청을 막고 확인한다.
+
+## 배포 직후 열려 있던 탭에서 화면을 옮기면 영어 기본 오류 화면이 뜬다 (2026-11-20)
+
+- 상황: 빌드본에서 퀴즈 풀기 화면 코드 파일을 지우고 목록에서 "풀기"를 누르자 React Router 기본 화면("Unexpected Application Error!")이 나왔다. 새 배포 뒤 옛 탭에서 같은 일이 생긴다.
+- 원인: 페이지는 처음 방문할 때 코드를 불러오는데(`route.lazy`), 배포가 바뀌면 옛 파일 이름이 없어진다. 라우터에 `errorElement`가 없었다.
+- 해결: 루트에 `RouteErrorPage`를 두고, 화면 코드 불러오기 실패(`isChunkLoadError`)면 30초 안에 한 번만 자동 새로고침한다(`shouldAutoReload`, sessionStorage에 시각 기록). 두 번째도 실패하면 "새 버전이 나왔어요" 화면을 보여 준다.
+- 다음에는: 개발 서버에서는 재현되지 않는다. `vite build` 결과를 `vite preview`로 띄우고 `assets`의 페이지 파일을 지워서 확인한다.

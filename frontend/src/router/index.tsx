@@ -3,6 +3,7 @@ import { Layout, LoadingFallback } from '@/components';
 import { enterDemoFromUrl } from '@/store';
 import MainPage from '@/pages/main/MainPage';
 import NotFoundPage from '@/pages/NotFoundPage';
+import RouteErrorPage from '@/pages/RouteErrorPage';
 import { lazyPage } from './lazyPage';
 import RequireAdmin from './RequireAdmin';
 import RequireAuth from './RequireAuth';
@@ -22,6 +23,8 @@ export const router = createBrowserRouter([
   {
     path: '/',
     element: <Layout />,
+    // 화면을 그리다 오류가 나거나 배포 뒤 옛 화면 코드를 못 불러왔을 때 (기본 화면은 영어·오류 내용 노출)
+    errorElement: <RouteErrorPage />,
     // 첫 방문에서 페이지 코드를 불러오는 동안 보여 줄 화면
     hydrateFallbackElement: <LoadingFallback />,
     children: [
