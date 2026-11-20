@@ -5,14 +5,15 @@ import { create } from 'zustand';
 //
 // "목업이냐"를 판단하는 곳은 이 파일 하나다. 세 가지를 구분한다.
 // - NO_BACKEND: 연결할 백엔드가 없는 빌드 (VITE_USE_MOCK=true, 지금 Vercel 배포). 로그인·가입이 닫히고 데이터는 늘 목업
-// - DEMO_AVAILABLE: "로그인 없이 체험해 보기"를 켤 수 있는 빌드 (지금은 NO_BACKEND와 같다)
+// - DEMO_AVAILABLE: "로그인 없이 체험해 보기"를 켤 수 있는지. 실제 서버 빌드에서도 켤 수 있다(11/21, 주소 하나로 체험·실제 서비스)
 // - isMockData()/useMockData(): 지금 데이터를 목업에서 읽는지 (백엔드가 없거나 체험 중). API 함수와 "예시 데이터" 문구가 이걸 본다
 const DEMO_KEY = 'ai-lms-demo';
 
 export const NO_BACKEND = import.meta.env.VITE_USE_MOCK === 'true';
 
-// TODO: 실제 서버 빌드에서도 체험을 켤 수 있게 하면 true로 바꾼다 (체험 중 서버를 부르지 않는지, 캐시 비우기 확인 뒤)
-export const DEMO_AVAILABLE = NO_BACKEND;
+// 실제 서버 빌드에서도 체험을 켤 수 있다. 체험 중에는 isMockData()가 true라 API 함수가 서버를 부르지 않는다
+// (store/useDemoStore.test.ts). 로그인한 상태에서는 버튼을 숨기고, 체험 중 로그인하면 체험을 끝낸다(api/auth.api.ts)
+export const DEMO_AVAILABLE = true;
 
 // 개발 중에만 쓰는 예외: .env.development.local에 VITE_MOCK_OPEN_ACCESS=true를 넣으면
 // 목업 모드에서도 체험 버튼 없이 모든 화면(관리자 포함)이 열린다. 공개 배포에는 넣지 않는다

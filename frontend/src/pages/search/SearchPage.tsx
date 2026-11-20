@@ -240,7 +240,10 @@ function SearchBody({ keyword }: { keyword: string }) {
       />
     );
   }
-  if (NO_BACKEND ? !demoActive && !MOCK_OPEN_ACCESS : status === 'anonymous') {
+  if (
+    !demoActive &&
+    (NO_BACKEND ? !MOCK_OPEN_ACCESS : status === 'anonymous')
+  ) {
     return (
       <EmptyState
         icon={<Search size={24} aria-hidden="true" />}
@@ -257,7 +260,7 @@ function SearchBody({ keyword }: { keyword: string }) {
       />
     );
   }
-  if (!NO_BACKEND && status === 'unknown') return null;
+  if (!NO_BACKEND && !demoActive && status === 'unknown') return null;
   return (
     <AsyncBoundary>
       <SearchResults keyword={keyword} />
