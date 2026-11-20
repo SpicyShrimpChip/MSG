@@ -36,7 +36,7 @@ export interface MaskResult {
   matches: MaskMatch[];
 }
 
-// 사용자가 넣은 단어를 정규식에 그대로 넣을 수 있게 특수 문자를 이스케이프한다
+// 글자를 정규식에 그대로 넣을 수 있게 특수 문자를 이스케이프한다 (가린 표시·키워드 칠하기용. 가리기 자체는 러스트 WASM이 한다)
 export function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

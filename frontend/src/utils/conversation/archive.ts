@@ -1,4 +1,3 @@
-import { strFromU8 } from 'fflate';
 import {
   extractEntry,
   readCentralDirectory,
@@ -7,6 +6,9 @@ import {
   ZipFormatError,
   type ZipEntry,
 } from './zipReader';
+
+// 대화 기록 파일은 UTF-8이다 (깨진 바이트는 대체 문자로)
+const UTF8 = new TextDecoder();
 
 // 내보내기 zip을 브라우저 안에서 연다. 서버로는 아무것도 보내지 않는다.
 // zip 전체를 메모리에 올리지 않고(Blob.slice) 목차를 본 뒤 대화 기록 파일만 꺼내 푼다.
@@ -121,7 +123,7 @@ async function readWithDirectory(
     }
     files.push({
       name: entry.name,
-      text: strFromU8(await extractEntry(blob, entry)),
+      text: UTF8.decode(await extractEntry(blob, entry)),
     });
   }
   if (files.length > 0) return { ok: true, files };
@@ -158,7 +160,7 @@ async function readWithScan(blob: Blob): Promise<ZipReadResult> {
     try {
       files.push({
         name: item.entry.name,
-        text: strFromU8(await item.extract()),
+        text: UTF8.decode(await item.extract()),
       });
     } catch (error) {
       // 이 대화 파일은 데이터가 깨졌다. 버리고 여기서 멈춘다
