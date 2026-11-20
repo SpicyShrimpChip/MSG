@@ -53,6 +53,7 @@ Swagger UI: `/swagger-ui/index.html` — 프론트와 API를 맞출 때 이 문�
 - 비밀번호는 BCrypt로 해시. 평문 저장·로그 출력 금지.
 - 모든 사용자 데이터 조회·수정은 로그인 사용자 소유인지 확인한다 (다른 사용자 id로 접근 차단).
 - DB 접속 정보, JWT 시크릿, LLM API 키, AWS 키는 `application.yaml`에 환경변수 참조로만 쓴다.
+- 탈퇴 뒤 30일 재가입 제한(`RejoinRestriction`, `app.rejoin`, V15 `withdrawn_account`, 11/21): 탈퇴 트랜잭션에서 정규화한 이메일의 HMAC-SHA256(키 `REJOIN_HASH_SECRET`)과 재가입 가능 시각만 남기고(이메일 원문·users 연결 없음), 가입할 때 기간 안이면 409, 기간이 지난 기록은 주기 작업이 지운다. 키가 없으면 기록도 확인도 하지 않는다. 기간·항목은 처리방침 2·4번과 같게 맞춘다.
 - 회원가입은 Cloudflare Turnstile로 자동 가입(봇)을 막는다(`SignupBotCheck`, `app.turnstile`, 11/20). 비밀 키(`TURNSTILE_SECRET_KEY`)가 없으면 확인하지 않고, 확인 서버에 닿지 못하면 가입을 막는다(503). 외부 확인은 DB 트랜잭션 밖(컨트롤러)에서 먼저 한다.
 - CORS 허용 출처는 설정값으로 관리한다 (로컬: `http://localhost:5173`·`5174`, 운영: 환경변수 `CORS_ALLOWED_ORIGINS`).
 - 업로드 파일은 확장자·크기와 **파일 내용**(실제 형식)을 검증한다(`MaterialFileInspector`). 브라우저가 보낸 MIME은 믿지 않고, 저장 위치(key)는 서버가 만들며 사용자가 보낸 파일 이름을 쓰지 않는다.
@@ -61,7 +62,7 @@ Swagger UI: `/swagger-ui/index.html` — 프론트와 API를 맞출 때 이 문�
 ## DB 마이그레이션 (Flyway)
 
 - 테이블 구조는 Flyway(`src/main/resources/db/migration`)로만 바꾼다. Hibernate는 `ddl-auto: validate`라 엔티티와 표가 맞는지 검사만 한다.
-- **머지된 `V*.sql`은 고치지 않고 새 번호를 추가한다.** 지금은 `V1__init_schema.sql`, `V2__create_course.sql`, `V3__create_material.sql`, `V4__create_conversation.sql`, `V5__create_learning_analysis.sql`, `V6__create_quiz.sql`, `V7__add_learning_purpose_and_quiz_modes.sql`, `V8__add_quiz_ai_consent_and_call_tracking.sql`, `V9__add_pre_post_assessment.sql`, `V10__create_material_concept.sql`, `V11__add_material_concept_study_note.sql`, `V12__create_concept_study_progress.sql`, `V13__create_concept_mastery.sql`, `V14__create_ai_daily_usage.sql`이고 다음은 `V15`이다. 새 번호는 팀원과 겹치지 않게 미리 말한다. 10/31에 `V1`부터 다시 쓴 것은 운영 DB가 없어서 가능했던 예외이고, 운영 DB가 생기면 하지 않는다(`docs/wiki/backend.md`).
+- **머지된 `V*.sql`은 고치지 않고 새 번호를 추가한다.** 지금은 `V1__init_schema.sql`, `V2__create_course.sql`, `V3__create_material.sql`, `V4__create_conversation.sql`, `V5__create_learning_analysis.sql`, `V6__create_quiz.sql`, `V7__add_learning_purpose_and_quiz_modes.sql`, `V8__add_quiz_ai_consent_and_call_tracking.sql`, `V9__add_pre_post_assessment.sql`, `V10__create_material_concept.sql`, `V11__add_material_concept_study_note.sql`, `V12__create_concept_study_progress.sql`, `V13__create_concept_mastery.sql`, `V14__create_ai_daily_usage.sql`, `V15__create_withdrawn_account.sql`이고 다음은 `V16`이다. 새 번호는 팀원과 겹치지 않게 미리 말한다. 10/31에 `V1`부터 다시 쓴 것은 운영 DB가 없어서 가능했던 예외이고, 운영 DB가 생기면 하지 않는다(`docs/wiki/backend.md`).
 - 버전 번호는 `db/migration`과 `db/vector`가 **함께** 쓴다. 같은 번호를 두 폴더에 쓰지 않는다. pgvector 확장(`db/vector/V0_1`)은 H2에 없어 local·prod·`pgTest`에서만 읽고, 번호를 `0.1`로 둬서 항상 `V1`보다 먼저 돈다.
 - 샘플 데이터는 `db/seed/R__*.sql`(반복 실행)이고 운영 프로필은 읽지 않는다.
 - 앱 계정(`ai_lms_app`)은 데이터 읽기·쓰기만 하고, 표 만들기·변경은 마이그레이션 계정(`ai_lms_migrator`)만 한다.

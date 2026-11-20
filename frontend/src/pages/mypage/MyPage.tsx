@@ -354,7 +354,8 @@ function DeleteAccountSection({ me }: { me: User }) {
         계정과 함께 내 과목, 올린 자료와 원본 파일, 그 자료로 만든
         퀴즈·사전·사후평가와 채점 결과, 가져온 AI 대화, 분석 결과와 피드백, 이
         브라우저에 저장한 가릴 단어가 모두 지워지고 되돌릴 수 없어요. 내가 쓴
-        공지사항이 있으면 글은 남고 작성자만 지워져요.
+        공지사항이 있으면 글은 남고 작성자만 지워져요. 탈퇴한 뒤 30일 동안은
+        같은 이메일로 다시 가입할 수 없어요.
       </p>
       <FormRow label="지금 비밀번호" htmlFor="mypage-delete-password" required>
         <PasswordInput
@@ -377,7 +378,7 @@ function DeleteAccountSection({ me }: { me: User }) {
       <ConfirmDialog
         open={confirming}
         title="정말 탈퇴할까요?"
-        description="계정과 내 모든 학습 데이터가 지워지고 되돌릴 수 없어요."
+        description="계정과 내 모든 학습 데이터가 지워지고 되돌릴 수 없어요. 같은 이메일로는 30일 뒤에 다시 가입할 수 있어요."
         confirmLabel="탈퇴하고 모두 지우기"
         onConfirm={() => {
           setConfirming(false);

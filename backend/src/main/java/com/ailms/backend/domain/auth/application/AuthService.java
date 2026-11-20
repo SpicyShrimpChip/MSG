@@ -5,6 +5,7 @@ import com.ailms.backend.domain.auth.dto.LoginRequest;
 import com.ailms.backend.domain.auth.dto.SignupRequest;
 import com.ailms.backend.domain.user.dao.UserRepository;
 import com.ailms.backend.domain.user.application.LearningProfileValidator;
+import com.ailms.backend.domain.user.application.RejoinRestriction;
 import com.ailms.backend.domain.user.dto.UserResponse;
 import com.ailms.backend.domain.user.entity.User;
 import com.ailms.backend.global.error.BusinessException;
@@ -35,19 +36,22 @@ public class AuthService {
 	private final JwtTokenProvider tokenProvider;
 	private final LoginAttemptLimiter loginAttemptLimiter;
 	private final LearningProfileValidator profileValidator;
+	private final RejoinRestriction rejoinRestriction;
 	private final Clock clock;
 	// 없는 이메일로 로그인해도 비밀번호 비교 시간이 비슷하도록 쓰는 해시 (응답 시간으로 가입 여부를 알 수 없게)
 	private final String dummyPasswordHash;
 
 	public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder,
 			RefreshTokenService refreshTokenService, JwtTokenProvider tokenProvider,
-			LoginAttemptLimiter loginAttemptLimiter, LearningProfileValidator profileValidator, Clock clock) {
+			LoginAttemptLimiter loginAttemptLimiter, LearningProfileValidator profileValidator,
+			RejoinRestriction rejoinRestriction, Clock clock) {
 		this.userRepository = userRepository;
 		this.passwordEncoder = passwordEncoder;
 		this.refreshTokenService = refreshTokenService;
 		this.tokenProvider = tokenProvider;
 		this.loginAttemptLimiter = loginAttemptLimiter;
 		this.profileValidator = profileValidator;
+		this.rejoinRestriction = rejoinRestriction;
 		this.clock = clock;
 		this.dummyPasswordHash = passwordEncoder.encode("timing-equalizer-password");
 	}
@@ -70,6 +74,8 @@ public class AuthService {
 		if (userRepository.existsByEmail(email)) {
 			throw new BusinessException(HttpStatus.CONFLICT, DUPLICATE_EMAIL_MESSAGE);
 		}
+		// 탈퇴한 뒤 기간이 지나지 않은 이메일이면 409 (app.rejoin, 키가 없으면 확인하지 않음)
+		rejoinRestriction.ensureCanJoin(email);
 
 		LearningProfileValidator.Profile profile = profileValidator.validate(request.learningPurpose(),
 				request.jobField(), request.jobFieldOther());

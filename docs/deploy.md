@@ -67,6 +67,7 @@ docker run -d -p 8080:8080 --env-file <운영 환경변수 파일> -v msg-upload
 | 보안 | `JWT_SECRET`, `CORS_ALLOWED_ORIGINS`                                                                                                                 |
 | AI   | `OPENAI_API_KEY`·`OPENAI_MODEL`, `ANTHROPIC_API_KEY`·`ANTHROPIC_MODEL`, `GEMINI_API_KEY`·`GEMINI_MODEL` (키나 모델 이름이 없으면 그 모델은 "미설정"), `AI_DAILY_CALL_LIMIT` (서비스 전체 하루 모델 호출 상한, 기본 500, 0이면 상한 없음. 제공사 콘솔 지출 한도와 함께 정한다) |
 | 가입 | `TURNSTILE_SECRET_KEY` (Cloudflare Turnstile 비밀 키, 비우면 자동 가입 방지 확인 안 함. 프론트 `VITE_TURNSTILE_SITE_KEY`와 같이 켠다) |
+| 재가입 제한 | `REJOIN_HASH_SECRET` (탈퇴한 이메일의 HMAC 키, 32자 이상 무작위 값. 비우면 탈퇴 뒤 30일 재가입 제한이 꺼진다. 운영 중에는 바꾸지 않는다) |
 | 선택 | `MATERIAL_CONTENT_ENABLED` (기본 꺼짐. 처리방침에 확정한 뒤에만 켠다)                                                                                |
 
 - DB는 PostgreSQL 16 + pgvector이고 계정 두 개가 필요하다. 만드는 SQL은 `.github/workflows/backend-ci.yml`의 "테스트 DB·계정 만들기"와 `backend/db/setup-local-postgres.sh`가 같은 구성이다. `vector` 확장은 관리자 계정으로 미리 설치한다. 테이블은 서버가 처음 뜰 때 Flyway가 만들고, 운영 프로필은 샘플 데이터를 넣지 않는다.

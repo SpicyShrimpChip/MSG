@@ -25,6 +25,9 @@ import org.springframework.transaction.annotation.Transactional;
  * 파일: 자료 원본은 같은 트랜잭션에서 file_deletion_task로 남기고 커밋 뒤 지운다(실패하면 주기 작업이 다시 시도,
  * 자료 삭제와 같은 정책). 남은 Access Token은 사용자 행이 없으므로 다음 요청부터 401이다.
  *
+ * <p>재가입 제한: 같은 트랜잭션에서 이메일의 키 해시와 재가입 가능 시각을 withdrawn_account에 남긴다(RejoinRestriction,
+ * 키가 없으면 남기지 않음). 이 한 줄은 사용자와 연결되지 않고 기간이 지나면 지운다.
+ *
  * <p>비밀번호 확인은 로그인 시도 제한(LoginAttemptLimiter)과 같은 한도를 쓴다. 마지막 관리자는 탈퇴할 수 없다(관리자 없는 서비스 방지).
  */
 @Service
@@ -39,6 +42,7 @@ public class WithdrawalService {
 	private final FileCleanupService fileCleanupService;
 	private final PasswordEncoder passwordEncoder;
 	private final LoginAttemptLimiter attemptLimiter;
+	private final RejoinRestriction rejoinRestriction;
 
 	@Transactional
 	public void withdraw(Long userId, String password, String clientIp) {
@@ -57,6 +61,8 @@ public class WithdrawalService {
 		fileCleanupService.deleteAfterCommit(materialRepository.findAllByUserId(userId).stream()
 				.map(Material::getStorageKey)
 				.toList());
+		// 같은 이메일의 재가입 제한 기록 (이메일 원문이 아니라 키 해시, app.rejoin)
+		rejoinRestriction.recordWithdrawal(user.getEmail());
 		userRepository.delete(user);
 		userRepository.flush();
 	}
