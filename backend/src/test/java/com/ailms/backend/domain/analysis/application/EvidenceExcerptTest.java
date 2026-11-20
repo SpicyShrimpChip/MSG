@@ -10,27 +10,16 @@ import org.junit.jupiter.api.Test;
 class EvidenceExcerptTest {
 
 	@Test
-	void 짧은_글은_그대로_둔다() {
+	void 마크다운_표시만_걷고_짧은_글_수식_기호_빈_글은_그대로_둔다() {
 		assertThat(EvidenceExcerpt.of("CBC는 IV를 쓰니까 오류가 전파 안 되는 거 맞지?"))
 				.isEqualTo("CBC는 IV를 쓰니까 오류가 전파 안 되는 거 맞지?");
-	}
-
-	@Test
-	void 굵게_코드_링크_표시를_걷어_낸다() {
 		assertThat(EvidenceExcerpt.of("**ECB (맞음)** - `E(P, K)`는 [위키](https://example.com/ecb) 참고"))
 				.isEqualTo("ECB (맞음) - E(P, K)는 위키 참고");
-	}
-
-	@Test
-	void 줄_앞의_제목_목록_인용_기호를_걷고_줄을_이어_붙인다() {
-		String content = "## 정리\n- 첫째\n1. 둘째\n> - 셋째\n---\n```java\nint x;\n```";
-		assertThat(EvidenceExcerpt.of(content)).isEqualTo("정리 첫째 둘째 셋째 int x;");
-	}
-
-	@Test
-	void 별표_밑줄_하나는_수식이라_그대로_둔다() {
-		assertThat(EvidenceExcerpt.of("C_i = E(P_i, K)이고 3*5*2 = 30"))
-				.isEqualTo("C_i = E(P_i, K)이고 3*5*2 = 30");
+		assertThat(EvidenceExcerpt.of("## 정리\n- 첫째\n1. 둘째\n> - 셋째\n---\n```java\nint x;\n```"))
+				.isEqualTo("정리 첫째 둘째 셋째 int x;");
+		assertThat(EvidenceExcerpt.of("C_i = E(P_i, K)이고 3*5*2 = 30")).isEqualTo("C_i = E(P_i, K)이고 3*5*2 = 30");
+		assertThat(EvidenceExcerpt.of("")).isEmpty();
+		assertThat(EvidenceExcerpt.of(null)).isEmpty();
 	}
 
 	@Test
@@ -66,11 +55,5 @@ class EvidenceExcerptTest {
 	void 아주_긴_메시지도_바로_끝난다() {
 		String content = "**".repeat(500_000) + "[".repeat(200_000);
 		assertTimeoutPreemptively(Duration.ofSeconds(1), () -> EvidenceExcerpt.of(content));
-	}
-
-	@Test
-	void 빈_글은_빈_글() {
-		assertThat(EvidenceExcerpt.of("")).isEmpty();
-		assertThat(EvidenceExcerpt.of(null)).isEmpty();
 	}
 }

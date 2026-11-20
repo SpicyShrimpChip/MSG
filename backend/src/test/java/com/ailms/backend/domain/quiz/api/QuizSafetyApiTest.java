@@ -269,15 +269,20 @@ class QuizSafetyApiTest {
 	// ---------- 학습용 IP ----------
 
 	@Test
-	void 사설_예시_IP는_보내고_공인_IP는_422() throws Exception {
+	void AI로_보낼_답에_이메일이나_공인_IP가_있으면_422이고_저장하지_않고_사설_예시_IP는_보낸다() throws Exception {
 		long quizId = generate();
 		enableGraders(List.of("met", "met"));
 		List<Long> ids = questionIds(quizId);
 
-		submit(quizId, List.of(Map.of("questionId", ids.get(2), "text", "203.0.113.5와 10.0.0.0/8을 PAT로 나눈다")))
-				.andExpect(status().isCreated());
+		submit(quizId, List.of(Map.of("questionId", ids.get(2), "text", "제 메일 me@example.com 으로 연락 주세요")))
+				.andExpect(status().isUnprocessableEntity())
+				.andExpect(jsonPath("$.data.questionIds[0]").value(ids.get(2)));
 		submit(quizId, List.of(Map.of("questionId", ids.get(2), "text", "우리 집 공인 IP 8.8.4.4로 접속한다")))
 				.andExpect(status().isUnprocessableEntity());
+		assertThat(jdbcTemplate.queryForObject("select count(*) from quiz_submission", Integer.class)).isZero();
+
+		submit(quizId, List.of(Map.of("questionId", ids.get(2), "text", "203.0.113.5와 10.0.0.0/8을 PAT로 나눈다")))
+				.andExpect(status().isCreated());
 	}
 
 	// ---------- 모의시험 ----------

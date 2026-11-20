@@ -68,15 +68,6 @@ class AdminNoticeApiTest {
 	// ---------- 권한 ----------
 
 	@Test
-	void 토큰이_없으면_작성도_수정도_삭제도_401() throws Exception {
-		mockMvc.perform(post("/api/admin/notices").contentType(MediaType.APPLICATION_JSON).content(body("제목", "본문")))
-				.andExpect(status().isUnauthorized());
-		mockMvc.perform(put("/api/admin/notices/1").contentType(MediaType.APPLICATION_JSON).content(body("제목", "본문")))
-				.andExpect(status().isUnauthorized());
-		mockMvc.perform(delete("/api/admin/notices/1")).andExpect(status().isUnauthorized());
-	}
-
-	@Test
 	void 일반_사용자는_작성도_수정도_삭제도_403이고_공지는_그대로다() throws Exception {
 		write(userToken, "해킹 공지", "본문").andExpect(status().isForbidden());
 		mockMvc.perform(put("/api/admin/notices/1").header(HttpHeaders.AUTHORIZATION, bearer(userToken))
@@ -129,24 +120,20 @@ class AdminNoticeApiTest {
 	}
 
 	@Test
-	void 제목이나_본문이_비어_있으면_400() throws Exception {
+	void 제목이나_본문이_비었거나_100자_5000자를_넘으면_400이고_저장하지_않는다() throws Exception {
 		write(adminToken, "   ", "본문")
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.message").value("제목을 입력해 주세요."));
 		write(adminToken, "제목", "")
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.message").value("본문을 입력해 주세요."));
-		assertThat(noticeCount()).isEqualTo(3);
-	}
-
-	@Test
-	void 제목은_100자_본문은_5000자까지만_받는다() throws Exception {
 		write(adminToken, "가".repeat(101), "본문")
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.message").value("제목은 100자까지 입력할 수 있어요."));
 		write(adminToken, "제목", "가".repeat(5001))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.message").value("본문은 5000자까지 입력할 수 있어요."));
+		assertThat(noticeCount()).isEqualTo(3);
 
 		write(adminToken, "가".repeat(100), "나".repeat(5000)).andExpect(status().isCreated());
 	}

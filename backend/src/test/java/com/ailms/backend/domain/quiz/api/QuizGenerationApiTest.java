@@ -321,24 +321,6 @@ class QuizGenerationApiTest {
 	}
 
 	@Test
-	void AI로_보낼_답에_개인정보가_있으면_422이고_저장하지_않는다_IP_예시는_막지_않는다() throws Exception {
-		long quizId = generate();
-		enableGraders();
-		essayLevels.put(LlmProvider.GPT, List.of("met", "met"));
-		essayLevels.put(LlmProvider.CLAUDE, List.of("met", "met"));
-		essayLevels.put(LlmProvider.GEMINI, List.of("met", "met"));
-		List<Long> ids = questionIds(quizId);
-
-		submit(quizId, List.of(Map.of("questionId", ids.get(2), "text", "제 메일 me@example.com 으로 연락 주세요")))
-				.andExpect(status().isUnprocessableEntity())
-				.andExpect(jsonPath("$.data.questionIds[0]").value(ids.get(2)));
-		assertThat(count("quiz_submission")).isZero();
-
-		submit(quizId, List.of(Map.of("questionId", ids.get(2), "text", "192.168.0.0/24 대역을 PAT로 나눈다")))
-				.andExpect(status().isCreated());
-	}
-
-	@Test
 	void 객관식이_아닌_문제에_보기_번호를_보내면_400() throws Exception {
 		long quizId = generate();
 		List<Long> ids = questionIds(quizId);

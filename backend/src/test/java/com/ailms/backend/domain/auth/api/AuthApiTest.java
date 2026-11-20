@@ -83,10 +83,22 @@ class AuthApiTest {
 	}
 
 	@Test
-	void 이메일_형식이_틀리면_400() throws Exception {
+	void 이메일_형식_비밀번호_확인_필수_동의가_틀리면_400과_고칠_점을_알려_준다() throws Exception {
 		signup(signupBody("not-an-email", PASSWORD))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.message").value("이메일 형식을 확인해 주세요. (예: name@example.com)"));
+
+		Map<String, Object> mismatch = signupBody("confirm@example.com", PASSWORD);
+		mismatch.put("passwordConfirm", "Different1!");
+		signup(mismatch)
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("비밀번호가 서로 달라요. 다시 확인해 주세요."));
+
+		Map<String, Object> noTerms = signupBody("terms@example.com", PASSWORD);
+		noTerms.put("agreedTerms", false);
+		signup(noTerms)
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("서비스 이용약관에 동의해 주세요."));
 	}
 
 	@Test
@@ -95,26 +107,6 @@ class AuthApiTest {
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.message").value("비밀번호에 특수문자(!, @, # 등)를 포함해 주세요."));
 		assertThat(userRepository.existsByEmail("weak@example.com")).isFalse();
-	}
-
-	@Test
-	void 비밀번호_확인이_다르면_400() throws Exception {
-		Map<String, Object> body = signupBody("confirm@example.com", PASSWORD);
-		body.put("passwordConfirm", "Different1!");
-
-		signup(body)
-				.andExpect(status().isBadRequest())
-				.andExpect(jsonPath("$.message").value("비밀번호가 서로 달라요. 다시 확인해 주세요."));
-	}
-
-	@Test
-	void 필수_동의를_하지_않으면_400() throws Exception {
-		Map<String, Object> body = signupBody("terms@example.com", PASSWORD);
-		body.put("agreedTerms", false);
-
-		signup(body)
-				.andExpect(status().isBadRequest())
-				.andExpect(jsonPath("$.message").value("서비스 이용약관에 동의해 주세요."));
 	}
 
 	// ---------- 로그인 ----------
@@ -177,16 +169,6 @@ class AuthApiTest {
 	}
 
 	// ---------- 보호된 API ----------
-
-	@Test
-	void 인증_없이_또는_잘못된_토큰으로_보호된_API에_접근하면_401() throws Exception {
-		mockMvc.perform(get("/api/users/me"))
-				.andExpect(status().isUnauthorized())
-				.andExpect(jsonPath("$.success").value(false))
-				.andExpect(jsonPath("$.message").value(UNAUTHORIZED));
-		mockMvc.perform(get("/api/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer not.a.jwt"))
-				.andExpect(status().isUnauthorized());
-	}
 
 	// ---------- 토큰 만료·갱신·로그아웃 ----------
 

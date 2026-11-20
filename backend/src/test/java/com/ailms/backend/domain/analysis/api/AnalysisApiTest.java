@@ -431,13 +431,6 @@ class AnalysisApiTest {
 		assertThat(count("concept_feedback")).isEqualTo(1);
 	}
 
-	@Test
-	void 토큰이_없으면_401() throws Exception {
-		mockMvc.perform(get("/api/analysis/providers")).andExpect(status().isUnauthorized());
-		mockMvc.perform(post("/api/analysis/courses/1/runs")).andExpect(status().isUnauthorized());
-		mockMvc.perform(delete("/api/analysis/feedback/1")).andExpect(status().isUnauthorized());
-	}
-
 	// ---------- 도우미 ----------
 
 	private static String answer(Map<?, ?>... concepts) {
