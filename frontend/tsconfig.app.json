@@ -27,5 +27,7 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src"]
+  "include": ["src"],
+  // 테스트 초기화(Node 전용 node:fs를 쓴다)는 Vitest가 따로 읽는다
+  "exclude": ["src/test"]
 }

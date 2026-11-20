@@ -44,8 +44,28 @@ jobs:
       - name: 형식 검사 (Prettier)
         run: npm run format:check
 
+      # 러스트 소스(wasm/conversation-core)를 고치고 npm run build:wasm 결과를 커밋하지 않았는지 (러스트 없이 해시로 확인)
+      - name: WASM 빌드 결과 확인
+        run: npm run check:wasm
+
       - name: 테스트
         run: npm test
 
       - name: 빌드 확인
         run: npm run build
+  # 대화 처리 러스트 크레이트(frontend/wasm/conversation-core) 단위 테스트·린트. 머지 필수 검사는 아니다
+  wasm-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend/wasm/conversation-core
+
+    steps:
+      - name: 코드 가져오기
+        uses: actions/checkout@v4
+
+      - name: 러스트 테스트
+        run: cargo test --locked
+
+      - name: 러스트 린트 (clippy)
+        run: cargo clippy --locked --all-targets -- -D warnings

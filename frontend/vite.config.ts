@@ -22,5 +22,7 @@ export default defineConfig({
   },
   test: {
     include: ['src/**/*.test.ts'],
+    // 대화 처리 WebAssembly(러스트)를 테스트 전에 초기화한다
+    setupFiles: ['src/test/setupWasm.ts'],
   },
 });

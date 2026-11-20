@@ -1,5 +1,6 @@
 // Web Worker에서도 읽으므로 '@/utils' 묶음 대신 필요한 파일만 가져온다
 import { isKnownNonConversationFile, readExportZip } from './archive';
+import { loadConversationCore } from './core';
 import {
   mergeParseResults,
   type FileParseResult,
@@ -17,6 +18,8 @@ export async function readExportFiles(files: File[]): Promise<MergedImport> {
   const skippedFiles: string[] = [];
   // 끝이 잘린 zip과 거기서 읽은 대화 파일 수
   const truncatedZips: { fileName: string; readCount: number }[] = [];
+  // zip 압축 풀기는 러스트 WebAssembly가 한다
+  await loadConversationCore();
 
   for (const file of files) {
     if (file.name.toLowerCase().endsWith('.zip')) {

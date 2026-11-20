@@ -11,6 +11,8 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "preview": "vite preview",
+    "build:wasm": "node scripts/build-wasm.mjs",
+    "check:wasm": "node scripts/check-wasm.mjs",
     "prepare": "cd .. && husky frontend/.husky"
   },
   "dependencies": {

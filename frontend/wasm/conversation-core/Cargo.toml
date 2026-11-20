@@ -1,0 +1,28 @@
+# 대화 가져오기의 무거운 처리(zip 압축 풀기·CRC 확인, 개인정보 가리기)를 WebAssembly로 돌리는 크레이트.
+# 브라우저의 대화 처리 Web Worker(frontend/src/utils/conversation/worker)가 부른다. 파일·대화는 브라우저 밖으로 나가지 않는다.
+# 빌드: frontend에서 `npm run build:wasm` (결과는 frontend/src/wasm/conversation-core에 커밋한다. Vercel에는 러스트가 없다)
+[package]
+name = "conversation-core"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+crc32fast = "1.5.5"
+memchr = "2.8.3"
+miniz_oxide = "0.9.1"
+# 유니코드 표는 이름·단어의 대소문자 무시(unicode-case)만 쓴다. 나머지 규칙은 ASCII·직접 쓴 문자 집합이라 빼서 WASM을 줄인다
+regex = { version = "1.13.2", default-features = false, features = ["std", "perf", "unicode-case"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+wasm-bindgen = "0.2.130"
+
+[profile.release]
+# 가리기는 글이 많아 속도를 우선한다 (크기 위주 "s"는 4배 느렸다)
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"

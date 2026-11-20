@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * 프론트가 가렸어야 할 개인정보가 글에 그대로 남아 있는지 검사한다. 고치지 않고 찾기만 한다.
- * 규칙은 frontend/src/utils/conversation/mask.ts와 같다(바꾸면 두 곳을 함께 고친다).
+ * 규칙은 frontend/wasm/conversation-core/src/mask.rs(브라우저 WASM)와 같다(바꾸면 두 곳을 함께 고친다).
  * 이름·사용자가 넣은 단어는 서버가 원래 단어를 모르므로 검사하지 않는다. 대체 표시([이메일] 등)는 통과한다.
  *
  * <p>JS의 \b와 Java의 \b는 한글 옆에서 다르게 동작해서, 단어 경계는 영문·숫자·_ 기준으로 직접 적었다.
