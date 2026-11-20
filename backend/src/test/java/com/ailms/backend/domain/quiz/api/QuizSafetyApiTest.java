@@ -144,7 +144,11 @@ class QuizSafetyApiTest {
 		List<Long> ids = questionIds(quizId);
 		long submissionId = submissionId(submit(quizId, List.of(Map.of("questionId", ids.get(2), "text", "PAT 설명")))
 				.andExpect(jsonPath("$.data.results[2].gradingStatus").value("pending")));
-		insertRuns(submissionId, 30, "SUCCEEDED", clock.instant().plusSeconds(60));
+		// 한도는 quiz_grading_run이 아니라 user_ai_usage로 센다 (퀴즈·과목을 지워도 줄지 않게)
+		for (int i = 0; i < 30; i++) {
+			jdbcTemplate.update("insert into user_ai_usage (user_id, kind, created_at) values (?, 'QUIZ_GRADING', ?)",
+					userId, Timestamp.valueOf(LocalDateTime.now(clock)));
+		}
 		enableGraders(List.of("met", "met"));
 
 		regrade(quizId, submissionId)

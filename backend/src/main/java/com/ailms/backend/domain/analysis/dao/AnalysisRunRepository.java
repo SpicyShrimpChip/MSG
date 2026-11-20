@@ -18,8 +18,6 @@ public interface AnalysisRunRepository extends JpaRepository<AnalysisRun, Long> 
 	Optional<AnalysisRun> findFirstByUserIdAndCourseIdAndStatusInOrderByIdDesc(Long userId, Long courseId,
 			Collection<AnalysisRunStatus> statuses);
 
-	long countByUserIdAndCreatedAtAfter(Long userId, LocalDateTime after);
-
 	boolean existsByUserIdAndStatusAndCreatedAtAfter(Long userId, AnalysisRunStatus status, LocalDateTime after);
 
 	@Query("select r.id from AnalysisRun r where r.userId = :userId")
