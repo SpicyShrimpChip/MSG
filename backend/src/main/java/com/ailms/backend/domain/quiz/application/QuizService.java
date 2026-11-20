@@ -28,6 +28,7 @@ import com.ailms.backend.domain.user.entity.JobField;
 import com.ailms.backend.global.error.BusinessException;
 import com.ailms.backend.global.security.ApiErrorResponder;
 import com.ailms.backend.global.llm.LlmClient;
+import com.ailms.backend.global.llm.UserAiUsage;
 import com.ailms.backend.global.llm.LlmClients;
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -75,6 +76,7 @@ public class QuizService {
 	private final QuizStatsService statsService;
 	private final QuizGradingRunRepository gradingRunRepository;
 	private final QuizAiUsage usage;
+	private final UserAiUsage userAiUsage;
 	private final LlmClients llmClients;
 	private final PersonalInfoDetector personalInfoDetector;
 	private final QuizProperties properties;
@@ -85,6 +87,7 @@ public class QuizService {
 			QuizSubmissionRepository submissionRepository, QuizAnswerRepository answerRepository,
 			CourseRepository courseRepository, UserRepository userRepository, AnswerGradingService gradingService,
 			QuizStatsService statsService, QuizGradingRunRepository gradingRunRepository, QuizAiUsage usage,
+			UserAiUsage userAiUsage,
 			LlmClients llmClients, PersonalInfoDetector personalInfoDetector,
 			QuizProperties properties, PlatformTransactionManager transactionManager, Clock clock) {
 		this.quizRepository = quizRepository;
@@ -97,6 +100,7 @@ public class QuizService {
 		this.statsService = statsService;
 		this.gradingRunRepository = gradingRunRepository;
 		this.usage = usage;
+		this.userAiUsage = userAiUsage;
 		this.llmClients = llmClients;
 		this.personalInfoDetector = personalInfoDetector;
 		this.properties = properties;
@@ -301,8 +305,7 @@ public class QuizService {
 
 	// 사용자 행을 잠근 트랜잭션 안에서: 24시간 실행 수 → 실제 모델 요청 수 순서로 본다. 넘었으면 이유 코드
 	private String limitReason(Long userId) {
-		if (gradingRunRepository.countByUserIdAndCreatedAtAfter(userId, LocalDateTime.now(clock).minusHours(24))
-				>= properties.dailyGradingLimit()) {
+		if (userAiUsage.countLast24Hours(userId, UserAiUsage.Kind.QUIZ_GRADING) >= properties.dailyGradingLimit()) {
 			return GradingNotes.LIMIT_EXCEEDED;
 		}
 		return usage.modelCallBudgetExhausted(userId) ? GradingNotes.BUDGET_EXCEEDED : null;
@@ -310,6 +313,7 @@ public class QuizService {
 
 	private QuizGradingRun reserveRun(Long userId, Long submissionId, QuizGradingRun.Kind kind, int answerCount) {
 		LocalDateTime now = LocalDateTime.now(clock);
+		userAiUsage.record(userId, UserAiUsage.Kind.QUIZ_GRADING);
 		return gradingRunRepository.save(QuizGradingRun.start(userId, submissionId, kind, answerCount, now,
 				now.plus(properties.gradingDeadline())));
 	}

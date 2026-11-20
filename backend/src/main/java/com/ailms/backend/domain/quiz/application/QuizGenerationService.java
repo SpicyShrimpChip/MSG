@@ -22,6 +22,7 @@ import com.ailms.backend.domain.user.dao.UserRepository;
 import com.ailms.backend.domain.user.entity.User;
 import com.ailms.backend.global.error.BusinessException;
 import com.ailms.backend.global.llm.AiCallQuota;
+import com.ailms.backend.global.llm.UserAiUsage;
 import com.ailms.backend.global.llm.LlmClient;
 import com.ailms.backend.global.llm.LlmClients;
 import com.ailms.backend.global.llm.LlmRequest;
@@ -88,6 +89,7 @@ public class QuizGenerationService {
 	private final LlmClients llmClients;
 	private final QuizModelFallback modelFallback;
 	private final AiCallQuota aiCallQuota;
+	private final UserAiUsage userAiUsage;
 	private final QuizGenerationParser parser;
 	private final QuizProperties properties;
 	private final QuizAiUsage usage;
@@ -99,7 +101,8 @@ public class QuizGenerationService {
 			QuizQuestionRepository questionRepository, QuizGenerationRepository generationRepository,
 			AnalysisRunRepository runRepository, ConceptConsensusRepository consensusRepository,
 			QuizStatsService statsService, QuizSpecResolver specResolver, LlmClients llmClients,
-			QuizModelFallback modelFallback, AiCallQuota aiCallQuota, QuizGenerationParser parser,
+			QuizModelFallback modelFallback, AiCallQuota aiCallQuota, UserAiUsage userAiUsage,
+			QuizGenerationParser parser,
 			QuizProperties properties, QuizAiUsage usage, ObjectMapper objectMapper,
 			PlatformTransactionManager transactionManager, Clock clock) {
 		this.userRepository = userRepository;
@@ -113,6 +116,7 @@ public class QuizGenerationService {
 		this.llmClients = llmClients;
 		this.modelFallback = modelFallback;
 		this.aiCallQuota = aiCallQuota;
+		this.userAiUsage = userAiUsage;
 		this.parser = parser;
 		this.properties = properties;
 		this.usage = usage;
@@ -234,7 +238,7 @@ public class QuizGenerationService {
 		if (!generationRepository.findAllByUserIdAndStatus(userId, QuizGenerationStatus.RUNNING).isEmpty()) {
 			throw new BusinessException(HttpStatus.CONFLICT, RUNNING_MESSAGE);
 		}
-		if (generationRepository.countByUserIdAndCreatedAtAfter(userId, now.minusHours(24))
+		if (userAiUsage.countLast24Hours(userId, UserAiUsage.Kind.QUIZ_GENERATION)
 				>= properties.dailyGenerationLimit()) {
 			throw new BusinessException(HttpStatus.TOO_MANY_REQUESTS, "24시간 동안 만들 수 있는 퀴즈 수("
 					+ properties.dailyGenerationLimit() + "번)를 다 썼어요. 나중에 다시 시도해 주세요.");
@@ -252,6 +256,7 @@ public class QuizGenerationService {
 		} catch (DataIntegrityViolationException e) {
 			throw new BusinessException(HttpStatus.CONFLICT, RUNNING_MESSAGE);
 		}
+		userAiUsage.record(userId, UserAiUsage.Kind.QUIZ_GENERATION);
 		QuizPrompt.Input input = new QuizPrompt.Input(spec.course().getName(), spec.mode(), spec.difficulty(),
 				spec.plan(), spec.concepts(), spec.examScope(), spec.jobLabel(),
 				// 대화 분석에서 나온 개념 상태는 대화 분석에도 동의한 경우에만 참고로 보낸다

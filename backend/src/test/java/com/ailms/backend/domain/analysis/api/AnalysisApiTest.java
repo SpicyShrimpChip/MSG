@@ -269,12 +269,26 @@ class AnalysisApiTest {
 		run(token, courseId).andExpect(status().isConflict());
 
 		jdbcTemplate.update("update analysis_run set status = 'COMPLETED'");
-		for (int i = 0; i < 9; i++) {
-			jdbcTemplate.update("insert into analysis_run (user_id, course_id, status, prompt_version,"
-					+ " conversation_count, message_count, truncated_message_count, input_chars, created_at)"
-					+ " values (?, ?, 'COMPLETED', 'v', 1, 1, 0, 1, current_timestamp)", userId, courseId);
+		// 횟수는 analysis_run이 아니라 user_ai_usage로 센다 (과목·대화를 지워도 줄지 않게)
+		for (int i = 0; i < 10; i++) {
+			jdbcTemplate.update("insert into user_ai_usage (user_id, kind, created_at)"
+					+ " values (?, 'ANALYSIS_RUN', current_timestamp)", userId);
 		}
 		run(token, courseId).andExpect(status().isTooManyRequests());
+	}
+
+	@Test
+	void 과목을_지워도_24시간_분석_횟수는_줄지_않는다() throws Exception {
+		models.get(LlmProvider.GPT).answer(answer(
+				concept("교착 상태", "understood", evidence(m.get(0), "user_explanation"))));
+		run(token, courseId).andExpect(status().isCreated());
+
+		mockMvc.perform(delete("/api/courses/" + courseId).header(HttpHeaders.AUTHORIZATION, bearer(token)))
+				.andExpect(status().isOk());
+
+		assertThat(count("analysis_run")).isZero();
+		assertThat(jdbcTemplate.queryForObject("select count(*) from user_ai_usage where kind = 'ANALYSIS_RUN'",
+				Integer.class)).isEqualTo(1);
 	}
 
 	@Test

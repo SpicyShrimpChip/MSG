@@ -26,6 +26,7 @@ import com.ailms.backend.domain.user.dao.UserRepository;
 import com.ailms.backend.domain.user.entity.User;
 import com.ailms.backend.global.error.BusinessException;
 import com.ailms.backend.global.llm.AiCallQuota;
+import com.ailms.backend.global.llm.UserAiUsage;
 import com.ailms.backend.global.llm.LlmClient;
 import com.ailms.backend.global.llm.LlmClients;
 import com.ailms.backend.global.llm.LlmProvider;
@@ -80,6 +81,7 @@ public class AnalysisService {
 	private final LlmClients llmClients;
 	private final ModelInvoker modelInvoker;
 	private final AiCallQuota aiCallQuota;
+	private final UserAiUsage userAiUsage;
 	private final ModelOutputParser outputParser;
 	private final AnalysisInputBuilder inputBuilder;
 	private final AnalysisProperties properties;
@@ -92,7 +94,8 @@ public class AnalysisService {
 			AnalysisRunRepository runRepository, AnalysisRunConversationRepository runConversationRepository,
 			AnalysisModelResultRepository modelResultRepository, ConceptJudgmentRepository judgmentRepository,
 			JudgmentEvidenceRepository evidenceRepository, ConceptConsensusRepository consensusRepository,
-			LlmClients llmClients, ModelInvoker modelInvoker, AiCallQuota aiCallQuota, ModelOutputParser outputParser,
+			LlmClients llmClients, ModelInvoker modelInvoker, AiCallQuota aiCallQuota, UserAiUsage userAiUsage,
+			ModelOutputParser outputParser,
 			AnalysisInputBuilder inputBuilder, AnalysisProperties properties, AnalysisQueryService queryService,
 			PlatformTransactionManager transactionManager, Clock clock) {
 		this.userRepository = userRepository;
@@ -108,6 +111,7 @@ public class AnalysisService {
 		this.llmClients = llmClients;
 		this.modelInvoker = modelInvoker;
 		this.aiCallQuota = aiCallQuota;
+		this.userAiUsage = userAiUsage;
 		this.outputParser = outputParser;
 		this.inputBuilder = inputBuilder;
 		this.properties = properties;
@@ -172,7 +176,7 @@ public class AnalysisService {
 				now.minus(properties.runningTimeout()))) {
 			throw new BusinessException(HttpStatus.CONFLICT, ALREADY_RUNNING_MESSAGE);
 		}
-		if (runRepository.countByUserIdAndCreatedAtAfter(userId, now.minusHours(24)) >= properties.dailyRunLimit()) {
+		if (userAiUsage.countLast24Hours(userId, UserAiUsage.Kind.ANALYSIS_RUN) >= properties.dailyRunLimit()) {
 			throw new BusinessException(HttpStatus.TOO_MANY_REQUESTS,
 					"24시간 동안 분석할 수 있는 횟수(" + properties.dailyRunLimit() + "번)를 다 썼어요. 나중에 다시 시도해 주세요.");
 		}
@@ -190,6 +194,7 @@ public class AnalysisService {
 		AnalysisRun run = runRepository.save(AnalysisRun.start(userId, courseId, AnalysisPrompt.VERSION,
 				input.conversationIds().size(), input.sentMessages().size(), input.truncatedMessageCount(),
 				input.userPrompt().length(), now));
+		userAiUsage.record(userId, UserAiUsage.Kind.ANALYSIS_RUN);
 		runConversationRepository.saveAll(input.conversationIds().stream()
 				.map(conversationId -> AnalysisRunConversation.of(run.getId(), conversationId))
 				.toList());
