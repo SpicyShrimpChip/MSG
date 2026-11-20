@@ -54,6 +54,13 @@ app:
   conversation-import:
     max-request-size: 2MB
 
+  # 회원가입 자동 가입 방지 (Cloudflare Turnstile). 비밀 키가 비면 확인하지 않는다 (로컬·테스트)
+  # 프론트 사이트 키(VITE_TURNSTILE_SITE_KEY)와 같이 켠다. 확인 서버에 닿지 못하면 가입을 막는다
+  turnstile:
+    secret-key: ${TURNSTILE_SECRET_KEY:}
+    verify-url: https://challenges.cloudflare.com/turnstile/v0/siteverify
+    timeout: 5s
+
   # 학습 분석에 쓰는 AI 모델. 키와 모델 이름은 환경변수(또는 backend/.env)로만 넣는다. 둘 중 하나라도 비면 그 모델은 "미설정"으로
   # 부르지 않는다. 모델 이름은 비용·품질을 보고 팀이 정한다 (기본값 없음)
   llm:

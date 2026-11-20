@@ -17,6 +17,8 @@ public class TestLlm implements ApplicationContextInitializer<ConfigurableApplic
 				"app.llm.openai.api-key", "",
 				"app.llm.anthropic.api-key", "",
 				"app.llm.gemini.api-key", "",
-				"app.llm.retry-backoff", "0ms")));
+				"app.llm.retry-backoff", "0ms",
+				// 개발자 PC에 Turnstile 비밀 키가 있어도 통합 테스트의 가입은 확인하지 않는다 (확인은 SignupBotCheckTest)
+				"app.turnstile.secret-key", "")));
 	}
 }

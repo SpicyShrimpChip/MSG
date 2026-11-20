@@ -10,6 +10,8 @@ interface ImportMetaEnv {
   readonly VITE_USE_MOCK?: string;
   // 'true'면 목업 모드에서도 체험 버튼 없이 모든 화면이 열린다 (개발용, 공개 배포에는 넣지 않는다)
   readonly VITE_MOCK_OPEN_ACCESS?: string;
+  // Cloudflare Turnstile 사이트 키 (공개 값). 있으면 회원가입에 자동 가입 방지 확인을 붙인다 (서버 TURNSTILE_SECRET_KEY와 같이 켠다)
+  readonly VITE_TURNSTILE_SITE_KEY?: string;
 }
 
 // TS 시스템에 명세서 강제 병합

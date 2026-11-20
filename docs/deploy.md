@@ -30,7 +30,7 @@
 
 React Router로 화면을 나누기 때문에 `/analysis`처럼 바로 들어오거나 새로고침한 주소도 `index.html`을 돌려줘야 한다(없으면 Vercel이 404를 낸다). 실제 파일(`/assets/...`)이 있으면 그 파일이 먼저 나가고, 없을 때만 `index.html`로 넘긴다.
 
-**백엔드를 배포한 뒤**: `/api` 요청을 백엔드로 넘기는 규칙을 **맨 앞에** 추가하고, Vercel 환경변수 `VITE_USE_MOCK`을 `false`로 바꾼다. 같은 출처로 요청하므로 로그인 쿠키·CORS 설정이 단순해진다(`frontend/CLAUDE.md` "백엔드 연동").
+**백엔드를 배포한 뒤**: `/api` 요청을 백엔드로 넘기는 규칙을 **맨 앞에** 추가하고, Vercel 환경변수 `VITE_USE_MOCK`을 `false`로 바꾼다. 회원가입 자동 가입 방지를 켜려면 Vercel에 `VITE_TURNSTILE_SITE_KEY`(공개 사이트 키), 백엔드에 `TURNSTILE_SECRET_KEY`(비밀 키)를 **같이** 넣는다. 한쪽만 넣으면 가입이 막히거나(백엔드만) 확인 없이 가입된다(프론트만). 키는 Cloudflare 대시보드 Turnstile에서 운영 도메인으로 만든다. 같은 출처로 요청하므로 로그인 쿠키·CORS 설정이 단순해진다(`frontend/CLAUDE.md` "백엔드 연동").
 
 ```json
 {
@@ -66,6 +66,7 @@ docker run -d -p 8080:8080 --env-file <운영 환경변수 파일> -v msg-upload
 | DB   | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`(앱 계정), `DB_MIGRATION_USERNAME`, `DB_MIGRATION_PASSWORD`(테이블 변경 계정)                                  |
 | 보안 | `JWT_SECRET`, `CORS_ALLOWED_ORIGINS`                                                                                                                 |
 | AI   | `OPENAI_API_KEY`·`OPENAI_MODEL`, `ANTHROPIC_API_KEY`·`ANTHROPIC_MODEL`, `GEMINI_API_KEY`·`GEMINI_MODEL` (키나 모델 이름이 없으면 그 모델은 "미설정") |
+| 가입 | `TURNSTILE_SECRET_KEY` (Cloudflare Turnstile 비밀 키, 비우면 자동 가입 방지 확인 안 함. 프론트 `VITE_TURNSTILE_SITE_KEY`와 같이 켠다) |
 | 선택 | `MATERIAL_CONTENT_ENABLED` (기본 꺼짐. 처리방침에 확정한 뒤에만 켠다)                                                                                |
 
 - DB는 PostgreSQL 16 + pgvector이고 계정 두 개가 필요하다. 만드는 SQL은 `.github/workflows/backend-ci.yml`의 "테스트 DB·계정 만들기"와 `backend/db/setup-local-postgres.sh`가 같은 구성이다. `vector` 확장은 관리자 계정으로 미리 설치한다. 테이블은 서버가 처음 뜰 때 Flyway가 만들고, 운영 프로필은 샘플 데이터를 넣지 않는다.
