@@ -11,7 +11,11 @@ export const REQUIRED_NOTICE: Notice[] = [
     label: '근거',
     value: '서비스 이용 계약의 이행(「개인정보 보호법」 제15조제1항제4호)',
   },
-  { label: '보유 기간', value: '탈퇴할 때까지' },
+  {
+    label: '보유 기간',
+    value:
+      '탈퇴할 때까지. 탈퇴 뒤 30일 동안은 같은 이메일로 다시 가입할 수 없도록, 이메일을 되돌릴 수 없게 바꾼 값만 30일 보관해요',
+  },
 ];
 
 export const AI_CONSENT_NOTICE: Notice[] = [
