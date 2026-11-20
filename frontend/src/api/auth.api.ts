@@ -7,7 +7,7 @@ import type {
 } from '@/types';
 import { hasSessionHint, useAuthStore } from '@/store/useAuthStore';
 import { refreshAccessToken } from './axios';
-import { NO_BACKEND } from '@/store/useDemoStore';
+import { NO_BACKEND, useDemoStore } from '@/store/useDemoStore';
 import { request } from './request';
 
 // 인증은 목업 없이 항상 실제 백엔드를 부른다 (가짜 로그인은 보안 흐름을 검증할 수 없다)
@@ -26,6 +26,8 @@ export async function login(input: LoginInput): Promise<LoginResult> {
     data: input,
   });
   useAuthStore.getState().setAccessToken(result.accessToken);
+  // 체험 중에 로그인하면 체험을 끝낸다 (그 뒤로는 예시가 아니라 내 데이터를 읽는다)
+  if (useDemoStore.getState().active) useDemoStore.getState().end();
   return result;
 }
 
@@ -89,7 +91,8 @@ export async function restoreSession(): Promise<void> {
   const { clearSession } = useAuthStore.getState();
   // 목업 모드는 로그인이 없다(체험 모드로만 연다). 쿠키는 포트를 가리지 않아서, 같은 PC에서 실제 모드(다른 포트)로
   // 로그인해 둔 세션을 되살리면 상단바만 로그인 상태가 되고 화면은 로그인으로 보내는 어긋남이 생긴다
-  if (NO_BACKEND || !hasSessionHint()) {
+  // 체험 중에는 서버를 부르지 않는다 (체험을 끝내면 메인을 새로 불러와 그때 되살린다)
+  if (NO_BACKEND || useDemoStore.getState().active || !hasSessionHint()) {
     clearSession();
     return;
   }

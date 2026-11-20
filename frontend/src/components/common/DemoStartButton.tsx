@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { DEMO_AVAILABLE, useDemoStore } from '@/store';
+import { DEMO_AVAILABLE, useAuthStore, useDemoStore } from '@/store';
 
 interface DemoStartButtonProps {
   className?: string;
@@ -10,7 +11,7 @@ interface DemoStartButtonProps {
 }
 
 // "로그인 없이 체험해 보기": 체험 모드를 켜고 예시 데이터 화면으로 간다.
-// 목업 모드(공개 배포)에서만 보이고, 이미 체험 중이면 숨긴다. 모양은 놓는 자리에서 className으로 정한다
+// 이미 체험 중이거나 로그인한 상태면 숨긴다(내 데이터와 예시가 섞이지 않게). 모양은 놓는 자리에서 className으로 정한다
 function DemoStartButton({
   className,
   to = '/analysis',
@@ -19,13 +20,19 @@ function DemoStartButton({
   const navigate = useNavigate();
   const active = useDemoStore((state) => state.active);
   const start = useDemoStore((state) => state.start);
+  const authenticated = useAuthStore(
+    (state) => state.status === 'authenticated',
+  );
+  const queryClient = useQueryClient();
 
-  if (!DEMO_AVAILABLE || active) return null;
+  if (!DEMO_AVAILABLE || active || authenticated) return null;
 
   return (
     <button
       type="button"
       onClick={() => {
+        // 서버에서 받아 둔 데이터가 예시 화면에 섞이지 않게 캐시를 비운다 (끝낼 때는 메인을 새로 불러온다)
+        queryClient.clear();
         start();
         navigate(to);
       }}
