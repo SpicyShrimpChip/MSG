@@ -13,6 +13,7 @@ import com.ailms.backend.domain.quiz.entity.QuizAiCall;
 import com.ailms.backend.domain.user.dao.UserRepository;
 import com.ailms.backend.domain.user.entity.User;
 import com.ailms.backend.global.error.BusinessException;
+import com.ailms.backend.global.llm.AiCallQuota;
 import com.ailms.backend.global.llm.LlmClient;
 import com.ailms.backend.global.llm.LlmClients;
 import com.ailms.backend.global.llm.LlmJson;
@@ -103,6 +104,7 @@ public class MaterialConceptService {
 	private final PersonalInfoDetector personalInfoDetector;
 	private final LlmClients llmClients;
 	private final ModelInvoker modelInvoker;
+	private final AiCallQuota aiCallQuota;
 	private final QuizAiUsage usage;
 	private final QuizProperties properties;
 	private final ObjectMapper objectMapper;
@@ -113,7 +115,7 @@ public class MaterialConceptService {
 			CourseRepository courseRepository, MaterialConceptRepository conceptRepository,
 			QuizAiCallRepository callRepository, MaterialTextExtractor extractor,
 			MaterialContentProperties contentProperties, PersonalInfoDetector personalInfoDetector,
-			LlmClients llmClients, ModelInvoker modelInvoker, QuizAiUsage usage, QuizProperties properties,
+			LlmClients llmClients, ModelInvoker modelInvoker, AiCallQuota aiCallQuota, QuizAiUsage usage, QuizProperties properties,
 			ObjectMapper objectMapper, PlatformTransactionManager transactionManager, Clock clock) {
 		this.userRepository = userRepository;
 		this.materialRepository = materialRepository;
@@ -125,6 +127,7 @@ public class MaterialConceptService {
 		this.personalInfoDetector = personalInfoDetector;
 		this.llmClients = llmClients;
 		this.modelInvoker = modelInvoker;
+		this.aiCallQuota = aiCallQuota;
 		this.usage = usage;
 		this.properties = properties;
 		this.objectMapper = objectMapper;
@@ -315,6 +318,7 @@ public class MaterialConceptService {
 			throw new BusinessException(HttpStatus.TOO_MANY_REQUESTS,
 					"오늘 AI 호출 한도를 다 써서 지금은 " + action + " 수 없어요. 내일 다시 시도해 주세요.");
 		}
+		aiCallQuota.ensureRemaining();
 		MaterialTextExtractor.Extracted extracted = extractor.extract(material);
 		if (extracted.status() != MaterialTextExtractor.Status.OK) {
 			throw new BusinessException(HttpStatus.UNPROCESSABLE_ENTITY, unreadableMessage(extracted.status()),

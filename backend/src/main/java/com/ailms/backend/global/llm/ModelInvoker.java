@@ -21,6 +21,9 @@ import org.springframework.stereotype.Component;
  * <p>학습 분석과 퀴즈(만들기·채점)는 스레드 묶음(Lane)을 따로 써서 한쪽이 몰려도 다른 쪽이 기다리지 않는다.
  * 마감 시각(deadline)을 주면 남은 시간이 없을 때 다시 시도하지 않고, {@link #await}는 마감까지만 기다린다.
  * 마감 뒤 늦게 끝난 호출의 결과는 버려진다(부르는 쪽이 받지 않는다).
+ *
+ * <p>부를 때마다 서비스 전체 하루 상한({@link AiCallQuota})에서 한 번을 받아 가고, 다 찼으면 부르지 않고
+ * {@link LlmException.Code#DAILY_LIMIT}을 돌려준다.
  */
 @Slf4j
 @Component
@@ -44,12 +47,14 @@ public class ModelInvoker {
 
 	private final LlmProperties properties;
 	private final Clock clock;
+	private final AiCallQuota quota;
 	private final ExecutorService analysisExecutor;
 	private final ExecutorService quizExecutor;
 
-	ModelInvoker(LlmProperties properties, Clock clock) {
+	ModelInvoker(LlmProperties properties, Clock clock, AiCallQuota quota) {
 		this.properties = properties;
 		this.clock = clock;
+		this.quota = quota;
 		this.analysisExecutor = pool("llm-analysis-");
 		this.quizExecutor = pool("llm-quiz-");
 	}
@@ -104,6 +109,10 @@ public class ModelInvoker {
 		int maxAttempts = 1 + Math.max(0, properties.maxRetries());
 		LlmException.Code lastCode = null;
 		for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+			// 부를 때마다(다시 부를 때도) 서비스 전체 하루 상한에서 한 번을 받아 간다. 다 찼으면 부르지 않는다
+			if (!quota.tryAcquire()) {
+				return new Outcome(null, LlmException.Code.DAILY_LIMIT, attempt - 1, elapsedMs(started));
+			}
 			try {
 				LlmResponse response = client.complete(request);
 				return new Outcome(response, null, attempt, elapsedMs(started));

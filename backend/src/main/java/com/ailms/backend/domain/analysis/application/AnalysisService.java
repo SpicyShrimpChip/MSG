@@ -25,6 +25,7 @@ import com.ailms.backend.domain.course.entity.Course;
 import com.ailms.backend.domain.user.dao.UserRepository;
 import com.ailms.backend.domain.user.entity.User;
 import com.ailms.backend.global.error.BusinessException;
+import com.ailms.backend.global.llm.AiCallQuota;
 import com.ailms.backend.global.llm.LlmClient;
 import com.ailms.backend.global.llm.LlmClients;
 import com.ailms.backend.global.llm.LlmProvider;
@@ -78,6 +79,7 @@ public class AnalysisService {
 	private final ConceptConsensusRepository consensusRepository;
 	private final LlmClients llmClients;
 	private final ModelInvoker modelInvoker;
+	private final AiCallQuota aiCallQuota;
 	private final ModelOutputParser outputParser;
 	private final AnalysisInputBuilder inputBuilder;
 	private final AnalysisProperties properties;
@@ -90,7 +92,7 @@ public class AnalysisService {
 			AnalysisRunRepository runRepository, AnalysisRunConversationRepository runConversationRepository,
 			AnalysisModelResultRepository modelResultRepository, ConceptJudgmentRepository judgmentRepository,
 			JudgmentEvidenceRepository evidenceRepository, ConceptConsensusRepository consensusRepository,
-			LlmClients llmClients, ModelInvoker modelInvoker, ModelOutputParser outputParser,
+			LlmClients llmClients, ModelInvoker modelInvoker, AiCallQuota aiCallQuota, ModelOutputParser outputParser,
 			AnalysisInputBuilder inputBuilder, AnalysisProperties properties, AnalysisQueryService queryService,
 			PlatformTransactionManager transactionManager, Clock clock) {
 		this.userRepository = userRepository;
@@ -105,6 +107,7 @@ public class AnalysisService {
 		this.consensusRepository = consensusRepository;
 		this.llmClients = llmClients;
 		this.modelInvoker = modelInvoker;
+		this.aiCallQuota = aiCallQuota;
 		this.outputParser = outputParser;
 		this.inputBuilder = inputBuilder;
 		this.properties = properties;
@@ -173,6 +176,7 @@ public class AnalysisService {
 			throw new BusinessException(HttpStatus.TOO_MANY_REQUESTS,
 					"24시간 동안 분석할 수 있는 횟수(" + properties.dailyRunLimit() + "번)를 다 썼어요. 나중에 다시 시도해 주세요.");
 		}
+		aiCallQuota.ensureRemaining();
 		List<Conversation> conversations = conversationRepository.findAnalyzableInCourse(userId, courseId);
 		if (conversations.isEmpty()) {
 			throw new BusinessException(HttpStatus.BAD_REQUEST, NO_CONVERSATIONS_MESSAGE);
