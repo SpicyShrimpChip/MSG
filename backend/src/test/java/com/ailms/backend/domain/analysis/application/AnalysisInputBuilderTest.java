@@ -21,7 +21,8 @@ class AnalysisInputBuilderTest {
 	private static final int MAX_MESSAGE = 1_500;
 
 	private final AnalysisInputBuilder builder = new AnalysisInputBuilder(
-			new AnalysisProperties(MAX_INPUT, MAX_MESSAGE, 1, 4000, 10, Duration.ofMinutes(10)));
+			new AnalysisProperties(MAX_INPUT, MAX_MESSAGE, 1, 4000, 10, Duration.ofMinutes(10),
+					Duration.ofSeconds(150)));
 	private final Course course = Course.create(1L, "정보보호", "2026-2", List.of("해시"), NOW);
 	private long nextMessageId = 1;
 

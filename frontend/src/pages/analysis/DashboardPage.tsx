@@ -6,7 +6,12 @@ import {
 } from '@tanstack/react-query';
 import { ChartColumn, Download, LoaderCircle, Sparkles } from 'lucide-react';
 import * as m from 'motion/react-m';
-import { analysisLatestKey, getLatestAnalysis, startAnalysis } from '@/api';
+import {
+  ApiError,
+  analysisLatestKey,
+  getLatestAnalysis,
+  startAnalysis,
+} from '@/api';
 import { useMockData } from '@/store';
 import { FADE_UP } from '@/constants';
 import {
@@ -20,6 +25,7 @@ import { useCourses, useProviders } from '@/hooks';
 import type { AnalysisRun, Course, DashboardComponentId } from '@/types';
 import {
   DEFAULT_LAYOUT,
+  isNoResponseError,
   parseDashboardLayout,
   sortByStudyOrder,
 } from '@/utils';
@@ -122,20 +128,53 @@ function AnalysisResult({ run }: { run: AnalysisRun }) {
   );
 }
 
+// 시간 초과·409 뒤 최근 분석을 다시 확인하는 간격과 그만둘 때까지의 시간 (서버 분석 예산 150초보다 넉넉히)
+const WAIT_POLL_MS = 10_000;
+const WAIT_LIMIT_MS = 5 * 60_000;
+
 // 과목 하나의 최근 분석과 분석 시작
 function CourseAnalysis({ course }: { course: Course }) {
   const mockData = useMockData();
   const queryClient = useQueryClient();
+  // 기다리기를 멈췄거나(시간 초과) 이미 분석 중(409)이면 서버에서 끝날 결과를 기다린다.
+  // 그때 화면에 있던 분석 id와 기다리기를 그만둘 시각을 두고, 새 분석이 보이면 멈춘다
+  const [waiting, setWaiting] = useState<{
+    fromRunId: number | null;
+    until: number;
+  } | null>(null);
   const { data: run } = useSuspenseQuery({
     queryKey: analysisLatestKey(course.id),
     queryFn: () => getLatestAnalysis(course.id),
+    refetchInterval: (query) =>
+      waiting !== null &&
+      (query.state.data?.id ?? null) === waiting.fromRunId &&
+      Date.now() < waiting.until
+        ? WAIT_POLL_MS
+        : false,
   });
   const { data: providers } = useProviders();
   const mutation = useMutation({
     mutationFn: () => startAnalysis(course.id),
+    onMutate: () => setWaiting(null),
     onSuccess: (next) =>
       queryClient.setQueryData(analysisLatestKey(course.id), next),
+    onError: (error) => {
+      if (
+        isNoResponseError(error) ||
+        (error instanceof ApiError && error.status === 409)
+      ) {
+        setWaiting({
+          fromRunId: run?.id ?? null,
+          until: Date.now() + WAIT_LIMIT_MS,
+        });
+        void queryClient.invalidateQueries({
+          queryKey: analysisLatestKey(course.id),
+        });
+      }
+    },
   });
+  // 기다리던 새 분석이 도착했으면 오류·기다림 안내를 내린다
+  const arrived = waiting !== null && (run?.id ?? null) !== waiting.fromRunId;
 
   const configured = providers.filter((item) => item.configured).length;
   const blockedReason =
@@ -168,6 +207,12 @@ function CourseAnalysis({ course }: { course: Course }) {
             disabled={mutation.isPending || blockedReason !== null}
             className="print:hidden"
           >
+            {waiting && !arrived && !mutation.isPending && (
+              <p className="rounded-xl bg-primary-soft px-4 py-3 text-body text-heading">
+                서버에서 아직 분석하고 있을 수 있어요. 끝나면 이 화면에 결과가
+                나타나요. 몇 분이 지나도 그대로면 다시 분석해 주세요.
+              </p>
+            )}
             {mutation.isPending && (
               <LoaderCircle
                 size={16}
@@ -192,13 +237,19 @@ function CourseAnalysis({ course }: { course: Course }) {
       )}
 
       <div aria-live="polite" className="flex flex-col gap-3 empty:hidden">
+        {waiting && !arrived && !mutation.isPending && (
+          <p className="rounded-xl bg-primary-soft px-4 py-3 text-body text-heading">
+            서버에서 아직 분석하고 있을 수 있어요. 끝나면 이 화면에 결과가
+            나타나요. 몇 분이 지나도 그대로면 다시 분석해 주세요.
+          </p>
+        )}
         {mutation.isPending && (
           <p className="rounded-xl bg-primary-soft px-4 py-3 text-body text-heading">
             모델마다 대화를 따로 읽고 있어요. 길면 2분쯤 걸려요. 이 화면을
             떠나지 말아 주세요.
           </p>
         )}
-        {mutation.isError && (
+        {mutation.isError && !waiting && (
           <p
             role="alert"
             className="rounded-xl border border-danger px-4 py-3 text-body text-heading"

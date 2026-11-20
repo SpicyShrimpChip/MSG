@@ -16,6 +16,9 @@ export class ApiError extends Error {
   }
 }
 
+export const TIMEOUT_MESSAGE =
+  '응답이 오래 걸려 기다리기를 멈췄어요. 서버에서는 아직 처리하고 있을 수 있으니 잠시 뒤 다시 확인해 주세요.';
+
 const DEFAULT_ERROR_MESSAGE =
   '요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.';
 
@@ -32,6 +35,10 @@ export function toApiError(error: unknown): ApiError {
   if (error instanceof ApiError) return error;
   if (isAxiosError<Partial<ApiResponse<unknown>>>(error)) {
     if (!error.response) {
+      // 시간 초과는 연결 문제가 아니다. 서버는 요청을 계속 처리하고 있을 수 있다
+      if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+        return new ApiError(TIMEOUT_MESSAGE);
+      }
       return new ApiError(
         '서버에 연결하지 못했어요. 인터넷 연결을 확인해 주세요.',
       );

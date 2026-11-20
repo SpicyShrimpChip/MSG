@@ -77,6 +77,18 @@ class ModelInvokerDeadlineTest {
 	}
 
 	@Test
+	void 마감이_지났어도_이미_끝난_호출의_결과는_쓴다() {
+		// 여러 모델을 차례로 기다릴 때: 앞 모델을 기다리다 마감이 지났지만 이 모델은 그 전에 답했다
+		java.util.concurrent.CompletableFuture<ModelInvoker.Outcome> done = java.util.concurrent.CompletableFuture
+				.completedFuture(new ModelInvoker.Outcome(new LlmResponse("{}", 1, 1), null, 1, 10));
+
+		ModelInvoker.Outcome outcome = invoker.await(done, Instant.now().minusSeconds(1));
+
+		assertThat(outcome.timedOut()).isFalse();
+		assertThat(outcome.response()).isNotNull();
+	}
+
+	@Test
 	void 마감이_지나면_기다리지_않고_시간_초과로_돌려준다() {
 		FakeLlmClient slow = new FakeLlmClient(LlmProvider.GPT).respond(request -> {
 			sleep(2_000);

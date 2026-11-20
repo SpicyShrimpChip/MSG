@@ -27,7 +27,13 @@ import {
 } from '@/constants';
 import { useCourses, useProviders, useSuspenseMe } from '@/hooks';
 import type { JobField, QuizDifficulty, QuizMode, User } from '@/types';
-import { cn, conceptStudyLink, formatSemester } from '@/utils';
+import {
+  cn,
+  conceptStudyLink,
+  createRequestKey,
+  formatSemester,
+  isNoResponseError,
+} from '@/utils';
 
 const EXAM_SCOPE_MAX = 200;
 const MOCK_EXAM_MAX_QUESTIONS = 20;
@@ -140,7 +146,7 @@ function QuizCreateForm({ me }: { me: User | null }) {
   const [jobFieldOther, setJobFieldOther] = useState(me?.jobFieldOther ?? '');
   const [mockExam, setMockExam] = useState(false);
   // 같은 요청을 두 번 보내도 퀴즈가 하나만 생기도록 화면을 열 때·실패한 뒤마다 새 키를 만든다
-  const [requestKey, setRequestKey] = useState(() => crypto.randomUUID());
+  const [requestKey, setRequestKey] = useState(createRequestKey);
 
   const course = courses.find((item) => item.id === courseId) ?? null;
   const types = QUESTION_TYPE_SETS[typeSet].types;
@@ -164,10 +170,12 @@ function QuizCreateForm({ me }: { me: User | null }) {
       });
       navigate(`/quizzes/${quiz.id}`);
     },
-    // 실패하면 그 키는 끝났으니 다시 만들 때는 새 키를 쓴다
-    onError: () => {
+    // 서버가 실패를 답했으면 그 키는 끝났으니 다시 만들 때는 새 키를 쓴다.
+    // 시간 초과·연결 끊김이면 서버가 아직 만들고 있을 수 있어 같은 키를 남긴다(다시 누르면 그 결과를 받는다)
+    onError: (error) => {
+      if (isNoResponseError(error)) return;
       savePendingKey(null);
-      setRequestKey(crypto.randomUUID());
+      setRequestKey(createRequestKey());
     },
   });
 

@@ -34,7 +34,7 @@ import {
   QUIZ_MAX_QUESTIONS,
 } from '@/constants';
 import MaterialConceptPanel from '@/pages/materials/components/MaterialConceptPanel';
-import { isReadable } from '@/utils';
+import { createRequestKey, isNoResponseError, isReadable } from '@/utils';
 import type {
   AssessmentKind,
   AssessmentSnapshot,
@@ -121,6 +121,9 @@ function MaterialAssessment({
   const [useContent, setUseContent] = useState(false);
   const [contentConsent, setContentConsent] = useState(false);
   const [created, setCreated] = useState<Quiz | null>(null);
+  // 같은 평가를 두 번 만들지 않도록, 시간 초과 뒤 다시 누를 때는 같은 키를 보낸다(서버가 끝난 결과를 돌려준다).
+  // 성공했거나 서버가 실패를 답한 뒤에만 새 키를 쓴다
+  const [requestKey, setRequestKey] = useState(createRequestKey);
   const readable = isReadable(material.fileName);
   const contentAllowed = ai.materialContentEnabled && readable;
   const types = QUESTION_TYPE_SETS[typeSet].types;
@@ -128,7 +131,7 @@ function MaterialAssessment({
   const mutation = useMutation({
     mutationFn: (kind: AssessmentKind) =>
       createAssessment({
-        requestKey: crypto.randomUUID(),
+        requestKey,
         materialId: material.id,
         kind,
         questionTypes: types,
@@ -137,7 +140,11 @@ function MaterialAssessment({
         useMaterialContent: useContent || undefined,
         materialContentConsent: useContent ? contentConsent : undefined,
       }),
+    onError: (error) => {
+      if (!isNoResponseError(error)) setRequestKey(createRequestKey());
+    },
     onSuccess: (quiz) => {
+      setRequestKey(createRequestKey());
       queryClient.setQueryData([...QUIZZES_QUERY_KEY, quiz.id], quiz);
       void queryClient.invalidateQueries({ queryKey: ASSESSMENTS_QUERY_KEY });
       void queryClient.invalidateQueries({

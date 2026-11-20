@@ -106,6 +106,8 @@ app:
     # 사용자 한 명이 24시간 안에 시작할 수 있는 분석 수 (분석 한 번에 모델 최대 3번 호출)
     daily-run-limit: 10
     running-timeout: 10m
+    # 분석 한 번에서 모델을 기다리는 전체 시간. 프론트 timeout(180초)보다 짧게 둔다 (늦은 모델은 시간 초과로 두고 나머지를 저장)
+    deadline: 150s
 
   # 개념별 숙련도 점수 (domain/analysis, 11/5 설계안 초기값). 전부 근거 없는 초기 가정이라 사용자 테스트 뒤 조정한다.
   # 점수 = (Σ무게·값 + 1) ÷ (Σ무게 + 2). 산식을 바꾸면 formula-version을 올린다 (docs/frontend-requests.md 5-10절)
