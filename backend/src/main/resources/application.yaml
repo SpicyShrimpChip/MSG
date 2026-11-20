@@ -54,6 +54,13 @@ app:
   conversation-import:
     max-request-size: 2MB
 
+  # 회원가입 자동 가입 방지 (Cloudflare Turnstile). 비밀 키가 비면 확인하지 않는다 (로컬·테스트)
+  # 프론트 사이트 키(VITE_TURNSTILE_SITE_KEY)와 같이 켠다. 확인 서버에 닿지 못하면 가입을 막는다
+  turnstile:
+    secret-key: ${TURNSTILE_SECRET_KEY:}
+    verify-url: https://challenges.cloudflare.com/turnstile/v0/siteverify
+    timeout: 5s
+
   # 서비스 전체 하루 AI 모델 호출 상한 (사용자별 한도와 따로, 계정을 여러 개 만들어도 넘을 수 없는 비용 상한).
   # 다시 부르기도 한 번으로 센다. 0 이하면 상한 없음. 날짜는 zone 기준으로 나눈다
   # TODO(미결): 500은 근거 없는 임시값 (분석 1번 = 최대 6번, 퀴즈 만들기 1번 = 최대 6번 호출). 제공사 콘솔 지출 한도와 함께 정한다

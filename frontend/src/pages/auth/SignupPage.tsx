@@ -2,6 +2,7 @@ import { useState, type SubmitEvent } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { signup } from '@/api';
+import { USE_MOCK } from '@/api/axios';
 import {
   Button,
   FormRow,
@@ -16,6 +17,12 @@ import AuthCard from './components/AuthCard';
 import MockAuthNotice from './components/MockAuthNotice';
 import PasswordRules from './components/PasswordRules';
 import SignupAgreements from './components/SignupAgreements';
+import TurnstileWidget, {
+  TURNSTILE_SITE_KEY,
+} from './components/TurnstileWidget';
+
+// 자동 가입 방지는 사이트 키가 있고 실제 서버와 연결된 모드에서만 (체험 모드에는 가입이 없다)
+const BOT_CHECK_ON = TURNSTILE_SITE_KEY !== '' && !USE_MOCK;
 
 interface SignupLocationState {
   // 가입 뒤 이어서 갈 화면 (메인 시작 안내·로그인 화면이 넘겨 준다)
@@ -40,6 +47,10 @@ function SignupPage() {
     jobFieldOther: '',
   });
   const mismatch = confirm !== '' && confirm !== password;
+  const [botToken, setBotToken] = useState<string | null>(null);
+  // 늘리면 자동 가입 방지 확인을 새로 한다
+  const [botResetKey, setBotResetKey] = useState(0);
+  const botCheckPending = BOT_CHECK_ON && !botToken;
 
   const mutation = useMutation({
     mutationFn: signup,
@@ -47,12 +58,16 @@ function SignupPage() {
       // 로그인하면 가입 전에 고른 화면으로 이어진다
       navigate('/login', { state: { signedUpEmail: user.email, from } });
     },
+    // 토큰은 한 번만 쓸 수 있어서, 가입이 실패하면(이메일 중복 등) 확인을 새로 받는다
+    onError: () => {
+      if (BOT_CHECK_ON) setBotResetKey((key) => key + 1);
+    },
   });
 
   const handleSubmit = (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!isPasswordValid(password) || password !== confirm) return;
-    if (mutation.isPending) return;
+    if (mutation.isPending || botCheckPending) return;
     // 서버에서도 같은 규칙으로 다시 검사한다 (이메일 중복, 비밀번호 규칙, 필수 동의)
     mutation.mutate({
       email: email.trim(),
@@ -68,6 +83,7 @@ function SignupPage() {
       jobField: profile.jobField,
       jobFieldOther:
         profile.jobField === 'other' ? profile.jobFieldOther.trim() : null,
+      ...(BOT_CHECK_ON && botToken ? { turnstileToken: botToken } : {}),
     });
   };
 
@@ -156,6 +172,10 @@ function SignupPage() {
           onAiQuizConsentChange={setAiQuizConsent}
         />
 
+        {BOT_CHECK_ON && (
+          <TurnstileWidget onToken={setBotToken} resetKey={botResetKey} />
+        )}
+
         <ErrorText error={mutation.error} />
 
         <div className="flex">
@@ -166,7 +186,8 @@ function SignupPage() {
             disabled={
               !isPasswordValid(password) ||
               password !== confirm ||
-              mutation.isPending
+              mutation.isPending ||
+              botCheckPending
             }
           >
             가입하기

@@ -18,6 +18,8 @@ public class TestLlm implements ApplicationContextInitializer<ConfigurableApplic
 				"app.llm.anthropic.api-key", "",
 				"app.llm.gemini.api-key", "",
 				"app.llm.retry-backoff", "0ms",
+				// 개발자 PC에 Turnstile 비밀 키가 있어도 통합 테스트의 가입은 확인하지 않는다 (확인은 SignupBotCheckTest)
+				"app.turnstile.secret-key", "",
 				// 테스트 전체가 같은 날짜 줄을 같이 쓰므로 상한에 닿지 않게 크게 둔다 (상한 테스트는 줄을 직접 채운다)
 				"app.ai-daily-limit.calls", "1000000")));
 	}

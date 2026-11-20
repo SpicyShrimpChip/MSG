@@ -3,6 +3,7 @@ package com.ailms.backend.domain.auth.api;
 import com.ailms.backend.domain.auth.application.AuthService;
 import com.ailms.backend.domain.auth.application.AuthService.LoginResult;
 import com.ailms.backend.domain.auth.application.AuthService.RefreshResult;
+import com.ailms.backend.domain.auth.application.SignupBotCheck;
 import com.ailms.backend.domain.auth.dto.AccessTokenResponse;
 import com.ailms.backend.domain.auth.dto.LoginRequest;
 import com.ailms.backend.domain.auth.dto.LoginResponse;
@@ -37,12 +38,15 @@ public class AuthController {
 	private static final String REQUESTED_WITH_VALUE = "XMLHttpRequest";
 
 	private final AuthService authService;
+	private final SignupBotCheck signupBotCheck;
 	private final RefreshTokenCookies refreshTokenCookies;
 
 	@Operation(summary = "회원가입", description = "이메일 중복이면 409. 비밀번호 규칙: 8자 이상, 영문·숫자·특수문자 포함.")
 	@PostMapping("/signup")
 	@ResponseStatus(HttpStatus.CREATED)
 	public ApiResponse<UserResponse> signup(@Valid @RequestBody SignupRequest request) {
+		// 외부 확인은 DB 트랜잭션 밖에서 먼저 한다
+		signupBotCheck.verify(request.turnstileToken());
 		return ApiResponse.success(authService.signup(request));
 	}
 

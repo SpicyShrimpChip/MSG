@@ -40,5 +40,8 @@ public record SignupRequest(
 		// 아래 셋은 선택. 빠지면 '아직 정하지 않음'·직무 없음 (예전 가입 요청과 호환). 마이페이지에서 바꿀 수 있다
 		@Schema(description = "exam_prep / self_development / work / undecided. 없으면 undecided") String learningPurpose,
 		@Schema(description = "관심 직무. 없으면 null") String jobField,
-		@Schema(description = "jobField가 other일 때 분야 이름 (30자까지)") String jobFieldOther) {
+		@Schema(description = "jobField가 other일 때 분야 이름 (30자까지)") String jobFieldOther,
+		// 자동 가입 방지 확인 토큰 (Cloudflare Turnstile). 서버에 비밀 키가 있을 때만 필요하다
+		@Schema(description = "Cloudflare Turnstile 토큰. 서버에서 자동 가입 방지를 켰을 때만 필요")
+		@Size(max = 2048, message = "자동 가입 방지 확인 정보가 올바르지 않아요.") String turnstileToken) {
 }

@@ -49,6 +49,8 @@ export interface SignupInput {
   learningPurpose?: LearningPurpose;
   jobField?: JobField | null;
   jobFieldOther?: string | null;
+  // 자동 가입 방지 확인 토큰 (Turnstile을 켰을 때만)
+  turnstileToken?: string;
 }
 
 export interface LoginInput {
