@@ -19,6 +19,9 @@ function Footer() {
           <Link to="/about" className="hover:underline">
             서비스 소개
           </Link>
+          <Link to="/terms" className="hover:underline">
+            이용약관
+          </Link>
           <Link to="/privacy" className="font-bold hover:underline">
             개인정보 처리방침
           </Link>

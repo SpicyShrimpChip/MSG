@@ -44,7 +44,11 @@ function SignupAgreements({
           <Link to="/privacy" className="font-bold text-primary underline">
             개인정보 처리방침
           </Link>
-          에서 볼 수 있어요. 서비스 이용약관 본문은 준비 중이에요.
+          에서, 서비스 이용 조건은{' '}
+          <Link to="/terms" className="font-bold text-primary underline">
+            이용약관
+          </Link>
+          에서 볼 수 있어요.
         </p>
         <label className="flex items-start gap-3 font-medium text-heading">
           <input

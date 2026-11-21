@@ -1,4 +1,4 @@
-import { SubPage } from '@/components';
+import { LegalDocument, SubPage, type LegalSection } from '@/components';
 
 // 개인정보 처리방침 초안. 항목·순서는 개인정보보호위원회 「2026 개인정보 처리방침 작성지침」(2026-04-24 개정,
 // 생성형 AI 부록 포함)의 필수·해당 시·권장 항목을 따르고, 내용은 지금 코드가 실제로 하는 처리
@@ -13,17 +13,6 @@ import { SubPage } from '@/components';
 // TODO(미결): 서버·DB 호스팅 업체, 학습 자료 원본의 장기 보관 기간, 만 14세 미만 가입, 보호책임자, 시행일
 // → 정해지면 아래 PENDING 문구를 실제 값으로 바꾼다 (서비스 공개 전 필수, 팀·멘토 검토 필요)
 
-type Block =
-  | { type: 'p'; text: string }
-  | { type: 'ul'; items: string[] }
-  | { type: 'table'; head: string[]; rows: string[][] };
-
-interface Section {
-  id: string;
-  title: string;
-  blocks: Block[];
-}
-
 const PENDING = '(확정 후 기재 예정)';
 
 // 가운뎃점으로 이으면 한 단어로 취급돼 휴대폰 폭에서 줄이 안 바뀌고 화면 밖으로 넘친다(11/6). 쉼표와 띄어쓰기로 잇는다
@@ -37,7 +26,7 @@ const SUMMARY = [
   '숙련도는 AI가 아니라 정해진 규칙의 코드로 계산하고, 근거를 함께 보여 줘요. 동의를 철회하거나 탈퇴하면 관련 정보를 바로 지워요. 탈퇴 뒤 30일 동안은 같은 이메일로 다시 가입할 수 없고, 이를 확인할 값만 30일 보관해요.',
 ];
 
-const SECTIONS: Section[] = [
+const SECTIONS: LegalSection[] = [
   {
     id: 'purpose',
     title: '1. 개인정보의 처리 목적',
@@ -516,53 +505,10 @@ const SECTIONS: Section[] = [
   },
 ];
 
-function SectionBlock({ block }: { block: Block }) {
-  if (block.type === 'p') {
-    return <p className="leading-relaxed text-ink-soft">{block.text}</p>;
-  }
-  if (block.type === 'ul') {
-    return (
-      <ul className="flex list-disc flex-col gap-1.5 pl-5 leading-relaxed text-ink-soft">
-        {block.items.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ul>
-    );
-  }
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-150 border-collapse border-t-2 border-heading text-body">
-        <thead>
-          <tr className="bg-surface-muted text-caption text-ink-soft">
-            {block.head.map((cell) => (
-              <th
-                key={cell}
-                scope="col"
-                className="border-b border-line px-3.5 py-3 text-left font-bold"
-              >
-                {cell}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {block.rows.map((row) => (
-            <tr key={row.join('|')}>
-              {row.map((cell, index) => (
-                <td
-                  key={block.head[index]}
-                  className={`border-b border-line px-3.5 py-3 align-top leading-relaxed ${index === 0 ? 'font-bold text-heading' : 'text-ink-soft'}`}
-                >
-                  {cell}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
+const INTRO =
+  'MSG(My Study Guide, 이하 "서비스")는 「개인정보 보호법」 등 관계 법령을 준수하여 이용자의 개인정보를 적법하게 처리하고 안전하게 관리합니다. 서비스는 「개인정보 보호법」 제30조에 따라 이용자의 개인정보 처리 및 보호에 관한 절차와 기준을 안내하고, 관련 고충을 신속하게 처리하기 위하여 다음과 같이 개인정보 처리방침을 수립·공개합니다.';
+
+const DRAFT_NOTICE = `이 처리방침은 초안입니다. 확정되지 않은 사항은 ${PENDING}로 표시하였으며, 확정 후 개정하여 공지합니다.`;
 
 function PrivacyPage() {
   return (
@@ -570,71 +516,12 @@ function PrivacyPage() {
       title="MSG 개인정보 처리방침"
       description="어떤 정보를 왜 모으고, 얼마나 보관하고, 어떻게 지울 수 있는지 알려 드려요"
     >
-      <section
-        aria-labelledby="privacy-summary-title"
-        className="max-w-3xl rounded-2xl bg-section p-5"
-      >
-        <h2 id="privacy-summary-title" className="mb-2 font-bold text-heading">
-          한눈에 보기
-        </h2>
-        <ul className="flex list-disc flex-col gap-1.5 pl-5 leading-relaxed text-ink-soft">
-          {SUMMARY.map((item) => (
-            <li key={item}>{item}</li>
-          ))}
-        </ul>
-      </section>
-
-      <p className="max-w-3xl leading-relaxed text-ink-soft">
-        MSG(My Study Guide, 이하 "서비스")는 「개인정보 보호법」 등 관계 법령을
-        준수하여 이용자의 개인정보를 적법하게 처리하고 안전하게 관리합니다.
-        서비스는 「개인정보 보호법」 제30조에 따라 이용자의 개인정보 처리 및
-        보호에 관한 절차와 기준을 안내하고, 관련 고충을 신속하게 처리하기 위하여
-        다음과 같이 개인정보 처리방침을 수립·공개합니다.
-      </p>
-
-      <p className="rounded-xl bg-surface-muted px-4 py-3 text-body text-ink-soft">
-        이 처리방침은 초안입니다. 확정되지 않은 사항은 {PENDING}로 표시하였으며,
-        확정 후 개정하여 공지합니다.
-      </p>
-
-      <nav aria-label="목차" className="rounded-2xl border border-line p-5">
-        <p className="mb-2 font-bold text-heading">목차</p>
-        <ol className="grid gap-x-6 gap-y-1.5 text-body sm:grid-cols-2">
-          {SECTIONS.map((section) => (
-            <li key={section.id}>
-              <a
-                href={`#${section.id}`}
-                className="text-ink-soft hover:text-primary hover:underline"
-              >
-                {section.title}
-              </a>
-            </li>
-          ))}
-        </ol>
-      </nav>
-
-      <div className="flex max-w-3xl flex-col gap-10">
-        {SECTIONS.map((section) => (
-          <section
-            key={section.id}
-            id={section.id}
-            aria-labelledby={`${section.id}-title`}
-            className="flex scroll-mt-24 flex-col gap-3"
-          >
-            <h2
-              id={`${section.id}-title`}
-              className="text-xl font-extrabold text-heading"
-            >
-              {section.title}
-            </h2>
-            {section.blocks.map((block, index) => (
-              // 고정된 문서 내용이라 순서가 바뀌지 않는다
-              // eslint-disable-next-line react-x/no-array-index-key
-              <SectionBlock key={index} block={block} />
-            ))}
-          </section>
-        ))}
-      </div>
+      <LegalDocument
+        summary={SUMMARY}
+        intro={INTRO}
+        draftNotice={DRAFT_NOTICE}
+        sections={SECTIONS}
+      />
     </SubPage>
   );
 }
