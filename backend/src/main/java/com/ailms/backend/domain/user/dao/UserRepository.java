@@ -1,11 +1,14 @@
 package com.ailms.backend.domain.user.dao;
 
 import com.ailms.backend.domain.user.entity.User;
+import com.ailms.backend.global.error.BusinessException;
+import com.ailms.backend.global.security.ApiErrorResponder;
 import jakarta.persistence.LockModeType;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.http.HttpStatus;
 
 public interface UserRepository extends JpaRepository<User, Long> {
 
@@ -20,4 +23,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select u from User u where u.id = :id")
 	Optional<User> findByIdForUpdate(Long id);
+
+	// 로그인한 사용자 행을 잠가 읽는다 (findByIdForUpdate). 토큰은 유효하지만 계정이 사라졌으면(탈퇴 직후 등) 401
+	default User lockLoginUser(Long id) {
+		return findByIdForUpdate(id)
+				.orElseThrow(() -> new BusinessException(HttpStatus.UNAUTHORIZED, ApiErrorResponder.UNAUTHORIZED_MESSAGE));
+	}
 }

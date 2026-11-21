@@ -51,8 +51,6 @@ import org.springframework.web.multipart.MultipartFile;
 @Transactional(readOnly = true)
 public class MaterialService {
 
-	static final String NOT_FOUND_MESSAGE = "자료를 찾을 수 없어요.";
-	static final String COURSE_NOT_FOUND_MESSAGE = "과목을 찾을 수 없어요.";
 	static final String STORE_FAILED_MESSAGE = "파일을 저장하지 못했어요. 잠시 뒤 다시 시도해 주세요.";
 
 	private final MaterialRepository materialRepository;
@@ -74,7 +72,7 @@ public class MaterialService {
 	}
 
 	public MaterialDetailResponse getMaterial(Long userId, Long id) {
-		Material material = find(userId, id);
+		Material material = materialRepository.getOwned(id, userId);
 		return MaterialDetailResponse.from(material,
 				(int) quizRepository.countByUserIdAndMaterialId(userId, material.getId()),
 				conceptRepository.findAllByMaterialIdAndUserIdOrderBySortOrderAsc(material.getId(), userId));
@@ -86,8 +84,8 @@ public class MaterialService {
 	@Transactional
 	public MaterialUploadResponse upload(Long userId, Long courseId, String rawTitle, MultipartFile file) {
 		String title = title(rawTitle);
-		if (courseId != null && !courseRepository.existsByIdAndUserId(courseId, userId)) {
-			throw new BusinessException(HttpStatus.NOT_FOUND, COURSE_NOT_FOUND_MESSAGE);
+		if (courseId != null) {
+			courseRepository.checkOwned(courseId, userId);
 		}
 		Path received = receive(file);
 		try {
@@ -105,7 +103,7 @@ public class MaterialService {
 
 	@Transactional
 	public void delete(Long userId, Long id) {
-		deleteAll(List.of(find(userId, id)));
+		deleteAll(List.of(materialRepository.getOwned(id, userId)));
 	}
 
 	/**
@@ -129,11 +127,6 @@ public class MaterialService {
 				.map(Material::getStorageKey)
 				.filter(Objects::nonNull)
 				.toList());
-	}
-
-	private Material find(Long userId, Long id) {
-		return materialRepository.findByIdAndUserId(id, userId)
-				.orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE));
 	}
 
 	private void store(String storageKey, Path content) {

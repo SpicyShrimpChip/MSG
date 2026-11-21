@@ -1,20 +1,18 @@
 package com.ailms.backend.global.security;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.ailms.backend.domain.auth.dao.RefreshTokenRepository;
 import com.ailms.backend.domain.user.dao.UserRepository;
 import com.ailms.backend.support.IntegrationTest;
+import com.ailms.backend.support.TestApi;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jayway.jsonpath.JsonPath;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -25,7 +23,6 @@ import org.springframework.test.web.servlet.MockMvc;
 @IntegrationTest
 class AdminAccessTest {
 
-	private static final String PASSWORD = "Passw0rd!";
 	private static final String ADMIN_PATH = "/api/admin/members";
 
 	@Autowired
@@ -84,23 +81,6 @@ class AdminAccessTest {
 	}
 
 	private String signupAndLogin(String email) throws Exception {
-		mockMvc.perform(post("/api/auth/signup")
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(Map.of(
-						"email", email,
-						"name", "테스터",
-						"password", PASSWORD,
-						"passwordConfirm", PASSWORD,
-						"agreedTerms", true,
-						"agreedPrivacy", true,
-						"agreedAiAnalysis", false))))
-				.andExpect(status().isCreated());
-		String body = mockMvc.perform(post("/api/auth/login")
-				.header("X-Requested-With", "XMLHttpRequest")
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(Map.of("email", email, "password", PASSWORD))))
-				.andExpect(status().isOk())
-				.andReturn().getResponse().getContentAsString();
-		return JsonPath.read(body, "$.data.accessToken");
+		return TestApi.signupAndLogin(mockMvc, objectMapper, email, Map.of("agreedAiAnalysis", false));
 	}
 }

@@ -26,7 +26,6 @@ import com.ailms.backend.domain.quiz.entity.QuizSubmission;
 import com.ailms.backend.domain.user.dao.UserRepository;
 import com.ailms.backend.domain.user.entity.JobField;
 import com.ailms.backend.global.error.BusinessException;
-import com.ailms.backend.global.security.ApiErrorResponder;
 import com.ailms.backend.global.llm.LlmClient;
 import com.ailms.backend.global.llm.UserAiUsage;
 import com.ailms.backend.global.llm.LlmClients;
@@ -60,7 +59,6 @@ public class QuizService {
 
 	static final String NOT_FOUND_MESSAGE = "퀴즈를 찾을 수 없어요.";
 	static final String SUBMISSION_NOT_FOUND_MESSAGE = "제출 기록을 찾을 수 없어요.";
-	static final String COURSE_NOT_FOUND_MESSAGE = "과목을 찾을 수 없어요.";
 	static final String GRADING_RUNNING_MESSAGE = "이 제출을 채점하고 있어요. 끝난 뒤 다시 확인해 주세요.";
 	static final String REGRADE_CONSENT_MESSAGE = "AI로 다시 채점하려면 AI 퀴즈 처리 동의가 필요해요. 마이페이지에서 동의할 수 있어요.";
 	static final String REGRADE_NO_MODEL_MESSAGE = "연결된 AI 모델이 없어 지금은 다시 채점할 수 없어요.";
@@ -164,7 +162,7 @@ public class QuizService {
 			String note = blocked;
 			QuizGradingRun run = null;
 			if (!needAi.isEmpty() && note == null) {
-				lockUser(userId);
+				userRepository.lockLoginUser(userId);
 				note = limitReason(userId);
 			}
 			for (AnswerGradingService.Item item : needAi) {
@@ -217,7 +215,7 @@ public class QuizService {
 				.collect(Collectors.toMap(QuizQuestion::getId, Function.identity()));
 		List<AnswerGradingService.Item> pending = new ArrayList<>();
 		Reserved reserved = transaction.execute(status -> {
-			lockUser(userId);
+			userRepository.lockLoginUser(userId);
 			findSubmission(userId, quiz.getId(), submissionId);
 			LocalDateTime now = LocalDateTime.now(clock);
 			expireStaleRuns(userId, now);
@@ -277,7 +275,7 @@ public class QuizService {
 		}
 		Map<Long, GradeOutcome> results = outcomes;
 		transaction.executeWithoutResult(status -> {
-			lockUser(userId);
+			userRepository.lockLoginUser(userId);
 			QuizGradingRun run = gradingRunRepository.findById(reserved.runId()).orElse(null);
 			LocalDateTime now = LocalDateTime.now(clock);
 			boolean active = run != null && run.isActiveAt(now);
@@ -332,11 +330,6 @@ public class QuizService {
 		}
 	}
 
-	private void lockUser(Long userId) {
-		userRepository.findByIdForUpdate(userId)
-				.orElseThrow(() -> new BusinessException(HttpStatus.UNAUTHORIZED, ApiErrorResponder.UNAUTHORIZED_MESSAGE));
-	}
-
 	private static String jobLabel(Quiz quiz) {
 		return quiz.getJobField() == null ? null
 				: quiz.getJobField() == JobField.OTHER ? quiz.getJobFieldOther() : quiz.getJobField().label();
@@ -345,8 +338,7 @@ public class QuizService {
 	// 과목의 개념별 퀴즈 결과 (학습 분석 대시보드와 나란히 쓴다)
 	@Transactional(readOnly = true)
 	public List<ConceptQuizStatsResponse> conceptStats(Long userId, Long courseId) {
-		Course course = courseRepository.findByIdAndUserId(courseId, userId)
-				.orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, COURSE_NOT_FOUND_MESSAGE));
+		Course course = courseRepository.getOwned(courseId, userId);
 		return statsService.byCourse(userId, course);
 	}
 
@@ -379,17 +371,9 @@ public class QuizService {
 	private QuizResultResponse result(Long userId, Long quizId, QuizSubmission submission) {
 		Quiz quiz = find(userId, quizId);
 		List<QuizQuestion> questions = questionRepository.findAllByQuizIdOrderBySortOrderAsc(quizId);
-		Map<Long, QuizAnswer> answers = answerRepository.findAllBySubmissionId(submission.getId()).stream()
-				.collect(Collectors.toMap(QuizAnswer::getQuestionId, Function.identity(), (a, b) -> a));
-		List<QuizAssessor.Graded> graded = questions.stream()
-				.map(question -> {
-					QuizAnswer answer = answers.get(question.getId());
-					return answer == null
-							? new QuizAssessor.Graded(question, GradingStatus.GRADED, 0, question.maxScore(), null)
-							: new QuizAssessor.Graded(question, answer.getGradingStatus(), answer.getScore(),
-									answer.getMaxScore(), answer.getGradingNote());
-				})
-				.toList();
+		Map<Long, QuizAnswer> answers = QuizAssessor
+				.answersByQuestion(answerRepository.findAllBySubmissionId(submission.getId()));
+		List<QuizAssessor.Graded> graded = QuizAssessor.graded(questions, answers);
 		return QuizResultResponse.of(quiz, submission, questions, answers,
 				QuizAssessor.assess(graded, properties.assessment()));
 	}

@@ -32,7 +32,6 @@ import com.ailms.backend.global.llm.LlmClients;
 import com.ailms.backend.global.llm.LlmProvider;
 import com.ailms.backend.global.llm.LlmRequest;
 import com.ailms.backend.global.llm.ModelInvoker;
-import com.ailms.backend.global.security.ApiErrorResponder;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -61,7 +60,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class AnalysisService {
 
 	static final String CONSENT_REQUIRED_MESSAGE = "AI 대화 분석에 동의해야 학습 분석을 할 수 있어요.";
-	static final String COURSE_NOT_FOUND_MESSAGE = "과목을 찾을 수 없어요.";
 	static final String NO_KEYWORDS_MESSAGE = "과목에 키워드를 먼저 넣어 주세요. 키워드가 분석할 개념이 돼요.";
 	static final String NO_CONVERSATIONS_MESSAGE = "이 과목에 분석할 AI 대화가 없어요. 대화를 먼저 가져와 주세요.";
 	static final String NO_MATCHING_MESSAGES = "과목 키워드가 들어간 대화가 없어 분석할 수 없어요.";
@@ -166,13 +164,11 @@ public class AnalysisService {
 
 	private Prepared prepare(Long userId, Long courseId) {
 		// 사용자 행을 잠가 같은 사용자의 동의 철회·다른 분석 시작과 차례로 처리한다
-		User user = userRepository.findByIdForUpdate(userId)
-				.orElseThrow(() -> new BusinessException(HttpStatus.UNAUTHORIZED, ApiErrorResponder.UNAUTHORIZED_MESSAGE));
+		User user = userRepository.lockLoginUser(userId);
 		if (!user.isAiAnalysisConsent()) {
 			throw new BusinessException(HttpStatus.FORBIDDEN, CONSENT_REQUIRED_MESSAGE);
 		}
-		Course course = courseRepository.findByIdAndUserId(courseId, userId)
-				.orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, COURSE_NOT_FOUND_MESSAGE));
+		Course course = courseRepository.getOwned(courseId, userId);
 		if (course.getKeywords().isEmpty()) {
 			throw new BusinessException(HttpStatus.BAD_REQUEST, NO_KEYWORDS_MESSAGE);
 		}
@@ -208,8 +204,7 @@ public class AnalysisService {
 
 	private void save(Long userId, Prepared prepared, List<LlmClient> clients,
 			Map<LlmProvider, ModelInvoker.Outcome> outcomes) {
-		User user = userRepository.findByIdForUpdate(userId)
-				.orElseThrow(() -> new BusinessException(HttpStatus.UNAUTHORIZED, ApiErrorResponder.UNAUTHORIZED_MESSAGE));
+		User user = userRepository.lockLoginUser(userId);
 		// 철회하거나 쓴 대화를 지우면 분석 행이 지워진다(AnalysisCleanup). 동의만 꺼진 경우도 저장하지 않는다
 		AnalysisRun run = runRepository.findByIdAndUserId(prepared.runId(), userId).orElse(null);
 		if (run == null || !user.isAiAnalysisConsent()) {

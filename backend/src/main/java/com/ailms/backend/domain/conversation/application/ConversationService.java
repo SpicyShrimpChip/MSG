@@ -61,7 +61,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class ConversationService {
 
 	static final String NOT_FOUND_MESSAGE = "대화를 찾을 수 없어요.";
-	static final String COURSE_NOT_FOUND_MESSAGE = "과목을 찾을 수 없어요.";
 	static final String CONSENT_REQUIRED_MESSAGE = "AI 대화 분석에 동의해야 대화를 가져올 수 있어요.";
 	static final String REJECTED_MESSAGE = "저장할 수 없는 대화가 있어 이번에 보낸 대화를 저장하지 않았어요.";
 	static final String PERSONAL_INFO_REASON =
@@ -125,18 +124,15 @@ public class ConversationService {
 
 	@Transactional
 	public ConversationImportResponse importConversations(Long userId, ConversationImportRequest request) {
-		// 사용자 행을 잠가 같은 사용자의 동의 철회와 차례로 처리한다 (UserRepository.findByIdForUpdate)
-		User user = userRepository.findByIdForUpdate(userId)
-				.orElseThrow(() -> new BusinessException(HttpStatus.UNAUTHORIZED, "로그인이 필요해요. 다시 로그인해 주세요."));
+		// 사용자 행을 잠가 같은 사용자의 동의 철회와 차례로 처리한다 (UserRepository.lockLoginUser)
+		User user = userRepository.lockLoginUser(userId);
 		if (!user.isAiAnalysisConsent()) {
 			throw new BusinessException(HttpStatus.FORBIDDEN, CONSENT_REQUIRED_MESSAGE);
 		}
 		if (request.requestIndex() > request.requestCount()) {
 			throw new BusinessException(HttpStatus.BAD_REQUEST, INVALID_IMPORT_MESSAGE);
 		}
-		if (!courseRepository.existsByIdAndUserId(request.courseId(), userId)) {
-			throw new BusinessException(HttpStatus.NOT_FOUND, COURSE_NOT_FOUND_MESSAGE);
-		}
+		courseRepository.checkOwned(request.courseId(), userId);
 		List<Incoming> incoming = incoming(request.conversations());
 		LocalDateTime now = LocalDateTime.now(clock);
 

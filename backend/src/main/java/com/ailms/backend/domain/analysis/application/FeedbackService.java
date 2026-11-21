@@ -37,7 +37,7 @@ public class FeedbackService {
 	private final Clock clock;
 
 	public List<FeedbackResponse> getFeedback(Long userId, Long courseId) {
-		findCourse(userId, courseId);
+		courseRepository.getOwned(courseId, userId);
 		return feedbackRepository.findAllByUserIdAndCourseIdOrderByIdAsc(userId, courseId).stream()
 				.map(FeedbackResponse::from)
 				.toList();
@@ -45,7 +45,7 @@ public class FeedbackService {
 
 	@Transactional
 	public FeedbackResponse save(Long userId, Long courseId, FeedbackRequest request) {
-		Course course = findCourse(userId, courseId);
+		Course course = courseRepository.getOwned(courseId, userId);
 		String concept = request.concept().strip().replaceAll("\\s+", " ");
 		String key = Course.nameKey(concept);
 		String name = course.getKeywords().stream()
@@ -80,10 +80,5 @@ public class FeedbackService {
 	public void delete(Long userId, Long id) {
 		feedbackRepository.delete(feedbackRepository.findByIdAndUserId(id, userId)
 				.orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE)));
-	}
-
-	private Course findCourse(Long userId, Long courseId) {
-		return courseRepository.findByIdAndUserId(courseId, userId)
-				.orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, AnalysisService.COURSE_NOT_FOUND_MESSAGE));
 	}
 }

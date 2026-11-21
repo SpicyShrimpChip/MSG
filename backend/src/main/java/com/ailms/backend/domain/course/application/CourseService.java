@@ -28,7 +28,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class CourseService {
 
-	static final String NOT_FOUND_MESSAGE = "과목을 찾을 수 없어요.";
 	static final String DUPLICATE_MESSAGE = "이 학기에 같은 이름의 과목이 이미 있어요.";
 
 	private final CourseRepository courseRepository;
@@ -55,7 +54,7 @@ public class CourseService {
 
 	@Transactional
 	public CourseResponse update(Long userId, Long id, CourseRequest request) {
-		Course course = find(userId, id);
+		Course course = courseRepository.getOwned(id, userId);
 		String name = name(request.name());
 		List<String> keywords = keywords(request.keywords());
 		if (courseRepository.existsByUserIdAndSemesterAndNameKeyAndIdNot(
@@ -74,14 +73,9 @@ public class CourseService {
 	 */
 	@Transactional
 	public void delete(Long userId, Long id) {
-		Course course = find(userId, id);
+		Course course = courseRepository.getOwned(id, userId);
 		materialService.deleteAllInCourse(userId, course.getId());
 		courseRepository.delete(course);
-	}
-
-	private Course find(Long userId, Long id) {
-		return courseRepository.findByIdAndUserId(id, userId)
-				.orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE));
 	}
 
 	// 위의 중복 검사를 거의 동시에 통과한 두 요청은 DB의 UNIQUE 제약이 막는다

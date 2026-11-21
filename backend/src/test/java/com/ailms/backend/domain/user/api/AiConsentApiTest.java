@@ -1,5 +1,6 @@
 package com.ailms.backend.domain.user.api;
 
+import static com.ailms.backend.support.TestApi.bearer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -11,6 +12,7 @@ import com.ailms.backend.domain.auth.dao.RefreshTokenRepository;
 import com.ailms.backend.domain.conversation.dao.ConversationRepository;
 import com.ailms.backend.domain.user.dao.UserRepository;
 import com.ailms.backend.support.IntegrationTest;
+import com.ailms.backend.support.TestApi;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
 import java.util.HashMap;
@@ -190,13 +192,7 @@ class AiConsentApiTest {
 	}
 
 	private long createCourse(String token) throws Exception {
-		String response = mockMvc.perform(post("/api/courses")
-						.header(HttpHeaders.AUTHORIZATION, bearer(token))
-						.contentType(MediaType.APPLICATION_JSON)
-						.content(json(Map.of("name", "운영체제", "semester", "2026-2", "keywords", List.of()))))
-				.andExpect(status().isCreated())
-				.andReturn().getResponse().getContentAsString();
-		return ((Number) JsonPath.read(response, "$.data.id")).longValue();
+		return TestApi.createCourse(mockMvc, objectMapper, token, "운영체제", List.of());
 	}
 
 	private int count(String table) {
@@ -205,10 +201,6 @@ class AiConsentApiTest {
 
 	private String json(Object value) throws Exception {
 		return objectMapper.writeValueAsString(value);
-	}
-
-	private static String bearer(String token) {
-		return "Bearer " + token;
 	}
 
 	private ResultActions login(String email) throws Exception {

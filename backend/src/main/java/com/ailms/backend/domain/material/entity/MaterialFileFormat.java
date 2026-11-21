@@ -33,10 +33,6 @@ public enum MaterialFileFormat {
 		return contentType;
 	}
 
-	public boolean isText() {
-		return this == TXT || this == MD;
-	}
-
 	public static Optional<MaterialFileFormat> fromExtension(String extension) {
 		return Arrays.stream(values()).filter(format -> format.extension.equals(extension)).findFirst();
 	}

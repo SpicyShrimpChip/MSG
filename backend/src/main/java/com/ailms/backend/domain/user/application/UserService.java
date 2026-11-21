@@ -37,8 +37,7 @@ public class UserService {
 	 */
 	@Transactional
 	public UserResponse changeConsents(Long userId, Boolean analysis, Boolean quiz) {
-		var user = userRepository.findByIdForUpdate(userId)
-				.orElseThrow(() -> new BusinessException(HttpStatus.UNAUTHORIZED, ApiErrorResponder.UNAUTHORIZED_MESSAGE));
+		var user = userRepository.lockLoginUser(userId);
 		LocalDateTime now = LocalDateTime.now(clock);
 		if (quiz != null) {
 			// 철회해도 이미 만든 퀴즈·채점 결과는 남긴다 (사용자의 학습 기록). 이후 AI 생성·채점만 멈춘다
@@ -52,7 +51,7 @@ public class UserService {
 		if (!consent) {
 			// 이미 철회한 상태에서 다시 철회해도 남은 대화가 없도록 매번 지운다
 			// 그 대화로 만든 학습 분석 결과도 deleteAllOfUser가 AnalysisCleanup으로 함께 지운다
-			// TODO: 숙련도 계산이 생기면 철회 뒤 다시 계산한다
+			// 숙련도는 분석 결과를 돌려줄 때 계산하고, 단계 기록(concept_mastery)은 analysis_run과 함께(CASCADE) 지워져 다시 계산할 것이 없다
 			conversationService.deleteAllOfUser(userId);
 		}
 		return UserResponse.from(user);

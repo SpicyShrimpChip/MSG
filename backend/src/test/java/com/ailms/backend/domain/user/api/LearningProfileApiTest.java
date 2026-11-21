@@ -1,5 +1,6 @@
 package com.ailms.backend.domain.user.api;
 
+import static com.ailms.backend.support.TestApi.bearer;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -154,7 +155,4 @@ class LearningProfileApiTest {
 		return JsonPath.read(response, "$.data.accessToken");
 	}
 
-	private static String bearer(String token) {
-		return "Bearer " + token;
-	}
 }

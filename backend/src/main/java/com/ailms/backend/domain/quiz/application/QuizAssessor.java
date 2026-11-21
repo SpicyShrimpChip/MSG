@@ -2,6 +2,7 @@ package com.ailms.backend.domain.quiz.application;
 
 import com.ailms.backend.domain.quiz.entity.GradingStatus;
 import com.ailms.backend.domain.quiz.entity.QuestionType;
+import com.ailms.backend.domain.quiz.entity.QuizAnswer;
 import com.ailms.backend.domain.quiz.entity.QuizConcept;
 import com.ailms.backend.domain.quiz.entity.QuizQuestion;
 import java.util.ArrayList;
@@ -9,6 +10,8 @@ import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * 채점 결과를 유형별·개념별로 모으고 학습 상태를 코드 규칙으로 판단한다. AI는 관여하지 않는다.
@@ -52,6 +55,25 @@ public final class QuizAssessor {
 	}
 
 	private QuizAssessor() {
+	}
+
+	// 제출의 답을 문제 id로 모은다 (같은 문제의 답이 여럿이면 앞의 것)
+	public static Map<Long, QuizAnswer> answersByQuestion(List<QuizAnswer> answers) {
+		return answers.stream()
+				.collect(Collectors.toMap(QuizAnswer::getQuestionId, Function.identity(), (a, b) -> a));
+	}
+
+	// 문제 순서대로 채점한 답을 맞춘다. 답이 없는 문제는 채점이 끝난 0점으로 센다
+	public static List<Graded> graded(List<QuizQuestion> questions, Map<Long, QuizAnswer> answersByQuestion) {
+		return questions.stream()
+				.map(question -> {
+					QuizAnswer answer = answersByQuestion.get(question.getId());
+					return answer == null
+							? new Graded(question, GradingStatus.GRADED, 0, question.maxScore(), null)
+							: new Graded(question, answer.getGradingStatus(), answer.getScore(), answer.getMaxScore(),
+									answer.getGradingNote());
+				})
+				.toList();
 	}
 
 	public static Result assess(List<Graded> answers, QuizProperties.Assessment rule) {

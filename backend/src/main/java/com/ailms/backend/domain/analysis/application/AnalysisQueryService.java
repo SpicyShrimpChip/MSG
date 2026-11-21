@@ -74,9 +74,7 @@ public class AnalysisQueryService {
 
 	// 과목의 가장 최근에 끝난 분석
 	public AnalysisRunResponse getLatest(Long userId, Long courseId) {
-		if (!courseRepository.existsByIdAndUserId(courseId, userId)) {
-			throw new BusinessException(HttpStatus.NOT_FOUND, AnalysisService.COURSE_NOT_FOUND_MESSAGE);
-		}
+		courseRepository.checkOwned(courseId, userId);
 		return toResponse(runRepository.findFirstByUserIdAndCourseIdAndStatusInOrderByIdDesc(userId, courseId, FINISHED)
 				.orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, NO_RUN_MESSAGE)));
 	}

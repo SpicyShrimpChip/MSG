@@ -9,7 +9,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.AccessLevel;
@@ -100,10 +99,6 @@ public class QuizGeneration {
 		generation.createdAt = now;
 		generation.deadlineAt = deadlineAt;
 		return generation;
-	}
-
-	public List<QuestionType> questionTypeList() {
-		return Arrays.stream(questionTypes.split(",")).map(QuestionType::valueOf).toList();
 	}
 
 	public void succeed(Long quizId, String provider, String model, Integer inputTokens, Integer outputTokens,

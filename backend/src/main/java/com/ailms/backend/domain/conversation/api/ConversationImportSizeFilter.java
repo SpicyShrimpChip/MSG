@@ -1,17 +1,14 @@
 package com.ailms.backend.domain.conversation.api;
 
-import com.ailms.backend.global.common.ApiResponse;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ailms.backend.global.security.ApiErrorResponder;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -28,7 +25,7 @@ public class ConversationImportSizeFilter extends OncePerRequestFilter {
 	static final String LENGTH_REQUIRED_MESSAGE = "요청 크기를 알 수 없어요. 다시 시도해 주세요.";
 
 	private final ConversationImportProperties properties;
-	private final ObjectMapper objectMapper;
+	private final ApiErrorResponder errorResponder;
 
 	@Override
 	protected boolean shouldNotFilter(HttpServletRequest request) {
@@ -40,20 +37,13 @@ public class ConversationImportSizeFilter extends OncePerRequestFilter {
 			throws ServletException, IOException {
 		long length = request.getContentLengthLong();
 		if (length < 0) {
-			write(response, HttpStatus.LENGTH_REQUIRED, LENGTH_REQUIRED_MESSAGE);
+			errorResponder.write(response, HttpStatus.LENGTH_REQUIRED, LENGTH_REQUIRED_MESSAGE);
 			return;
 		}
 		if (length > properties.maxRequestSize().toBytes()) {
-			write(response, HttpStatus.PAYLOAD_TOO_LARGE, TOO_LARGE_MESSAGE);
+			errorResponder.write(response, HttpStatus.PAYLOAD_TOO_LARGE, TOO_LARGE_MESSAGE);
 			return;
 		}
 		chain.doFilter(request, response);
-	}
-
-	private void write(HttpServletResponse response, HttpStatus status, String message) throws IOException {
-		response.setStatus(status.value());
-		response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-		response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-		objectMapper.writeValue(response.getWriter(), ApiResponse.error(message));
 	}
 }
