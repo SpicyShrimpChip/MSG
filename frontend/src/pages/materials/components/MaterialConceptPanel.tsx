@@ -4,7 +4,7 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from '@tanstack/react-query';
-import { BookOpen, ChevronDown, LoaderCircle, Lock, Quote } from 'lucide-react';
+import { BookOpen, ChevronDown, Lock, Quote } from 'lucide-react';
 import {
   CURRICULUM_QUERY_KEY,
   MATERIALS_QUERY_KEY,
@@ -23,6 +23,7 @@ import {
   ErrorText,
   Notice,
   StudyStatusBadge,
+  Spinner,
 } from '@/components';
 import { useMe, useQuizAiStatus } from '@/hooks';
 import type { ConceptStudy, MaterialConcept, QuizAiStatus } from '@/types';
@@ -234,13 +235,7 @@ function ConceptCard({
                   }
                   onClick={() => mutation.mutate()}
                 >
-                  {mutation.isPending && (
-                    <LoaderCircle
-                      size={16}
-                      className="animate-spin"
-                      aria-hidden="true"
-                    />
-                  )}
+                  {mutation.isPending && <Spinner />}
                   {concept.studyNote ? '다시 만들기' : '설명 만들기'}
                 </Button>
                 {mutation.isPending && (
@@ -408,13 +403,7 @@ function MaterialConceptPanel({
             }
             onClick={() => mutation.mutate()}
           >
-            {mutation.isPending && (
-              <LoaderCircle
-                size={16}
-                className="animate-spin"
-                aria-hidden="true"
-              />
-            )}
+            {mutation.isPending && <Spinner />}
             핵심 개념 뽑기
           </Button>
           {mutation.isPending && (

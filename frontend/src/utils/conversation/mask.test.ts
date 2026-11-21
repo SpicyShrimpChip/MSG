@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { collectMaskedSpots, maskConversation, maskText } from './mask';
+import { maskConversationWithSpots, maskText } from './mask';
 import type { ParsedConversation } from './types';
 
 describe('maskText', () => {
@@ -110,7 +110,7 @@ describe('maskText', () => {
   });
 });
 
-describe('maskConversation', () => {
+describe('maskConversationWithSpots: 가린 대화', () => {
   const conversation: ParsedConversation = {
     id: 'c1',
     source: 'chatgpt',
@@ -126,7 +126,7 @@ describe('maskConversation', () => {
       conversation: masked,
       counts,
       totalCount,
-    } = maskConversation(conversation, {
+    } = maskConversationWithSpots(conversation, {
       names: ['변지환'],
     });
     expect(masked.title).toBe('[이름] 정보보호 질문');
@@ -139,13 +139,13 @@ describe('maskConversation', () => {
   });
 
   it('원래 대화는 바꾸지 않는다', () => {
-    maskConversation(conversation, { names: ['변지환'] });
+    maskConversationWithSpots(conversation, { names: ['변지환'] });
     expect(conversation.title).toBe('변지환 정보보호 질문');
     expect(conversation.messages[0].text).toContain('test@example.com');
   });
 });
 
-describe('collectMaskedSpots', () => {
+describe('maskConversationWithSpots: 가린 곳 목록', () => {
   const conversation: ParsedConversation = {
     id: 'c1',
     source: 'claude',
@@ -162,7 +162,9 @@ describe('collectMaskedSpots', () => {
   };
 
   it('제목과 모든 메시지에서 가린 곳을 순서대로 모으고 앞뒤 글을 한 줄로 붙인다', () => {
-    const spots = collectMaskedSpots(conversation, { names: ['홍길동'] });
+    const { spots } = maskConversationWithSpots(conversation, {
+      names: ['홍길동'],
+    });
     expect(
       spots.map(({ messageIndex, kind, original, before, after }) => ({
         messageIndex,
@@ -197,7 +199,7 @@ describe('collectMaskedSpots', () => {
   });
 
   it('가린 표시가 글 안에서 몇 번째인지(사용자가 쓴 [IP] 글자도 센다) 알려 준다', () => {
-    const spots = collectMaskedSpots({
+    const { spots } = maskConversationWithSpots({
       ...conversation,
       messages: [
         {
@@ -216,7 +218,11 @@ describe('collectMaskedSpots', () => {
 
   it('가린 곳이 없으면 빈 목록', () => {
     expect(
-      collectMaskedSpots({ ...conversation, title: '정리', messages: [] }),
+      maskConversationWithSpots({
+        ...conversation,
+        title: '정리',
+        messages: [],
+      }).spots,
     ).toEqual([]);
   });
 });

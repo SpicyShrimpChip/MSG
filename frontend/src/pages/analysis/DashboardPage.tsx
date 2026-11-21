@@ -4,7 +4,7 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from '@tanstack/react-query';
-import { ChartColumn, Download, LoaderCircle, Sparkles } from 'lucide-react';
+import { ChartColumn, Download } from 'lucide-react';
 import * as m from 'motion/react-m';
 import {
   ApiError,
@@ -15,11 +15,13 @@ import {
 import { useMockData } from '@/store';
 import { FADE_UP } from '@/constants';
 import {
+  AiLegend,
   AsyncBoundary,
   Button,
   EmptyState,
   SelectInput,
   SubPage,
+  Spinner,
 } from '@/components';
 import { useCourses, useProviders } from '@/hooks';
 import type { AnalysisRun, Course, DashboardComponentId } from '@/types';
@@ -207,13 +209,7 @@ function CourseAnalysis({ course }: { course: Course }) {
             disabled={mutation.isPending || blockedReason !== null}
             className="print:hidden"
           >
-            {mutation.isPending && (
-              <LoaderCircle
-                size={16}
-                className="animate-spin"
-                aria-hidden="true"
-              />
-            )}
+            {mutation.isPending && <Spinner />}
             {mutation.isPending
               ? '분석 중이에요'
               : run
@@ -305,10 +301,7 @@ function Dashboard() {
             ))}
           </SelectInput>
         </label>
-        <p className="flex items-center gap-1.5 text-caption text-ai">
-          <Sparkles size={14} aria-hidden="true" />
-          AI 표시가 있는 내용은 AI가 작성했어요
-        </p>
+        <AiLegend />
       </div>
 
       {/* 맨 위: 사전평가 vs 사후평가 (평가가 없거나 불러오지 못해도 아래 분석은 그대로 보인다) */}

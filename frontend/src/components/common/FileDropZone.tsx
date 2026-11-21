@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
-import { LoaderCircle, Upload } from 'lucide-react';
+import { Upload } from 'lucide-react';
+import Spinner from './Spinner';
 
 interface FileDropZoneProps {
   // 숨긴 입력칸의 id. 바깥 라벨(FormRow 등)이 이 id를 가리킬 수 있다
@@ -50,11 +51,7 @@ function FileDropZone({
       >
         <span className="flex size-12 items-center justify-center rounded-xl bg-primary text-on-primary">
           {busy ? (
-            <LoaderCircle
-              size={22}
-              className="animate-spin"
-              aria-hidden="true"
-            />
+            <Spinner size={22} />
           ) : (
             <Upload size={22} aria-hidden="true" />
           )}

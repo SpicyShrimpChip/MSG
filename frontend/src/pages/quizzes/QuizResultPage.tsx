@@ -5,7 +5,7 @@ import {
   useSuspenseQueries,
   useSuspenseQuery,
 } from '@tanstack/react-query';
-import { ListChecks, RefreshCw, Sparkles } from 'lucide-react';
+import { ListChecks, RefreshCw } from 'lucide-react';
 import {
   QUIZZES_QUERY_KEY,
   STUDY_QUERY_KEY,
@@ -15,6 +15,7 @@ import {
   regradeQuiz,
 } from '@/api';
 import {
+  AiLegend,
   AiNote,
   AsyncBoundary,
   Button,
@@ -33,10 +34,8 @@ import type {
   SuggestionKind,
 } from '@/types';
 import { conceptQuizLink, conceptStudyLink, formatDate } from '@/utils';
+import { percentOf } from '@/utils/assessment';
 import QuestionResultCard from './components/QuestionResultCard';
-
-const percentOf = (score: number, max: number) =>
-  max === 0 ? 0 : Math.round((score / max) * 100);
 
 // 결과 판단(코드 규칙) 문구. 모드마다 무엇을 판단하는지가 다르다
 const STATUS_TITLE: Record<
@@ -357,10 +356,7 @@ function QuizResultContent({ quizId }: { quizId: number }) {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-extrabold text-heading">문제별 결과</h2>
-        <p className="flex items-center gap-1.5 text-caption text-ai">
-          <Sparkles size={14} aria-hidden="true" />
-          AI 표시가 있는 내용은 AI가 작성했어요
-        </p>
+        <AiLegend />
       </div>
 
       <ol className="flex flex-col gap-4">

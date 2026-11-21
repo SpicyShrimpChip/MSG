@@ -3,19 +3,20 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 import {
   FileCheck,
   ListChecks,
-  LoaderCircle,
   Sparkles,
   TriangleAlert,
   Video,
 } from 'lucide-react';
 import { MATERIALS_QUERY_KEY, getMaterial } from '@/api';
 import {
+  AiLegend,
   AiNote,
   AsyncBoundary,
   Button,
   EmptyState,
   SubPage,
   Tabs,
+  Spinner,
 } from '@/components';
 import { useCourses, useQuizzes } from '@/hooks';
 import type { MaterialDetail } from '@/types';
@@ -46,9 +47,7 @@ function NotReady({ status }: { status: MaterialDetail['status'] }) {
   }
   return (
     <EmptyState
-      icon={
-        <LoaderCircle size={24} aria-hidden="true" className="animate-spin" />
-      }
+      icon={<Spinner size={24} />}
       title="요약과 핵심 개념을 만들고 있어요"
       description="자료 길이에 따라 몇 분 걸릴 수 있어요. 다 되면 이 화면에서 바로 볼 수 있어요."
     />
@@ -162,10 +161,7 @@ function MaterialDetailContent({ materialId }: { materialId: number }) {
             {date && <span>{date}</span>}
           </p>
         </div>
-        <p className="flex items-center gap-1.5 text-caption text-ai">
-          <Sparkles size={14} aria-hidden="true" />
-          AI 표시가 있는 내용은 AI가 작성했어요
-        </p>
+        <AiLegend />
       </div>
       <Tabs
         label="자료 상세 보기"

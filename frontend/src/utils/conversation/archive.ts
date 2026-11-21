@@ -28,7 +28,7 @@ export const isKnownNonConversationFile = (name: string) =>
 
 // 풀었을 때 이보다 크면 열지 않는다 (잘못 만든 압축 파일로 브라우저가 멈추지 않게)
 // 실제 Claude 대화 기록은 31MB였다(2026-10-31)
-export const MAX_UNZIPPED_BYTES = 300 * 1024 * 1024;
+const MAX_UNZIPPED_BYTES = 300 * 1024 * 1024;
 
 export interface ZipProblem {
   title: string;

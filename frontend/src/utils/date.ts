@@ -7,3 +7,13 @@ export function formatDate(iso: string | undefined | null): string | null {
   const day = String(date.getDate()).padStart(2, '0');
   return `${date.getFullYear()}-${month}-${day}`;
 }
+
+// ISO 문자열을 "11월 2일 오후 4:20"처럼 (화면 표시용, 내 컴퓨터 시간대 기준)
+export function formatDateTime(iso: string): string {
+  return new Date(iso).toLocaleString('ko-KR', {
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}

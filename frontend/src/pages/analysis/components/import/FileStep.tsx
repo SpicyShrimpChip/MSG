@@ -9,23 +9,17 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button, Card, FileDropZone, Notice } from '@/components';
-import type { ClaudeManifest, MergedImport } from '@/utils';
+import {
+  formatDateTime,
+  type ClaudeManifest,
+  type MergedImport,
+} from '@/utils';
 import { readExportFilesOffThread } from '@/utils/conversation/worker/client';
 
 interface FileStepProps {
   imported: MergedImport | null;
   onLoaded: (imported: MergedImport) => void;
   onNext: () => void;
-}
-
-// 시각을 "11월 1일 오후 7:08"처럼 (내 컴퓨터 시간대 기준)
-function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString('ko-KR', {
-    month: 'long',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
 }
 
 // 파일 이름은 작은 회색 글씨로 따로. 길면 말줄임표로 자른다

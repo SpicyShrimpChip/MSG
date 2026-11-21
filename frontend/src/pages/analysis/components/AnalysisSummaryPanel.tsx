@@ -1,20 +1,10 @@
 import type { AnalysisRun } from '@/types';
-import { countJudgingModels } from '@/utils';
+import { countJudgingModels, formatDateTime } from '@/utils';
 import Panel from './Panel';
 
 interface AnalysisSummaryPanelProps {
   run: AnalysisRun;
   layoutReason?: string | null;
-}
-
-// "11월 2일 16:20"처럼 (내 컴퓨터 시간대 기준)
-function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString('ko-KR', {
-    month: 'long',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
 }
 
 // 이번 분석에 쓴 기록의 양 (코드가 센 값)

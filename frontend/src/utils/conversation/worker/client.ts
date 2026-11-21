@@ -21,7 +21,7 @@ let worker: Worker | null | undefined;
 let nextId = 1;
 const pending = new Map<number, Pending>();
 
-export class ConversationWorkerError extends Error {}
+class ConversationWorkerError extends Error {}
 
 function failAll() {
   for (const { reject } of pending.values()) {

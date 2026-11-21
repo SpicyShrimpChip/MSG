@@ -1,7 +1,6 @@
 import { useState, type SubmitEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
-import { LoaderCircle } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
 import { MATERIALS_QUERY_KEY, uploadMaterial } from '@/api';
@@ -13,6 +12,7 @@ import {
   SelectInput,
   SubPage,
   TextInput,
+  Spinner,
 } from '@/components';
 import {
   FADE_UP,
@@ -173,13 +173,7 @@ function MaterialUploadForm() {
           className="w-full"
           disabled={mutation.isPending || !agreed || !file || !hasCourses}
         >
-          {mutation.isPending && (
-            <LoaderCircle
-              size={18}
-              aria-hidden="true"
-              className="animate-spin"
-            />
-          )}
+          {mutation.isPending && <Spinner size={18} />}
           {mutation.isPending ? '올리는 중…' : '자료 올리기'}
         </Button>
       </div>

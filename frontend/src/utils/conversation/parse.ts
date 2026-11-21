@@ -15,9 +15,7 @@ function readJson(text: string): unknown {
 }
 
 // 제목이 없는 대화는 첫 질문 앞부분으로 제목을 만든다 (Claude는 제목 없는 대화가 많다)
-export function titleFromMessages(
-  messages: ParsedConversation['messages'],
-): string {
+function titleFromMessages(messages: ParsedConversation['messages']): string {
   const first = messages.find((message) => message.role === 'user');
   const line = first?.text.replace(/\s+/g, ' ').trim() ?? '';
   if (!line) return UNTITLED;

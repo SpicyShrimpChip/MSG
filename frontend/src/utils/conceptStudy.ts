@@ -2,8 +2,8 @@ import type { CheckAttempt, StudyStatus } from '@/types';
 
 // 개념 학습 상태 규칙. 실제 모드에서는 서버(ConceptStudyRules)가 정한 값을 그대로 보여 주고,
 // 이 함수는 목업(체험 모드)이 같은 규칙으로 예시 상태를 만들 때만 쓴다. 기준은 서버 설정 기본값과 같다
-export const STUDY_MIN_RATE = 0.6;
-export const STUDY_MIN_GRADED = 2;
+const STUDY_MIN_RATE = 0.6;
+const STUDY_MIN_GRADED = 2;
 
 // 확인 퀴즈 결과 하나의 판정: 대기·확인 필요 답이 있거나 채점 문제가 적으면 추가 확인 필요(틀린 답으로 세지 않음)
 export function judgeCheck(

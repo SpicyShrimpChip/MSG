@@ -1,43 +1,13 @@
-import { Link } from 'react-router-dom';
-import {
-  AsyncBoundary,
-  BoardTable,
-  SubPage,
-  type BoardColumn,
-} from '@/components';
+import { AsyncBoundary, BoardTable, SubPage } from '@/components';
 import { useNotices } from '@/hooks';
-import type { Notice } from '@/types';
-
-const COLUMNS: BoardColumn<Notice>[] = [
-  {
-    key: 'id',
-    label: '번호',
-    widthClass: 'w-18',
-    render: (row) => row.id,
-  },
-  {
-    key: 'title',
-    label: '제목',
-    render: (row) => (
-      <Link to={`/notices/${row.id}`} className="hover:underline">
-        {row.title}
-      </Link>
-    ),
-  },
-  {
-    key: 'createdAt',
-    label: '작성일',
-    widthClass: 'w-36',
-    render: (row) => row.createdAt,
-  },
-];
+import { NOTICE_COLUMNS } from './components/noticeColumns';
 
 function NoticeTable() {
   const { data: notices } = useNotices();
 
   return (
     <BoardTable
-      columns={COLUMNS}
+      columns={NOTICE_COLUMNS}
       rows={notices}
       getRowKey={(row) => row.id}
       emptyMessage="아직 등록된 공지사항이 없어요."

@@ -1,9 +1,11 @@
 import type {
+  AssessmentKind,
   JobField,
   LearningPurpose,
   QuestionType,
   QuizDifficulty,
   QuizMode,
+  QuizSummary,
 } from '@/types';
 
 // 학습 목적 (가입·마이페이지). 값은 백엔드 LearningPurpose와 같다
@@ -100,6 +102,21 @@ export const QUIZ_MAX_QUESTIONS = 10;
 
 export function quizModeLabel(mode: QuizMode | null): string | null {
   return QUIZ_MODES.find((item) => item.value === mode)?.label ?? null;
+}
+
+const ASSESSMENT_KIND_LABELS: Record<AssessmentKind, string> = {
+  pre: '사전평가',
+  post: '사후평가',
+};
+
+// 퀴즈 제목 옆 알약 글자: 사전·사후평가 → 모의시험 → 학습 모드 순으로 하나. 학습 모드가 없으면 null
+export function quizKindLabel(
+  quiz: Pick<QuizSummary, 'mode' | 'mockExam' | 'assessmentKind'>,
+): string | null {
+  const modeLabel = quizModeLabel(quiz.mode);
+  if (!modeLabel) return null;
+  if (quiz.assessmentKind) return ASSESSMENT_KIND_LABELS[quiz.assessmentKind];
+  return quiz.mockExam ? '모의시험' : modeLabel;
 }
 
 export function jobFieldLabel(

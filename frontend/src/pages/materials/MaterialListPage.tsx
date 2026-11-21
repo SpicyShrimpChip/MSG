@@ -5,7 +5,7 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from '@tanstack/react-query';
-import { FileText, LoaderCircle, Trash2 } from 'lucide-react';
+import { FileText, Trash2 } from 'lucide-react';
 import { MATERIALS_QUERY_KEY, deleteMaterial, getMaterials } from '@/api';
 import {
   AsyncBoundary,
@@ -16,6 +16,7 @@ import {
   EmptyState,
   SubPage,
   ErrorText,
+  Spinner,
 } from '@/components';
 import { useCourses } from '@/hooks';
 import type { Course, MaterialSummary } from '@/types';
@@ -60,7 +61,7 @@ function StatusChip({ status }: { status: MaterialSummary['status'] }) {
   if (status === 'processing') {
     return (
       <Chip tone="primary" className="gap-1.5">
-        <LoaderCircle size={12} className="animate-spin" aria-hidden="true" />
+        <Spinner size={12} />
         요약 만드는 중
       </Chip>
     );

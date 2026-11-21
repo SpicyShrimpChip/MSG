@@ -1,7 +1,6 @@
 import { useState, type SubmitEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { LoaderCircle } from 'lucide-react';
 import { NOTICES_QUERY_KEY, createNotice, updateNotice } from '@/api';
 import {
   AsyncBoundary,
@@ -12,6 +11,7 @@ import {
   SubPage,
   TextInput,
   ErrorText,
+  Spinner,
 } from '@/components';
 import {
   NOTICE_CONTENT_MAX_LENGTH,
@@ -89,13 +89,7 @@ function NoticeForm({ notice }: { notice?: NoticeDetail }) {
 
       <div className="flex flex-wrap gap-2">
         <Button type="submit" size="lg" disabled={mutation.isPending || empty}>
-          {mutation.isPending && (
-            <LoaderCircle
-              size={18}
-              aria-hidden="true"
-              className="animate-spin"
-            />
-          )}
+          {mutation.isPending && <Spinner size={18} />}
           {mutation.isPending
             ? '저장하는 중…'
             : notice
