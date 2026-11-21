@@ -42,6 +42,7 @@ export const MENU: MenuGroup[] = [
     path: '/about',
     children: [
       { label: '서비스 소개', path: '/about' },
+      { label: '이용약관', path: '/terms' },
       { label: '개인정보 처리방침', path: '/privacy' },
     ],
   },

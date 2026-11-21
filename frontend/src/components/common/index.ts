@@ -32,3 +32,8 @@ export {
   type LearningProfileValue,
 } from './LearningProfileFields';
 export { default as LogoMark } from './LogoMark';
+export {
+  default as LegalDocument,
+  type LegalBlock,
+  type LegalSection,
+} from './LegalDocument';
