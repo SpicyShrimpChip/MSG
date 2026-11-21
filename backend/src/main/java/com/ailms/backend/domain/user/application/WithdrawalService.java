@@ -8,7 +8,6 @@ import com.ailms.backend.domain.user.dao.UserRepository;
 import com.ailms.backend.domain.user.entity.Role;
 import com.ailms.backend.domain.user.entity.User;
 import com.ailms.backend.global.error.BusinessException;
-import com.ailms.backend.global.security.ApiErrorResponder;
 import com.ailms.backend.global.storage.FileCleanupService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -47,8 +46,7 @@ public class WithdrawalService {
 	@Transactional
 	public void withdraw(Long userId, String password, String clientIp) {
 		// 사용자 행을 잠가 같은 사용자의 퀴즈 만들기·채점·동의 변경과 겹치지 않게 한다
-		User user = userRepository.findByIdForUpdate(userId)
-				.orElseThrow(() -> new BusinessException(HttpStatus.UNAUTHORIZED, ApiErrorResponder.UNAUTHORIZED_MESSAGE));
+		User user = userRepository.lockLoginUser(userId);
 		attemptLimiter.checkAllowed(user.getEmail(), clientIp);
 		if (PasswordPolicy.exceedsMaxBytes(password) || !passwordEncoder.matches(password, user.getPasswordHash())) {
 			attemptLimiter.recordFailure(user.getEmail(), clientIp);

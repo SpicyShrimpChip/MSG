@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * 보안 필터 단계(컨트롤러에 닿기 전)에서 거절된 요청도 { success: false, message, data: null } 형식으로 돌려준다.
+ * 다른 필터(ConversationImportSizeFilter)도 같은 형식으로 거절할 때 {@link #write}를 쓴다.
  */
 @Component
 @RequiredArgsConstructor
@@ -39,7 +40,7 @@ public class ApiErrorResponder implements AuthenticationEntryPoint, AccessDenied
 		write(response, HttpStatus.FORBIDDEN, FORBIDDEN_MESSAGE);
 	}
 
-	private void write(HttpServletResponse response, HttpStatus status, String message) throws IOException {
+	public void write(HttpServletResponse response, HttpStatus status, String message) throws IOException {
 		response.setStatus(status.value());
 		response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 		response.setCharacterEncoding(StandardCharsets.UTF_8.name());

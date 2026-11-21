@@ -46,8 +46,6 @@ public class AssessmentService {
 
 	static final String BASIS = "최신 사전평가(제출한 것 우선)와 그 사전평가에 이어 만든 최신 사후평가를, 각각 가장 최근 제출로 비교해요."
 			+ " 점수는 채점이 끝난 답만 더해요.";
-	static final String MATERIAL_NOT_FOUND_MESSAGE = "자료를 찾을 수 없어요.";
-	static final String COURSE_NOT_FOUND_MESSAGE = "과목을 찾을 수 없어요.";
 	static final String NEED_TARGET_MESSAGE = "과목이나 자료를 골라 주세요.";
 	static final String NO_COURSE_MESSAGE = "과목에 연결된 자료로만 평가를 만들 수 있어요. 자료를 과목에 연결해 주세요.";
 	static final List<String> DEFAULT_TYPES = List.of("multiple_choice", "short_answer");
@@ -65,8 +63,7 @@ public class AssessmentService {
 	private final MaterialContentProperties contentProperties;
 
 	public QuizGenerationService.Created create(Long userId, AssessmentCreateRequest request) {
-		Material material = materialRepository.findByIdAndUserId(request.materialId(), userId)
-				.orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, MATERIAL_NOT_FOUND_MESSAGE));
+		Material material = materialRepository.getOwned(request.materialId(), userId);
 		if (material.getCourseId() == null) {
 			throw new BusinessException(HttpStatus.BAD_REQUEST, NO_COURSE_MESSAGE);
 		}
@@ -84,14 +81,11 @@ public class AssessmentService {
 		List<Quiz> pres;
 		Material material = null;
 		if (materialId != null) {
-			material = materialRepository.findByIdAndUserId(materialId, userId)
-					.orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, MATERIAL_NOT_FOUND_MESSAGE));
+			material = materialRepository.getOwned(materialId, userId);
 			pres = quizRepository.findAllByUserIdAndMaterialIdAndAssessmentKindOrderByIdDesc(userId, materialId,
 					AssessmentKind.PRE);
 		} else if (courseId != null) {
-			if (!courseRepository.existsByIdAndUserId(courseId, userId)) {
-				throw new BusinessException(HttpStatus.NOT_FOUND, COURSE_NOT_FOUND_MESSAGE);
-			}
+			courseRepository.checkOwned(courseId, userId);
 			pres = quizRepository.findAllByUserIdAndCourseIdAndAssessmentKindOrderByIdDesc(userId, courseId,
 					AssessmentKind.PRE);
 		} else {
@@ -252,17 +246,9 @@ public class AssessmentService {
 			return new Measured(new AssessmentComparisonResponse.Snapshot(quiz.getId(), quiz.getTitle(), null, null,
 					questions.size(), 0, 0, 0, 0, 0), null, Map.of());
 		}
-		Map<Long, QuizAnswer> answers = answerRepository.findAllBySubmissionId(submission.getId()).stream()
-				.collect(Collectors.toMap(QuizAnswer::getQuestionId, Function.identity(), (a, b) -> a));
-		List<QuizAssessor.Graded> graded = questions.stream()
-				.map(question -> {
-					QuizAnswer answer = answers.get(question.getId());
-					return answer == null
-							? new QuizAssessor.Graded(question, GradingStatus.GRADED, 0, question.maxScore(), null)
-							: new QuizAssessor.Graded(question, answer.getGradingStatus(), answer.getScore(),
-									answer.getMaxScore(), answer.getGradingNote());
-				})
-				.toList();
+		Map<Long, QuizAnswer> answers = QuizAssessor
+				.answersByQuestion(answerRepository.findAllBySubmissionId(submission.getId()));
+		List<QuizAssessor.Graded> graded = QuizAssessor.graded(questions, answers);
 		int gradedCount = (int) graded.stream().filter(g -> g.status() == GradingStatus.GRADED).count();
 		Map<String, QuizAssessor.ConceptStat> byConcept = QuizAssessor
 				.byConcept(graded, properties.assessment().conceptMinRate()).stream()

@@ -26,7 +26,6 @@ import com.ailms.backend.global.llm.UserAiUsage;
 import com.ailms.backend.global.llm.LlmClient;
 import com.ailms.backend.global.llm.LlmClients;
 import com.ailms.backend.global.llm.LlmRequest;
-import com.ailms.backend.global.security.ApiErrorResponder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.time.Instant;
@@ -219,8 +218,7 @@ public class QuizGenerationService {
 
 	private Started start(Long userId, QuizCreateRequest request, List<LlmClient> clients) {
 		// 사용자 행을 잠가 같은 사용자의 만들기 요청을 차례로 처리한다 (중복 키·동시 실행·한도 검사가 겹치지 않게)
-		User user = userRepository.findByIdForUpdate(userId)
-				.orElseThrow(() -> new BusinessException(HttpStatus.UNAUTHORIZED, ApiErrorResponder.UNAUTHORIZED_MESSAGE));
+		User user = userRepository.lockLoginUser(userId);
 		LocalDateTime now = LocalDateTime.now(clock);
 		expireStale(userId, now);
 		String requestKey = request.requestKey().strip();
@@ -333,8 +331,7 @@ public class QuizGenerationService {
 	// 이 요청이 아직 진행 중이고 마감 전일 때만 저장한다. 아니면 null (늦게 온 결과·다른 요청이 끝낸 기록)
 	private QuizResponse save(Long userId, Long generationId, QuizSpec spec, QuizGenerationParser.ParsedQuiz parsed,
 			LlmClient client, QuizModelFallback.Tracker attempt) {
-		userRepository.findByIdForUpdate(userId)
-				.orElseThrow(() -> new BusinessException(HttpStatus.UNAUTHORIZED, ApiErrorResponder.UNAUTHORIZED_MESSAGE));
+		userRepository.lockLoginUser(userId);
 		LocalDateTime now = LocalDateTime.now(clock);
 		QuizGeneration generation = generationRepository.findById(generationId).orElse(null);
 		if (generation == null || !generation.isActiveAt(now, properties.runningTimeout())) {

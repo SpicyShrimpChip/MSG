@@ -51,7 +51,7 @@ Swagger UI: `/swagger-ui/index.html` — 프론트와 API를 맞출 때 이 문�
 
 - 인증 기본 방향: JWT access token + HttpOnly 쿠키 refresh token (레퍼런스 프로젝트 방식)
 - 비밀번호는 BCrypt로 해시. 평문 저장·로그 출력 금지.
-- 모든 사용자 데이터 조회·수정은 로그인 사용자 소유인지 확인한다 (다른 사용자 id로 접근 차단).
+- 모든 사용자 데이터 조회·수정은 로그인 사용자 소유인지 확인한다 (다른 사용자 id로 접근 차단). 과목·자료는 저장소 기본 메서드(`CourseRepository.getOwned`·`checkOwned`, `MaterialRepository.getOwned`, 없거나 남의 것이면 404)를, 사용자 행 잠금은 `UserRepository.lockLoginUser`(없으면 401)를 쓴다.
 - DB 접속 정보, JWT 시크릿, LLM API 키, AWS 키는 `application.yaml`에 환경변수 참조로만 쓴다.
 - 탈퇴 뒤 30일 재가입 제한(`RejoinRestriction`, `app.rejoin`, V15 `withdrawn_account`, 11/21): 탈퇴 트랜잭션에서 정규화한 이메일의 HMAC-SHA256(키 `REJOIN_HASH_SECRET`)과 재가입 가능 시각만 남기고(이메일 원문·users 연결 없음), 가입할 때 기간 안이면 409, 기간이 지난 기록은 주기 작업이 지운다. 키가 없으면 기록도 확인도 하지 않는다. 기간·항목은 처리방침 2·4번과 같게 맞춘다.
 - 회원가입은 Cloudflare Turnstile로 자동 가입(봇)을 막는다(`SignupBotCheck`, `app.turnstile`, 11/20). 비밀 키(`TURNSTILE_SECRET_KEY`)가 없으면 확인하지 않고, 확인 서버에 닿지 못하면 가입을 막는다(503). 외부 확인은 DB 트랜잭션 밖(컨트롤러)에서 먼저 한다.

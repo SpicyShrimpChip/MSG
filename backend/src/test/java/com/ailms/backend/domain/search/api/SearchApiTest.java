@@ -1,24 +1,23 @@
 package com.ailms.backend.domain.search.api;
 
+import static com.ailms.backend.support.TestApi.bearer;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.ailms.backend.domain.auth.dao.RefreshTokenRepository;
 import com.ailms.backend.domain.user.dao.UserRepository;
 import com.ailms.backend.support.IntegrationTest;
+import com.ailms.backend.support.TestApi;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jayway.jsonpath.JsonPath;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -28,8 +27,6 @@ import org.springframework.test.web.servlet.ResultActions;
  */
 @IntegrationTest
 class SearchApiTest {
-
-	private static final String PASSWORD = "Passw0rd!";
 
 	@Autowired
 	private MockMvc mockMvc;
@@ -113,30 +110,10 @@ class SearchApiTest {
 	}
 
 	private long createCourse(String token, String name, List<String> keywords) throws Exception {
-		String response = mockMvc.perform(post("/api/courses").header(HttpHeaders.AUTHORIZATION, bearer(token))
-						.contentType(MediaType.APPLICATION_JSON)
-						.content(objectMapper.writeValueAsString(
-								Map.of("name", name, "semester", "2026-2", "keywords", keywords))))
-				.andExpect(status().isCreated())
-				.andReturn().getResponse().getContentAsString();
-		return ((Number) JsonPath.read(response, "$.data.id")).longValue();
-	}
-
-	private static String bearer(String token) {
-		return "Bearer " + token;
+		return TestApi.createCourse(mockMvc, objectMapper, token, name, keywords);
 	}
 
 	private String signupAndLogin(String email) throws Exception {
-		mockMvc.perform(post("/api/auth/signup").contentType(MediaType.APPLICATION_JSON)
-						.content(objectMapper.writeValueAsString(Map.of("email", email, "name", "테스터", "password",
-								PASSWORD, "passwordConfirm", PASSWORD, "agreedTerms", true, "agreedPrivacy", true,
-								"agreedAiAnalysis", false))))
-				.andExpect(status().isCreated());
-		String response = mockMvc.perform(post("/api/auth/login").header("X-Requested-With", "XMLHttpRequest")
-						.contentType(MediaType.APPLICATION_JSON)
-						.content(objectMapper.writeValueAsString(Map.of("email", email, "password", PASSWORD))))
-				.andExpect(status().isOk())
-				.andReturn().getResponse().getContentAsString();
-		return JsonPath.read(response, "$.data.accessToken");
+		return TestApi.signupAndLogin(mockMvc, objectMapper, email, Map.of("agreedAiAnalysis", false));
 	}
 }

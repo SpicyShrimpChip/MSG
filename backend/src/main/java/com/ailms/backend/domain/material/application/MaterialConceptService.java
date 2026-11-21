@@ -21,7 +21,6 @@ import com.ailms.backend.global.llm.LlmClient;
 import com.ailms.backend.global.llm.LlmClients;
 import com.ailms.backend.global.llm.LlmJson;
 import com.ailms.backend.global.llm.LlmRequest;
-import com.ailms.backend.global.security.ApiErrorResponder;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -73,7 +72,6 @@ public class MaterialConceptService {
 	static final String CONSENT_MESSAGE = "자료 본문을 외부 AI로 보내려면 확인에 체크해 주세요.";
 	static final String QUIZ_CONSENT_MESSAGE = "AI로 핵심 개념을 뽑으려면 AI 퀴즈 처리 동의가 필요해요. 마이페이지에서 동의할 수 있어요.";
 	static final String NO_MODEL_MESSAGE = "연결된 AI 모델이 없어 지금은 핵심 개념을 뽑을 수 없어요.";
-	static final String MATERIAL_NOT_FOUND_MESSAGE = "자료를 찾을 수 없어요.";
 	static final String NO_VALID_MESSAGE = "AI가 고른 개념을 자료에서 확인하지 못해 저장하지 않았어요. 다시 시도해 주세요.";
 	static final String MODEL_FAILED_MESSAGE = "AI 모델의 응답을 받지 못해 핵심 개념을 뽑지 못했어요. 잠시 뒤 다시 시도해 주세요.";
 	static final String NOTE_SYSTEM = """
@@ -138,7 +136,7 @@ public class MaterialConceptService {
 
 	public List<MaterialConceptResponse> list(Long userId, Long materialId) {
 		return transaction.execute(status -> {
-			findMaterial(userId, materialId);
+			materialRepository.getOwned(materialId, userId);
 			return conceptRepository.findAllByMaterialIdAndUserIdOrderBySortOrderAsc(materialId, userId).stream()
 					.map(MaterialConceptResponse::from).toList();
 		});
@@ -184,7 +182,7 @@ public class MaterialConceptService {
 	 */
 	public MaterialConceptResponse explain(Long userId, Long materialId, String conceptId, boolean confirmed) {
 		NotePrepared note = transaction.execute(status -> {
-			findMaterial(userId, materialId);
+			materialRepository.getOwned(materialId, userId);
 			MaterialConcept concept = findConcept(userId, materialId, conceptId);
 			List<String> others = conceptRepository.findAllByMaterialIdAndUserIdOrderBySortOrderAsc(materialId, userId)
 					.stream().map(MaterialConcept::getName).filter(name -> !name.equals(concept.getName())).toList();
@@ -262,9 +260,8 @@ public class MaterialConceptService {
 
 	private MaterialConceptResponse saveNote(Long userId, Long materialId, String conceptId, Note note,
 			LlmClient client) {
-		userRepository.findByIdForUpdate(userId)
-				.orElseThrow(() -> new BusinessException(HttpStatus.UNAUTHORIZED, ApiErrorResponder.UNAUTHORIZED_MESSAGE));
-		findMaterial(userId, materialId);
+		userRepository.lockLoginUser(userId);
+		materialRepository.getOwned(materialId, userId);
 		// 기다리는 동안 개념을 다시 뽑았으면 그 개념이 없을 수 있다
 		MaterialConcept concept = conceptRepository.findAllByMaterialIdAndUserIdOrderBySortOrderAsc(materialId, userId)
 				.stream().filter(c -> c.getConceptKey().equals(conceptId)).findFirst()
@@ -283,9 +280,8 @@ public class MaterialConceptService {
 
 	private Prepared prepare(Long userId, Long materialId, boolean confirmed, String purpose, int dailyLimit,
 			String action) {
-		User user = userRepository.findByIdForUpdate(userId)
-				.orElseThrow(() -> new BusinessException(HttpStatus.UNAUTHORIZED, ApiErrorResponder.UNAUTHORIZED_MESSAGE));
-		Material material = findMaterial(userId, materialId);
+		User user = userRepository.lockLoginUser(userId);
+		Material material = materialRepository.getOwned(materialId, userId);
 		if (!contentProperties.enabled()) {
 			throw new BusinessException(HttpStatus.FORBIDDEN, MaterialContentProperties.DISABLED_MESSAGE);
 		}
@@ -389,9 +385,8 @@ public class MaterialConceptService {
 
 	private List<MaterialConceptResponse> save(Long userId, Long materialId, List<Verified> verified,
 			LlmClient client) {
-		userRepository.findByIdForUpdate(userId)
-				.orElseThrow(() -> new BusinessException(HttpStatus.UNAUTHORIZED, ApiErrorResponder.UNAUTHORIZED_MESSAGE));
-		findMaterial(userId, materialId);
+		userRepository.lockLoginUser(userId);
+		materialRepository.getOwned(materialId, userId);
 		conceptRepository.deleteAllOfMaterial(materialId, userId);
 		LocalDateTime now = LocalDateTime.now(clock);
 		List<MaterialConcept> concepts = new ArrayList<>();
@@ -402,11 +397,6 @@ public class MaterialConceptService {
 					now));
 		}
 		return conceptRepository.saveAll(concepts).stream().map(MaterialConceptResponse::from).toList();
-	}
-
-	private Material findMaterial(Long userId, Long materialId) {
-		return materialRepository.findByIdAndUserId(materialId, userId)
-				.orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, MATERIAL_NOT_FOUND_MESSAGE));
 	}
 
 	private List<LlmClient> orderedClients() {
