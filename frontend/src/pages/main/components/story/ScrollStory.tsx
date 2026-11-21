@@ -8,9 +8,9 @@ import {
 import * as m from 'motion/react-m';
 import { Lock } from 'lucide-react';
 import { FADE_UP, SWEEP_TRANSITION } from '@/constants';
+import { StartPaths } from '@/components';
 import PrivacyNotice from '../PrivacyNotice';
 import { SceneMotionContext } from './sceneMotionContext';
-import StartPaths from './StartPaths';
 import { STORY_STEPS } from './StoryScenes';
 
 const TOTAL = STORY_STEPS.length;

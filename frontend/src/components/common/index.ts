@@ -37,3 +37,4 @@ export {
   type LegalBlock,
   type LegalSection,
 } from './LegalDocument';
+export { default as StartPaths } from './StartPaths';
