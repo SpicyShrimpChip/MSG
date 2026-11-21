@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, MessageSquare, Upload } from 'lucide-react';
 import * as m from 'motion/react-m';
-import { DemoStartButton } from '@/components';
+import DemoStartButton from './DemoStartButton';
 import { FADE_UP } from '@/constants';
 import { useAuthStore } from '@/store';
 
@@ -29,10 +29,15 @@ const PATHS: {
   },
 ];
 
-// 스크롤 소개를 다 본 뒤 바로 시작할 수 있게 두 진입 경로(사용자 유형 A·B)를 보여 준다.
-// 메인 소개는 대부분 아직 가입하지 않은 사람이 보므로, 로그인 전에는 카드가 회원가입으로 가고
+interface StartPathsProps {
+  // 놓이는 자리의 제목 단계에 맞춘다(메인 스크롤 소개 안은 h3, 서비스 소개 페이지는 h2)
+  headingAs?: 'h2' | 'h3';
+}
+
+// 두 진입 경로(사용자 유형 A·B)를 보여 준다. 메인 스크롤 소개 끝과 서비스 소개 페이지에서 쓴다.
+// 대부분 아직 가입하지 않은 사람이 보므로, 로그인 전에는 카드가 회원가입으로 가고
 // 가입·로그인을 마치면 고른 화면으로 이어진다 (SignupPage → LoginPage가 from을 넘겨준다)
-function StartPaths() {
+function StartPaths({ headingAs: Heading = 'h3' }: StartPathsProps) {
   const signedIn = useAuthStore((state) => state.status === 'authenticated');
 
   return (
@@ -44,9 +49,9 @@ function StartPaths() {
       className="flex flex-col gap-8 rounded-3xl bg-section p-5 md:p-12"
     >
       <div className="flex flex-col gap-2">
-        <h3 className="text-2xl font-extrabold tracking-tight text-heading md:text-3xl">
+        <Heading className="text-2xl font-extrabold tracking-tight text-heading md:text-3xl">
           내 공부 기록으로 시작해 볼까요?
-        </h3>
+        </Heading>
         <p className="text-ink-soft">
           {signedIn
             ? '어느 쪽으로 시작해도 기록이 쌓이면 같은 방식으로 분석해요.'
@@ -95,7 +100,7 @@ function StartPaths() {
           >
             로그인
           </Link>
-          {/* 공개 배포(목업 모드)에서만 보인다 */}
+          {/* 로그인하지 않았고 체험을 켤 수 있을 때만 보인다 */}
           <DemoStartButton className="ml-4 font-bold text-primary underline-offset-4 hover:underline" />
         </p>
       )}
