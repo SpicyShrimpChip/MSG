@@ -207,12 +207,6 @@ function CourseAnalysis({ course }: { course: Course }) {
             disabled={mutation.isPending || blockedReason !== null}
             className="print:hidden"
           >
-            {waiting && !arrived && !mutation.isPending && (
-              <p className="rounded-xl bg-primary-soft px-4 py-3 text-body text-heading">
-                서버에서 아직 분석하고 있을 수 있어요. 끝나면 이 화면에 결과가
-                나타나요. 몇 분이 지나도 그대로면 다시 분석해 주세요.
-              </p>
-            )}
             {mutation.isPending && (
               <LoaderCircle
                 size={16}
