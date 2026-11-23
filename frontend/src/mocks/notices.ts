@@ -8,7 +8,7 @@ import {
 import { mockDelay } from './delay';
 
 // 목업 전용 저장소. 새로고침해도 관리자 화면에서 쓴 공지가 남도록 브라우저에 저장한다 (실제 데이터는 서버 DB에 저장)
-const STORAGE_KEY = 'ai-lms-mock-notices';
+const STORAGE_KEY = 'msg-mock-notices';
 
 // 백엔드 시드 R__sample_notices.sql과 같은 내용
 const SAMPLE: NoticeDetail[] = [

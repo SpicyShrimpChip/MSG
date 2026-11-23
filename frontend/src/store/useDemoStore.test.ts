@@ -70,7 +70,7 @@ describe('실제 서버 빌드의 체험 모드', () => {
   it('로그인한 적이 있어도 체험 중 새로고침이면 세션을 서버에서 되살리지 않는다', async () => {
     // "로그인한 적 있음" 표시만 있는 저장소
     vi.stubGlobal('localStorage', {
-      getItem: (key: string) => (key === 'ai-lms-has-session' ? '1' : null),
+      getItem: (key: string) => (key === 'msg-has-session' ? '1' : null),
       setItem: () => undefined,
       removeItem: () => undefined,
       key: () => null,

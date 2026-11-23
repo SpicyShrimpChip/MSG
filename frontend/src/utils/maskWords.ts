@@ -4,7 +4,7 @@
 
 type WordStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 
-const KEY_PREFIX = 'ai-lms-mask-words:';
+const KEY_PREFIX = 'msg-mask-words:';
 
 export const maskWordsKey = (userId: number) => `${KEY_PREFIX}${userId}`;
 

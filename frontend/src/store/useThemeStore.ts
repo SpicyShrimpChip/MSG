@@ -71,7 +71,7 @@ export const useThemeStore = create<ThemeState>()(
         set({ preference });
       },
     }),
-    { name: 'ai-lms-theme' },
+    { name: 'msg-theme' },
   ),
 );
 

@@ -4,7 +4,7 @@ import { mockDelay } from './delay';
 import { removeMockMaterialsOfCourse } from './materials';
 
 // 목업 전용 저장소. 새로고침해도 등록한 과목이 남도록 브라우저에 저장한다 (실제 데이터는 서버에 저장)
-const STORAGE_KEY = 'ai-lms-mock-courses';
+const STORAGE_KEY = 'msg-mock-courses';
 
 // 처음 열었을 때 보여 줄 시연 과목 (mocks/analysis.ts·materials.ts의 courseId 1·2와 같다).
 // 키워드는 대시보드·자료·커리큘럼·퀴즈 목업의 개념 이름과 같게 쓴다. 대시보드·퀴즈 결과의 "확인 퀴즈 만들기"가
