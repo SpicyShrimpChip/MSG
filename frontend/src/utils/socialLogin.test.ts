@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { kakaoStartUrl, safeReturnTo, socialErrorMessage } from './socialLogin';
+import {
+  buildSocialSignupInput,
+  initialSocialName,
+  kakaoStartUrl,
+  safeReturnTo,
+  socialErrorMessage,
+} from './socialLogin';
 
 describe('safeReturnTo', () => {
   it.each(['/analysis', '/quizzes/3?tab=a', '/'])(
@@ -77,5 +83,55 @@ describe('socialErrorMessage', () => {
     expect(socialErrorMessage('failed')).toBe(general);
     expect(socialErrorMessage('unavailable')).toBe(general);
     expect(socialErrorMessage('<script>')).toBe(general);
+  });
+});
+
+describe('initialSocialName', () => {
+  it('카카오 닉네임을 이름 칸의 처음 값으로 쓰고 30자로 자른다', () => {
+    expect(initialSocialName('  카카오닉 ')).toBe('카카오닉');
+    expect(initialSocialName('가'.repeat(40))).toHaveLength(30);
+  });
+
+  it('닉네임이 없으면 빈 칸', () => {
+    expect(initialSocialName(null)).toBe('');
+  });
+});
+
+describe('buildSocialSignupInput', () => {
+  const base = {
+    name: '  새 사용자 ',
+    acknowledged: true,
+    aiConsent: false,
+    aiQuizConsent: true,
+    profile: {
+      learningPurpose: 'work' as const,
+      jobField: 'data_analysis' as const,
+      jobFieldOther: '무시됨',
+    },
+  };
+
+  it('안내 확인 하나로 이용약관·개인정보를 함께 보내고 이름을 다듬는다', () => {
+    expect(buildSocialSignupInput(base)).toEqual({
+      name: '새 사용자',
+      agreedTerms: true,
+      agreedPrivacy: true,
+      agreedAiAnalysis: false,
+      agreedAiQuiz: true,
+      learningPurpose: 'work',
+      jobField: 'data_analysis',
+      jobFieldOther: null,
+    });
+  });
+
+  it('직무가 기타일 때만 직접 쓴 분야를 보낸다', () => {
+    const input = buildSocialSignupInput({
+      ...base,
+      profile: {
+        learningPurpose: 'work',
+        jobField: 'other',
+        jobFieldOther: ' 교육 ',
+      },
+    });
+    expect(input.jobFieldOther).toBe('교육');
   });
 });

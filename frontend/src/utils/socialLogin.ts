@@ -1,3 +1,5 @@
+import type { JobField, LearningPurpose, SocialSignupInput } from '@/types';
+
 // 소셜(카카오) 로그인 화면 도우미. 서버 계약은 docs/frontend-requests.md 5-11절
 
 const HOME = '/';
@@ -47,4 +49,42 @@ export function socialErrorMessage(code: string | null): string | null {
   return Object.hasOwn(SOCIAL_ERROR_MESSAGES, code)
     ? SOCIAL_ERROR_MESSAGES[code]
     : GENERAL_ERROR;
+}
+
+const MAX_NAME_LENGTH = 30;
+
+// 가입 마무리 화면의 이름 칸 처음 값: 카카오 닉네임(선택 동의). 없으면 빈 칸
+export function initialSocialName(nickname: string | null): string {
+  return (nickname ?? '').trim().slice(0, MAX_NAME_LENGTH);
+}
+
+interface SocialSignupForm {
+  name: string;
+  // 이용약관·개인정보 수집·이용 안내 확인 (일반 가입과 같은 체크 하나)
+  acknowledged: boolean;
+  aiConsent: boolean;
+  aiQuizConsent: boolean;
+  profile: {
+    learningPurpose: LearningPurpose;
+    jobField: JobField | null;
+    jobFieldOther: string;
+  };
+}
+
+// 가입 마무리 화면의 입력을 서버 요청 모양으로 바꾼다 (일반 가입 SignupPage와 같은 규칙)
+export function buildSocialSignupInput(
+  form: SocialSignupForm,
+): SocialSignupInput {
+  const { profile } = form;
+  return {
+    name: form.name.trim(),
+    agreedTerms: form.acknowledged,
+    agreedPrivacy: form.acknowledged,
+    agreedAiAnalysis: form.aiConsent,
+    agreedAiQuiz: form.aiQuizConsent,
+    learningPurpose: profile.learningPurpose,
+    jobField: profile.jobField,
+    jobFieldOther:
+      profile.jobField === 'other' ? profile.jobFieldOther.trim() : null,
+  };
 }
