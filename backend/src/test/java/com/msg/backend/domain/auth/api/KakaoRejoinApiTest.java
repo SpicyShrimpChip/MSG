@@ -1,6 +1,8 @@
 package com.msg.backend.domain.auth.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.msg.backend.domain.auth.dao.RefreshTokenRepository;
 import com.msg.backend.domain.auth.dao.UserSocialAccountRepository;
@@ -12,12 +14,14 @@ import com.msg.backend.support.IntegrationTest;
 import com.msg.backend.support.KakaoLoginFlow;
 import com.msg.backend.support.MutableClock;
 import com.msg.backend.support.TestKakao;
+import jakarta.servlet.http.Cookie;
 import java.time.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -68,5 +72,19 @@ class KakaoRejoinApiTest {
 		clock.advance(Duration.ofDays(30).plusMinutes(1));
 		assertThat(KakaoLoginFlow.login(mockMvc, null).getHeader(HttpHeaders.LOCATION))
 				.startsWith(TestKakao.FRONTEND + "/signup/social");
+	}
+
+	@Test
+	void 가입_마무리_중에_탈퇴_기록이_생기면_가입은_409() throws Exception {
+		Cookie ticket = KakaoLoginFlow.signupCookie(KakaoLoginFlow.login(mockMvc, null));
+		rejoinRestriction.recordWithdrawal("kakao@example.com");
+
+		mockMvc.perform(post("/api/auth/social/signup")
+						.header("X-Requested-With", "XMLHttpRequest")
+						.cookie(ticket)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{\"name\":\"새 사용자\",\"agreedTerms\":true,\"agreedPrivacy\":true}"))
+				.andExpect(status().isConflict());
+		assertThat(userRepository.count()).isZero();
 	}
 }

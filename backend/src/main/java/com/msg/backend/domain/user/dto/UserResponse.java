@@ -18,12 +18,13 @@ public record UserResponse(
 				"software_development", "data_analysis", "system_cloud_operations", "other"})
 		String jobField,
 		@Schema(description = "관심 직무가 other일 때 직접 쓴 분야 이름. 아니면 null") String jobFieldOther,
-		@Schema(description = "AI 퀴즈 처리 동의(선택). 퀴즈 만들기·주관식·서술형 AI 채점에 필요") boolean aiQuizConsent) {
+		@Schema(description = "AI 퀴즈 처리 동의(선택). 퀴즈 만들기·주관식·서술형 AI 채점에 필요") boolean aiQuizConsent,
+		@Schema(description = "비밀번호로 로그인할 수 있는지. false면(카카오로만 가입) 탈퇴 때 비밀번호 대신 \"탈퇴\"를 입력한다") boolean hasPassword) {
 
 	public static UserResponse from(User user) {
 		return new UserResponse(user.getId(), user.getEmail(), user.getName(), user.isAiAnalysisConsent(),
 				user.getRole(), user.getLearningPurpose().apiValue(),
 				user.getJobField() == null ? null : user.getJobField().apiValue(), user.getJobFieldOther(),
-				user.isAiQuizConsent());
+				user.isAiQuizConsent(), user.hasPassword());
 	}
 }

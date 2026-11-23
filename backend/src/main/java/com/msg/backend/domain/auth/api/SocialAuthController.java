@@ -1,5 +1,6 @@
 package com.msg.backend.domain.auth.api;
 
+import com.msg.backend.domain.auth.application.AuthService.LoginResult;
 import com.msg.backend.domain.auth.application.FrontendProperties;
 import com.msg.backend.domain.auth.application.KakaoClient;
 import com.msg.backend.domain.auth.application.KakaoProperties;
@@ -9,13 +10,20 @@ import com.msg.backend.domain.auth.application.SocialLoginService;
 import com.msg.backend.domain.auth.application.SocialLoginService.LoggedIn;
 import com.msg.backend.domain.auth.application.SocialLoginService.NeedsSignup;
 import com.msg.backend.domain.auth.application.SocialLoginService.SocialLoginOutcome;
+import com.msg.backend.domain.auth.application.SocialProfile;
+import com.msg.backend.domain.auth.dto.LoginResponse;
+import com.msg.backend.domain.auth.dto.PendingSocialSignupResponse;
+import com.msg.backend.domain.auth.dto.SocialSignupRequest;
 import com.msg.backend.domain.auth.entity.SocialProvider;
 import com.msg.backend.global.common.ApiResponse;
+import com.msg.backend.global.error.BusinessException;
+import com.msg.backend.global.security.jwt.JwtTokenProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -25,6 +33,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -41,6 +52,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 @RequiredArgsConstructor
 public class SocialAuthController {
 
+	static final String TICKET_EXPIRED_MESSAGE = "가입 정보가 만료됐어요. 카카오 로그인을 다시 해 주세요.";
+
 	private final KakaoProperties kakaoProperties;
 	private final FrontendProperties frontendProperties;
 	private final OAuthStateCookies stateCookies;
@@ -48,6 +61,7 @@ public class SocialAuthController {
 	private final RefreshTokenCookies refreshTokenCookies;
 	private final KakaoClient kakaoClient;
 	private final SocialLoginService socialLoginService;
+	private final JwtTokenProvider tokenProvider;
 
 	@Operation(summary = "쓸 수 있는 소셜 로그인", description = "서버에 카카오 키가 있으면 [\"kakao\"], 없으면 []. 화면은 목록에 있는 버튼만 보여 준다.")
 	@GetMapping("/social/providers")
@@ -124,6 +138,44 @@ public class SocialAuthController {
 			log.error("카카오 로그인 콜백 처리 실패", e);
 			redirect(response, loginWithError(SocialError.FAILED.code()));
 		}
+	}
+
+	@Operation(summary = "가입 마무리 정보", description = "카카오에서 처음 온 사용자의 가입 마무리 화면이 부른다. 가입 마무리 쿠키(10분)가 없거나 만료·위조면 401.")
+	@GetMapping("/social/pending")
+	public ApiResponse<PendingSocialSignupResponse> pending(HttpServletRequest request) {
+		SocialProfile profile = readTicket(request);
+		return ApiResponse.success(new PendingSocialSignupResponse(profile.provider().apiValue(), profile.email(),
+				profile.nickname()));
+	}
+
+	@Operation(summary = "카카오 가입 마무리", description = "약관 동의를 받아 계정을 만들고 바로 로그인한다(응답은 로그인과 같음, Refresh는 쿠키). "
+			+ "가입 마무리 쿠키가 없거나 만료면 401, 같은 이메일이 이미 있거나 이미 가입을 마쳤으면 409, 탈퇴 뒤 30일 안이면 409.")
+	@PostMapping("/social/signup")
+	public ApiResponse<LoginResponse> socialSignup(
+			@Parameter(description = "XMLHttpRequest", required = true) @RequestHeader(value = AuthController.REQUESTED_WITH, required = false) String requestedWith,
+			@Valid @RequestBody SocialSignupRequest body,
+			HttpServletRequest request,
+			HttpServletResponse response) {
+		AuthController.requireXmlHttpRequest(requestedWith);
+		SocialProfile profile = readTicket(request);
+		LoginResult result;
+		try {
+			result = socialLoginService.completeSignup(profile, body);
+		} catch (BusinessException e) {
+			// 이미 가입했거나 막힌 표는 더 쓸 수 없으니 지운다
+			if (e.getStatus() == HttpStatus.CONFLICT) {
+				signupTicketCookies.clear(response);
+			}
+			throw e;
+		}
+		signupTicketCookies.clear(response);
+		refreshTokenCookies.write(response, result.refreshToken());
+		return ApiResponse.success(new LoginResponse(result.accessToken(), result.user()));
+	}
+
+	private SocialProfile readTicket(HttpServletRequest request) {
+		return tokenProvider.parseSocialSignupTicket(signupTicketCookies.read(request))
+				.orElseThrow(() -> new BusinessException(HttpStatus.UNAUTHORIZED, TICKET_EXPIRED_MESSAGE));
 	}
 
 	private String loginWithError(String code) {

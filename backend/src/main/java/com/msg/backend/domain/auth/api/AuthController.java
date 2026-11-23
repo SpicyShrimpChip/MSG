@@ -34,7 +34,7 @@ public class AuthController {
 
 	// 쿠키를 쓰는 요청(로그인·갱신·로그아웃)은 이 헤더가 있어야 받는다.
 	// 다른 사이트의 폼 전송은 이 헤더를 붙일 수 없고, 스크립트로 붙이면 CORS 사전 요청에서 막힌다 (CSRF 방어)
-	private static final String REQUESTED_WITH = "X-Requested-With";
+	static final String REQUESTED_WITH = "X-Requested-With";
 	private static final String REQUESTED_WITH_VALUE = "XMLHttpRequest";
 
 	private final AuthService authService;
@@ -97,7 +97,7 @@ public class AuthController {
 		return ApiResponse.success("로그아웃했어요.", null);
 	}
 
-	private static void requireXmlHttpRequest(String requestedWith) {
+	static void requireXmlHttpRequest(String requestedWith) {
 		if (!REQUESTED_WITH_VALUE.equals(requestedWith)) {
 			throw new BusinessException(HttpStatus.FORBIDDEN, "허용되지 않은 요청이에요. 페이지를 새로고침한 뒤 다시 시도해 주세요.");
 		}
