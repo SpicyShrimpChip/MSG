@@ -180,6 +180,10 @@ export const router = createBrowserRouter([
         lazy: lazyPage(() => import('@/pages/auth/SocialDonePage')),
       },
       {
+        path: 'auth/social/link',
+        lazy: lazyPage(() => import('@/pages/auth/SocialLinkPage')),
+      },
+      {
         path: 'search',
         lazy: lazyPage(() => import('@/pages/search/SearchPage')),
       },

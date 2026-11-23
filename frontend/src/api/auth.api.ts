@@ -109,6 +109,20 @@ export function updateLearningProfile(
   });
 }
 
+// 카카오를 같은 이메일의 비밀번호 계정에 연결한다: 그 계정의 비밀번호를 확인한 뒤 연결하고 로그인한다(응답은 로그인과 같다).
+// 틀리면 로그인과 같은 401·429. 확정: Swagger `소셜 로그인` POST /api/auth/social/link
+export async function linkSocialAccount(
+  password: string,
+): Promise<LoginResult> {
+  const result = await request<LoginResult>({
+    method: 'POST',
+    url: '/auth/social/link',
+    data: { password },
+  });
+  startSession(result.accessToken);
+  return result;
+}
+
 // 탈퇴: 서버가 내 모든 데이터를 지운다(카카오가 연결돼 있으면 연결도 끊는다). 성공하면 브라우저 쪽 세션도 지운다
 // 확정: Swagger `회원` DELETE /api/users/me { password } 또는 { confirmText: "탈퇴" }(비밀번호 없는 계정).
 // 확인이 틀리면 400, 마지막 관리자 409

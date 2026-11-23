@@ -25,6 +25,7 @@ import {
 } from '@/utils';
 import AuthCard from './components/AuthCard';
 import SignupAgreements from './components/SignupAgreements';
+import SocialPendingError from './components/SocialPendingError';
 
 // 카카오에서 처음 온 사용자의 가입 마무리 화면 (/signup/social?returnTo=).
 // 서버는 아직 아무것도 저장하지 않았고, 가입 마무리 쿠키(10분)로 카카오 이메일·닉네임만 알려 준다.
@@ -46,31 +47,11 @@ function SocialSignupPage() {
       {pending.isPending ? (
         <LoadingFallback />
       ) : pending.isError ? (
-        <PendingError error={pending.error} />
+        <SocialPendingError error={pending.error} />
       ) : (
         <SocialSignupForm pending={pending.data} returnTo={returnTo} />
       )}
     </AuthCard>
-  );
-}
-
-function PendingError({ error }: { error: Error }) {
-  const expired = error instanceof ApiError && error.status === 401;
-  return (
-    <div className="flex flex-col items-center gap-4 text-center">
-      <p role="alert" className="text-body text-danger">
-        {expired
-          ? '가입 정보가 만료됐어요. 카카오 로그인을 다시 해 주세요.'
-          : error.message}
-      </p>
-      <Link
-        to="/login"
-        replace
-        className="font-medium text-primary underline-offset-4 hover:underline"
-      >
-        로그인 화면으로 가기
-      </Link>
-    </div>
   );
 }
 
