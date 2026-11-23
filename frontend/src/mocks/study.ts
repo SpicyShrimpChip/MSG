@@ -5,7 +5,7 @@ import { mockDelay } from './delay';
 import { mockMaterialsSnapshot } from './materials';
 
 // 체험 모드의 개념 학습 기록. 서버로 보내지 않고 이 브라우저(localStorage)에만 둔다 (실제 기록은 서버 DB)
-const STORAGE_KEY = 'ai-lms-mock-study';
+const STORAGE_KEY = 'msg-mock-study';
 
 interface MockRecord {
   firstCompletedAt: string;

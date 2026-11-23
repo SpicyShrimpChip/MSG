@@ -39,7 +39,7 @@ import {
 const EXAM_SCOPE_MAX = 200;
 const MOCK_EXAM_MAX_QUESTIONS = 20;
 // 만들기를 보낸 요청 키 (이 탭에서만). 새로 고치거나 다른 화면에 다녀와도 같은 요청의 결과를 찾는다
-const PENDING_KEY = 'ai-lms-quiz-generation-pending';
+const PENDING_KEY = 'msg-quiz-generation-pending';
 
 function loadPendingKey(): string | null {
   try {

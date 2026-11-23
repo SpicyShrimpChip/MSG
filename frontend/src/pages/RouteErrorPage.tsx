@@ -4,7 +4,7 @@ import { CircleAlert } from 'lucide-react';
 import { Button } from '@/components';
 import { isChunkLoadError, shouldAutoReload } from '@/utils';
 
-const RELOAD_KEY = 'ai-lms-chunk-reload-at';
+const RELOAD_KEY = 'msg-chunk-reload-at';
 
 function readLastReload(): number | null {
   try {

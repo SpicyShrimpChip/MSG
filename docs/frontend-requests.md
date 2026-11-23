@@ -636,7 +636,7 @@ layout = {
   - 새 파일: `types/study.ts`, `api/study.api.ts`, `utils/conceptStudy.ts`, `components/common/StudyStatusBadge.tsx`, `pages/materials/components/ConceptStudyActions.tsx`, `pages/analysis/components/StudyProgressPanel.tsx`(대시보드)
   - 확인 퀴즈 모드: `/quizzes/new?checkMaterialId=&checkConceptId=&concept=`
   - 결과 화면: "개념으로 돌아가기"·"커리큘럼으로 돌아가기"
-  - 체험 모드 기록은 `mocks/study.ts`가 localStorage(`ai-lms-mock-study`)에만 둔다(서버로 보내지 않음)
+  - 체험 모드 기록은 `mocks/study.ts`가 localStorage(`msg-mock-study`)에만 둔다(서버로 보내지 않음)
 
 ## 5-10. 숙련도 점수 산식 설계안과 참고 문헌 (11/4 제안, 11/5 초기값으로 확정)
 

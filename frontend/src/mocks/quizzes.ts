@@ -160,7 +160,7 @@ const QUIZZES: MockQuiz[] = [
 ];
 
 // 제출 결과는 새로고침해도 남도록 브라우저에 저장한다 (퀴즈 id → 가장 최근 결과)
-const STORAGE_KEY = 'ai-lms-mock-quiz-results-v2';
+const STORAGE_KEY = 'msg-mock-quiz-results-v2';
 
 function loadResults(): Record<number, QuizResult> {
   try {
@@ -183,8 +183,8 @@ const setResult = (quizId: number, result: QuizResult) => {
 };
 
 // 체험 중 만든 퀴즈도 새로고침해도 남도록 브라우저에 저장한다 (최근 것이 앞).
-// 체험을 시작·끝낼 때 결과와 같이 지워진다(store/useDemoStore.ts의 `ai-lms-mock-*`)
-const CREATED_KEY = 'ai-lms-mock-created-quizzes';
+// 체험을 시작·끝낼 때 결과와 같이 지워진다(store/useDemoStore.ts의 `msg-mock-*`)
+const CREATED_KEY = 'msg-mock-created-quizzes';
 // 저장소를 쓸 수 없을 때만 쓰는 이번 화면 목록
 let createdFallback: MockQuiz[] = [];
 

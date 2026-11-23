@@ -13,7 +13,7 @@ interface AuthState {
 
 // 새로고침 뒤 세션 복원을 시도할지 정하는 표시. 토큰이 아니라 "로그인한 적 있음"만 저장한다
 // (로그인하지 않은 사람은 갱신 요청을 보내지 않도록)
-const SESSION_HINT_KEY = 'ai-lms-has-session';
+const SESSION_HINT_KEY = 'msg-has-session';
 
 export const hasSessionHint = () => {
   try {

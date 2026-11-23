@@ -7,7 +7,7 @@ import { create } from 'zustand';
 // - NO_BACKEND: 연결할 백엔드가 없는 빌드 (VITE_USE_MOCK=true, 지금 Vercel 배포). 로그인·가입이 닫히고 데이터는 늘 목업
 // - DEMO_AVAILABLE: "로그인 없이 체험해 보기"를 켤 수 있는지. 실제 서버 빌드에서도 켤 수 있다(11/21, 주소 하나로 체험·실제 서비스)
 // - isMockData()/useMockData(): 지금 데이터를 목업에서 읽는지 (백엔드가 없거나 체험 중). API 함수와 "예시 데이터" 문구가 이걸 본다
-const DEMO_KEY = 'ai-lms-demo';
+const DEMO_KEY = 'msg-demo';
 
 export const NO_BACKEND = import.meta.env.VITE_USE_MOCK === 'true';
 
@@ -38,12 +38,12 @@ const writeDemo = (on: boolean) => {
   }
 };
 
-// 체험 중 바꾼 예시 데이터(자료·과목·퀴즈 결과·학습 기록)는 mocks/가 localStorage(`ai-lms-mock-*`)에 둔다.
+// 체험 중 바꾼 예시 데이터(자료·과목·퀴즈 결과·학습 기록)는 mocks/가 localStorage(`msg-mock-*`)에 둔다.
 // 체험을 시작할 때와 끝낼 때 지워서 다음 체험이 늘 처음 예시 상태에서 시작하게 한다 (탭을 그냥 닫아도 다음 시작 때 지워진다).
-// 공지(`ai-lms-mock-notices`)는 체험에서 쓰지 않는 관리자 기능(개발 중 VITE_MOCK_OPEN_ACCESS)이라 남긴다.
+// 공지(`msg-mock-notices`)는 체험에서 쓰지 않는 관리자 기능(개발 중 VITE_MOCK_OPEN_ACCESS)이라 남긴다.
 // 체험이 켜진 뒤에만 mocks/가 저장소를 읽으므로, 시작할 때 지우면 메모리에 남은 옛 값도 없다
-const MOCK_DATA_PREFIX = 'ai-lms-mock-';
-const KEEP_MOCK_KEYS = new Set(['ai-lms-mock-notices']);
+const MOCK_DATA_PREFIX = 'msg-mock-';
+const KEEP_MOCK_KEYS = new Set(['msg-mock-notices']);
 
 const clearMockData = () => {
   try {

@@ -7,7 +7,7 @@ export interface Draft {
   texts: Record<number, string>;
 }
 
-const key = (quizId: number) => `ai-lms-quiz-draft:${quizId}`;
+const key = (quizId: number) => `msg-quiz-draft:${quizId}`;
 const EMPTY: Draft = { choices: {}, texts: {} };
 
 export function loadDraft(quizId: number): Draft {

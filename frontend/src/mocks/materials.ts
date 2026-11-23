@@ -10,7 +10,7 @@ import { ApiError } from '@/api/request';
 import { mockDelay } from './delay';
 
 // 목업 전용 저장소. 새로고침해도 올린 자료가 남도록 브라우저에 저장한다 (실제 데이터는 서버에 저장)
-const STORAGE_KEY = 'ai-lms-mock-materials';
+const STORAGE_KEY = 'msg-mock-materials';
 
 // 시연 과목(정보보호개론 1, 운영체제 2)에 맞춘 샘플. 요약은 직접 쓴 정리 노트를 가정한 예시이고
 // 강의자료·시험 문제 원문은 넣지 않는다. conceptId는 mocks/quizzes.ts와 같은 값
