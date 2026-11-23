@@ -96,3 +96,10 @@
 - 원인: `backend-ci.yml`은 `branches: ["main"]`인 PR에서만 돈다. squash 머지는 앞 PR 커밋을 새 커밋 하나로 main에 넣어, 다음 브랜치의 원래 커밋과 기록이 달라진다(내용은 같다).
 - 해결: `git diff origin/main <앞 브랜치> -- backend`가 비어 있는지(내용이 같은지) 확인하고, `origin/main`을 다음 브랜치에 병합하며 충돌 파일은 다음 브랜치 쪽으로 정했다. 강제 푸시 없이 일반 푸시로 끝났다(위 "Claude는 강제 푸시가 막혀 있다").
 - 다음에는: 앞 PR을 머지한 뒤 다음 PR의 base를 main으로 바꾸고, 그 CI가 통과한 걸 보고 머지한다. 쌓은 PR은 로컬 `./gradlew test`로만 확인된 상태임을 PR에 적는다. 프론트 CI(`frontend-ci.yml`)도 base가 main인 PR에서만 돈다(11/21 #186도 같은 방법으로 해결).
+
+## Git Bash에서 `docker compose exec ... /data/...`의 경로가 Windows 경로로 바뀐다 (2026-11-23, #198)
+
+- 상황: 윈도우 PC에서 `deploy/backup.sh`를 로컬 compose로 시험했더니 `tar: C:/Program Files/Git/data/uploads: Cannot open`이 났다.
+- 원인: Git Bash(MSYS)가 `/`로 시작하는 인자를 Windows 경로로 바꿔 컨테이너 안 경로가 깨진다. 리눅스 서버에서는 생기지 않는다.
+- 해결: 그 명령 앞에 `MSYS_NO_PATHCONV=1`을 붙여 실행했다(스크립트는 고치지 않음). `docker run -v`에 PC 경로를 넘길 때는 `$(pwd -W)`를 썼다.
+- 다음에는: 윈도우에서 컨테이너 안 경로를 인자로 넘기는 도커 명령이 이상하면 먼저 `MSYS_NO_PATHCONV=1`로 다시 해 본다.
