@@ -8,11 +8,13 @@ import com.msg.backend.domain.auth.application.SocialError;
 import com.msg.backend.domain.auth.application.SocialLoginException;
 import com.msg.backend.domain.auth.application.SocialLoginService;
 import com.msg.backend.domain.auth.application.SocialLoginService.LoggedIn;
+import com.msg.backend.domain.auth.application.SocialLoginService.NeedsLink;
 import com.msg.backend.domain.auth.application.SocialLoginService.NeedsSignup;
 import com.msg.backend.domain.auth.application.SocialLoginService.SocialLoginOutcome;
 import com.msg.backend.domain.auth.application.SocialProfile;
 import com.msg.backend.domain.auth.dto.LoginResponse;
 import com.msg.backend.domain.auth.dto.PendingSocialSignupResponse;
+import com.msg.backend.domain.auth.dto.SocialLinkRequest;
 import com.msg.backend.domain.auth.dto.SocialSignupRequest;
 import com.msg.backend.domain.auth.entity.SocialProvider;
 import com.msg.backend.global.common.ApiResponse;
@@ -93,6 +95,7 @@ public class SocialAuthController {
 
 	@Operation(summary = "카카오 로그인 콜백", description = "카카오가 브라우저를 돌려보내는 주소(Redirect URI). 결과에 따라 화면으로 302 이동한다: "
 			+ "로그인되면 Refresh 쿠키를 심고 /auth/social/done?returnTo=, 처음 온 사용자는 가입 마무리 쿠키를 심고 /signup/social?returnTo=, "
+			+ "같은 이메일의 비밀번호 계정이 있으면 같은 쿠키를 심고 /auth/social/link?returnTo=(비밀번호 확인 뒤 연결), "
 			+ "실패하면 /login?socialError=코드(state, cancelled, email_required, email_unverified, rejoin_restricted, link_conflict, failed, unavailable).")
 	@GetMapping("/kakao/callback")
 	public void kakaoCallback(
@@ -131,6 +134,9 @@ public class SocialAuthController {
 			} else if (outcome instanceof NeedsSignup needsSignup) {
 				signupTicketCookies.write(response, needsSignup.ticket());
 				redirect(response, frontendProperties.baseUrl() + "/signup/social?returnTo=" + encodedReturnTo);
+			} else if (outcome instanceof NeedsLink needsLink) {
+				signupTicketCookies.write(response, needsLink.ticket());
+				redirect(response, frontendProperties.baseUrl() + "/auth/social/link?returnTo=" + encodedReturnTo);
 			}
 		} catch (SocialLoginException e) {
 			redirect(response, loginWithError(e.error().code()));
@@ -163,6 +169,32 @@ public class SocialAuthController {
 			result = socialLoginService.completeSignup(profile, body);
 		} catch (BusinessException e) {
 			// 이미 가입했거나 막힌 표는 더 쓸 수 없으니 지운다
+			if (e.getStatus() == HttpStatus.CONFLICT) {
+				signupTicketCookies.clear(response);
+			}
+			throw e;
+		}
+		signupTicketCookies.clear(response);
+		refreshTokenCookies.write(response, result.refreshToken());
+		return ApiResponse.success(new LoginResponse(result.accessToken(), result.user()));
+	}
+
+	@Operation(summary = "카카오를 기존 계정에 연결", description = "같은 이메일의 비밀번호 계정이 있어 연결 확인 화면으로 온 경우. "
+			+ "그 계정의 비밀번호를 확인하고 카카오를 연결한 뒤 로그인한다(응답은 로그인과 같음). 비밀번호가 틀리면 로그인과 같은 401·429, "
+			+ "표(쿠키)가 없거나 만료면 401, 그새 다른 카카오가 연결됐거나 계정이 없으면 409.")
+	@PostMapping("/social/link")
+	public ApiResponse<LoginResponse> socialLink(
+			@Parameter(description = "XMLHttpRequest", required = true) @RequestHeader(value = AuthController.REQUESTED_WITH, required = false) String requestedWith,
+			@Valid @RequestBody SocialLinkRequest body,
+			HttpServletRequest request,
+			HttpServletResponse response) {
+		AuthController.requireXmlHttpRequest(requestedWith);
+		SocialProfile profile = readTicket(request);
+		LoginResult result;
+		try {
+			result = socialLoginService.linkWithPassword(profile, body.password(), request.getRemoteAddr());
+		} catch (BusinessException e) {
+			// 비밀번호가 틀리면 다시 시도할 수 있게 표를 남기고, 더 쓸 수 없는 표(409)만 지운다
 			if (e.getStatus() == HttpStatus.CONFLICT) {
 				signupTicketCookies.clear(response);
 			}

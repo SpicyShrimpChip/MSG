@@ -734,15 +734,18 @@ layout = {
 | `GET /api/auth/kakao/start?returnTo=/경로` | 버튼 → `window.location.assign` | 카카오 로그인·동의 화면으로 302. `returnTo`는 `/`로 시작하는 사이트 안 경로만 쓰고 아니면 `/` |
 | `GET /api/auth/kakao/callback` | 카카오가 브라우저를 돌려보냄 | 아래 셋 중 하나로 302 |
 | `GET /api/auth/social/pending` | 가입 마무리 화면(axios) | `{ provider: "kakao", email, nickname \| null }`. 가입 마무리 쿠키가 없거나 10분이 지났으면 401 "가입 정보가 만료됐어요. 카카오 로그인을 다시 해 주세요." |
+| `POST /api/auth/social/link` | 계정 연결 화면(axios, `X-Requested-With` 필요) | 본문 `{ password }`. 같은 이메일의 비밀번호 계정 비밀번호를 확인하고 카카오를 연결한 뒤 **로그인과 같은 응답** + Refresh 쿠키. 틀리면 로그인과 같은 401 "이메일 또는 비밀번호를 확인해 주세요."·429(이때 쿠키는 남아 다시 시도 가능), 쿠키 없음·만료 401, 그새 다른 카카오가 연결됐거나 계정이 없으면 409 |
 | `POST /api/auth/social/signup` | 가입 마무리 화면(axios, `X-Requested-With` 필요) | 본문 `{ name, agreedTerms, agreedPrivacy, agreedAiAnalysis, agreedAiQuiz, learningPurpose?, jobField?, jobFieldOther? }`(일반 가입에서 이메일·비밀번호·Turnstile만 뺀 것, 오류 문구도 같음). 성공하면 **로그인과 같은 응답** `{ accessToken, user }` + Refresh 쿠키. 같은 이메일이 이미 있거나 이미 가입을 마쳤으면 409 "이미 가입된 이메일이에요.", 탈퇴 뒤 30일 안이면 409(재가입 제한 문구) |
 
 콜백이 보내는 화면 (`FRONTEND_BASE_URL` 기준):
 
 - `/auth/social/done?returnTo=…` — 이미 가입한 사용자. Refresh 쿠키가 심어져 있으니 화면이 `/api/auth/refresh`를 한 번 불러 Access Token을 받고 `returnTo`로 간다.
+- `/auth/social/link?returnTo=…` — 카카오가 확인한 이메일과 같은 이메일의 **비밀번호 계정**이 이미 있다. 자동으로 연결하지 않는다(비밀번호 가입은 이메일 주인을 확인하지 않아 남이 미리 만든 계정일 수 있다). `pending`으로 이메일을 보여 주고 그 계정의 비밀번호를 받아 `link`를 부른다. 비밀번호를 모르면 그냥 이메일·비밀번호 로그인으로 가면 된다.
 - `/signup/social?returnTo=…` — 처음 온 사용자. 가입 마무리 쿠키(HttpOnly, 화면 스크립트는 못 읽음)가 있으니 `pending`으로 이메일·닉네임을 보여 주고 약관 동의를 받아 `signup`을 부른다. **이때까지 서버 DB에는 아무것도 저장하지 않는다.**
 - `/login?socialError=코드` — 실패. 코드: `state`(시간이 지났거나 다른 창에서 돌아옴), `cancelled`(동의 화면에서 취소, 문구 없이 조용히), `email_required`(이메일 제공 동의 안 함), `email_unverified`(카카오에서 인증 안 된 이메일), `rejoin_restricted`(탈퇴 30일 안), `link_conflict`(그 이메일 계정에 다른 카카오가 이미 연결됨), `failed`(카카오 장애 등), `unavailable`(서버에 카카오 키 없음).
 
-- 같은 이메일로 비밀번호 가입한 회원이 카카오로 들어오면, 카카오가 **확인한 이메일**일 때만 그 계정에 카카오를 연결하고 로그인한다.
+- 같은 이메일로 비밀번호 가입한 회원이 카카오로 들어오면, 카카오가 **확인한 이메일**이어도 바로 연결하지 않고 위 계정 연결 화면에서 비밀번호를 확인한 뒤 연결한다. 한 번 연결하면 다음부터는 카카오로 바로 로그인된다.
+- `returnTo`는 `useSearchParams().get('returnTo')` 값을 그대로 `safeReturnTo`에 넣고 다시 디코드하지 않는다. 이동은 `navigate()`로만 한다(두 번 디코드하면 `/%2F%2Fevil.com`이 `//evil.com`이 된다).
 - **`User`에 `hasPassword: boolean`이 생겼다**(로그인·내 정보·가입 응답 모두). 카카오로만 가입한 계정은 `false`이고 비밀번호 로그인은 "이메일 또는 비밀번호를 확인해 주세요."로 실패한다. 탈퇴 요청 모양은 위 "탈퇴 요청 모양 변경" 참고.
 - 카카오 디자인 가이드: 버튼 배경 `#FEE500`, 검정 말풍선 심볼, 글자 `rgba(0,0,0,0.85)` "카카오 로그인", 모서리 12px.
 

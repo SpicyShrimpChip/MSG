@@ -85,18 +85,20 @@ class KakaoCallbackApiTest {
 	}
 
 	@Test
-	void 확인된_같은_이메일의_기존_회원은_연결하고_로그인한다() throws Exception {
+	void 같은_이메일의_비밀번호_회원이면_로그인하지_않고_비밀번호_확인_화면으로_보낸다() throws Exception {
+		// 비밀번호 가입은 이메일 주인을 확인하지 않으므로, 남이 미리 만든 계정일 수 있다(자동 연결하면 그 계정에 묶인다)
 		TestApi.signupAndLogin(mockMvc, objectMapper, "same@example.com", Map.of());
 		kakao.user(4242L, "Same@Example.com", true, true, "닉");
+		long tokens = refreshTokenRepository.count();
 
-		MockHttpServletResponse response = KakaoLoginFlow.login(mockMvc, null);
+		MockHttpServletResponse response = KakaoLoginFlow.login(mockMvc, "/analysis");
 
-		assertThat(response.getHeader(HttpHeaders.LOCATION)).isEqualTo(FRONTEND + "/auth/social/done?returnTo=%2F");
-		assertThat(KakaoLoginFlow.setCookie(response, REFRESH_COOKIE)).isPresent();
-		Long userId = userRepository.findByEmail("same@example.com").orElseThrow().getId();
-		assertThat(socialAccountRepository.findAllByUserId(userId))
-				.singleElement().extracting(UserSocialAccount::getProviderUserId).isEqualTo("4242");
-		assertThat(userRepository.count()).isEqualTo(1);
+		assertThat(response.getHeader(HttpHeaders.LOCATION))
+				.isEqualTo(FRONTEND + "/auth/social/link?returnTo=%2Fanalysis");
+		assertThat(KakaoLoginFlow.setCookie(response, REFRESH_COOKIE)).isEmpty();
+		assertThat(KakaoLoginFlow.setCookie(response, SIGNUP_COOKIE)).isPresent();
+		assertThat(socialAccountRepository.count()).isZero();
+		assertThat(refreshTokenRepository.count()).isEqualTo(tokens);
 	}
 
 	@Test

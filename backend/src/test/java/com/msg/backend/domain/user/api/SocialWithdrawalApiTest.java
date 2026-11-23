@@ -96,8 +96,13 @@ class SocialWithdrawalApiTest {
 	@Test
 	void 비밀번호와_카카오가_둘_다_있으면_비밀번호로_탈퇴하고_연결도_끊긴다() throws Exception {
 		TestApi.signupAndLogin(mockMvc, objectMapper, "kakao@example.com", Map.of());
-		// 같은 확인된 이메일로 카카오 로그인 → 연결
-		KakaoLoginFlow.login(mockMvc, null);
+		// 같은 확인된 이메일로 카카오 로그인 → 비밀번호를 확인하고 연결
+		var ticket = KakaoLoginFlow.signupCookie(KakaoLoginFlow.login(mockMvc, null));
+		mockMvc.perform(post("/api/auth/social/link").cookie(ticket)
+						.header("X-Requested-With", "XMLHttpRequest")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(objectMapper.writeValueAsString(Map.of("password", TestApi.PASSWORD))))
+				.andExpect(status().isOk());
 		assertThat(socialAccountRepository.count()).isEqualTo(1);
 		String token = TestApi.login(mockMvc, objectMapper, "kakao@example.com");
 

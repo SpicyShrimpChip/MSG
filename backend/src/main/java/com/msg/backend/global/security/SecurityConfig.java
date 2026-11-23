@@ -24,7 +24,7 @@ public class SecurityConfig {
 			// 소셜 로그인: 브라우저가 직접 이동하는 시작·콜백 주소와 버튼 목록, 가입 마무리 정보(서명 쿠키로 확인)
 			"/api/auth/social/providers", "/api/auth/kakao/start", "/api/auth/kakao/callback", "/api/auth/social/pending"};
 	private static final String[] PUBLIC_AUTH = {
-			"/api/auth/signup", "/api/auth/login", "/api/auth/refresh", "/api/auth/logout", "/api/auth/social/signup"
+			"/api/auth/signup", "/api/auth/login", "/api/auth/refresh", "/api/auth/logout", "/api/auth/social/signup", "/api/auth/social/link"
 	};
 	private static final String[] PUBLIC_DOCS = {"/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**"};
 
