@@ -49,7 +49,7 @@ src/
 - 클래스 순서는 손으로 맞추지 않는다. `prettier-plugin-tailwindcss`가 저장·커밋할 때 `className`과 `cn()` 안의 클래스를 Tailwind 권장 순서로 정렬한다(`.prettierrc`). `TONE_CLASS` 같은 상수 문자열은 정렬 대상이 아니다.
 - 서버 데이터를 만들거나 바꾸는 저장 버튼은 `useMutation` 대신 `useSingleFlightMutation`(`hooks/`)을 쓴다(11/24, #210). `disabled={isPending}`는 다시 그린 뒤에야 걸려 더블클릭·연타가 두 번 보내므로, `mutate` 직전에 동기 잠금(`utils/submitLock.ts`)을 걸고 요청이 끝나면 푼다. 한 화면의 두 버튼이 서로 겹치면 안 되면 같은 잠금을 넘긴다(`ConceptFeedbackBox`). 자료 올리기는 서버 요청 키(`requestKey`)도 함께 보낸다.
 - 서버 데이터는 React Query로만 다루고 Zustand에 복사하지 않는다. 쿼리 키는 문자열로 직접 쓰지 않고 API 파일의 상수(`ME_QUERY_KEY`, `COURSES_QUERY_KEY`)나 훅을 쓴다.
-- 로딩·에러 처리는 `useSuspenseQuery` + `AsyncBoundary`로 한다. 불러오는 동안은 `LoadingFallback`(회색 틀 `Skeleton`)이 보인다. `AsyncBoundary`는 `QueryErrorResetBoundary`로 감싸 "다시 시도"가 실패한 조회를 다시 부르게 한다(빼면 같은 오류 화면이 남는다). 화면을 그리다 난 오류와 배포 뒤 옛 화면 코드 불러오기 실패는 라우터 루트의 `RouteErrorPage`가 받는다(코드 불러오기 실패는 30초 안에 한 번만 자동 새로고침).
+- 로딩·에러 처리는 `useSuspenseQuery` + `AsyncBoundary`로 한다. 불러오는 동안은 `LoadingFallback`(회색 틀 `Skeleton`)이 보인다. `AsyncBoundary`는 `QueryErrorResetBoundary`로 감싸 "다시 시도"가 실패한 조회를 다시 부르게 한다(빼면 같은 오류 화면이 남는다). 상세 화면처럼 없거나 남의 것(서버 404)일 수 있는 화면은 `notFoundAction`(예: `{ label: '퀴즈 목록으로', to: '/quizzes' }`)을 넘겨, 404면 "다시 시도" 대신 목록으로 가는 버튼을 보여 준다. 화면을 그리다 난 오류와 배포 뒤 옛 화면 코드 불러오기 실패는 라우터 루트의 `RouteErrorPage`가 받는다(코드 불러오기 실패는 30초 안에 한 번만 자동 새로고침).
 - 페이지는 처음 방문할 때만 코드를 불러온다. `router/index.tsx`에 `lazyPage(() => import('@/pages/...'))`로 추가하고, 페이지 파일은 default export로 만든다(메인·404만 처음부터 불러온다). 여러 페이지를 한 번에 export하는 모음 파일(`pages/index.ts`)은 만들지 않는다. 쪼개지지 않는다.
 
 ## 움직임 (Motion)

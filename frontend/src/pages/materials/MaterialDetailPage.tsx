@@ -217,7 +217,9 @@ function MaterialDetailPage() {
       title="자료 상세"
       description="자료의 요약, 핵심 개념, 퀴즈를 한곳에서 볼 수 있어요"
     >
-      <AsyncBoundary>
+      <AsyncBoundary
+        notFoundAction={{ label: '학습자료 목록으로', to: '/materials' }}
+      >
         <MaterialDetailContent materialId={Number(materialId)} />
       </AsyncBoundary>
     </SubPage>

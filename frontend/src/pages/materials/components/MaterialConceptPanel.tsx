@@ -207,7 +207,11 @@ function ConceptCard({
                 {concept.studyNote ? '설명 다시 만들기' : '자세한 설명 만들기'}
               </p>
               {blockedReason ? (
-                <p className="text-caption text-ink-soft">{blockedReason}</p>
+                // 이유는 아래 "핵심 개념 뽑기" 칸에 한 번만 보여 준다 (개념마다 같은 안내가 반복되지 않게)
+                <p className="text-caption text-ink-soft">
+                  지금은 설명을 만들 수 없어요. 이유는 아래 &ldquo;핵심 개념
+                  뽑기&rdquo;에 있어요.
+                </p>
               ) : (
                 <label className="flex items-start gap-3 text-caption text-heading">
                   <input

@@ -329,7 +329,9 @@ function QuizSolvePage() {
       title="퀴즈 풀기"
       description="문제를 풀고 제출하면 서버가 채점해요"
     >
-      <AsyncBoundary>
+      <AsyncBoundary
+        notFoundAction={{ label: '퀴즈 목록으로', to: '/quizzes' }}
+      >
         <QuizForm quizId={Number(quizId)} />
       </AsyncBoundary>
     </SubPage>

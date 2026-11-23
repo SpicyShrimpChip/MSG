@@ -28,7 +28,7 @@ export const AI_CONSENT_NOTICE: Notice[] = [
 ];
 
 // AI 퀴즈 처리 동의(선택). 대화 분석 동의와 목적·항목이 달라 따로 받는다.
-// 받는 곳(제공사)·국가·보관 기간은 아직 정하지 않아 처리방침에서 "정해지면 적음"으로 둔다 (팀 검토 항목)
+// 받는 곳(제공사)은 11/6 확정(OpenAI·Anthropic·Google). 국가·제공사 쪽 보관 기간은 처리방침 7·8번에 적었다
 export const AI_QUIZ_CONSENT_NOTICE: Notice[] = [
   {
     label: '항목',
@@ -41,12 +41,13 @@ export const AI_QUIZ_CONSENT_NOTICE: Notice[] = [
   },
   {
     label: '받는 곳',
-    value: '외부 생성형 AI 서비스(API). 제공사는 개인정보 처리방침에 적어요',
+    value:
+      '외부 생성형 AI 서비스(API): OpenAI, Anthropic, Google. 자세한 내용은 개인정보 처리방침 7·8번에 있어요',
   },
   {
     label: '보유 기간',
     value:
-      '만든 퀴즈와 채점 결과는 내가 지우거나 탈퇴할 때까지. 외부 AI 제공사의 보관 기간은 제공사가 정해지면 개인정보 처리방침에 적어요',
+      '만든 퀴즈와 채점 결과는 내가 지우거나 탈퇴할 때까지. 외부 AI 제공사가 보관하는 기간은 개인정보 처리방침 8번에 있어요',
   },
 ];
 

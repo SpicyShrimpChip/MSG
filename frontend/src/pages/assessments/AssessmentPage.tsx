@@ -29,7 +29,6 @@ import {
   SubPage,
 } from '@/components';
 import {
-  CONTENT_DISABLED_MESSAGE,
   DIFFICULTIES,
   QUESTION_TYPE_SETS,
   QUIZ_MAX_QUESTIONS,
@@ -264,8 +263,9 @@ function MaterialAssessment({
             <span>
               자료 본문(앞부분 12,000자까지)으로 문제 만들기
               <span className="block text-caption text-ink-soft">
+                {/* 꺼진 이유는 위 "핵심 개념 뽑기" 칸에 한 번만 보여 준다 */}
                 {!ai.materialContentEnabled
-                  ? CONTENT_DISABLED_MESSAGE
+                  ? '자료 본문 보내기는 지금 꺼져 있어요(이유는 위 “핵심 개념 뽑기”에 있어요). 본문 없이 개념으로만 만들어요.'
                   : readable
                     ? 'TXT·MD·PPTX와 글이 들어 있는 PDF(100쪽까지)를 읽어요. 스캔한 PDF는 읽지 못해요. 체크하지 않으면 개념 목록으로만 만들어요.'
                     : '이 형식은 본문을 읽지 못해요. 개념 목록으로만 만들어요.'}

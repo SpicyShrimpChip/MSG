@@ -33,7 +33,9 @@ function NoticeDetailPage() {
   return (
     <SubPage title="공지사항" description="서비스 소식과 안내를 알려 드려요">
       {Number.isInteger(id) && id > 0 ? (
-        <AsyncBoundary>
+        <AsyncBoundary
+          notFoundAction={{ label: '공지사항 목록으로', to: '/notices' }}
+        >
           <NoticeContent noticeId={id} />
         </AsyncBoundary>
       ) : (

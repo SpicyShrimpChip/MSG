@@ -36,6 +36,7 @@ import {
   NoticeList,
 } from '@/pages/auth/components/ConsentNotice';
 import WordList from '@/pages/analysis/components/import/WordList';
+import type { MainLocationState } from '@/pages/main/components/WithdrawnToast';
 
 // 내 정보: 흰 카드 안에 항목 이름과 값을 한 줄씩
 function AccountInfo({ me }: { me: User }) {
@@ -179,7 +180,10 @@ function LearningProfileSection({ me }: { me: User }) {
           <LearningProfileFields
             idPrefix="mypage"
             value={value}
-            onChange={setValue}
+            onChange={(next) => {
+              setValue(next);
+              if (mutation.isError) mutation.reset();
+            }}
           />
           <ErrorText error={mutation.error} />
           <div className="flex gap-2">
@@ -341,7 +345,9 @@ function DeleteAccountSection({ me }: { me: User }) {
     onSuccess: () => {
       clearMaskWords();
       queryClient.clear();
-      navigate('/');
+      // 메인에서 "탈퇴했어요" 안내를 한 번 보여 준다
+      const state: MainLocationState = { withdrawn: true };
+      navigate('/', { state });
     },
   });
 
@@ -366,7 +372,11 @@ function DeleteAccountSection({ me }: { me: User }) {
           id="mypage-delete-password"
           autoComplete="current-password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            // 비밀번호를 고치면 "맞지 않아요" 같은 지난 오류를 지운다
+            if (mutation.isError) mutation.reset();
+          }}
         />
       </FormRow>
       <ErrorText error={mutation.error} />

@@ -322,7 +322,7 @@ function QuizResultContent({ quizId }: { quizId: number }) {
               `AI 채점을 기다리는 답 ${result.pendingCount}개`}
             {result.pendingCount > 0 && result.reviewCount > 0 && ', '}
             {result.reviewCount > 0 &&
-              `AI 판단이 엇갈려 확인이 필요한 답 ${result.reviewCount}개`}
+              `AI 판단이 엇갈리거나 확신하지 못해 확인이 필요한 답 ${result.reviewCount}개`}
             는 점수에 넣지 않았어요.
           </p>
         )}
@@ -400,7 +400,9 @@ function QuizResultPage() {
   const { quizId } = useParams();
   return (
     <SubPage narrow="reading" title="퀴즈 결과">
-      <AsyncBoundary>
+      <AsyncBoundary
+        notFoundAction={{ label: '퀴즈 목록으로', to: '/quizzes' }}
+      >
         <QuizResultContent quizId={Number(quizId)} />
       </AsyncBoundary>
     </SubPage>

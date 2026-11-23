@@ -56,6 +56,12 @@ function CourseForm({
     },
   });
 
+  // 입력을 고치면 지난 오류 문구를 지운다 (제출할 때 다시 검사한다)
+  const clearErrors = () => {
+    setNameError(undefined);
+    if (mutation.isError) mutation.reset();
+  };
+
   const handleSubmit = (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     const trimmed = normalizeKeyword(name);
@@ -102,7 +108,10 @@ function CourseForm({
           <TextInput
             id="course-name"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => {
+              setName(e.target.value);
+              clearErrors();
+            }}
             maxLength={NAME_MAX_LENGTH}
             placeholder="운영체제"
             aria-invalid={nameError ? true : undefined}
@@ -113,7 +122,10 @@ function CourseForm({
           <SelectInput
             id="course-semester"
             value={semester}
-            onChange={(e) => setSemester(e.target.value)}
+            onChange={(e) => {
+              setSemester(e.target.value);
+              clearErrors();
+            }}
             className="w-full max-w-60"
           >
             {getSemesterOptions().map((option) => (
@@ -131,7 +143,10 @@ function CourseForm({
           <KeywordInput
             id="course-keywords"
             keywords={keywords}
-            onChange={setKeywords}
+            onChange={(next) => {
+              setKeywords(next);
+              if (mutation.isError) mutation.reset();
+            }}
           />
         </FormRow>
       </div>
