@@ -18,8 +18,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
 import jakarta.servlet.http.Cookie;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -203,7 +210,8 @@ class AuthApiTest {
 		String secondAccess = accessToken(rotated);
 		assertThat(secondRefresh).isNotEqualTo(firstRefresh);
 
-		// 이미 쓴 토큰 재사용 → 탈취로 보고 세션 폐기, 쿠키 삭제
+		// 동시 갱신 유예 시간(10초)이 지난 뒤 이미 쓴 토큰 재사용 → 탈취로 보고 세션 폐기, 쿠키 삭제
+		clock.advance(Duration.ofSeconds(11));
 		refresh(firstRefresh)
 				.andExpect(status().isUnauthorized())
 				.andExpect(jsonPath("$.message").value(UNAUTHORIZED))
@@ -213,6 +221,73 @@ class AuthApiTest {
 		refresh(secondRefresh).andExpect(status().isUnauthorized());
 		mockMvc.perform(get("/api/users/me").header(HttpHeaders.AUTHORIZATION, bearer(secondAccess)))
 				.andExpect(status().isUnauthorized());
+	}
+
+	@Test
+	void 방금_회전된_토큰으로_다시_갱신하면_유예_시간_안에서는_세션을_끊지_않고_다시_발급한다() throws Exception {
+		createUser("grace@example.com");
+		String firstRefresh = refreshCookie(login("grace@example.com", PASSWORD).andReturn());
+
+		// 탭 두 개가 같은 쿠키로 갱신: 먼저 온 쪽이 회전한 뒤 늦게 온 쪽이 같은(이미 폐기된) 토큰을 보낸다
+		MvcResult first = refresh(firstRefresh).andExpect(status().isOk()).andReturn();
+		clock.advance(Duration.ofSeconds(9));
+		MvcResult second = refresh(firstRefresh).andExpect(status().isOk()).andReturn();
+
+		// 두 응답의 새 토큰과 Access Token이 모두 쓸 수 있다 (쿠키에는 늦게 도착한 쪽이 남는다)
+		String fromFirst = refreshCookie(first);
+		String fromSecond = refreshCookie(second);
+		assertThat(fromSecond).isNotEqualTo(fromFirst).isNotEqualTo(firstRefresh);
+		for (MvcResult result : new MvcResult[] {first, second}) {
+			mockMvc.perform(get("/api/users/me").header(HttpHeaders.AUTHORIZATION, bearer(accessToken(result))))
+					.andExpect(status().isOk());
+		}
+		clock.advance(Duration.ofMinutes(1));
+		refresh(fromFirst).andExpect(status().isOk());
+		refresh(fromSecond).andExpect(status().isOk());
+	}
+
+	@Test
+	void 같은_쿠키로_동시에_갱신해도_둘_다_성공하고_세션이_유지된다() throws Exception {
+		createUser("race@example.com");
+		String refreshToken = refreshCookie(login("race@example.com", PASSWORD).andReturn());
+
+		CountDownLatch start = new CountDownLatch(1);
+		ExecutorService pool = Executors.newFixedThreadPool(2);
+		try {
+			List<Future<MvcResult>> futures = new ArrayList<>();
+			for (int i = 0; i < 2; i++) {
+				futures.add(pool.submit(() -> {
+					start.await();
+					return refresh(refreshToken).andReturn();
+				}));
+			}
+			start.countDown();
+			List<String> nextTokens = new ArrayList<>();
+			for (Future<MvcResult> future : futures) {
+				MvcResult result = future.get(30, TimeUnit.SECONDS);
+				assertThat(result.getResponse().getStatus()).isEqualTo(200);
+				nextTokens.add(refreshCookie(result));
+			}
+			// 동시 갱신 뒤에도 세션이 살아 있어 다음 갱신이 된다
+			clock.advance(Duration.ofMinutes(1));
+			for (String next : nextTokens) {
+				refresh(next).andExpect(status().isOk());
+			}
+		} finally {
+			pool.shutdownNow();
+		}
+	}
+
+	@Test
+	void 로그아웃한_세션의_토큰은_유예_시간_안이어도_다시_발급하지_않는다() throws Exception {
+		createUser("grace-logout@example.com");
+		String firstRefresh = refreshCookie(login("grace-logout@example.com", PASSWORD).andReturn());
+		String secondRefresh = refreshCookie(refresh(firstRefresh).andExpect(status().isOk()).andReturn());
+
+		// 회전 직후 다른 탭에서 로그아웃 → 회전으로 폐기된 토큰도, 로그아웃으로 폐기된 토큰도 받지 않는다
+		logout(secondRefresh).andExpect(status().isOk());
+		refresh(firstRefresh).andExpect(status().isUnauthorized());
+		refresh(secondRefresh).andExpect(status().isUnauthorized());
 	}
 
 	@Test
@@ -232,9 +307,7 @@ class AuthApiTest {
 		String access = accessToken(loginResult);
 		String refreshToken = refreshCookie(loginResult);
 
-		mockMvc.perform(post("/api/auth/logout")
-						.header("X-Requested-With", "XMLHttpRequest")
-						.cookie(new Cookie(COOKIE, refreshToken)))
+		logout(refreshToken)
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.message").value("로그아웃했어요."))
 				.andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("Max-Age=0")));
@@ -294,6 +367,12 @@ class AuthApiTest {
 
 	private ResultActions refresh(String refreshToken) throws Exception {
 		return mockMvc.perform(post("/api/auth/refresh")
+				.header("X-Requested-With", "XMLHttpRequest")
+				.cookie(new Cookie(COOKIE, refreshToken)));
+	}
+
+	private ResultActions logout(String refreshToken) throws Exception {
+		return mockMvc.perform(post("/api/auth/logout")
 				.header("X-Requested-With", "XMLHttpRequest")
 				.cookie(new Cookie(COOKIE, refreshToken)));
 	}

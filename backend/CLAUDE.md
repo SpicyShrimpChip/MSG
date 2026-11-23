@@ -51,6 +51,7 @@ Swagger UI: `/swagger-ui/index.html` — 프론트와 API를 맞출 때 이 문�
 
 - 인증 기본 방향: JWT access token + HttpOnly 쿠키 refresh token (레퍼런스 프로젝트 방식)
 - 비밀번호는 BCrypt로 해시. 평문 저장·로그 출력 금지.
+- Refresh Token은 갱신마다 회전하고, 폐기된 토큰이 다시 오면 세션 전체를 폐기한다(재사용 감지). 단 회전된 지 `app.auth.refresh-reuse-grace`(10초) 안이고 세션이 살아 있으면 탭 여러 개의 동시 갱신으로 보고 다시 발급한다(#211, `RefreshTokenService.isRotatedWithinGrace`). 토큰을 하나씩 폐기하는 기능(회전 말고)을 새로 만들면 이 판단이 깨지므로, 그때는 폐기 사유 칸을 추가한다.
 - 모든 사용자 데이터 조회·수정은 로그인 사용자 소유인지 확인한다 (다른 사용자 id로 접근 차단). 과목·자료는 저장소 기본 메서드(`CourseRepository.getOwned`·`checkOwned`, `MaterialRepository.getOwned`, 없거나 남의 것이면 404)를, 사용자 행 잠금은 `UserRepository.lockLoginUser`(없으면 401)를 쓴다.
 - DB 접속 정보, JWT 시크릿, LLM API 키, AWS 키는 `application.yaml`에 환경변수 참조로만 쓴다.
 - 탈퇴 뒤 30일 재가입 제한(`RejoinRestriction`, `app.rejoin`, `withdrawn_account`, 11/21): 탈퇴 트랜잭션에서 정규화한 이메일의 HMAC-SHA256(키 `REJOIN_HASH_SECRET`)과 재가입 가능 시각만 남기고(이메일 원문·users 연결 없음), 가입할 때 기간 안이면 409, 기간이 지난 기록은 주기 작업이 지운다. 키가 없으면 기록도 확인도 하지 않는다. 기간·항목은 처리방침 2·4번과 같게 맞춘다.
