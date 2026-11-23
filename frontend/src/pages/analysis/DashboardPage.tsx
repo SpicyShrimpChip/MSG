@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import {
   useMutation,
   useQueryClient,
@@ -20,6 +20,7 @@ import {
   AsyncBoundary,
   Button,
   EmptyState,
+  ResultBeam,
   SelectInput,
   SubPage,
 } from '@/components';
@@ -27,6 +28,7 @@ import { useCourses, useProviders } from '@/hooks';
 import type { AnalysisRun, Course, DashboardComponentId } from '@/types';
 import {
   DEFAULT_LAYOUT,
+  cn,
   isNoResponseError,
   parseDashboardLayout,
   sortByStudyOrder,
@@ -42,7 +44,18 @@ import ModelStatusPanel from './components/ModelStatusPanel';
 import RecommendationPanel from './components/RecommendationPanel';
 
 // 분석 결과를 배치대로 그린다. 배치 JSON은 검증을 통과할 때만 쓰고, 아니면 기본 배치
-function AnalysisResult({ run }: { run: AnalysisRun }) {
+interface AnalysisResultProps {
+  run: AnalysisRun;
+  // 방금 도착한 분석이면 카드마다 테두리 빛이 한 바퀴 돈다
+  highlight: boolean;
+  onHighlightDone: () => void;
+}
+
+function AnalysisResult({
+  run,
+  highlight,
+  onHighlightDone,
+}: AnalysisResultProps) {
   // 처음엔 추천 순서 첫 개념을 자세히 보여 준다. 피드백으로 순서가 바뀌어도 보던 개념은 그대로 둔다
   const [selected, setSelected] = useState<string | null>(
     () => sortByStudyOrder(run.concepts)[0]?.concept ?? null,
@@ -120,9 +133,10 @@ function AnalysisResult({ run }: { run: AnalysisRun }) {
             initial={FADE_UP.initial}
             animate={FADE_UP.animate}
             transition={{ ...FADE_UP.transition, delay: index * 0.06 }}
-            className={item.size === 'wide' ? 'lg:col-span-2' : undefined}
+            className={cn('relative', item.size === 'wide' && 'lg:col-span-2')}
           >
             {renderComponent(item.component, item.aiReason)}
+            <ResultBeam active={highlight} onDone={onHighlightDone} />
           </m.div>
         ))}
       </div>
@@ -177,6 +191,17 @@ function CourseAnalysis({ course }: { course: Course }) {
   });
   // 기다리던 새 분석이 도착했으면 오류·기다림 안내를 내린다
   const arrived = waiting !== null && (run?.id ?? null) !== waiting.fromRunId;
+
+  // 화면을 연 뒤 새 분석이 들어오면(분석하기 응답이든 기다리다 도착했든) 결과 카드에 빛을 한 번 돌린다.
+  // 처음 불러온 분석에는 돌리지 않는다. 과목을 바꾸면 이 부품이 새로 만들어져 처음부터 센다
+  const runId = run?.id ?? null;
+  const [seenRunId, setSeenRunId] = useState(runId);
+  const [beamRunId, setBeamRunId] = useState<number | null>(null);
+  if (runId !== seenRunId) {
+    setSeenRunId(runId);
+    setBeamRunId(runId);
+  }
+  const endBeam = useCallback(() => setBeamRunId(null), []);
 
   const configured = providers.filter((item) => item.configured).length;
   const blockedReason =
@@ -254,7 +279,12 @@ function CourseAnalysis({ course }: { course: Course }) {
       </div>
 
       {run ? (
-        <AnalysisResult key={run.id} run={run} />
+        <AnalysisResult
+          key={run.id}
+          run={run}
+          highlight={beamRunId === run.id}
+          onHighlightDone={endBeam}
+        />
       ) : (
         <EmptyState
           icon={<ChartColumn size={24} aria-hidden="true" />}
