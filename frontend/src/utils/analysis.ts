@@ -63,3 +63,35 @@ export const FEEDBACK_LABEL: Record<ConceptFeedbackType, string> = {
   already_know: '이미 알아요',
   want_to_study: '더 공부할래요',
 };
+
+// 대시보드 맨 위 "한눈에 보기"에 쓰는 개수 (코드가 센 값).
+// 숙련도가 없는 개념(아직 계산 전)은 근거 부족으로 센다. 모델 의견은 정확도가 아니라 같은 판단을 한 모델 수로 나눈다
+export interface ConceptOverview {
+  total: number;
+  mastery: Record<MasteryStage, number>;
+  comparison: {
+    unanimous: number;
+    majority: number;
+    disagreement: number;
+    // 모델 1개만 판단했거나 판단이 없어 비교하지 못한 개념
+    notCompared: number;
+  };
+}
+
+export function summarizeConcepts(concepts: ConceptResult[]): ConceptOverview {
+  const overview: ConceptOverview = {
+    total: concepts.length,
+    mastery: { strong: 0, normal: 0, needs_work: 0, insufficient_evidence: 0 },
+    comparison: { unanimous: 0, majority: 0, disagreement: 0, notCompared: 0 },
+  };
+  for (const concept of concepts) {
+    overview.mastery[concept.mastery?.level ?? 'insufficient_evidence'] += 1;
+    const outcome = concept.comparison.outcome;
+    if (outcome === 'single_model' || outcome === 'no_result') {
+      overview.comparison.notCompared += 1;
+    } else {
+      overview.comparison[outcome] += 1;
+    }
+  }
+  return overview;
+}

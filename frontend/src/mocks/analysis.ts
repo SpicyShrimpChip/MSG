@@ -435,8 +435,7 @@ const RUN: AnalysisRun = {
   ],
   // 목업에서만 동적 배치 예시를 보여 준다 (백엔드는 아직 배치를 주지 않는다)
   layout: {
-    aiSummary:
-      '이해 부족과 의견이 갈린 개념이 있어 개념별 판단을 위에 두었어요.',
+    aiSummary: '이해 부족과 의견이 갈린 개념이 있어 그 개념부터 펼쳐 두었어요.',
     basis: {
       notUnderstoodCount: 1,
       disagreementCount: 1,
@@ -444,34 +443,22 @@ const RUN: AnalysisRun = {
     },
     items: [
       {
-        component: 'conceptTable',
+        component: 'summary',
         order: 1,
-        size: 'normal',
-        aiReason: '먼저 볼 개념을 고르기 쉽게',
+        size: 'wide',
+        aiReason: '보완 필요 개념이 몇 개인지 먼저',
       },
       {
-        component: 'conceptDetail',
+        component: 'concepts',
         order: 2,
-        size: 'normal',
-        aiReason: '고른 개념의 근거를 바로 옆에',
-      },
-      {
-        component: 'recommendation',
-        order: 3,
-        size: 'normal',
-        aiReason: '다음에 할 공부 순서',
+        size: 'wide',
+        aiReason: '이해 부족·의견이 갈린 개념부터 펼쳐 보게',
       },
       {
         component: 'models',
-        order: 4,
-        size: 'normal',
-        aiReason: '어떤 모델이 판단했는지 확인',
-      },
-      {
-        component: 'summary',
-        order: 5,
+        order: 3,
         size: 'wide',
-        aiReason: '분석에 쓴 기록의 양',
+        aiReason: '어떤 모델이 판단했는지 확인',
       },
     ],
   },

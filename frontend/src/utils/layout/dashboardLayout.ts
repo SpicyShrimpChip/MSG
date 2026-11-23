@@ -45,10 +45,8 @@ export const DEFAULT_LAYOUT: DashboardLayout = {
   explanation: null,
   items: [
     { component: 'summary', order: 1, size: 'wide', aiReason: null },
-    { component: 'conceptTable', order: 2, size: 'normal', aiReason: null },
-    { component: 'conceptDetail', order: 3, size: 'normal', aiReason: null },
-    { component: 'models', order: 4, size: 'normal', aiReason: null },
-    { component: 'recommendation', order: 5, size: 'normal', aiReason: null },
+    { component: 'concepts', order: 2, size: 'wide', aiReason: null },
+    { component: 'models', order: 3, size: 'wide', aiReason: null },
   ],
 };
 

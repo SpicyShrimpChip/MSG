@@ -76,3 +76,35 @@ export function ComparisonBadge({
     </span>
   );
 }
+
+// 개념 목록 한 줄에 모델마다 붙이는 작은 칩: "GPT 이해 부족". 판단이 없으면 점선 칩에 이유를 쓴다
+export function ModelVerdictChip({
+  provider,
+  status,
+  missingLabel,
+}: {
+  provider: string;
+  status: UnderstandingStatus | null;
+  // 판단이 없을 때 글 (연결 안 됨 / 판단 없음)
+  missingLabel?: string;
+}) {
+  if (!status) {
+    return (
+      <span
+        className={cn(
+          BADGE_CLASS,
+          'border border-dashed border-line-strong text-ink-muted',
+        )}
+      >
+        {provider} {missingLabel ?? '판단 없음'}
+      </span>
+    );
+  }
+  const { icon: Icon, className } = STATUS_STYLE[status];
+  return (
+    <span className={cn(BADGE_CLASS, className)}>
+      <Icon size={14} aria-hidden="true" />
+      {provider} {UNDERSTANDING_LABEL[status]}
+    </span>
+  );
+}
