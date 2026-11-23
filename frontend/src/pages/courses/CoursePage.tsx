@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { BookMarked } from 'lucide-react';
 import { COURSES_QUERY_KEY, MATERIALS_QUERY_KEY, deleteCourse } from '@/api';
-import { useCourses } from '@/hooks';
+import { useCourses, useSingleFlightMutation } from '@/hooks';
 import {
   AsyncBoundary,
   ConfirmDialog,
@@ -22,7 +22,7 @@ function CourseManager() {
   const [deleting, setDeleting] = useState<Course | null>(null);
 
   // 과목을 지우면 그 과목의 자료도 함께 지워지므로 자료 목록도 새로 받는다
-  const removal = useMutation({
+  const removal = useSingleFlightMutation({
     mutationFn: deleteCourse,
     onSuccess: () =>
       Promise.all([

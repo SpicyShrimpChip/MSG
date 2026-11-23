@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { NOTICES_QUERY_KEY, deleteNotice } from '@/api';
-import { useNotices } from '@/hooks';
+import { useNotices, useSingleFlightMutation } from '@/hooks';
 import {
   AsyncBoundary,
   BoardTable,
@@ -20,7 +20,7 @@ function NoticeAdminTable() {
   const { data: notices } = useNotices();
   const [deleting, setDeleting] = useState<Notice | null>(null);
 
-  const removal = useMutation({
+  const removal = useSingleFlightMutation({
     mutationFn: deleteNotice,
     // 목록과 상세 모두 새로 받는다
     onSuccess: () =>

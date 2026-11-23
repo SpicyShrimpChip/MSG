@@ -47,6 +47,7 @@
 - thinking-orbs 구슬이 밝은 화면에서 안 보이고 32px에서 비어 보인다
 - border-beam 빛이 밝은 화면에서 거의 안 보이고 화면 모드를 안 따라간다
 - 좌우로 나눈 표·상세에서 표 옆이 크게 빈다
+- `disabled={isPending}`만으로는 저장 버튼 더블클릭을 못 막는다
 
 ### [tooling.md](tooling.md): CI·Git·배포
 

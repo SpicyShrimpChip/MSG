@@ -1,10 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import {
-  useMutation,
-  useQueryClient,
-  useSuspenseQuery,
-} from '@tanstack/react-query';
+import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { ClipboardCheck, FileText, Lock } from 'lucide-react';
 import {
   ASSESSMENTS_QUERY_KEY,
@@ -15,7 +11,11 @@ import {
   getMaterials,
 } from '@/api';
 import { useMockData } from '@/store';
-import { useQuizAiStatus, useSuspenseMe } from '@/hooks';
+import {
+  useQuizAiStatus,
+  useSuspenseMe,
+  useSingleFlightMutation,
+} from '@/hooks';
 import {
   AiWaiting,
   AsyncBoundary,
@@ -129,7 +129,7 @@ function MaterialAssessment({
   const contentAllowed = ai.materialContentEnabled && readable;
   const types = QUESTION_TYPE_SETS[typeSet].types;
 
-  const mutation = useMutation({
+  const mutation = useSingleFlightMutation({
     mutationFn: (kind: AssessmentKind) =>
       createAssessment({
         requestKey,

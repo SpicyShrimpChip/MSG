@@ -32,6 +32,7 @@ export function uploadMaterial(input: MaterialUploadInput): Promise<Material> {
   const body = new FormData();
   body.append('courseId', String(input.courseId));
   body.append('title', input.title);
+  body.append('requestKey', input.requestKey);
   body.append('file', input.file);
   return request<Material>({
     method: 'POST',

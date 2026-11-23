@@ -1,9 +1,5 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
-import {
-  useMutation,
-  useQueryClient,
-  useSuspenseQuery,
-} from '@tanstack/react-query';
+import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { ChartColumn, CircleAlert, Download } from 'lucide-react';
 import * as m from 'motion/react-m';
 import {
@@ -25,7 +21,7 @@ import {
   SelectInput,
   SubPage,
 } from '@/components';
-import { useCourses, useProviders } from '@/hooks';
+import { useCourses, useProviders, useSingleFlightMutation } from '@/hooks';
 import type {
   AnalysisRun,
   Course,
@@ -199,7 +195,7 @@ function CourseAnalysis({ course }: { course: Course }) {
   const { run, lastAttempt } = latest;
   const serverRunning = isAnalysisRunning(latest);
   const { data: providers } = useProviders();
-  const mutation = useMutation({
+  const mutation = useSingleFlightMutation({
     mutationFn: () => startAnalysis(course.id),
     onMutate: () => setWaiting(null),
     onSuccess: (next) => {

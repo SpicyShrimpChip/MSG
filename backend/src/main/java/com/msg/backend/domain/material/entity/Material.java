@@ -27,6 +27,8 @@ public class Material {
 	public static final int FILE_NAME_MAX_LENGTH = 255;
 	// spring.servlet.multipart.max-file-size와 같은 값 (프론트 MATERIAL_MAX_SIZE_MB)
 	public static final long MAX_FILE_SIZE = 20L * 1024 * 1024;
+	// 퀴즈 요청 키(QuizGeneration.REQUEST_KEY_MAX_LENGTH)와 같은 길이
+	public static final int REQUEST_KEY_MAX_LENGTH = 64;
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -61,6 +63,10 @@ public class Material {
 	@Column(nullable = false, length = 20)
 	private MaterialStatus status;
 
+	// 화면이 올리기마다 만든 요청 키 (V2, #210). 같은 사용자가 같은 키로 다시 보내면 새로 저장하지 않는다. 키 없이 올렸으면 null
+	@Column(length = REQUEST_KEY_MAX_LENGTH)
+	private String requestKey;
+
 	@Column(nullable = false)
 	private LocalDateTime createdAt;
 
@@ -68,7 +74,7 @@ public class Material {
 	private LocalDateTime updatedAt;
 
 	public static Material upload(Long userId, Long courseId, String title, String originalFileName,
-			MaterialFileFormat fileFormat, long fileSize, String storageKey, LocalDateTime now) {
+			MaterialFileFormat fileFormat, long fileSize, String storageKey, String requestKey, LocalDateTime now) {
 		Material material = new Material();
 		material.userId = userId;
 		material.courseId = courseId;
@@ -79,6 +85,7 @@ public class Material {
 		material.fileSize = fileSize;
 		material.storageKey = storageKey;
 		material.status = MaterialStatus.UPLOADED;
+		material.requestKey = requestKey;
 		material.createdAt = now;
 		material.updatedAt = now;
 		return material;

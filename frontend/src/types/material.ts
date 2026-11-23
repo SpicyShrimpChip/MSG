@@ -10,6 +10,8 @@ export interface MaterialUploadInput {
   courseId: number;
   title: string;
   file: File;
+  // 화면이 올리기마다 만든 요청 키(UUID, 64자까지). 같은 키로 다시 보내면 서버가 새로 저장하지 않고 이미 올린 자료를 돌려준다
+  requestKey: string;
 }
 
 // uploaded: 파일 저장 완료, AI 분석 전 / processing: 글 뽑기·AI 분석 중 / ready: 완료 / failed: 글을 뽑지 못함 등

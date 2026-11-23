@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Lock, UserRound } from 'lucide-react';
 import {
   ME_QUERY_KEY,
@@ -23,7 +23,11 @@ import {
   type LearningProfileValue,
 } from '@/components';
 import { LEARNING_PURPOSES, jobFieldLabel } from '@/constants';
-import { useSavedMaskWords, useSuspenseMe } from '@/hooks';
+import {
+  useSavedMaskWords,
+  useSuspenseMe,
+  useSingleFlightMutation,
+} from '@/hooks';
 import { useAuthStore, useMockData } from '@/store';
 import type { User } from '@/types';
 import {
@@ -58,7 +62,7 @@ function AccountInfo({ me }: { me: User }) {
 function AiQuizConsentSection({ me }: { me: User }) {
   const queryClient = useQueryClient();
   const [confirming, setConfirming] = useState(false);
-  const mutation = useMutation({
+  const mutation = useSingleFlightMutation({
     mutationFn: updateAiQuizConsent,
     onSuccess: (user) => queryClient.setQueryData(ME_QUERY_KEY, user),
   });
@@ -129,7 +133,7 @@ function LearningProfileSection({ me }: { me: User }) {
     jobField: me.jobField,
     jobFieldOther: me.jobFieldOther ?? '',
   });
-  const mutation = useMutation({
+  const mutation = useSingleFlightMutation({
     mutationFn: updateLearningProfile,
     onSuccess: (user) => {
       queryClient.setQueryData(ME_QUERY_KEY, user);
@@ -210,7 +214,7 @@ function AiConsentSection({ me }: { me: User }) {
   const queryClient = useQueryClient();
   const [confirming, setConfirming] = useState(false);
   const { clear: clearMaskWords } = useSavedMaskWords(me.id);
-  const mutation = useMutation({
+  const mutation = useSingleFlightMutation({
     mutationFn: updateAiConsent,
     onSuccess: (user) => {
       queryClient.setQueryData(ME_QUERY_KEY, user);
@@ -332,7 +336,7 @@ function DeleteAccountSection({ me }: { me: User }) {
   // 본인 확인: 지금 비밀번호를 다시 받는다 (서버가 확인)
   const [password, setPassword] = useState('');
   const { clear: clearMaskWords } = useSavedMaskWords(me.id);
-  const mutation = useMutation({
+  const mutation = useSingleFlightMutation({
     mutationFn: () => deleteAccount(password),
     onSuccess: () => {
       clearMaskWords();

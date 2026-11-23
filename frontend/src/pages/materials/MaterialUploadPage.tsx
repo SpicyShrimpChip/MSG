@@ -1,5 +1,5 @@
 import { useState, type SubmitEvent } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
@@ -20,10 +20,12 @@ import {
   MATERIAL_MAX_SIZE_MB,
   MATERIAL_TITLE_MAX_LENGTH,
 } from '@/constants';
-import { useCourses } from '@/hooks';
+import { useCourses, useSingleFlightMutation } from '@/hooks';
 import {
   MATERIAL_FORMAT_LABEL,
+  createRequestKey,
   formatSemester,
+  isNoResponseError,
   normalizeKeyword,
   validateMaterialFile,
 } from '@/utils';
@@ -38,15 +40,21 @@ function MaterialUploadForm() {
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string>();
   const [agreed, setAgreed] = useState(false);
+  // 같은 올리기가 두 번 저장되지 않게 하는 요청 키. 서버는 같은 키면 이미 올린 자료를 돌려준다.
+  // 응답을 못 받은 실패(시간 초과·연결 끊김)는 서버가 저장했을 수 있어 다시 보낼 때 같은 키를 쓰고, 파일을 바꾸면 새 키로 바꾼다
+  const [requestKey, setRequestKey] = useState(createRequestKey);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
   // 올리면 목록을 새로 받고, 요약이 만들어지는 과정을 볼 수 있게 자료 상세로 옮겨 간다
-  const mutation = useMutation({
+  const mutation = useSingleFlightMutation({
     mutationFn: uploadMaterial,
     onSuccess: (material) => {
       void queryClient.invalidateQueries({ queryKey: MATERIALS_QUERY_KEY });
       navigate(`/materials/${material.id}`);
+    },
+    onError: (error) => {
+      if (!isNoResponseError(error)) setRequestKey(createRequestKey());
     },
   });
 
@@ -54,6 +62,7 @@ function MaterialUploadForm() {
 
   const handleFileChange = (picked: File | undefined) => {
     mutation.reset();
+    setRequestKey(createRequestKey());
     if (!picked) {
       setFile(null);
       setFileError(undefined);
@@ -74,7 +83,12 @@ function MaterialUploadForm() {
     e.preventDefault();
     const trimmed = normalizeKeyword(title);
     if (!file || !agreed || !courseId || !trimmed) return;
-    mutation.mutate({ courseId: Number(courseId), title: trimmed, file });
+    mutation.mutate({
+      courseId: Number(courseId),
+      title: trimmed,
+      file,
+      requestKey,
+    });
   };
 
   return (

@@ -230,11 +230,23 @@ export function mockGetMaterial(id: number): Promise<MaterialDetail> {
   return mockDelay(material);
 }
 
+// 요청 키 → 올린 자료 id (서버의 material.request_key처럼 같은 키면 새로 만들지 않는다. 새로 고치면 잊는다)
+const mockUploadKeys = new Map<string, number>();
+
 // 목업은 파일 내용을 읽지 않는다. 서버처럼 올린 자료는 AI 분석 전(uploaded) 상태로 남는다
 export function mockUploadMaterial(
   input: MaterialUploadInput,
 ): Promise<Material> {
   const materials = getAll();
+  const existing = materials.find(
+    (item) => item.id === mockUploadKeys.get(input.requestKey),
+  );
+  if (existing) {
+    return mockDelay(
+      { id: existing.id, courseId: existing.courseId, title: existing.title },
+      800,
+    );
+  }
   const material: MaterialDetail = {
     id: Math.max(0, ...materials.map((item) => item.id)) + 1,
     courseId: input.courseId,
@@ -247,6 +259,7 @@ export function mockUploadMaterial(
     concepts: [],
   };
   setAll([...materials, material]);
+  mockUploadKeys.set(input.requestKey, material.id);
   return mockDelay(
     { id: material.id, courseId: material.courseId, title: material.title },
     800,
