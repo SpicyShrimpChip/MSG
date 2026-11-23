@@ -121,6 +121,23 @@ class ConversationApiTest {
 				.containsExactly(true, false, false);
 	}
 
+	// 코드 실행 결과를 붙여 넣은 대화처럼 NUL 문자가 든 글. PostgreSQL은 NUL을 저장하지 못해
+	// 묶음 전체가 409로 실패했다(#215). H2는 그대로 저장하므로 DB 값에 NUL이 없는지 직접 확인한다
+	@Test
+	void 제목과_메시지의_NUL_문자는_지우고_저장한다() throws Exception {
+		send(token, importBody(UUID.randomUUID().toString(), 1, 1, courseId, List.of(
+				conversation("c-\u00001", "교착\u0000 상태", List.of(
+						message("user", "실행 결과: \u0000\u0000끝\n다음 줄"),
+						message("assistant", "답"))))))
+				.andExpect(status().isCreated());
+
+		assertThat(jdbcTemplate.queryForObject("select client_id from conversation", String.class)).isEqualTo("c-1");
+		assertThat(jdbcTemplate.queryForObject("select title from conversation", String.class)).isEqualTo("교착 상태");
+		assertThat(jdbcTemplate.queryForList(
+				"select content from conversation_message order by part_index, seq", String.class))
+				.containsExactly("실행 결과: 끝\n다음 줄", "답");
+	}
+
 	@Test
 	void AI_대화_분석에_동의하지_않으면_403이고_저장하지_않는다() throws Exception {
 		String noConsent = signupAndLogin("no-consent@example.com", false);
