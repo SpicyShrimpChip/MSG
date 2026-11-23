@@ -117,7 +117,7 @@ flowchart LR
 | **퀴즈**<br>🟢 동작 | 목록, 풀기, 서버 채점, 결과 |
 | **회원, 내 과목**<br>🟢 동작 | 가입, 로그인 유지, 분석 동의, 과목과 키워드, 회원 탈퇴 |
 | **학습 자료**<br>🔵 API 연결 | 올리기·목록·상세·삭제, 본문 읽기(TXT·MD·PPTX·글자가 있는 PDF). 실제 PDF·PPTX 파일로 점검 완료 |
-| **학습 대시보드**<br>🔵 API 연결 | 모델별 판단과 근거, 개념별 숙련도 단계와 변화, 추천 순서, "이 판단, 내 생각과 맞나요?" 피드백, 사전·사후평가 비교 |
+| **학습 대시보드**<br>🔵 API 연결 | 위에서 아래로 읽는 한 화면: 요약 칸 4개(숙련도 분포·모델 의견·사전→사후평가·학습 진도) → 공부할 순서대로 본 개념 목록(펼치면 숙련도 근거와 변화, 모델별 판단과 근거, "이 판단, 내 생각과 맞나요?" 피드백) → 사전·사후평가 비교 |
 | **맞춤 커리큘럼, 사전·사후평가, 검색**<br>🔵 API 연결 | 사전 테스트 → 핵심 개념 학습 → 개념별 확인 퀴즈 → 사후 평가 4단계와 학습 진도, 통합 검색 |
 | **숙련도**<br>🟠 로직 구현 | 퀴즈 결과와 대화 판단을 규칙으로 계산(숫자는 초기값), 단계·근거·변화 추이 표시 |
 | **AI 분석, 퀴즈 만들기, AI 채점 (LLM 호출)**<br>🔵 API 연결 | 세 모델 판단과 비교, 학습 모드별 퀴즈 만들기, 주관식·서술형 다수결 채점. GPT·Gemini는 실제 호출로 동작 확인, Claude는 코드는 연결했고 API 크레딧 충전 전이라 동작 미확인 |
@@ -182,7 +182,28 @@ flowchart LR
 | Frontend | React 19, TypeScript 6, Vite 8, Tailwind CSS 4, React Router 7, TanStack Query 5, Zustand 5, Axios, zod, Motion, Vitest |
 | Backend | Spring Boot 3.5, Java 17, Gradle, Spring Security(JWT), Spring Data JPA, Flyway, PostgreSQL 16 + pgvector, H2(테스트) |
 | LLM | OpenAI(GPT), Anthropic(Claude), Google(Gemini) 클라이언트. 모델 이름은 환경변수, 사용자별 호출 한도는 설정값. Claude는 프롬프트 캐싱으로 고정 지시문의 입력 요금을 줄임 |
+| 브라우저 처리 | Web Worker, Rust → WebAssembly(대화 zip 풀기·CRC 확인·개인정보 가리기. JSON 파싱은 브라우저 `JSON.parse`) |
+| 배포 | 프론트 Vercel, 백엔드 AWS EC2 한 대 + Docker Compose(Caddy 자동 HTTPS → 백엔드 → PostgreSQL 16/pgvector). 백엔드 서버는 올리는 중이라 배포 주소는 아직 예시 데이터로 동작 |
 | 개발 환경 | Docker Compose(로컬 PostgreSQL + pgvector), GitHub Actions, ESLint, Prettier, Husky + lint-staged, Renovate, Claude Code |
+
+## 사용한 오픈소스
+
+직접 가져다 쓰는 주요 오픈소스입니다. 모두 상용·공개 배포가 가능한 라이선스이고, 각 라이선스 문구는 설치되는 패키지에 함께 들어 있습니다. 전체 목록은 [`frontend/package.json`](frontend/package.json), [`backend/build.gradle`](backend/build.gradle), [`frontend/wasm/conversation-core/Cargo.toml`](frontend/wasm/conversation-core/Cargo.toml)에 있습니다.
+
+| 분야 | 오픈소스 | 라이선스 |
+| --- | --- | --- |
+| 화면 기본 | [React](https://github.com/facebook/react), [React Router](https://github.com/remix-run/react-router), [TanStack Query](https://github.com/TanStack/query), [Zustand](https://github.com/pmndrs/zustand), [Axios](https://github.com/axios/axios), [zod](https://github.com/colinhacks/zod), [react-error-boundary](https://github.com/bvaughn/react-error-boundary) | MIT |
+| 화면 꾸밈 | [Tailwind CSS](https://github.com/tailwindlabs/tailwindcss), [tailwind-merge](https://github.com/dcastil/tailwind-merge), [clsx](https://github.com/lukeed/clsx), [Motion](https://github.com/motiondivision/motion) | MIT |
+| AI 화면 효과 | [thinking-orbs](https://www.npmjs.com/package/thinking-orbs)(AI 응답을 기다리는 점 구슬), [border-beam](https://www.npmjs.com/package/border-beam)(새 분석 결과가 도착했을 때 테두리 빛) | MIT |
+| 아이콘·글꼴 | [Lucide](https://github.com/lucide-icons/lucide) / [Pretendard](https://github.com/orioncactus/pretendard) | ISC / OFL-1.1 |
+| 대화 보기 | [react-markdown](https://github.com/remarkjs/react-markdown), [remark-gfm](https://github.com/remarkjs/remark-gfm)(AI 답변 마크다운을 HTML 문자열 없이 그림) | MIT |
+| 대화 파일 처리(Rust) | [miniz_oxide](https://github.com/Frommi/miniz_oxide)(압축 풀기), [crc32fast](https://github.com/srijs/rust-crc32fast), [regex](https://github.com/rust-lang/regex)(개인정보 가리기), [memchr](https://github.com/BurntSushi/memchr), [serde](https://github.com/serde-rs/serde), [wasm-bindgen](https://github.com/rustwasm/wasm-bindgen) | MIT 또는 Apache-2.0 등 복수 선택 |
+| 서버 | [Spring Boot](https://github.com/spring-projects/spring-boot)(Web·Security·Data JPA·Validation), [springdoc-openapi](https://github.com/springdoc/springdoc-openapi), [Flyway](https://github.com/flyway/flyway), [JJWT](https://github.com/jwtk/jjwt), [Apache PDFBox](https://pdfbox.apache.org/)(PDF 본문 추출) | Apache-2.0 |
+| 서버 보조 | [Lombok](https://github.com/projectlombok/lombok) / [H2](https://github.com/h2database/h2database)(테스트 DB) / [PostgreSQL JDBC](https://github.com/pgjdbc/pgjdbc) | MIT / MPL-2.0·EPL-1.0 / BSD-2-Clause |
+| DB·배포 | [PostgreSQL](https://www.postgresql.org/), [pgvector](https://github.com/pgvector/pgvector) / [Caddy](https://github.com/caddyserver/caddy)(자동 HTTPS) | PostgreSQL License / Apache-2.0 |
+| 개발 도구 | [Vite](https://github.com/vitejs/vite), [Vitest](https://github.com/vitest-dev/vitest), [ESLint](https://github.com/eslint/eslint), [Prettier](https://github.com/prettier/prettier), [Husky](https://github.com/typicode/husky), [lint-staged](https://github.com/lint-staged/lint-staged), [fflate](https://github.com/101arrowz/fflate)(테스트용 zip 만들기) / [TypeScript](https://github.com/microsoft/TypeScript) | MIT / Apache-2.0 |
+
+외부 AI(OpenAI, Anthropic, Google)와 가입 화면 봇 확인(Cloudflare Turnstile)은 오픈소스가 아니라 각 회사의 API·서비스를 이용 약관에 따라 씁니다.
 
 ## 팀
 
@@ -200,8 +221,8 @@ flowchart LR
 ## 다음 계획
 
 - **본선 (진행 중, 최종 결과물 제출 12/11, 본선 시연 12/18):** 제출 전까지 아래를 모두 완성합니다.
-  - 끝남: 긴 대화가 분석에서 빠지는 문제와 오류 화면 다시 시도 수정, AI 비용 안전장치(서비스 전체 하루 호출 상한, 가입 화면 봇 확인), 백엔드 구조 정리(모델 호출·퀴즈 요청 검사·자료 개념 기능), 탈퇴 뒤 30일 재가입 제한, 큰 대화 파일도 화면이 멈추지 않는 브라우저 처리(Web Worker, zip 풀기·개인정보 가리기는 WebAssembly(Rust)), 프론트·백엔드 중복·쓰이지 않는 코드 정리(공용 부품·저장소 소유 확인 메서드·테스트 도우미로 합치기)
-  - 남은 일: 백엔드 배포와 세 모델 동작 확인, 자료 요약과 자료 기반 챗봇(대화 기록이 적은 사용자의 시작 경로), 소셜 로그인, 시연·발표 준비
+  - 끝남: 긴 대화가 분석에서 빠지는 문제와 오류 화면 다시 시도 수정, AI 비용 안전장치(서비스 전체 하루 호출 상한, 가입 화면 봇 확인), 백엔드 구조 정리(모델 호출·퀴즈 요청 검사·자료 개념 기능), 탈퇴 뒤 30일 재가입 제한, 큰 대화 파일도 화면이 멈추지 않는 브라우저 처리(Web Worker, zip 풀기·개인정보 가리기는 WebAssembly(Rust)), 프론트·백엔드 중복·쓰이지 않는 코드 정리(공용 부품·저장소 소유 확인 메서드·테스트 도우미로 합치기), 배포 구성(AWS EC2 + Docker Compose, 매일 DB 백업), AI를 기다리는 화면과 새 결과 도착 표시, 학습 대시보드를 위에서 아래로 읽는 개념 목록으로 재구성, 상단바 정리(읽는 동안 숨기기)
+  - 남은 일: 백엔드 서버 올리기와 세 모델 동작 확인 → **실사용자 테스트와 피드백 모으기**, 소셜 로그인, 시연·발표 준비. 자료 요약과 자료 기반 챗봇(대화 기록이 적은 사용자의 시작 경로)은 AI 호출 비용 때문에 순서를 뒤로 미뤘습니다
 - **사용자 테스트 뒤:** 숙련도 규칙의 숫자 조정
 - **이후 후보:** 작업 난이도에 따른 모델 등급 나눠 쓰기, Gemini 대화 가져오기, 오픈소스 모델을 직접 띄운 개인정보 가리기, 판단 근거 출처, 커뮤니티 기능 재검토
 
