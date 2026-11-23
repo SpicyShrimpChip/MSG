@@ -50,6 +50,32 @@ describe('toApiError', () => {
     expect(result.status).toBeUndefined();
   });
 
+  it('프록시가 낸 504(서버 응답 형식 없음)는 시간 초과와 같게 다룬다', () => {
+    const error = new AxiosError('fail', 'ERR_BAD_RESPONSE', config, null, {
+      status: 504,
+      statusText: 'Gateway Timeout',
+      headers: {},
+      config,
+      data: 'An error occurred with your deployment',
+    });
+    const result = toApiError(error);
+    expect(result.message).toBe(TIMEOUT_MESSAGE);
+    expect(result.status).toBeUndefined();
+  });
+
+  it('서버가 직접 보낸 504는 서버 메시지와 상태 코드를 그대로 담는다', () => {
+    const error = new AxiosError('fail', 'ERR_BAD_RESPONSE', config, null, {
+      status: 504,
+      statusText: 'Gateway Timeout',
+      headers: {},
+      config,
+      data: { success: false, message: '퀴즈를 만들지 못했어요.' },
+    });
+    const result = toApiError(error);
+    expect(result.message).toBe('퀴즈를 만들지 못했어요.');
+    expect(result.status).toBe(504);
+  });
+
   it('알 수 없는 오류도 ApiError로 바꾼다', () => {
     expect(toApiError(new Error('boom'))).toBeInstanceOf(ApiError);
   });
