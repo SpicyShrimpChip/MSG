@@ -104,18 +104,26 @@ DB 안을 보려면 `docker exec -it db-postgres-1 psql -U msg_migrator msg`. �
 - 확장에는 Copilot AI 기능도 있어요. 실제 사용자 데이터가 든 DB에는 AI 기능을 쓰지 않아요.
 - 표 구조를 바꾸는 SQL은 여기서 직접 치지 말고 마이그레이션 파일(`V7__...sql`처럼 다음 번호, `backend/CLAUDE.md` 참고)로 만들어요. 직접 친 SQL은 그 컴퓨터의 DB에만 반영돼요.
 
-## 예전 이름(`ai_lms`)으로 만든 DB를 쓰고 있다면 (11/24)
+## 11/24 전에 세팅한 컴퓨터라면 (이름 변경 + 마이그레이션 합치기)
 
-서비스 이름을 MSG로 통일하면서 DB·계정 이름이 `ai_lms` → `msg`, `ai_lms_test` → `msg_test`, `ai_lms_app` → `msg_app`, `ai_lms_migrator` → `msg_migrator`로 바뀌었어요. 11/24 전에 세팅한 컴퓨터는 `backend/.env`가 옛 이름을 가리키고 있어서 `bootRun`은 그대로 되지만, `pgTest`는 `msg_test`를 찾아요. 데이터를 지우지 않고 이름만 바꾸는 방법이에요.
+11/24에 두 가지가 바뀌어 예전 로컬 DB는 그대로 쓸 수 없어요.
 
-1. 백엔드(`bootRun`)와 VS Code DB 접속을 끄고(접속 중인 DB는 이름을 못 바꿔요), 컨테이너 안에서 이름을 바꿔요.
+- 서비스 이름을 MSG로 통일하면서 DB·계정 이름이 `ai_lms` → `msg`, `ai_lms_test` → `msg_test`, `ai_lms_app` → `msg_app`, `ai_lms_migrator` → `msg_migrator`로 바뀌었어요.
+- 첫 운영 배포 전에 마이그레이션 V1~V16을 `V1` 하나로 합쳤어요. 예전 DB에는 V1~V16 기록이 남아 있어 Flyway가 검증 오류를 내요. **로컬 DB는 비우고 다시 만들어요(로컬 데이터는 사라져요).**
+
+계정은 이름만 바꿔 비밀번호를 그대로 쓰고, DB는 비운 채로 다시 만드는 방법이에요.
+
+1. 백엔드(`bootRun`)와 VS Code DB 접속을 끄고, 컨테이너 안에서 계정 이름을 바꾼 뒤 DB를 다시 만들어요. 이미 `msg_*` 이름이면 첫 줄은 건너뛰어요.
 
    ```bash
-   docker exec db-postgres-1 psql -U postgres -v ON_ERROR_STOP=1 \
-     -c "ALTER DATABASE ai_lms RENAME TO msg" \
-     -c "ALTER DATABASE ai_lms_test RENAME TO msg_test" \
-     -c "ALTER ROLE ai_lms_app RENAME TO msg_app" \
-     -c "ALTER ROLE ai_lms_migrator RENAME TO msg_migrator"
+   docker exec db-postgres-1 psql -U postgres -v ON_ERROR_STOP=1      -c "ALTER ROLE ai_lms_app RENAME TO msg_app"      -c "ALTER ROLE ai_lms_migrator RENAME TO msg_migrator"
+   for old in ai_lms ai_lms_test msg msg_test; do
+     docker exec db-postgres-1 psql -U postgres -c "DROP DATABASE IF EXISTS $old"
+   done
+   for db in msg msg_test; do
+     docker exec db-postgres-1 psql -U postgres -v ON_ERROR_STOP=1        -c "CREATE DATABASE $db OWNER msg_migrator ENCODING 'UTF8' TEMPLATE template0"        -c "REVOKE ALL ON DATABASE $db FROM PUBLIC"        -c "GRANT CONNECT ON DATABASE $db TO msg_app"
+     docker exec db-postgres-1 psql -U postgres -d $db -v ON_ERROR_STOP=1        -c "CREATE EXTENSION IF NOT EXISTS vector"        -c "REVOKE ALL ON SCHEMA public FROM PUBLIC"        -c "GRANT USAGE ON SCHEMA public TO msg_app"        -c "GRANT ALL ON SCHEMA public TO msg_migrator"        -c "ALTER DEFAULT PRIVILEGES FOR ROLE msg_migrator IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO msg_app"        -c "ALTER DEFAULT PRIVILEGES FOR ROLE msg_migrator IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO msg_app"
+   done
    ```
 
 2. `backend/.env`에서 세 줄을 고쳐요. 비밀번호는 그대로예요.
@@ -126,11 +134,11 @@ DB 안을 보려면 `docker exec -it db-postgres-1 psql -U msg_migrator msg`. �
    DB_MIGRATION_USERNAME=msg_migrator
    ```
 
-3. `./gradlew pgTest`로 확인해요. VS Code 확장의 접속 정보(계정·DB 이름)도 새 이름으로 바꿔요.
+3. `./gradlew pgTest`와 `./gradlew bootRun`으로 확인해요(처음 실행할 때 Flyway가 `V1` 하나로 표를 만들어요). VS Code 확장의 접속 정보(계정·DB 이름)도 새 이름으로 바꿔요.
 
-- 권한과 표는 이름이 아니라 내부 번호로 이어져 있어서 그대로 따라와요.
+- Git Bash에서 위 명령의 경로가 이상하게 바뀌면 앞에 `MSYS_NO_PATHCONV=1`을 붙여요(`docs/wiki/tooling.md`).
 - 계정 이름을 바꾼 뒤 로그인이 안 되면(옛 MD5 방식 비밀번호는 이름이 바뀌면 지워져요) `ALTER ROLE msg_app PASSWORD '<.env의 DB_PASSWORD>'`처럼 다시 넣어요. 이 PostgreSQL 16 컨테이너의 기본값(SCRAM)이면 그대로 돼요.
-- 다시 만드는 게 편하면 아래 "처음부터 다시 하고 싶을 때"를 따라 `setup-local-postgres.sh`를 다시 실행해도 돼요(데이터는 사라져요).
+- 계정까지 새로 만드는 게 편하면 아래 "처음부터 다시 하고 싶을 때"를 따라 `setup-local-postgres.sh`를 다시 실행해도 돼요.
 
 ## 처음부터 다시 하고 싶을 때
 
