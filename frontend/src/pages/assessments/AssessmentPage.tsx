@@ -347,7 +347,7 @@ function MaterialAssessment({
           </Button>
           {mutation.isPending && (
             <span className="text-caption text-ink-soft" aria-live="polite">
-              AI가 문제를 만드는 중이에요. 최대 2분 30초 걸릴 수 있어요.
+              AI가 문제를 만드는 중이에요. 최대 1분 40초 걸릴 수 있어요.
             </span>
           )}
           {!preReady && (

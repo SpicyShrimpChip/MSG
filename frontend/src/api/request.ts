@@ -16,6 +16,10 @@ export class ApiError extends Error {
   }
 }
 
+// AI를 기다리는 요청(분석·퀴즈 만들기·채점·자료 개념)의 timeout. 배포에서는 Vercel이 /api를 백엔드로 넘기며
+// 첫 응답을 120초까지만 기다리므로, 서버 시간 예산(app.analysis.deadline·app.quiz.*-deadline 100초)보다 길고 120초보다 짧게 둔다
+export const AI_REQUEST_TIMEOUT_MS = 115_000;
+
 export const TIMEOUT_MESSAGE =
   '응답이 오래 걸려 기다리기를 멈췄어요. 서버에서는 아직 처리하고 있을 수 있으니 잠시 뒤 다시 확인해 주세요.';
 
@@ -42,6 +46,14 @@ export function toApiError(error: unknown): ApiError {
       return new ApiError(
         '서버에 연결하지 못했어요. 인터넷 연결을 확인해 주세요.',
       );
+    }
+    // 앞단 프록시(Vercel)가 백엔드를 기다리다 낸 504는 서버 응답 형식(success)이 없다.
+    // 서버는 아직 처리하고 있을 수 있으므로 시간 초과와 같게 다룬다(화면이 결과를 다시 확인한다)
+    if (
+      error.response.status === 504 &&
+      typeof error.response.data?.success !== 'boolean'
+    ) {
+      return new ApiError(TIMEOUT_MESSAGE);
     }
     return new ApiError(
       error.response.data?.message || DEFAULT_ERROR_MESSAGE,

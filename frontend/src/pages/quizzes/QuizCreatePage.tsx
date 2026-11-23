@@ -64,7 +64,7 @@ function isQuizMode(value: string | null): value is QuizMode {
 
 // 퀴즈 만들기: 학습 모드·과목·문제 유형·난이도·문제 수를 골라 서버에 AI 생성을 부탁한다.
 // 서버가 구조·정답·채점 기준을 검증하고 통과한 퀴즈만 저장한다. 실패하면 서버 message를 그대로 보여 준다
-// 이전에 보낸 만들기 요청이 남아 있으면 끝날 때까지 상태를 확인한다 (서버 마감 150초)
+// 이전에 보낸 만들기 요청이 남아 있으면 끝날 때까지 상태를 확인한다 (서버 마감 100초)
 function PendingGeneration({
   requestKey,
   onDone,
@@ -539,7 +539,7 @@ function QuizCreateForm({ me }: { me: User | null }) {
         </Button>
         {mutation.isPending && (
           <p className="text-body text-ink-soft" aria-live="polite">
-            최대 2분 30초 걸릴 수 있어요. 화면을 새로 고쳐도 결과를 다시 찾아
+            최대 1분 40초 걸릴 수 있어요. 화면을 새로 고쳐도 결과를 다시 찾아
             줘요.
           </p>
         )}

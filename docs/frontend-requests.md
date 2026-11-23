@@ -425,8 +425,8 @@ QuizCreateInput = {
 
 - **AI 퀴즈 처리 동의를 따로 받는다.** `User.aiQuizConsent`, 가입 `agreedAiQuiz`(선택, 없으면 false), 마이페이지 `PATCH /api/users/me/consents { aiQuiz }`. 대화 분석 동의(`aiAnalysis`)를 퀴즈로 넓히지 않는다. 기존 회원은 false. 동의가 없으면 만들기 403, 주관식·서술형은 `pending`(이유 문구는 `gradingMessage`).
 - 더한 필드: `QuizCreateInput.mockExam`(exam_prep만, 20문제까지), `Quiz.mockExam`, `QuizSummary.mockExam`·`lastReviewCount`, 개념별 결과 `correctCount`(채점이 끝나고 만점인 문제 수, 대기·확인 필요는 틀린 것으로 세지 않음)·`lastSubmittedAt`.
-- 오류 추가: 만들기 504(전체 시간 150초 초과, 저장 안 함), 429(24시간 실제 모델 요청 수 상한), 다시 채점 409(같은 제출을 채점 중)·429(24시간 AI 채점 실행 한도, 답은 그대로)·403(퀴즈 동의 없음)·503(모델 없음).
-- timeout: 만들기 180초, 제출·다시 채점 150초(서버 예산 150초·120초보다 길게). 만들기를 보낸 키는 탭 sessionStorage에 두고 새로 고치면 상태 API로 결과를 찾는다.
+- 오류 추가: 만들기 504(전체 시간 100초 초과, 저장 안 함), 429(24시간 실제 모델 요청 수 상한), 다시 채점 409(같은 제출을 채점 중)·429(24시간 AI 채점 실행 한도, 답은 그대로)·403(퀴즈 동의 없음)·503(모델 없음).
+- timeout: 만들기·제출·다시 채점 모두 115초(`AI_REQUEST_TIMEOUT_MS`, 서버 예산 100초보다 길고 Vercel 프록시 한도 120초보다 짧게). 프록시가 낸 504(서버 응답 형식 없음)는 시간 초과와 같게 다룬다. 만들기를 보낸 키는 탭 sessionStorage에 두고 새로 고치면 상태 API로 결과를 찾는다.
 
 #### 11/3 사전·사후평가·자료 핵심 개념 (백엔드 V9·V10, 확정: Swagger `사전·사후평가`, 핵심 개념 API도 같은 태그)
 

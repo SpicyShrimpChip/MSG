@@ -18,7 +18,7 @@ import {
 } from '@/mocks';
 // 스토어 배럴(화면 모드 등 window 사용)까지 불러오지 않도록 파일을 직접 가져온다
 import { isMockData } from '@/store/useDemoStore';
-import { request } from './request';
+import { AI_REQUEST_TIMEOUT_MS, request } from './request';
 
 // React Query에서 내 학습자료를 담는 키. 상세는 [...MATERIALS_QUERY_KEY, id]
 export const MATERIALS_QUERY_KEY = ['materials'] as const;
@@ -78,7 +78,7 @@ export function extractMaterialConcepts(
     method: 'POST',
     url: `/materials/${id}/concepts`,
     data: input,
-    timeout: 180_000,
+    timeout: AI_REQUEST_TIMEOUT_MS,
   });
 }
 
@@ -92,6 +92,6 @@ export function createConceptStudyNote(
     method: 'POST',
     url: `/materials/${id}/concepts/study-notes`,
     data: input,
-    timeout: 180_000,
+    timeout: AI_REQUEST_TIMEOUT_MS,
   });
 }

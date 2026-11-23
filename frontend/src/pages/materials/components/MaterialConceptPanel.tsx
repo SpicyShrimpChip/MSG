@@ -408,7 +408,7 @@ function MaterialConceptPanel({
           </Button>
           {mutation.isPending && (
             <span className="text-caption text-ink-soft" aria-live="polite">
-              AI가 개념을 찾는 중이에요. 최대 2분 30초 걸릴 수 있어요.
+              AI가 개념을 찾는 중이에요. 최대 1분 40초 걸릴 수 있어요.
             </span>
           )}
           {mockData && (

@@ -17,7 +17,7 @@ import {
 } from '@/mocks';
 // 스토어 배럴(화면 모드 등 window 사용)까지 불러오지 않도록 파일을 직접 가져온다
 import { isMockData } from '@/store/useDemoStore';
-import { request } from './request';
+import { AI_REQUEST_TIMEOUT_MS, request } from './request';
 
 // React Query에서 퀴즈를 담는 키. 한 퀴즈는 [...QUIZZES_QUERY_KEY, id], 최근 결과는 [...QUIZZES_QUERY_KEY, id, 'result'],
 // 과목의 개념별 결과는 [...QUIZZES_QUERY_KEY, 'concept-stats', courseId]
@@ -34,14 +34,14 @@ export function getQuiz(id: number): Promise<Quiz> {
   return request<Quiz>({ method: 'GET', url: `/quizzes/${id}` });
 }
 
-// AI로 퀴즈 만들기. 서버는 전체 150초(app.quiz.generation-deadline) 안에서만 모델을 기다리므로 그보다 조금 길게 기다린다
+// AI로 퀴즈 만들기. 서버는 전체 100초(app.quiz.generation-deadline) 안에서만 모델을 기다리므로 그보다 조금 길게 기다린다
 export function createQuiz(input: QuizCreateInput): Promise<Quiz> {
   if (isMockData()) return mockCreateQuiz(input);
   return request<Quiz>({
     method: 'POST',
     url: '/quizzes',
     data: input,
-    timeout: 180_000,
+    timeout: AI_REQUEST_TIMEOUT_MS,
   });
 }
 
@@ -66,7 +66,7 @@ export function submitQuiz(
     method: 'POST',
     url: `/quizzes/${id}/submissions`,
     data: { answers },
-    timeout: 150_000,
+    timeout: AI_REQUEST_TIMEOUT_MS,
   });
 }
 
@@ -79,7 +79,7 @@ export function regradeQuiz(
   return request<QuizResult>({
     method: 'POST',
     url: `/quizzes/${id}/submissions/${submissionId}/grading`,
-    timeout: 150_000,
+    timeout: AI_REQUEST_TIMEOUT_MS,
   });
 }
 

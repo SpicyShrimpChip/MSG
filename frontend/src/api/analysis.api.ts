@@ -13,7 +13,7 @@ import {
 } from '@/mocks';
 // 스토어 배럴(화면 모드 등 window 사용)까지 불러오지 않도록 파일을 직접 가져온다
 import { isMockData } from '@/store/useDemoStore';
-import { ApiError, request } from './request';
+import { AI_REQUEST_TIMEOUT_MS, ApiError, request } from './request';
 
 export const ANALYSIS_QUERY_KEY = ['analysis'] as const;
 
@@ -65,12 +65,12 @@ export function deleteConceptFeedback(id: number): Promise<void> {
   return request<void>({ method: 'DELETE', url: `/analysis/feedback/${id}` });
 }
 
-// 분석 시작. 모델을 기다리므로 길면 2분쯤 걸린다
+// 분석 시작. 모델을 기다리므로 길면 1분 40초쯤 걸린다 (서버 예산 100초)
 export function startAnalysis(courseId: number): Promise<AnalysisRun> {
   if (isMockData()) return mockStartAnalysis(courseId);
   return request<AnalysisRun>({
     method: 'POST',
     url: `/analysis/courses/${courseId}/runs`,
-    timeout: 180_000,
+    timeout: AI_REQUEST_TIMEOUT_MS,
   });
 }

@@ -130,7 +130,7 @@ function AnalysisResult({ run }: { run: AnalysisRun }) {
   );
 }
 
-// 시간 초과·409 뒤 최근 분석을 다시 확인하는 간격과 그만둘 때까지의 시간 (서버 분석 예산 150초보다 넉넉히)
+// 시간 초과·409 뒤 최근 분석을 다시 확인하는 간격과 그만둘 때까지의 시간 (서버 분석 예산 100초보다 넉넉히)
 const WAIT_POLL_MS = 10_000;
 const WAIT_LIMIT_MS = 5 * 60_000;
 
@@ -235,7 +235,7 @@ function CourseAnalysis({ course }: { course: Course }) {
         )}
         {mutation.isPending && (
           <p className="rounded-xl bg-primary-soft px-4 py-3 text-body text-heading">
-            모델마다 대화를 따로 읽고 있어요. 길면 2분쯤 걸려요. 이 화면을
+            모델마다 대화를 따로 읽고 있어요. 길면 1분 40초쯤 걸려요. 이 화면을
             떠나지 말아 주세요.
           </p>
         )}

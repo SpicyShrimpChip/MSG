@@ -106,8 +106,9 @@ app:
     # 사용자 한 명이 24시간 안에 시작할 수 있는 분석 수 (분석 한 번에 모델 최대 3번 호출)
     daily-run-limit: 10
     running-timeout: 10m
-    # 분석 한 번에서 모델을 기다리는 전체 시간. 프론트 timeout(180초)보다 짧게 둔다 (늦은 모델은 시간 초과로 두고 나머지를 저장)
-    deadline: 150s
+    # 분석 한 번에서 모델을 기다리는 전체 시간 (늦은 모델은 시간 초과로 두고 나머지를 저장).
+    # 배포에서 Vercel이 /api를 넘기며 첫 응답을 120초까지만 기다리므로 그보다 넉넉히 짧게, 프론트 timeout(115초)보다도 짧게 둔다
+    deadline: 100s
 
   # 개념별 숙련도 점수 (domain/analysis, 11/5 설계안 초기값). 전부 근거 없는 초기 가정이라 사용자 테스트 뒤 조정한다.
   # 점수 = (Σ무게·값 + 1) ÷ (Σ무게 + 2). 산식을 바꾸면 formula-version을 올린다 (docs/frontend-requests.md 5-10절)
@@ -136,9 +137,9 @@ app:
     daily-generation-limit: 20
     daily-grading-limit: 30
     daily-model-call-limit: 150
-    # 시간 예산. 프론트 timeout(만들기 180초, 제출·다시 채점 150초)보다 짧게 둔다
-    generation-deadline: 150s
-    grading-deadline: 120s
+    # 시간 예산 (자료 핵심 개념 뽑기·개념 설명도 generation-deadline). Vercel 프록시 한도 120초와 프론트 timeout 115초보다 짧게 둔다
+    generation-deadline: 100s
+    grading-deadline: 100s
     # 마감 시각이 없는 옛 만들기 기록(V7)을 끝난 것으로 볼 시간
     running-timeout: 5m
     generation-max-output-tokens: 6000

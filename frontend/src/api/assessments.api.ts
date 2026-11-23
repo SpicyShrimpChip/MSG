@@ -11,18 +11,18 @@ import {
 } from '@/mocks';
 // 스토어 배럴(화면 모드 등 window 사용)까지 불러오지 않도록 파일을 직접 가져온다
 import { isMockData } from '@/store/useDemoStore';
-import { request } from './request';
+import { AI_REQUEST_TIMEOUT_MS, request } from './request';
 
 export const ASSESSMENTS_QUERY_KEY = ['assessments'] as const;
 
-// 사전·사후평가 만들기 (백엔드 11/3, Swagger `사전·사후평가`). 퀴즈 만들기와 같은 시간 예산(150초)
+// 사전·사후평가 만들기 (백엔드 11/3, Swagger `사전·사후평가`). 퀴즈 만들기와 같은 시간 예산(100초)
 export function createAssessment(input: AssessmentCreateInput): Promise<Quiz> {
   if (isMockData()) return mockCreateAssessment(input);
   return request<Quiz>({
     method: 'POST',
     url: '/assessments',
     data: input,
-    timeout: 180_000,
+    timeout: AI_REQUEST_TIMEOUT_MS,
   });
 }
 
