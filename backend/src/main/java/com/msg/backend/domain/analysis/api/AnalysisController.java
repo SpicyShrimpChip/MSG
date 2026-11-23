@@ -7,6 +7,7 @@ import com.msg.backend.domain.analysis.application.MasteryHistoryService;
 import com.msg.backend.domain.analysis.dto.AnalysisRunResponse;
 import com.msg.backend.domain.analysis.dto.FeedbackRequest;
 import com.msg.backend.domain.analysis.dto.FeedbackResponse;
+import com.msg.backend.domain.analysis.dto.LatestAnalysisResponse;
 import com.msg.backend.domain.analysis.dto.ProviderStatusResponse;
 import com.msg.backend.global.common.ApiResponse;
 import com.msg.backend.global.security.AuthUser;
@@ -47,6 +48,7 @@ public class AnalysisController {
 
 	@Operation(summary = "과목 대화 분석하기", description = "이 과목에 가져온 대화(가져오기 완료, 동의한 사용자)를 "
 			+ "설정된 모델마다 같은 지시문으로 따로 분석하고 개념(과목 키워드)별로 의견을 비교한다. 모델을 기다리므로 오래 걸릴 수 있다. "
+			+ "모델이 모두 실패하면 status failed로 돌려주고(24시간 횟수에는 센다) runs/latest의 결과를 바꾸지 않는다. "
 			+ "미동의 403, 남의 과목 404, 키워드·대화 없음 400, 이미 분석 중 409, 24시간 횟수 초과 429, 설정된 모델 없음 503.")
 	@PostMapping("/courses/{courseId}/runs")
 	public ResponseEntity<ApiResponse<AnalysisRunResponse>> run(@AuthenticationPrincipal AuthUser authUser,
@@ -56,12 +58,15 @@ public class AnalysisController {
 						analysisService.run(authUser.userId(), courseId))));
 	}
 
-	@Operation(summary = "과목의 최근 분석 결과", description = "가장 최근에 끝난 분석. 없으면 404.")
+	@Operation(summary = "과목의 최근 분석 결과", description = "run: 모델이 하나 이상 판단한 가장 최근 분석(completed·partial). "
+			+ "모델이 모두 실패한 분석은 run이 되지 않고, 그보다 나중에 시작한 분석이 진행 중이거나 결과 없이 끝났으면 lastAttempt로 알린다. "
+			+ "둘 다 없으면 404.")
 	@GetMapping("/courses/{courseId}/runs/latest")
-	public ApiResponse<AnalysisRunResponse> latest(@AuthenticationPrincipal AuthUser authUser,
+	public ApiResponse<LatestAnalysisResponse> latest(@AuthenticationPrincipal AuthUser authUser,
 			@PathVariable Long courseId) {
-		return ApiResponse.success(masteryHistoryService.recordAndAttach(authUser.userId(),
-				queryService.getLatest(authUser.userId(), courseId)));
+		LatestAnalysisResponse latest = queryService.getLatest(authUser.userId(), courseId);
+		return ApiResponse.success(latest.run() == null ? latest
+				: latest.withRun(masteryHistoryService.recordAndAttach(authUser.userId(), latest.run())));
 	}
 
 	@Operation(summary = "분석 결과 하나")

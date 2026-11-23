@@ -299,7 +299,7 @@ GPT·Claude·Gemini가 과목 하나의 가져온 대화를 **같은 기준으�
 | ------ | ---------------------------------------------- | ------------------------------------------------- | ----------------------------------------------------------- |
 | GET    | `/api/analysis/providers`                      | -                                                 | `ProviderStatus[]` (모델별 설정 여부, 키는 안 줌)           |
 | POST   | `/api/analysis/courses/{courseId}/runs`        | -                                                 | `AnalysisRun` (201). 모델을 기다리므로 수십 초 걸릴 수 있다 |
-| GET    | `/api/analysis/courses/{courseId}/runs/latest` | -                                                 | `AnalysisRun` (가장 최근에 끝난 분석, 없으면 404)           |
+| GET    | `/api/analysis/courses/{courseId}/runs/latest` | -                                                 | `LatestAnalysis` (아래, 분석한 적이 없으면 404)             |
 | GET    | `/api/analysis/runs/{runId}`                   | -                                                 | `AnalysisRun`                                               |
 | GET    | `/api/analysis/courses/{courseId}/feedback`    | -                                                 | `ConceptFeedback[]`                                         |
 | PUT    | `/api/analysis/courses/{courseId}/feedback`    | `{ concept, feedback, comment?, analysisRunId? }` | `ConceptFeedback` (있으면 바꾼다)                           |
@@ -329,7 +329,17 @@ AnalysisRun = {
 }
 ConceptFeedback = { id, courseId, concept, feedback: "already_know" | "want_to_study", comment: string | null,
                     analysisRunId: number | null, updatedAt, nextAction: "confirm_quiz" | "prioritize_study" }
+// runs/latest (11/24, #209·#214). run: 모델이 하나 이상 판단한 가장 최근 분석(completed·partial)만.
+// lastAttempt: run보다 나중에 시작한 분석이 진행 중이거나 결과 없이 끝났으면 그 시도 (없으면 null)
+LatestAnalysis = {
+  run: AnalysisRun | null,
+  lastAttempt: { runId, status: "running" | "failed", startedAt, finishedAt: string | null,
+                 message: string | null /* 결과가 없는 이유, 진행 중이면 null */ } | null
+}
 ```
+
+- **모델이 모두 실패한 분석은 이전 결과를 덮지 않는다(11/24, #209).** `POST runs`는 그대로 `status: "failed"`인 `AnalysisRun`(201)을 돌려주지만, `runs/latest`의 `run`은 이전에 모델이 판단한 분석이고 실패는 `lastAttempt.status: "failed"`로만 알린다. 실패한 시도도 24시간 분석 횟수에는 센다(제공사가 시간 초과에도 요금을 매길 수 있다). 판단한 모델이 없는 분석은 숙련도 기록(`concept_mastery`)을 남기지 않고, 일부 모델이 실패한 분석(`partial`)은 대화 쪽 근거만 바뀌었으면 기록하지 않는다(모델이 빠져 생긴 변화와 구분할 수 없다. 퀴즈·산식이 바뀌었거나 첫 기록이면 남긴다).
+- **분석 중이면 `lastAttempt.status: "running"`(11/24, #214).** 새로고침해도 대시보드가 처음부터 "분석 중"을 보여 주고 끝날 때까지 다시 확인한다. 시작한 지 `app.analysis.running-timeout`(10분)이 지나도 끝나지 않은 분석(서버가 중간에 멈춤)은 `failed`로 준다. 진행 중 표시는 과목 단위다(새 분석을 막는 409는 사용자 단위).
 
 화면에 보여 줄 때 지킬 것:
 

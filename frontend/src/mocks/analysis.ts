@@ -5,6 +5,7 @@ import type {
   ConceptJudgment,
   ConceptResult,
   JudgmentEvidence,
+  LatestAnalysis,
   ProviderStatus,
 } from '@/types';
 import { ApiError } from '@/api/request';
@@ -493,11 +494,12 @@ export function mockGetProviders(): Promise<ProviderStatus[]> {
   return mockDelay(PROVIDERS);
 }
 
+// 체험에는 진행 중·실패한 시도가 없다 (예시 분석은 늘 바로 끝난다)
 export function mockGetLatestAnalysis(
   courseId: number,
-): Promise<AnalysisRun | null> {
+): Promise<LatestAnalysis> {
   const run = latest.get(courseId);
-  return mockDelay(run ? withFeedback(run) : null);
+  return mockDelay({ run: run ? withFeedback(run) : null, lastAttempt: null });
 }
 
 export function mockSaveConceptFeedback(

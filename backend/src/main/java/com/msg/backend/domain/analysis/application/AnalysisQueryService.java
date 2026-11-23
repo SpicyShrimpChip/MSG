@@ -8,6 +8,7 @@ import com.msg.backend.domain.analysis.dao.ConceptJudgmentRepository;
 import com.msg.backend.domain.analysis.dao.JudgmentEvidenceRepository;
 import com.msg.backend.domain.analysis.dto.AnalysisRunResponse;
 import com.msg.backend.domain.analysis.dto.FeedbackResponse;
+import com.msg.backend.domain.analysis.dto.LatestAnalysisResponse;
 import com.msg.backend.domain.analysis.entity.AnalysisModelResult;
 import com.msg.backend.domain.analysis.entity.AnalysisRun;
 import com.msg.backend.domain.analysis.entity.AnalysisRunStatus;
@@ -29,6 +30,8 @@ import com.msg.backend.domain.quiz.application.QuizStatsService;
 import com.msg.backend.domain.quiz.dto.ConceptQuizStatsResponse;
 import com.msg.backend.global.error.BusinessException;
 import com.msg.backend.global.llm.LlmException;
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -52,8 +55,9 @@ public class AnalysisQueryService {
 
 	static final String RUN_NOT_FOUND_MESSAGE = "분석 결과를 찾을 수 없어요.";
 	static final String NO_RUN_MESSAGE = "아직 이 과목을 분석한 결과가 없어요.";
-	private static final Set<AnalysisRunStatus> FINISHED =
-			Set.of(AnalysisRunStatus.COMPLETED, AnalysisRunStatus.PARTIAL, AnalysisRunStatus.FAILED);
+	static final String UNFINISHED_MESSAGE = "분석이 제시간에 끝나지 않아 결과를 받지 못했어요.";
+	// 모델이 하나 이상 판단한 분석만 화면 결과로 쓴다. 모두 실패한 분석(FAILED)은 이전 결과를 덮지 않는다(#209)
+	private static final Set<AnalysisRunStatus> JUDGED = Set.of(AnalysisRunStatus.COMPLETED, AnalysisRunStatus.PARTIAL);
 
 	private final AnalysisRunRepository runRepository;
 	private final AnalysisModelResultRepository modelResultRepository;
@@ -66,17 +70,54 @@ public class AnalysisQueryService {
 	private final CourseRepository courseRepository;
 	private final QuizStatsService quizStatsService;
 	private final MasteryCalculator masteryCalculator;
+	private final AnalysisProperties properties;
+	private final Clock clock;
 
 	public AnalysisRunResponse getRun(Long userId, Long runId) {
 		return toResponse(runRepository.findByIdAndUserId(runId, userId)
 				.orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, RUN_NOT_FOUND_MESSAGE)));
 	}
 
-	// 과목의 가장 최근에 끝난 분석
-	public AnalysisRunResponse getLatest(Long userId, Long courseId) {
+	// 과목의 최근 분석: 모델이 하나 이상 판단한 가장 최근 분석과, 그 뒤에 시작한 분석이 진행 중·결과 없음이면 그 시도.
+	// 둘 다 없으면(한 번도 분석하지 않음) 404
+	public LatestAnalysisResponse getLatest(Long userId, Long courseId) {
 		courseRepository.checkOwned(courseId, userId);
-		return toResponse(runRepository.findFirstByUserIdAndCourseIdAndStatusInOrderByIdDesc(userId, courseId, FINISHED)
-				.orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, NO_RUN_MESSAGE)));
+		AnalysisRun judged = runRepository.findFirstByUserIdAndCourseIdAndStatusInOrderByIdDesc(userId, courseId, JUDGED)
+				.orElse(null);
+		LatestAnalysisResponse.LastAttempt attempt = runRepository
+				.findFirstByUserIdAndCourseIdOrderByIdDesc(userId, courseId)
+				.filter(newest -> judged == null || !newest.getId().equals(judged.getId()))
+				.map(this::lastAttempt)
+				.orElse(null);
+		if (judged == null && attempt == null) {
+			throw new BusinessException(HttpStatus.NOT_FOUND, NO_RUN_MESSAGE);
+		}
+		return new LatestAnalysisResponse(judged == null ? null : toResponse(judged), attempt);
+	}
+
+	// 판단한 모델이 없는 시도. 시작한 지 runningTimeout이 지나도 RUNNING이면(서버가 중간에 멈춤) 끝나지 못한 것으로 본다
+	private LatestAnalysisResponse.LastAttempt lastAttempt(AnalysisRun run) {
+		if (run.getStatus() == AnalysisRunStatus.RUNNING) {
+			boolean active = run.getCreatedAt().isAfter(LocalDateTime.now(clock).minus(properties.runningTimeout()));
+			return new LatestAnalysisResponse.LastAttempt(run.getId(), active ? "running" : "failed",
+					run.getCreatedAt(), null, active ? null : UNFINISHED_MESSAGE);
+		}
+		return new LatestAnalysisResponse.LastAttempt(run.getId(), "failed", run.getCreatedAt(),
+				run.getCompletedAt(), failedMessage(run));
+	}
+
+	// 모두 실패한 이유. 부른 모델의 이유가 모두 같으면 그 이유를 덧붙인다 (예: 모두 호출 한도 초과)
+	private String failedMessage(AnalysisRun run) {
+		List<AnalysisModelResult> called = modelResultRepository.findAllByRunId(run.getId()).stream()
+				.filter(result -> result.getStatus() != ModelResultStatus.NOT_CONFIGURED)
+				.toList();
+		if (called.isEmpty()) {
+			return "분석 결과를 받지 못했어요.";
+		}
+		String summary = called.size() == 1 ? "연결된 모델이 결과를 주지 못했어요."
+				: "연결된 모델 " + called.size() + "개가 모두 결과를 주지 못했어요.";
+		List<String> reasons = called.stream().map(AnalysisQueryService::message).distinct().toList();
+		return reasons.size() == 1 ? summary + " " + reasons.get(0) : summary;
 	}
 
 	private AnalysisRunResponse toResponse(AnalysisRun run) {
