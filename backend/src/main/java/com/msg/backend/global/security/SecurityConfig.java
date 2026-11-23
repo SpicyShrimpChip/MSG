@@ -20,7 +20,9 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
 	// 로그인 없이 쓸 수 있는 주소. 나머지는 모두 로그인이 필요하다
-	private static final String[] PUBLIC_GET = {"/api/notices", "/api/notices/**"};
+	private static final String[] PUBLIC_GET = {"/api/notices", "/api/notices/**",
+			// 소셜 로그인: 브라우저가 직접 이동하는 시작·콜백 주소와 버튼 목록, 가입 마무리 정보(서명 쿠키로 확인)
+			"/api/auth/social/providers", "/api/auth/kakao/start", "/api/auth/kakao/callback", "/api/auth/social/pending"};
 	private static final String[] PUBLIC_AUTH = {
 			"/api/auth/signup", "/api/auth/login", "/api/auth/refresh", "/api/auth/logout"
 	};
