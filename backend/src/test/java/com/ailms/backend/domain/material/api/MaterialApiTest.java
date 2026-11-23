@@ -54,7 +54,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 학습자료 올리기·조회·삭제와 과목 삭제 때 자료 정리. 파일은 TestStorage의 임시 폴더에만 저장하고,
- * DB는 H2 또는 ai_lms_test에서만 돈다(TestDatabaseGuard). 회원을 지우면 과목·자료 행도 함께 지워진다.
+ * DB는 H2 또는 msg_test에서만 돈다(TestDatabaseGuard). 회원을 지우면 과목·자료 행도 함께 지워진다.
  */
 @IntegrationTest
 class MaterialApiTest {

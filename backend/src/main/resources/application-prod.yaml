@@ -14,7 +14,7 @@ springdoc:
     enabled: false
 
 spring:
-  # 예: jdbc:postgresql://db:5432/ai_lms (deploy/compose.yaml이 넣어 준다)
+  # 예: jdbc:postgresql://db:5432/msg (deploy/compose.yaml이 넣어 준다)
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}

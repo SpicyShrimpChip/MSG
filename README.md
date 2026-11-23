@@ -280,7 +280,7 @@ cd MSG/backend
 ./db/setup-local-postgres.sh # 처음 한 번: DB·계정을 만들고 backend/.env 생성 (관리자 비밀번호 필요, psql이 없으면 도커 컨테이너 안의 psql을 써서 묻지 않음)
 ./gradlew bootRun           # http://localhost:8080 (로컬 PostgreSQL, 테이블은 Flyway가 자동 생성)
 ./gradlew test              # H2 메모리 DB로 테스트
-./gradlew pgTest            # 같은 테스트를 PostgreSQL(ai_lms_test)로 실행
+./gradlew pgTest            # 같은 테스트를 PostgreSQL(msg_test)로 실행
 ```
 
 - API 문서(Swagger): http://localhost:8080/swagger-ui/index.html

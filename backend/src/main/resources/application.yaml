@@ -173,7 +173,7 @@ app:
     # Base64로 인코딩한 32바이트 이상 키. 비어 있고 allow-ephemeral-secret이 true면 실행할 때마다 임시 키를 만든다
     secret: ${JWT_SECRET:}
     allow-ephemeral-secret: true
-    issuer: ai-lms
+    issuer: msg
     access-token-ttl: 15m
 
   auth:

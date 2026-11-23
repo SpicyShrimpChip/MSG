@@ -30,10 +30,10 @@ services:
     restart: unless-stopped
     env_file: backend.env
     environment:
-      DB_URL: jdbc:postgresql://db:5432/ai_lms
-      DB_USERNAME: ai_lms_app
+      DB_URL: jdbc:postgresql://db:5432/msg
+      DB_USERNAME: msg_app
       DB_PASSWORD: ${APP_DB_PASSWORD:?APP_DB_PASSWORD를 .env에 넣어 주세요}
-      DB_MIGRATION_USERNAME: ai_lms_migrator
+      DB_MIGRATION_USERNAME: msg_migrator
       DB_MIGRATION_PASSWORD: ${MIGRATION_DB_PASSWORD:?MIGRATION_DB_PASSWORD를 .env에 넣어 주세요}
       STORAGE_LOCAL_ROOT: /data/uploads
     volumes:
@@ -57,7 +57,7 @@ services:
       # 데이터 폴더가 비어 있을 때(처음 띄울 때)만 실행된다
       - ./db-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d ai_lms"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d msg"]
       interval: 5s
       timeout: 5s
       retries: 20
