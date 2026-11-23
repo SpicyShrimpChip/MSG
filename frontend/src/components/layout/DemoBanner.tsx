@@ -10,7 +10,7 @@ function DemoBanner() {
   return (
     <div
       role="status"
-      className="flex items-center gap-3 border-b border-line bg-primary-soft px-6 py-2 text-body text-heading-soft max-sm:gap-2 max-sm:px-4 print:hidden"
+      className="pointer-events-auto relative z-10 flex items-center gap-3 border-b border-line bg-primary-soft px-6 py-2 text-body text-heading-soft max-sm:gap-2 max-sm:px-4 print:hidden"
     >
       <span className="shrink-0 rounded bg-primary px-2 py-0.5 text-caption font-bold text-on-primary">
         체험 모드

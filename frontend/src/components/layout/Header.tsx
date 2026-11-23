@@ -12,7 +12,11 @@ import { Menu, Search, X } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
 import { logout } from '@/api';
-import { MOTION_DURATION } from '@/constants';
+import {
+  HEADER_HIDE_TRANSITION,
+  HEADER_SHOW_SPRING,
+  MOTION_DURATION,
+} from '@/constants';
 import { useMe } from '@/hooks';
 import { useAuthStore, useDemoStore } from '@/store';
 import { cn } from '@/utils';
@@ -20,12 +24,13 @@ import Gnb from './Gnb';
 import MobileMenu, { MOBILE_MENU_ID } from './MobileMenu';
 import ThemeToggle from './ThemeToggle';
 import { usePhone } from './usePhone';
-import { useScrolled } from './useScrolled';
-import { GlassSurface, LogoMark } from '../common';
+import { useHideOnScroll } from './useHideOnScroll';
+import { LogoMark } from '../common';
 import { FIELD_CLASS } from '../common/fieldClass';
 
-// 넓은 화면 상단바 알약 높이(px): 맨 위 64(h-16), 스크롤하면 56(h-14). 유리 바탕(GlassSurface)에도 같은 값을 넘긴다
-const CAPSULE_HEIGHT = { top: 64, scrolled: 56 };
+// 숨을 때 위로 빼는 거리(px). 상단바(넓은 화면 80, 휴대폰 57, 중간 폭에서 두 줄로 접혀도)와 알약 그림자까지 화면 밖으로 나가게 넉넉히 둔다.
+// 퍼센트로 두면 나올 때 첫 프레임에 위치가 튀었다
+const HIDE_OFFSET = 160;
 
 const ACCOUNT_LINK_CLASS = 'font-medium text-ink-soft hover:text-heading';
 
@@ -134,17 +139,21 @@ function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
-  const scrolled = useScrolled();
-  const capsuleHeight = scrolled ? CAPSULE_HEIGHT.scrolled : CAPSULE_HEIGHT.top;
-  // 스크롤하면 검색칸을 돋보기로 접고, 돋보기를 누르거나 입력 중일 때만 펼친다.
-  // 휴대폰 폭은 늘 돋보기만 두고, 누르면 상단바 한 줄을 검색칸이 덮는다(닫으면 입력한 글자는 남긴다)
+  // 휴대폰 폭은 검색칸을 돋보기로 접어 두고, 누르면 상단바 한 줄을 검색칸이 덮는다(닫으면 입력한 글자는 남긴다).
+  // 넓은 화면은 늘 펼쳐 둔다
   const phone = usePhone();
   const [searchOpen, setSearchOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const searchCollapsed = phone
-    ? !searchOpen
-    : scrolled && !searchOpen && !keyword;
+  const searchCollapsed = phone && !searchOpen;
   const phoneSearchOpen = phone && searchOpen;
+
+  // 아래로 내리면 숨고 위로 올리면 다시 나온다(11/24). 메뉴·검색을 쓰는 중이면 숨기지 않는다:
+  // 키보드 포커스가 상단바 안에 있거나(드롭다운 포함) 마우스가 올라가 있거나 햄버거 메뉴·휴대폰 검색칸이 열려 있을 때
+  const scrolledAway = useHideOnScroll();
+  const [focusInside, setFocusInside] = useState(false);
+  const [pointerInside, setPointerInside] = useState(false);
+  const hidden =
+    scrolledAway && !focusInside && !pointerInside && !menuOpen && !searchOpen;
 
   // 휴대폰 검색칸은 상단바를 덮으므로, 칸 바깥을 누르면 확실히 닫는다 (포커스가 안 들어간 채 열린 경우도 닫히게)
   const searchFormRef = useRef<HTMLFormElement>(null);
@@ -179,20 +188,23 @@ function Header() {
 
   return (
     // 좁은 화면: 흰 바탕 한 줄 + 햄버거 메뉴(MobileMenu). 넓은 화면처럼 위에 붙어 따라온다(11/6, 창을 좁힌 노트북에서 메뉴로 돌아가기 불편했다).
-    // 넓은 화면: 처음부터 본문 폭(1152px)의 유리 알약이 위에 떠 있고, 스크롤하면 높이가 64 → 56px로 줄고 검색칸은 돋보기로 접힌다.
-    // 바깥 자리(h-20 = 80px)는 그대로 둬서 아래 내용이 들썩이지 않게 한다. 배경은 투명이라 첫 화면 파란 띠는 이 자리까지 끌어올린다(Hero의 lg:-mt-20)
-    <header className="sticky top-0 z-40 border-b border-line bg-surface-raised lg:h-20 lg:border-transparent lg:bg-transparent lg:pt-2 print:hidden">
-      <div
-        className={`glass-frame mx-auto flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-6 max-lg:max-w-page max-lg:py-3.5 max-lg:shadow-none max-lg:after:hidden max-sm:gap-x-3 max-sm:px-4 max-sm:py-2 lg:w-[calc(100%-3rem)] lg:max-w-[72rem] lg:flex-nowrap lg:rounded-full lg:pr-3 lg:pl-5 lg:transition-[height] lg:duration-300 lg:ease-out ${
-          scrolled ? 'lg:h-14' : 'lg:h-16'
-        }`}
-      >
-        {/* 유리 바탕 (모서리는 높이의 절반). 알약 바로 안에 둬야 둥근 모서리를 물려받는다. 넓은 화면에서만 */}
-        <GlassSurface
-          radius={capsuleHeight / 2}
-          height={capsuleHeight}
-          className="max-lg:hidden"
-        />
+    // 넓은 화면: 본문 폭(1152px)의 흰 알약(64px)이 위에 떠 있다. 바탕은 거의 불투명하고 흐림만 걸어, 지나가는 내용이 은은하게 비친다
+    // (11/24 굴절 유리를 뺐다: 흰 바탕에서는 보이지 않고 파란 띠 위에서는 연보라 판이 됐다).
+    // 바깥 자리(h-20 = 80px)는 배경이 투명이라 첫 화면 파란 띠는 이 자리까지 끌어올린다(Hero의 lg:-mt-20).
+    // 숨을 때는 위로 빠르게 빠지고, 나올 때는 스프링으로 살짝 지나쳤다 제자리를 잡는다. "동작 줄이기"면 움직이지 않고 바로 바뀐다(MotionConfig)
+    <m.header
+      initial={false}
+      animate={{ y: hidden ? -HIDE_OFFSET : 0 }}
+      transition={hidden ? HEADER_HIDE_TRANSITION : HEADER_SHOW_SPRING}
+      onFocus={() => setFocusInside(true)}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget)) setFocusInside(false);
+      }}
+      onPointerEnter={() => setPointerInside(true)}
+      onPointerLeave={() => setPointerInside(false)}
+      className="pointer-events-auto relative border-b border-line bg-surface-raised lg:h-20 lg:border-transparent lg:bg-transparent lg:pt-2 print:hidden"
+    >
+      <div className="glass mx-auto flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-6 max-lg:max-w-page max-lg:bg-transparent max-lg:py-3.5 max-lg:shadow-none max-lg:backdrop-filter-none max-sm:gap-x-3 max-sm:px-4 max-sm:py-2 lg:h-16 lg:w-[calc(100%-3rem)] lg:max-w-[72rem] lg:flex-nowrap lg:rounded-full lg:bg-surface-raised/90 lg:pr-3 lg:pl-5">
         {/* 배치: [로고 + 메뉴] ……… [검색·계정·화면 모드]. 메뉴는 로고 옆(48px)에 붙이고 빈 공간은 가운데에 둔다
             (메뉴를 정가운데에 두면 넓은 오른쪽 묶음 때문에 메뉴가 검색칸에 붙어 오른쪽으로 쏠려 보였다, 11/6).
             min-w-max: 내용 폭 아래로는 줄지 않게 (없으면 로고 글자가 줄바꿈된다) */}
@@ -206,22 +218,19 @@ function Header() {
         <Gnb />
 
         <div className="flex flex-wrap items-center gap-3 text-sm lg:ml-auto lg:min-w-max lg:shrink-0 lg:flex-nowrap">
-          {/* 검색칸 자리는 펼친 폭(w-44)으로 고정하고 칸만 오른쪽으로 접는다.
-              자리가 그대로라 검색칸이 접히고 펼쳐져도 메뉴는 움직이지 않는다 */}
+          {/* 휴대폰 폭은 돋보기 자리(w-10)만 두고, 열면 상단바 한 줄을 덮는다 */}
           <div className="flex w-44 shrink-0 justify-end max-sm:w-10">
-            {/* 맨 위에서는 펼쳐 두고, 스크롤하면 돋보기만 남긴다. 칸 폭(w-44 ↔ w-10) 하나만 알약 높이와 같은 시간으로 바뀌고,
-                안의 입력칸은 남는 폭을 채운다. 돋보기 버튼은 두 모양에서 크기·자리가 같다(바뀌는 순간 튀지 않게) */}
             <form
               ref={searchFormRef}
               role="search"
               onSubmit={handleSearch}
               className={cn(
-                'flex h-10 shrink-0 items-center gap-1.5 overflow-hidden transition-[width,padding,border-color,background-color] duration-300 ease-out',
+                'flex h-10 shrink-0 items-center gap-1.5 overflow-hidden',
                 searchCollapsed
                   ? 'w-10 rounded-full border border-transparent px-1'
                   : ['w-44 pr-1 pl-3', FIELD_CLASS],
                 phoneSearchOpen &&
-                  'absolute inset-x-4 top-1/2 z-10 w-auto -translate-y-1/2 transition-none',
+                  'absolute inset-x-4 top-1/2 z-10 w-auto -translate-y-1/2',
               )}
             >
               <label htmlFor="global-search" className="sr-only">
@@ -236,7 +245,7 @@ function Header() {
                 onBlur={(e) => {
                   // 같은 칸의 돋보기(제출)를 누르는 중이면 접지 않는다 (접히면 제출 버튼이 열기 버튼으로 바뀐다)
                   if (e.currentTarget.form?.contains(e.relatedTarget)) return;
-                  if (!keyword || phone) setSearchOpen(false);
+                  setSearchOpen(false);
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Escape') {
@@ -325,7 +334,7 @@ function Header() {
           />
         )}
       </AnimatePresence>
-    </header>
+    </m.header>
   );
 }
 

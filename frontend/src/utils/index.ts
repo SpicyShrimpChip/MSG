@@ -8,7 +8,6 @@ export * from './layout';
 export * from './semester';
 export * from './material';
 export * from './password';
-export * from './liquidGlass';
 export * from './maskWords';
 export * from './search';
 export * from './conceptStudy';
