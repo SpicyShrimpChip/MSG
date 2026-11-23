@@ -358,6 +358,18 @@ class AuthApiTest {
 		signup(signupBody(email, PASSWORD)).andExpect(status().isCreated());
 	}
 
+	@Test
+	void 비밀번호_없는_계정에_비밀번호_로그인은_같은_문구로_실패한다() throws Exception {
+		userRepository.saveAndFlush(User.signUpWithSocial("social-only@example.com", "카카오", false,
+				java.time.LocalDateTime.now()));
+
+		login("social-only@example.com", PASSWORD)
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.message").value("이메일 또는 비밀번호를 확인해 주세요."));
+		login("social-only@example.com", "")
+				.andExpect(status().isBadRequest());
+	}
+
 	private ResultActions login(String email, String password) throws Exception {
 		return mockMvc.perform(post("/api/auth/login")
 				.header("X-Requested-With", "XMLHttpRequest")

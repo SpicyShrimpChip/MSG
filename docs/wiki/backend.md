@@ -119,3 +119,10 @@
 - 원인: `runs/latest`가 끝난 상태(`FAILED` 포함) 중 가장 최근 것을 돌려줬고, 숙련도 기록은 그 응답으로 계산해 남겼다. 진행 중인 분석은 응답에 없었다.
 - 해결: `runs/latest`를 `{ run, lastAttempt }`로 바꿔 `run`은 모델이 판단한 분석만, 진행 중·실패한 시도는 `lastAttempt`로 따로 알린다. 숙련도 기록은 `failed`면 남기지 않고, `partial`은 퀴즈·산식이 바뀐 때만 남긴다.
 - 다음에는: "가장 최근 결과"를 고를 때 실패한 실행이 결과 자리를 차지하지 않는지, 그 결과로 쌓는 기록(변화 추이)이 장애를 학습 변화로 남기지 않는지 본다.
+
+## 테스트 공용 초기화의 설정값이 `@TestPropertySource`를 이겼다 (2026-11-24, 카카오 로그인)
+
+- 상황: 통합 테스트가 모두 같은 가짜 카카오 서버를 쓰도록 `@IntegrationTest`의 초기화(`TestKakao`)에서 카카오 키를 넣었다. 키가 없을 때를 보는 테스트에 `@TestPropertySource(properties = "app.oauth.kakao.client-id=")`를 붙였는데 키가 그대로 남아 실패했다.
+- 원인: 초기화(`ApplicationContextInitializer`)는 `@TestPropertySource`의 값이 환경에 들어간 뒤에 돈다. 초기화가 `addFirst`로 넣은 값이 맨 앞이 되어 테스트 클래스가 정한 값보다 먼저 읽혔다.
+- 해결: 초기화는 `TestPropertySourceUtils.INLINED_PROPERTIES_PROPERTY_SOURCE_NAME`("Inlined Test Properties")이 있으면 그 **바로 뒤**에 넣는다. 테스트 클래스 값이 이기고, 그 밖의 설정·`backend/.env`보다는 앞이라 개발자 PC의 실제 키는 여전히 덮는다.
+- 다음에는: 테스트 초기화에서 설정값을 넣을 때는 클래스별로 바꿔야 하는 값인지 먼저 보고, 그렇다면 인라인 값 뒤에 넣는다. `@DynamicPropertySource`는 클래스마다 컨텍스트를 새로 띄우니 공용 값에는 쓰지 않는다.

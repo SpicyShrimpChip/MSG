@@ -46,6 +46,11 @@ public final class TestApi {
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(objectMapper.writeValueAsString(body)))
 				.andExpect(status().isCreated());
+		return login(mockMvc, objectMapper, email);
+	}
+
+	// 이미 가입한 이메일로 비밀번호(PASSWORD) 로그인해 access token을 돌려준다
+	public static String login(MockMvc mockMvc, ObjectMapper objectMapper, String email) throws Exception {
 		String response = mockMvc.perform(post("/api/auth/login")
 						.header("X-Requested-With", "XMLHttpRequest")
 						.contentType(MediaType.APPLICATION_JSON)
