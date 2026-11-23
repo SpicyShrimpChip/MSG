@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState, type SubmitEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { FileText, LoaderCircle, Lock, Sparkles, Target } from 'lucide-react';
+import { FileText, Lock, Sparkles, Target } from 'lucide-react';
 import { QUIZZES_QUERY_KEY, createQuiz, getGenerationStatus } from '@/api';
 import { useMockData } from '@/store';
 import {
+  AiWaiting,
   AsyncBoundary,
   Button,
   Card,
@@ -16,7 +17,6 @@ import {
   SelectInput,
   SubPage,
   TextInput,
-  Spinner,
 } from '@/components';
 import {
   DIFFICULTIES,
@@ -92,10 +92,10 @@ function PendingGeneration({
     }
   }, [data, error, navigate, onDone]);
   return (
-    <Notice icon={LoaderCircle} iconClassName="animate-spin text-primary">
+    <AiWaiting state="connecting">
       이전에 보낸 퀴즈 만들기 요청을 확인하고 있어요. 끝나면 바로 문제 화면으로
       이동해요.
-    </Notice>
+    </AiWaiting>
   );
 }
 
@@ -524,25 +524,21 @@ function QuizCreateForm({ me }: { me: User | null }) {
 
       <ErrorText error={mutation.error} />
 
+      {mutation.isPending && (
+        <AiWaiting state="connecting">
+          AI가 문제를 만드는 중이에요. 최대 1분 40초 걸릴 수 있어요. 화면을 새로
+          고쳐도 결과를 다시 찾아 줘요.
+        </AiWaiting>
+      )}
       <div className="flex flex-wrap items-center gap-3">
         <Button
           type="submit"
           size="lg"
           disabled={blocked || mutation.isPending}
         >
-          {mutation.isPending ? (
-            <Spinner size={18} />
-          ) : (
-            <Sparkles size={18} aria-hidden="true" />
-          )}
-          {mutation.isPending ? 'AI가 문제를 만드는 중…' : '퀴즈 만들기'}
+          <Sparkles size={18} aria-hidden="true" />
+          {mutation.isPending ? '만드는 중…' : '퀴즈 만들기'}
         </Button>
-        {mutation.isPending && (
-          <p className="text-body text-ink-soft" aria-live="polite">
-            최대 1분 40초 걸릴 수 있어요. 화면을 새로 고쳐도 결과를 다시 찾아
-            줘요.
-          </p>
-        )}
         {configured.length > 0 && (
           <span className="flex flex-wrap items-center gap-1.5 text-caption text-ink-muted">
             연결된 모델

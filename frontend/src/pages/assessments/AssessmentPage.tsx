@@ -17,6 +17,7 @@ import {
 import { useMockData } from '@/store';
 import { useQuizAiStatus, useSuspenseMe } from '@/hooks';
 import {
+  AiWaiting,
   AsyncBoundary,
   Button,
   Card,
@@ -26,7 +27,6 @@ import {
   Notice,
   SelectInput,
   SubPage,
-  Spinner,
 } from '@/components';
 import {
   CONTENT_DISABLED_MESSAGE,
@@ -319,6 +319,12 @@ function MaterialAssessment({
           </Notice>
         )}
 
+        {mutation.isPending && (
+          <AiWaiting state="connecting">
+            AI가 {mutation.variables === 'post' ? '사후' : '사전'}평가 문제를
+            만드는 중이에요. 최대 1분 40초 걸릴 수 있어요.
+          </AiWaiting>
+        )}
         <div className="flex flex-wrap items-center gap-2">
           <Button
             disabled={
@@ -329,7 +335,6 @@ function MaterialAssessment({
             }
             onClick={() => mutation.mutate('pre')}
           >
-            {mutation.isPending && mutation.variables === 'pre' && <Spinner />}
             사전평가 만들기
           </Button>
           <Button
@@ -342,14 +347,8 @@ function MaterialAssessment({
             }
             onClick={() => mutation.mutate('post')}
           >
-            {mutation.isPending && mutation.variables === 'post' && <Spinner />}
             사후평가 만들기
           </Button>
-          {mutation.isPending && (
-            <span className="text-caption text-ink-soft" aria-live="polite">
-              AI가 문제를 만드는 중이에요. 최대 1분 40초 걸릴 수 있어요.
-            </span>
-          )}
           {!preReady && (
             <span className="text-caption text-ink-muted">
               사후평가는 사전평가를 만든 뒤에 볼 수 있어요.

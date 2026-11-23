@@ -17,13 +17,13 @@ import {
 import { useMockData } from '@/store';
 import {
   AiNote,
+  AiWaiting,
   Button,
   Card,
   Chip,
   ErrorText,
   Notice,
   StudyStatusBadge,
-  Spinner,
 } from '@/components';
 import { useMe, useQuizAiStatus } from '@/hooks';
 import type { ConceptStudy, MaterialConcept, QuizAiStatus } from '@/types';
@@ -227,6 +227,11 @@ function ConceptCard({
                 </label>
               )}
               <ErrorText error={mutation.error} />
+              {mutation.isPending && (
+                <AiWaiting>
+                  AI가 설명을 쓰는 중이에요. 1분 정도 걸릴 수 있어요.
+                </AiWaiting>
+              )}
               <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant="secondary"
@@ -235,17 +240,8 @@ function ConceptCard({
                   }
                   onClick={() => mutation.mutate()}
                 >
-                  {mutation.isPending && <Spinner />}
                   {concept.studyNote ? '다시 만들기' : '설명 만들기'}
                 </Button>
-                {mutation.isPending && (
-                  <span
-                    className="text-caption text-ink-soft"
-                    aria-live="polite"
-                  >
-                    AI가 설명을 쓰는 중이에요. 1분 정도 걸릴 수 있어요.
-                  </span>
-                )}
               </div>
             </div>
           </div>
@@ -396,6 +392,11 @@ function MaterialConceptPanel({
           </label>
         )}
         <ErrorText error={mutation.error} />
+        {mutation.isPending && (
+          <AiWaiting>
+            AI가 개념을 찾는 중이에요. 최대 1분 40초 걸릴 수 있어요.
+          </AiWaiting>
+        )}
         <div className="flex flex-wrap items-center gap-2">
           <Button
             disabled={
@@ -403,14 +404,8 @@ function MaterialConceptPanel({
             }
             onClick={() => mutation.mutate()}
           >
-            {mutation.isPending && <Spinner />}
             핵심 개념 뽑기
           </Button>
-          {mutation.isPending && (
-            <span className="text-caption text-ink-soft" aria-live="polite">
-              AI가 개념을 찾는 중이에요. 최대 1분 40초 걸릴 수 있어요.
-            </span>
-          )}
           {mockData && (
             <span className="text-caption text-ink-muted">
               목업에서는 AI를 부르지 않아요. 예시 개념의 설명은 미리 써 둔

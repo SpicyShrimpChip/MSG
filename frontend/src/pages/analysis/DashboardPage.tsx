@@ -16,12 +16,12 @@ import { useMockData } from '@/store';
 import { FADE_UP } from '@/constants';
 import {
   AiLegend,
+  AiWaiting,
   AsyncBoundary,
   Button,
   EmptyState,
   SelectInput,
   SubPage,
-  Spinner,
 } from '@/components';
 import { useCourses, useProviders } from '@/hooks';
 import type { AnalysisRun, Course, DashboardComponentId } from '@/types';
@@ -209,7 +209,6 @@ function CourseAnalysis({ course }: { course: Course }) {
             disabled={mutation.isPending || blockedReason !== null}
             className="print:hidden"
           >
-            {mutation.isPending && <Spinner />}
             {mutation.isPending
               ? '분석 중이에요'
               : run
@@ -234,10 +233,10 @@ function CourseAnalysis({ course }: { course: Course }) {
           </p>
         )}
         {mutation.isPending && (
-          <p className="rounded-xl bg-primary-soft px-4 py-3 text-body text-heading">
+          <AiWaiting state="weaving" live={false}>
             모델마다 대화를 따로 읽고 있어요. 길면 1분 40초쯤 걸려요. 이 화면을
             떠나지 말아 주세요.
-          </p>
+          </AiWaiting>
         )}
         {mutation.isError && !waiting && (
           <p

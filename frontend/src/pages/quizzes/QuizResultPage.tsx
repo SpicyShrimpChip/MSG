@@ -17,6 +17,7 @@ import {
 import {
   AiLegend,
   AiNote,
+  AiWaiting,
   AsyncBoundary,
   Button,
   Card,
@@ -338,6 +339,12 @@ function QuizResultContent({ quizId }: { quizId: number }) {
                 ? '다시 채점하는 중…'
                 : '대기 중인 답 다시 채점하기'}
             </Button>
+            {regrade.isPending && (
+              <AiWaiting>
+                AI가 대기 중인 답을 다시 채점하는 중이에요. 최대 1분 40초 걸릴
+                수 있어요.
+              </AiWaiting>
+            )}
             <ErrorText error={regrade.error} />
           </div>
         )}
