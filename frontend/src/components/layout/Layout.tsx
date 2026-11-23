@@ -10,8 +10,9 @@ function Layout() {
   return (
     <div className="flex min-h-screen flex-col">
       <NavigationProgress />
-      {/* 체험 모드 띠도 상단바와 함께 화면 위에 붙어 있게 한 덩어리로 고정한다 */}
-      <div className="sticky top-0 z-40 print:hidden">
+      {/* 체험 모드 띠도 상단바와 함께 화면 위에 붙어 있게 한 덩어리로 고정한다.
+          상단바는 내리면 띠 뒤로 숨고(띠는 늘 보인다), 숨은 동안 빈 자리가 아래 내용의 클릭을 막지 않게 묶음은 클릭을 통과시킨다 */}
+      <div className="pointer-events-none sticky top-0 z-40 print:hidden">
         <DemoBanner />
         <Header />
       </div>
