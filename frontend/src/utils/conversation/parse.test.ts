@@ -428,6 +428,51 @@ describe('parseConversationExport', () => {
     ]);
   });
 
+  // 코드 실행 결과를 붙여 넣은 대화처럼 NUL 문자가 든 글. 서버 DB(PostgreSQL)가 저장하지 못해
+  // 대화 묶음 전체가 실패했다(#215). JSON 파일 안에서는 \u0000 이스케이프로 적힌다
+  it('NUL 문자는 지우고 다른 글자는 그대로 두며, NUL만 있는 메시지는 빈 메시지로 건너뛴다', () => {
+    const nul = '\u0000';
+    const chatGpt = JSON.stringify([
+      {
+        ...chatGptConversation('gpt', [
+          gptMessage('user', [`실행 결과:${nul}${nul}\n\t끝`]),
+          gptMessage('assistant', [nul]),
+          gptMessage('assistant', [`답${nul}변`]),
+        ]),
+        title: `교착${nul} 상태`,
+      },
+    ]);
+    expect(chatGpt).toContain('\\u0000');
+
+    const gptResult = parseConversationExport('conversations.json', chatGpt);
+    if (!gptResult.ok) throw new Error(gptResult.message);
+    const [gptConversation] = gptResult.conversations;
+    expect(gptConversation.title).toBe('교착 상태');
+    expect(gptConversation.messages.map((m) => [m.role, m.text])).toEqual([
+      ['user', '실행 결과:\n\t끝'],
+      ['assistant', '답변'],
+    ]);
+
+    const claudeResult = parseConversationExport(
+      'conversations.json',
+      JSON.stringify([
+        claudeConversation('cl-1', [
+          {
+            sender: 'human',
+            text: '',
+            content: [{ type: 'text', text: `${nul}교착 상태가 뭐예요?` }],
+          },
+        ]),
+      ]),
+    );
+    if (!claudeResult.ok) throw new Error(claudeResult.message);
+    const [claudeConversationResult] = claudeResult.conversations;
+    expect(claudeConversationResult.title).toBe('교착 상태가 뭐예요?');
+    expect(claudeConversationResult.messages[0].text).toBe(
+      '교착 상태가 뭐예요?',
+    );
+  });
+
   it('JSON이 아니면 이유를 알려 준다', () => {
     const result = parseConversationExport('conversations.json', '{ 깨진 파일');
     expect(result.ok).toBe(false);

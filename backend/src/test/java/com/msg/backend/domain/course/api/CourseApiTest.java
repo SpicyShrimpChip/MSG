@@ -130,6 +130,18 @@ class CourseApiTest {
 		assertThat(courseCount()).isZero();
 	}
 
+	// PostgreSQL은 NUL 문자를 저장하지 못해 요청 전체가 실패했다(#215). H2는 그대로 저장해 DB 값으로 확인한다
+	@Test
+	void 이름과_키워드의_NUL_문자는_지우고_저장한다() throws Exception {
+		create(token, "운영\u0000체제", "2026-2", List.of("프로\u0000세스"))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.name").value("운영체제"))
+				.andExpect(jsonPath("$.data.keywords", contains("프로세스")));
+
+		assertThat(jdbcTemplate.queryForObject("select name from course", String.class)).isEqualTo("운영체제");
+		assertThat(jdbcTemplate.queryForObject("select keyword from course_keyword", String.class)).isEqualTo("프로세스");
+	}
+
 	@Test
 	void 같은_학기에_같은_이름은_대소문자가_달라도_409() throws Exception {
 		create(token, "Database", "2026-2", List.of()).andExpect(status().isCreated());
