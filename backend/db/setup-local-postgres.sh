@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# PostgreSQL(pgvector)에 AI LMS 전용 DB와 계정을 만들고 backend/.env를 쓴다. 직접 터미널에서 실행한다:
+# PostgreSQL(pgvector)에 MSG 전용 DB와 계정을 만들고 backend/.env를 쓴다. 직접 터미널에서 실행한다:
 #   cd backend && ./db/setup-local-postgres.sh
 #
 # 하는 일
