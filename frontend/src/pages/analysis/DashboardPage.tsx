@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
-import { ChartColumn, Download } from 'lucide-react';
+import { ChartColumn, CircleAlert, Download } from 'lucide-react';
 import * as m from 'motion/react-m';
 import {
   ApiError,
@@ -16,15 +16,25 @@ import {
   AsyncBoundary,
   Button,
   EmptyState,
+  Notice,
   ResultBeam,
   SelectInput,
   SubPage,
 } from '@/components';
 import { useCourses, useProviders, useSingleFlightMutation } from '@/hooks';
-import type { AnalysisRun, Course, DashboardComponentId } from '@/types';
+import type {
+  AnalysisRun,
+  Course,
+  DashboardComponentId,
+  LastAnalysisAttempt,
+  LatestAnalysis,
+} from '@/types';
 import {
   DEFAULT_LAYOUT,
+  formatDateTime,
+  isAnalysisRunning,
   isNoResponseError,
+  newestAnalysisId,
   parseDashboardLayout,
   sortByStudyOrder,
 } from '@/utils';
@@ -129,43 +139,85 @@ function AnalysisResult({
   );
 }
 
-// 시간 초과·409 뒤 최근 분석을 다시 확인하는 간격과 그만둘 때까지의 시간 (서버 분석 예산 100초보다 넉넉히)
+// 시간 초과·409 뒤나 서버가 분석 중이라고 할 때 최근 분석을 다시 확인하는 간격,
+// 시간 초과·409 뒤 그만둘 때까지의 시간 (서버 분석 예산 100초보다 넉넉히)
 const WAIT_POLL_MS = 10_000;
 const WAIT_LIMIT_MS = 5 * 60_000;
+
+// 결과 없이 끝난 가장 최근 분석 안내. 이전 결과가 있으면 그것을 그대로 보여 준다고 알린다
+function FailedAttemptNotice({
+  attempt,
+  hasPreviousRun,
+}: {
+  attempt: LastAnalysisAttempt;
+  hasPreviousRun: boolean;
+}) {
+  const at = formatDateTime(attempt.finishedAt ?? attempt.startedAt);
+  return (
+    <Notice icon={CircleAlert}>
+      <p className="text-heading">
+        {hasPreviousRun
+          ? `가장 최근 분석(${at})은 결과를 받지 못해 이전 분석 결과를 그대로 보여 드려요.`
+          : `분석(${at})을 시도했지만 결과를 받지 못했어요.`}
+      </p>
+      {attempt.message && <p>{attempt.message}</p>}
+      <p>
+        잠시 뒤 다시 분석해 주세요. 결과를 받지 못한 분석도 24시간 분석 횟수에
+        들어가요.
+      </p>
+    </Notice>
+  );
+}
 
 // 과목 하나의 최근 분석과 분석 시작
 function CourseAnalysis({ course }: { course: Course }) {
   const mockData = useMockData();
   const queryClient = useQueryClient();
   // 기다리기를 멈췄거나(시간 초과) 이미 분석 중(409)이면 서버에서 끝날 결과를 기다린다.
-  // 그때 화면에 있던 분석 id와 기다리기를 그만둘 시각을 두고, 새 분석이 보이면 멈춘다
+  // 그때 가장 나중 분석 id와 기다리기를 그만둘 시각을 두고, 더 나중 분석이 보이면 멈춘다
   const [waiting, setWaiting] = useState<{
     fromRunId: number | null;
     until: number;
   } | null>(null);
-  const { data: run } = useSuspenseQuery({
+  const { data: latest } = useSuspenseQuery({
     queryKey: analysisLatestKey(course.id),
     queryFn: () => getLatestAnalysis(course.id),
+    // 서버가 분석 중이라고 하면(새로고침·다른 화면에서 돌아옴) 끝날 때까지 다시 확인한다.
+    // 서버는 오래 멈춘 분석(running-timeout)을 진행 중으로 주지 않으므로 끝없이 묻지 않는다
     refetchInterval: (query) =>
-      waiting !== null &&
-      (query.state.data?.id ?? null) === waiting.fromRunId &&
-      Date.now() < waiting.until
+      isAnalysisRunning(query.state.data) ||
+      (waiting !== null &&
+        newestAnalysisId(query.state.data) === waiting.fromRunId &&
+        Date.now() < waiting.until)
         ? WAIT_POLL_MS
         : false,
   });
+  const { run, lastAttempt } = latest;
+  const serverRunning = isAnalysisRunning(latest);
   const { data: providers } = useProviders();
   const mutation = useSingleFlightMutation({
     mutationFn: () => startAnalysis(course.id),
     onMutate: () => setWaiting(null),
-    onSuccess: (next) =>
-      queryClient.setQueryData(analysisLatestKey(course.id), next),
+    onSuccess: (next) => {
+      // 모델이 모두 실패한 분석은 이전 결과를 덮지 않는다. 서버에서 이전 결과와 실패 안내를 다시 받는다
+      if (next.status === 'failed') {
+        void queryClient.invalidateQueries({
+          queryKey: analysisLatestKey(course.id),
+        });
+        return;
+      }
+      queryClient.setQueryData<LatestAnalysis>(analysisLatestKey(course.id), {
+        run: next,
+        lastAttempt: null,
+      });
+    },
     onError: (error) => {
       if (
         isNoResponseError(error) ||
         (error instanceof ApiError && error.status === 409)
       ) {
         setWaiting({
-          fromRunId: run?.id ?? null,
+          fromRunId: newestAnalysisId(latest),
           until: Date.now() + WAIT_LIMIT_MS,
         });
         void queryClient.invalidateQueries({
@@ -174,8 +226,12 @@ function CourseAnalysis({ course }: { course: Course }) {
       }
     },
   });
-  // 기다리던 새 분석이 도착했으면 오류·기다림 안내를 내린다
-  const arrived = waiting !== null && (run?.id ?? null) !== waiting.fromRunId;
+  // 기다리던 분석이 끝났으면(더 나중 분석이 보이고 진행 중이 아님) 오류·기다림 안내를 내린다
+  const arrived =
+    waiting !== null &&
+    newestAnalysisId(latest) !== waiting.fromRunId &&
+    !serverRunning;
+  const analyzing = mutation.isPending || serverRunning;
 
   // 화면을 연 뒤 새 분석이 들어오면(분석하기 응답이든 기다리다 도착했든) 결과 카드에 빛을 한 번 돌린다.
   // 처음 불러온 분석에는 돌리지 않는다. 과목을 바꾸면 이 부품이 새로 만들어져 처음부터 센다
@@ -216,14 +272,10 @@ function CourseAnalysis({ course }: { course: Course }) {
           )}
           <Button
             onClick={() => mutation.mutate()}
-            disabled={mutation.isPending || blockedReason !== null}
+            disabled={analyzing || blockedReason !== null}
             className="print:hidden"
           >
-            {mutation.isPending
-              ? '분석 중이에요'
-              : run
-                ? '다시 분석하기'
-                : '분석하기'}
+            {analyzing ? '분석 중이에요' : run ? '다시 분석하기' : '분석하기'}
           </Button>
         </div>
       </div>
@@ -236,7 +288,7 @@ function CourseAnalysis({ course }: { course: Course }) {
       )}
 
       <div aria-live="polite" className="flex flex-col gap-3 empty:hidden">
-        {waiting && !arrived && !mutation.isPending && (
+        {waiting && !arrived && !analyzing && (
           <p className="rounded-xl bg-primary-soft px-4 py-3 text-body text-heading">
             서버에서 아직 분석하고 있을 수 있어요. 끝나면 이 화면에 결과가
             나타나요. 몇 분이 지나도 그대로면 다시 분석해 주세요.
@@ -247,6 +299,19 @@ function CourseAnalysis({ course }: { course: Course }) {
             모델마다 대화를 따로 읽고 있어요. 길면 1분 40초쯤 걸려요. 이 화면을
             떠나지 말아 주세요.
           </AiWaiting>
+        )}
+        {/* 새로고침하거나 다른 화면에서 돌아와도 서버가 분석 중이면 이어서 보여 준다 */}
+        {!mutation.isPending && serverRunning && (
+          <AiWaiting state="weaving" live={false}>
+            모델마다 대화를 따로 읽고 있어요. 길면 1분 40초쯤 걸리고, 끝나면 이
+            화면에 결과가 나타나요.
+          </AiWaiting>
+        )}
+        {!analyzing && lastAttempt?.status === 'failed' && (
+          <FailedAttemptNotice
+            attempt={lastAttempt}
+            hasPreviousRun={run !== null}
+          />
         )}
         {mutation.isError && !waiting && (
           <p

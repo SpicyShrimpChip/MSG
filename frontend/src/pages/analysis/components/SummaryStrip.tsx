@@ -281,10 +281,15 @@ function SummaryStrip({ run, layoutReason }: SummaryStripProps) {
               );
             })}
           </ul>
-          {overview.comparison.notCompared > 0 && (
+          {overview.comparison.singleModel > 0 && (
             <p className="text-caption text-ink-muted">
               모델 하나만 판단해 비교하지 못한 개념{' '}
-              {overview.comparison.notCompared}개
+              {overview.comparison.singleModel}개
+            </p>
+          )}
+          {overview.comparison.noResult > 0 && (
+            <p className="text-caption text-ink-muted">
+              판단한 모델이 없는 개념 {overview.comparison.noResult}개
             </p>
           )}
         </Tile>

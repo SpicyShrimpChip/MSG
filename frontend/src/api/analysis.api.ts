@@ -2,6 +2,7 @@ import type {
   AnalysisRun,
   ConceptFeedback,
   ConceptFeedbackInput,
+  LatestAnalysis,
   ProviderStatus,
 } from '@/types';
 import {
@@ -30,18 +31,20 @@ export function getProviders(): Promise<ProviderStatus[]> {
   });
 }
 
-// 과목의 가장 최근 분석. 아직 분석하지 않았으면(404) null
+// 과목의 최근 분석과 그 뒤의 진행 중·실패한 시도. 아직 분석한 적이 없으면(404) 둘 다 null
 export async function getLatestAnalysis(
   courseId: number,
-): Promise<AnalysisRun | null> {
+): Promise<LatestAnalysis> {
   if (isMockData()) return mockGetLatestAnalysis(courseId);
   try {
-    return await request<AnalysisRun>({
+    return await request<LatestAnalysis>({
       method: 'GET',
       url: `/analysis/courses/${courseId}/runs/latest`,
     });
   } catch (error) {
-    if (error instanceof ApiError && error.status === 404) return null;
+    if (error instanceof ApiError && error.status === 404) {
+      return { run: null, lastAttempt: null };
+    }
     throw error;
   }
 }

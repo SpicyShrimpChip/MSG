@@ -185,6 +185,16 @@ class MaterialApiTest {
 		assertThat(storedFileCount()).isEqualTo(filesBefore);
 	}
 
+	// multipart 글자 칸은 JSON이 아니라 요청 파라미터로 받아 따로 지운다(NulStrippingConfig). #215
+	@Test
+	void 제목의_NUL_문자는_지우고_저장한다() throws Exception {
+		upload(token, courseId, "공개키\u0000 정리", pdf("노트.pdf"))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.title").value("공개키 정리"));
+
+		assertThat(jdbcTemplate.queryForObject("select title from material", String.class)).isEqualTo("공개키 정리");
+	}
+
 	@Test
 	void 제목이_비었거나_60자를_넘으면_400() throws Exception {
 		upload(token, courseId, "   ", pdf("노트.pdf"))

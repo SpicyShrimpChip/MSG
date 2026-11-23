@@ -4,6 +4,7 @@ import type {
   ConceptComparison,
   ConceptFeedbackType,
   ConceptResult,
+  LatestAnalysis,
   MasteryStage,
   UnderstandingStatus,
 } from '@/types';
@@ -73,8 +74,10 @@ export interface ConceptOverview {
     unanimous: number;
     majority: number;
     disagreement: number;
-    // 모델 1개만 판단했거나 판단이 없어 비교하지 못한 개념
-    notCompared: number;
+    // 모델 1개만 판단해 비교하지 못한 개념
+    singleModel: number;
+    // 판단한 모델이 없는 개념 (모델이 실패했거나 그 개념을 빠뜨림)
+    noResult: number;
   };
 }
 
@@ -82,16 +85,33 @@ export function summarizeConcepts(concepts: ConceptResult[]): ConceptOverview {
   const overview: ConceptOverview = {
     total: concepts.length,
     mastery: { strong: 0, normal: 0, needs_work: 0, insufficient_evidence: 0 },
-    comparison: { unanimous: 0, majority: 0, disagreement: 0, notCompared: 0 },
+    comparison: {
+      unanimous: 0,
+      majority: 0,
+      disagreement: 0,
+      singleModel: 0,
+      noResult: 0,
+    },
   };
   for (const concept of concepts) {
     overview.mastery[concept.mastery?.level ?? 'insufficient_evidence'] += 1;
     const outcome = concept.comparison.outcome;
-    if (outcome === 'single_model' || outcome === 'no_result') {
-      overview.comparison.notCompared += 1;
-    } else {
-      overview.comparison[outcome] += 1;
-    }
+    if (outcome === 'single_model') overview.comparison.singleModel += 1;
+    else if (outcome === 'no_result') overview.comparison.noResult += 1;
+    else overview.comparison[outcome] += 1;
   }
   return overview;
+}
+
+// 최근 분석 응답에서 가장 나중에 시작한 분석 id. 결과 없는 시도(진행 중·실패)가 있으면 그 시도가 결과보다 나중이다.
+// 기다리던 분석이 끝났는지(이 값이 바뀌었는지) 볼 때 쓴다
+export function newestAnalysisId(
+  latest: LatestAnalysis | undefined,
+): number | null {
+  return latest?.lastAttempt?.runId ?? latest?.run?.id ?? null;
+}
+
+// 서버가 이 과목을 아직 분석하고 있는지 (새로고침해도 "분석 중"을 이어 보여 주려고 서버 값으로 본다)
+export function isAnalysisRunning(latest: LatestAnalysis | undefined): boolean {
+  return latest?.lastAttempt?.status === 'running';
 }

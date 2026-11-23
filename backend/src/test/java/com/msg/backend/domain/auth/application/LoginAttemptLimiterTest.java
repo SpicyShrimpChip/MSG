@@ -21,7 +21,7 @@ class LoginAttemptLimiterTest {
 	void setUp() {
 		clock = new MutableClock();
 		var config = new AuthProperties.LoginAttempt(3, Duration.ofMinutes(15), Duration.ofMinutes(10), 5);
-		limiter = new LoginAttemptLimiter(new AuthProperties(Duration.ofDays(14), null, config), clock);
+		limiter = new LoginAttemptLimiter(new AuthProperties(Duration.ofDays(14), Duration.ZERO, null, config), clock);
 	}
 
 	@Test

@@ -3,7 +3,9 @@ package com.msg.backend.global.error;
 import com.msg.backend.global.common.ApiResponse;
 import com.msg.backend.global.security.ApiErrorResponder;
 import lombok.extern.slf4j.Slf4j;
+import java.sql.SQLException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -41,18 +43,39 @@ public class GlobalExceptionHandler {
 	static final String FILE_TOO_LARGE_MESSAGE = "파일이 너무 커요. 올릴 수 있는 크기를 확인해 주세요.";
 	static final String MISSING_FILE_MESSAGE = "올릴 파일을 골라 주세요.";
 	static final String CONFLICT_MESSAGE = "다른 요청과 겹쳐 저장하지 못했어요. 잠시 뒤 다시 시도해 주세요.";
+	static final String UNSAVABLE_DATA_MESSAGE = "저장할 수 없는 값이 들어 있어 저장하지 못했어요. 입력한 내용을 확인해 주세요.";
+
+	// SQL 표준 상태 코드: UNIQUE 제약 위반. PostgreSQL·H2 모두 이 값을 쓴다
+	private static final String UNIQUE_VIOLATION_SQL_STATE = "23505";
 
 	@ExceptionHandler(BusinessException.class)
 	public ResponseEntity<ApiResponse<Object>> handleBusiness(BusinessException e) {
 		return ResponseEntity.status(e.getStatus()).body(ApiResponse.error(e.getMessage(), e.getData()));
 	}
 
-	// 동시에 들어온 두 요청이 같은 행을 만들려다 UNIQUE 제약에 걸렸을 때.
-	// 예외 메시지에 저장하려던 값(대화 본문 등)이 들어 있을 수 있어 로그에 남기지 않는다
+	// DB 제약 위반. 예외 메시지에 저장하려던 값(대화 본문 등)이 들어 있을 수 있어 로그에는 종류와 SQL 상태 코드만 남긴다.
+	// 동시에 들어온 두 요청이 같은 행을 만들려다 UNIQUE 제약에 걸린 경우만 "다른 요청과 겹쳐"(409)로 알린다.
+	// 그 밖의 경우(NUL 같은 저장할 수 없는 글자, 길이·외래 키 위반 등)는 다시 시도해도 같은 결과라
+	// "잠시 뒤 다시 시도"를 권하지 않는다 (#215: NUL 문자가 든 대화가 계속 409로 실패했다)
 	@ExceptionHandler(DataIntegrityViolationException.class)
 	public ResponseEntity<ApiResponse<Void>> handleDataIntegrity(DataIntegrityViolationException e) {
-		log.warn("DB 제약 위반으로 요청을 거절했다 ({})", e.getClass().getSimpleName());
-		return respond(HttpStatus.CONFLICT, CONFLICT_MESSAGE);
+		String sqlState = sqlStateOf(e);
+		if (e instanceof DuplicateKeyException || UNIQUE_VIOLATION_SQL_STATE.equals(sqlState)) {
+			log.warn("UNIQUE 제약 위반으로 요청을 거절했다 ({})", e.getClass().getSimpleName());
+			return respond(HttpStatus.CONFLICT, CONFLICT_MESSAGE);
+		}
+		log.warn("DB 제약 위반으로 요청을 거절했다 ({}, SQL 상태 {})", e.getClass().getSimpleName(), sqlState);
+		return respond(HttpStatus.BAD_REQUEST, UNSAVABLE_DATA_MESSAGE);
+	}
+
+	// 원인 사슬에서 처음 만나는 SQL 상태 코드. 없으면 null
+	static String sqlStateOf(Throwable e) {
+		for (Throwable cause = e; cause != null; cause = cause.getCause() == cause ? null : cause.getCause()) {
+			if (cause instanceof SQLException sql && sql.getSQLState() != null) {
+				return sql.getSQLState();
+			}
+		}
+		return null;
 	}
 
 	// @Valid 요청 본문·폼 검증 실패: DTO에 적은 검증 문구 중 첫 번째를 보여 준다
