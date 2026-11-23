@@ -14,6 +14,7 @@ import {
 } from '@/components';
 import { isPasswordValid } from '@/utils';
 import AuthCard from './components/AuthCard';
+import KakaoLoginButton from './components/KakaoLoginButton';
 import MockAuthNotice from './components/MockAuthNotice';
 import PasswordRules from './components/PasswordRules';
 import SignupAgreements from './components/SignupAgreements';
@@ -96,6 +97,8 @@ function SignupPage() {
     <AuthCard title="회원가입" wide>
       <form onSubmit={handleSubmit} className="flex flex-col gap-8">
         <MockAuthNotice from={from} />
+        {/* 카카오로도 가입할 수 있다. 처음이면 이메일·비밀번호 없이 약관 동의만 받는 가입 마무리 화면으로 간다 */}
+        <KakaoLoginButton returnTo={from} divider="after" />
         <div className="flex flex-col gap-6">
           <FormRow label="이메일" htmlFor="signup-email" required>
             <TextInput

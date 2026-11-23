@@ -12,6 +12,8 @@ export interface User {
   learningPurpose: LearningPurpose;
   jobField: JobField | null;
   jobFieldOther: string | null;
+  // 비밀번호로 로그인할 수 있는지. 카카오로만 가입한 계정은 false (탈퇴 때 비밀번호 대신 "탈퇴"를 입력한다)
+  hasPassword: boolean;
 }
 
 export type LearningPurpose =
@@ -52,6 +54,30 @@ export interface SignupInput {
   // 자동 가입 방지 확인 토큰 (Turnstile을 켰을 때만)
   turnstileToken?: string;
 }
+
+// 카카오에서 처음 온 사용자의 가입 마무리 정보 (GET /api/auth/social/pending, 서버 DB에는 아직 없다)
+export interface PendingSocialSignup {
+  provider: 'kakao';
+  // 카카오가 확인한 이메일. 가입하면 이 이메일로 계정이 생긴다
+  email: string;
+  // 카카오 닉네임(선택 동의). 이름 칸의 처음 값으로 쓴다
+  nickname: string | null;
+}
+
+// 카카오 가입 마무리 (POST /api/auth/social/signup). 일반 가입에서 이메일·비밀번호·자동 가입 방지 확인만 뺐다
+export interface SocialSignupInput {
+  name: string;
+  agreedTerms: boolean;
+  agreedPrivacy: boolean;
+  agreedAiAnalysis: boolean;
+  agreedAiQuiz: boolean;
+  learningPurpose?: LearningPurpose;
+  jobField?: JobField | null;
+  jobFieldOther?: string | null;
+}
+
+// 탈퇴 확인 (DELETE /api/users/me). 비밀번호가 있는 계정은 password, 없는 계정(카카오로만 가입)은 confirmText "탈퇴"
+export type DeleteAccountInput = { password: string } | { confirmText: string };
 
 export interface LoginInput {
   email: string;

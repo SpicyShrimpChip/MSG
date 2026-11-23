@@ -341,7 +341,7 @@ function DeleteAccountSection({ me }: { me: User }) {
   const [password, setPassword] = useState('');
   const { clear: clearMaskWords } = useSavedMaskWords(me.id);
   const mutation = useSingleFlightMutation({
-    mutationFn: () => deleteAccount(password),
+    mutationFn: () => deleteAccount({ password }),
     onSuccess: () => {
       clearMaskWords();
       queryClient.clear();
