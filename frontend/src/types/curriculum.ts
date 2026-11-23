@@ -73,6 +73,7 @@ export interface CurriculumFlow {
     key: FlowStepKey;
     order: number;
     title: string;
+    // done은 지금 단계와 따로 센다: 앞 단계가 남아 있어도 끝낸 단계는 done
     status: 'done' | 'current' | 'upcoming';
     // 이 단계의 지금 상태 (코드가 센 사실)
     summary: string;
