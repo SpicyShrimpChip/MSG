@@ -29,11 +29,35 @@ type RetriableConfig = InternalAxiosRequestConfig & { _authRetried?: boolean };
 
 let refreshPromise: Promise<string> | null = null;
 
+// 탭끼리 갱신 차례를 정하는 Web Locks 이름. 같은 출처의 모든 탭이 같은 이름을 쓴다
+export const REFRESH_LOCK_NAME = 'msg-auth-refresh';
+
+// 같은 브라우저의 다른 탭과 갱신이 겹치지 않게 Web Locks로 차례를 기다린다 (#211).
+// 쿠키는 탭끼리 같이 쓰므로, 앞 탭이 회전을 끝낸 뒤에 보내야 새 쿠키가 실린다.
+// Web Locks가 없거나(https가 아닌 주소 등) 잠금을 못 받으면 기다리지 않고 바로 보낸다 (서버도 짧은 유예로 막아 준다)
+function withRefreshLock<T>(task: () => Promise<T>): Promise<T> {
+  const locks: LockManager | undefined =
+    typeof navigator === 'undefined' ? undefined : navigator.locks;
+  if (!locks) return task();
+  let started = false;
+  const run = () => {
+    started = true;
+    return task();
+  };
+  return locks.request(REFRESH_LOCK_NAME, run).catch((error: unknown) => {
+    // 갱신 자체가 실패한 것이면 그대로 알리고, 잠금만 실패했으면 잠금 없이 보낸다
+    if (started) throw error;
+    return task();
+  });
+}
+
 // Refresh Token 쿠키로 새 Access Token을 받는다. 여러 요청이 동시에 401을 받아도 갱신은 한 번만 보낸다
-// (Refresh Token은 한 번 쓰면 폐기되므로, 두 번 보내면 서버가 재사용으로 보고 세션을 끊는다)
+// (Refresh Token은 한 번 쓰면 폐기되므로, 두 번 보내면 서버가 재사용으로 보고 세션을 끊는다).
+// 다른 탭과는 withRefreshLock으로 차례를 지킨다
 export function refreshAccessToken(): Promise<string> {
-  refreshPromise ??= api
-    .post<ApiResponse<{ accessToken: string }>>('/auth/refresh')
+  refreshPromise ??= withRefreshLock(() =>
+    api.post<ApiResponse<{ accessToken: string }>>('/auth/refresh'),
+  )
     .then(({ data: body }) => {
       if (!body.success) throw new Error(body.message);
       useAuthStore.getState().setAccessToken(body.data.accessToken);

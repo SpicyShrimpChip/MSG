@@ -1,6 +1,6 @@
 import { useState, type SubmitEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { NOTICES_QUERY_KEY, createNotice, updateNotice } from '@/api';
 import {
   AsyncBoundary,
@@ -17,7 +17,7 @@ import {
   NOTICE_CONTENT_MAX_LENGTH,
   NOTICE_TITLE_MAX_LENGTH,
 } from '@/constants';
-import { useNotice } from '@/hooks';
+import { useNotice, useSingleFlightMutation } from '@/hooks';
 import type { NoticeDetail } from '@/types';
 
 // 새로 쓰기(notice 없음)와 고치기(notice 있음)가 같은 폼을 쓴다
@@ -27,7 +27,7 @@ function NoticeForm({ notice }: { notice?: NoticeDetail }) {
   const [title, setTitle] = useState(notice?.title ?? '');
   const [content, setContent] = useState(notice?.content ?? '');
 
-  const mutation = useMutation({
+  const mutation = useSingleFlightMutation({
     mutationFn: () => {
       const input = { title, content };
       return notice ? updateNotice(notice.id, input) : createNotice(input);

@@ -23,6 +23,9 @@ public interface MaterialRepository extends JpaRepository<Material, Long> {
 				.orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE));
 	}
 
+	// 같은 요청 키로 이미 올린 내 자료 (더블클릭·재시도로 같은 올리기가 다시 온 경우)
+	Optional<Material> findByUserIdAndRequestKey(Long userId, String requestKey);
+
 	List<Material> findAllByUserIdAndCourseId(Long userId, Long courseId);
 
 	List<Material> findAllByUserId(Long userId);

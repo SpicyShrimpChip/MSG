@@ -51,18 +51,20 @@ Swagger UI: `/swagger-ui/index.html` — 프론트와 API를 맞출 때 이 문�
 
 - 인증 기본 방향: JWT access token + HttpOnly 쿠키 refresh token (레퍼런스 프로젝트 방식)
 - 비밀번호는 BCrypt로 해시. 평문 저장·로그 출력 금지.
+- Refresh Token은 갱신마다 회전하고, 폐기된 토큰이 다시 오면 세션 전체를 폐기한다(재사용 감지). 단 회전된 지 `app.auth.refresh-reuse-grace`(10초) 안이고 세션이 살아 있으면 탭 여러 개의 동시 갱신으로 보고 다시 발급한다(#211, `RefreshTokenService.isRotatedWithinGrace`). 토큰을 하나씩 폐기하는 기능(회전 말고)을 새로 만들면 이 판단이 깨지므로, 그때는 폐기 사유 칸을 추가한다.
 - 모든 사용자 데이터 조회·수정은 로그인 사용자 소유인지 확인한다 (다른 사용자 id로 접근 차단). 과목·자료는 저장소 기본 메서드(`CourseRepository.getOwned`·`checkOwned`, `MaterialRepository.getOwned`, 없거나 남의 것이면 404)를, 사용자 행 잠금은 `UserRepository.lockLoginUser`(없으면 401)를 쓴다.
 - DB 접속 정보, JWT 시크릿, LLM API 키, AWS 키는 `application.yaml`에 환경변수 참조로만 쓴다.
 - 탈퇴 뒤 30일 재가입 제한(`RejoinRestriction`, `app.rejoin`, `withdrawn_account`, 11/21): 탈퇴 트랜잭션에서 정규화한 이메일의 HMAC-SHA256(키 `REJOIN_HASH_SECRET`)과 재가입 가능 시각만 남기고(이메일 원문·users 연결 없음), 가입할 때 기간 안이면 409, 기간이 지난 기록은 주기 작업이 지운다. 키가 없으면 기록도 확인도 하지 않는다. 기간·항목은 처리방침 2·4번과 같게 맞춘다.
 - 회원가입은 Cloudflare Turnstile로 자동 가입(봇)을 막는다(`SignupBotCheck`, `app.turnstile`, 11/20). 비밀 키(`TURNSTILE_SECRET_KEY`)가 없으면 확인하지 않고, 확인 서버에 닿지 못하면 가입을 막는다(503). 외부 확인은 DB 트랜잭션 밖(컨트롤러)에서 먼저 한다.
 - CORS 허용 출처는 설정값으로 관리한다 (로컬: `http://localhost:5173`·`5174`, 운영: 환경변수 `CORS_ALLOWED_ORIGINS`).
 - 업로드 파일은 확장자·크기와 **파일 내용**(실제 형식)을 검증한다(`MaterialFileInspector`). 브라우저가 보낸 MIME은 믿지 않고, 저장 위치(key)는 서버가 만들며 사용자가 보낸 파일 이름을 쓰지 않는다.
+- 자료 올리기는 선택 `requestKey`(64자까지, `material.request_key`, UNIQUE `(user_id, request_key)`)를 받는다(11/24, #210). 같은 사용자·같은 키면 사용자 행을 잠근 채 이미 올린 자료를 찾아 200으로 돌려주고 파일을 다시 저장하지 않는다.
 - DB 행과 저장소 파일을 함께 지울 때는 행 삭제 트랜잭션에서 `FileCleanupService.deleteAfterCommit`으로 삭제 작업을 남긴다(커밋 뒤 파일 삭제, 실패하면 주기 작업이 다시 시도). 파일을 먼저 지우지 않는다.
 
 ## DB 마이그레이션 (Flyway)
 
 - 테이블 구조는 Flyway(`src/main/resources/db/migration`)로만 바꾼다. Hibernate는 `ddl-auto: validate`라 엔티티와 표가 맞는지 검사만 한다.
-- **머지된 `V*.sql`은 고치지 않고 새 번호를 추가한다.** 지금은 `V1__init_schema.sql` 하나이고 다음은 `V2`다. 새 번호는 팀원과 겹치지 않게 미리 말한다. 11/24에 운영 DB를 처음 만들기 전 V1~V16을 V1 하나로 합쳤다(10/31에 이어 두 번째, 합치기 전 스키마와 `pg_dump --schema-only`로 같은 것을 확인). 운영 DB를 만든 뒤로는 **다시 합치지 않는다**(`docs/wiki/backend.md`). 코드 주석의 "V6 퀴즈"·"V11" 같은 표기는 합치기 전 버전 이력이다.
+- **머지된 `V*.sql`은 고치지 않고 새 번호를 추가한다.** 지금은 `V1__init_schema.sql`·`V2__material_request_key.sql`(#210)이고 다음은 `V3`다. 새 번호는 팀원과 겹치지 않게 미리 말한다. 11/24에 운영 DB를 처음 만들기 전 V1~V16을 V1 하나로 합쳤다(10/31에 이어 두 번째, 합치기 전 스키마와 `pg_dump --schema-only`로 같은 것을 확인). 운영 DB를 만든 뒤로는 **다시 합치지 않는다**(`docs/wiki/backend.md`). 코드 주석의 "V6 퀴즈"·"V11" 같은 표기는 합치기 전 버전 이력이다.
 - 버전 번호는 `db/migration`과 `db/vector`가 **함께** 쓴다. 같은 번호를 두 폴더에 쓰지 않는다. pgvector 확장(`db/vector/V0_1`)은 H2에 없어 local·prod·`pgTest`에서만 읽고, 번호를 `0.1`로 둬서 항상 `V1`보다 먼저 돈다.
 - 샘플 데이터는 `db/seed/R__*.sql`(반복 실행)이고 운영 프로필은 읽지 않는다.
 - 앱 계정(`msg_app`)은 데이터 읽기·쓰기만 하고, 표 만들기·변경은 마이그레이션 계정(`msg_migrator`)만 한다.
@@ -84,7 +86,7 @@ Swagger UI: `/swagger-ui/index.html` — 프론트와 API를 맞출 때 이 문�
 - **사전·사후평가·자료 핵심 개념 (11/3):** 평가는 퀴즈 행(`assessment_kind`, `pre_assessment_id`)이고 사후평가는 최신 사전평가의 개념·개념 출처·유형별 수·난이도·모드를 그대로 쓴다(`QuizGenerationService`). 비교(`AssessmentService.compare`)는 최신 사전평가와 그 사후평가의 최근 제출에서 채점이 끝난 답만 세고, 변화량·개념 상태·비교 가능 조건을 코드로 계산한다. **학습자료 본문은 `app.material-content.enabled`(기본 false)가 켜져 있고 요청마다 확인(`materialContentConsent`)이 있을 때만 외부로 보낸다.** 처리 근거와 제공사·국가·보관 기간을 처리방침에 확정하기 전에는 켜지 않는다. 본문 읽기는 `MaterialTextExtractor`(TXT·MD·PPTX·PDFBox, 외부 서비스 없음, 스캔 PDF는 NO_TEXT), 핵심 개념은 `MaterialConceptService`가 AI 후보 중 이름·근거 문장이 본문에 실제로 있는 것만 `material_concept`에 저장한다(지어낸 개념은 버림). 자세한 계약은 `docs/frontend-requests.md` "11/3 사전·사후평가".
 - **AI가 하나뿐일 때:** 키와 모델 이름이 모두 있는 모델만 쓴다. 하나뿐이면 만들기·채점 모두 그 모델로 하고, 채점 판단이 하나면 다수결로 표시하지 않고 `SINGLE_MODEL`("추가 확인 필요")로 둔다. 하나도 없으면 503.
 - **학습 피드백:** 사용자 의견(`concept_feedback`)은 AI 결과와 따로 두고 AI 판단·숙련도를 바꾸지 않는다. 추천 순서만 코드 규칙으로 바꾼다.
-- **숙련도 점수 (산식 11/5 확정, 계산 클래스 구현함 `analysis/application/MasteryCalculator`, 설정 `app.mastery.*`, 분석 응답 `concepts[].mastery`, 기록 `MasteryHistoryService`·`concept_mastery`):** 최근 분석을 돌려줄 때(분석 실행·`runs/latest`) 개념의 마지막 기록과 단계·근거가 다르면 한 줄을 남기고 `mastery.history`(최근 30개)를 붙인다. 지난 분석(`runs/{id}`)은 기록하지 않고 붙이기만 한다. 기록은 `analysis_run`에 CASCADE로 달려 대화 삭제·동의 철회 때 함께 지워진다. 대화 분류 결과(이해 못 함 / 재설명 요청 / 스스로 활용)와 퀴즈 정답률을 받아 점수를 계산하는 클래스를 분리하고, 가중치는 설정값으로 둔다. 초기값과 계산은 `docs/frontend-requests.md` 5-10절(퀴즈 1.0 : 대화 0.5, (Σw·s+1)÷(Σw+2), 근거 무게 합 3.0 미만은 "근거 부족"). LLM이 점수를 직접 매기지 않는다. 계산 로직에는 단위 테스트를 작성한다.
+- **숙련도 점수 (산식 11/5 확정, 계산 클래스 구현함 `analysis/application/MasteryCalculator`, 설정 `app.mastery.*`, 분석 응답 `concepts[].mastery`, 기록 `MasteryHistoryService`·`concept_mastery`):** 최근 분석을 돌려줄 때(분석 실행·`runs/latest`) 개념의 마지막 기록과 단계·근거가 다르면 한 줄을 남기고 `mastery.history`(최근 30개)를 붙인다. 지난 분석(`runs/{id}`)은 기록하지 않고 붙이기만 한다. 모델 장애로 생긴 변화는 남기지 않는다(11/24, #209): 판단한 모델이 없는 분석(`failed`)은 기록하지 않고 `runs/latest`의 결과도 되지 않으며(그 시도는 `lastAttempt`로 알림), 일부 모델이 실패한 분석(`partial`)은 퀴즈·산식이 바뀌었거나 첫 기록일 때만 남긴다. 기록은 `analysis_run`에 CASCADE로 달려 대화 삭제·동의 철회 때 함께 지워진다. 대화 분류 결과(이해 못 함 / 재설명 요청 / 스스로 활용)와 퀴즈 정답률을 받아 점수를 계산하는 클래스를 분리하고, 가중치는 설정값으로 둔다. 초기값과 계산은 `docs/frontend-requests.md` 5-10절(퀴즈 1.0 : 대화 0.5, (Σw·s+1)÷(Σw+2), 근거 무게 합 3.0 미만은 "근거 부족"). LLM이 점수를 직접 매기지 않는다. 계산 로직에는 단위 테스트를 작성한다.
 - **DB:** PostgreSQL 16 + pgvector(확정, MySQL에서 이주). 기본 프로필·`./gradlew test`는 H2(PostgreSQL 모드), 실제 DB 테스트는 `./gradlew pgTest`(`msg_test`). H2에서도 돌도록 마이그레이션에는 특정 DB 전용 문법을 쓰지 않고, `CREATE EXTENSION vector`처럼 PostgreSQL 전용인 것은 `db/vector/`에 둔다(local·prod에서만 적용). 로컬 DB는 `backend/db/docker-compose.yml` + `setup-local-postgres.sh`.
 - **배치 JSON:** LLM이 출력한 화면 배치 JSON은 서버에서도 허용 컴포넌트 목록 기준으로 1차 검증한 뒤 프론트에 전달한다.
 

@@ -1,10 +1,10 @@
 import { useParams } from 'react-router-dom';
 import {
-  useMutation,
   useQueryClient,
   useSuspenseQueries,
   useSuspenseQuery,
 } from '@tanstack/react-query';
+import { useSingleFlightMutation } from '@/hooks';
 import { ListChecks, RefreshCw } from 'lucide-react';
 import {
   QUIZZES_QUERY_KEY,
@@ -270,7 +270,7 @@ function QuizResultContent({ quizId }: { quizId: number }) {
       },
     ],
   });
-  const regrade = useMutation({
+  const regrade = useSingleFlightMutation({
     mutationFn: (submissionId: number) => regradeQuiz(quizId, submissionId),
     onSuccess: (next) => {
       queryClient.setQueryData([...QUIZZES_QUERY_KEY, quizId, 'result'], next);

@@ -121,6 +121,38 @@ class CurriculumFlowApiTest {
 	}
 
 	@Test
+	void 앞_단계가_남아도_끝낸_사후_평가는_완료로_표시한다() throws Exception {
+		long material = upload("노트.txt");
+		submit(createAssessment(material, "pre"), List.of(0, 1));
+
+		// 개념 학습·확인 퀴즈를 건너뛰고 사후 평가를 먼저 끝낸 경우 (#213)
+		submit(createAssessment(material, "post"), List.of(0, 0));
+		curriculum()
+				.andExpect(jsonPath("$.data.flow.currentStep").value("concept_study"))
+				.andExpect(jsonPath("$.data.flow.stages[0].status").value("done"))
+				.andExpect(jsonPath("$.data.flow.stages[1].status").value("current"))
+				.andExpect(jsonPath("$.data.flow.stages[2].status").value("upcoming"))
+				.andExpect(jsonPath("$.data.flow.stages[3].status").value("done"))
+				.andExpect(jsonPath("$.data.flow.postTest.status").value("submitted"))
+				.andExpect(jsonPath("$.data.flow.overallDelta").value(50));
+	}
+
+	@Test
+	void 사전_테스트_전에_푼_퀴즈로는_개념_학습과_확인_퀴즈를_끝낸_것으로_보지_않는다() throws Exception {
+		upload("노트.txt");
+		submit(createQuiz("VLAN"), List.of(0));
+		submit(createQuiz("NAT"), List.of(0));
+
+		// 과목 키워드 개념은 사전 테스트 제출 뒤 퀴즈로만 본다
+		curriculum()
+				.andExpect(jsonPath("$.data.flow.currentStep").value("pre_test"))
+				.andExpect(jsonPath("$.data.flow.stages[0].status").value("current"))
+				.andExpect(jsonPath("$.data.flow.stages[1].status").value("upcoming"))
+				.andExpect(jsonPath("$.data.flow.stages[2].status").value("upcoming"))
+				.andExpect(jsonPath("$.data.flow.stages[3].status").value("upcoming"));
+	}
+
+	@Test
 	void 자료가_없으면_사전_테스트_자료가_비어_있고_안내한다() throws Exception {
 		curriculum()
 				.andExpect(jsonPath("$.data.flow.assessmentMaterial").value(nullValue()))

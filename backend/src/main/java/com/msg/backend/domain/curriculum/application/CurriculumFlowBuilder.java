@@ -38,6 +38,9 @@ import org.springframework.stereotype.Component;
  * <li>먼저 공부할 개념(대상): 사전 테스트 기준 미만·미채점 개념, 없으면 전체.</li>
  * <li>지금 단계: 사전 미제출 → 사전 테스트 / 대상 중 학습 전·복습 필요 개념이 있음 → 개념 학습 / 학습 완료 뒤 확인 퀴즈를 안 푼 개념이 있음
  * → 확인 퀴즈 / 사후 미제출 → 사후 평가 / 모두 끝 → done. 이해 확인·추가 확인 필요(채점 대기 등)는 막지 않는다.</li>
+ * <li>단계 완료: 지금 단계와 따로 센다. 앞 단계가 남아 있어도 끝낸 단계는 done이다(#213). 사전·사후 평가는 제출, 개념 학습은 대상 중
+ * 학습 전·복습 필요 개념이 없음, 확인 퀴즈는 대상이 모두 확인 퀴즈까지 마침(지금 단계 규칙과 같은 판정). 과목 키워드뿐인 개념은 사전평가
+ * 제출 뒤 퀴즈로만 보므로 사전 미제출이면 끝낸 것으로 보지 않는다.</li>
  * </ul>
  * 학습 진행률은 실제 "학습 완료" 기록으로만 센다(페이지 열람·퀴즈 생성은 세지 않음). 사후 평가는 막지 않고 남은 학습을 안내한다. 숙련도 점수가 아니다.
  */
@@ -149,8 +152,13 @@ class CurriculumFlowBuilder {
 		}
 		boolean practiceStarted = concepts.stream()
 				.anyMatch(c -> c.practiceGradedCount() > 0 || "pending".equals(c.practiceStatus()));
-		List<Need> needs = targets.stream().map(c -> need(c, practiceStarted)).toList();
+		List<Need> needs = targets.stream().map(c -> need(c, practiceStarted, preDone)).toList();
 		long remaining = needs.stream().filter(need -> need != Need.OK).count();
+		// 단계마다 끝냈는지 (지금 단계와 따로 센다)
+		boolean studyDone = !targets.isEmpty() && !needs.contains(Need.STUDY);
+		boolean quizDone = !targets.isEmpty() && needs.stream().allMatch(need -> need == Need.OK);
+		Map<String, Boolean> completed = Map.of(PRE_TEST, preDone, CONCEPT_STUDY, studyDone, CONCEPT_QUIZ, quizDone,
+				POST_TEST, postDone);
 
 		String current = !preDone ? PRE_TEST
 				: needs.contains(Need.STUDY) ? CONCEPT_STUDY
@@ -168,7 +176,9 @@ class CurriculumFlowBuilder {
 		List<CurriculumResponse.FlowStage> stages = new ArrayList<>();
 		for (int i = 0; i < ORDER.size(); i++) {
 			String key = ORDER.get(i);
-			String status = i < currentIndex ? "done" : i == currentIndex ? "current" : "upcoming";
+			// 지금 단계 앞은 늘 done(대상 개념이 없을 때 포함), 뒤라도 끝낸 단계는 done
+			String status = i < currentIndex || completed.get(key) ? "done"
+					: i == currentIndex ? "current" : "upcoming";
 			stages.add(new CurriculumResponse.FlowStage(key, i + 1, TITLES.get(key), status, summaries.get(key)));
 		}
 
@@ -176,14 +186,17 @@ class CurriculumFlowBuilder {
 				state(post, postDone), comparison.overallDelta(), progress);
 	}
 
-	// 자료 개념은 학습 기록·확인 퀴즈로, 과목 키워드뿐인 개념은 예전처럼 일반 퀴즈 결과로 본다
-	private static Need need(CurriculumResponse.FlowConcept concept, boolean practiceStarted) {
+	// 자료 개념은 학습 기록·확인 퀴즈로, 과목 키워드뿐인 개념은 예전처럼 사전평가 제출 뒤 일반 퀴즈 결과로 본다
+	private static Need need(CurriculumResponse.FlowConcept concept, boolean practiceStarted, boolean preDone) {
 		if (concept.study() != null) {
 			return switch (concept.study().status()) {
 				case "not_studied", "review_needed" -> Need.STUDY;
 				case "studied" -> Need.QUIZ;
 				default -> Need.OK;
 			};
+		}
+		if (!preDone) {
+			return Need.STUDY;
 		}
 		if (concept.practiceGradedCount() > 0) {
 			return Need.OK;

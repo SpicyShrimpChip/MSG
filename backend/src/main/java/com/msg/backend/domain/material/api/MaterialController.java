@@ -35,15 +35,20 @@ public class MaterialController {
 	private final MaterialService materialService;
 
 	@Operation(summary = "자료 올리기", description = "multipart/form-data. PDF·PPTX·TXT·MD, 20MB까지. "
-			+ "확장자와 파일 내용이 함께 맞아야 한다. 성공하면 status는 uploaded(AI 분석 전)다.")
+			+ "확장자와 파일 내용이 함께 맞아야 한다. 성공하면 status는 uploaded(AI 분석 전)다. "
+			+ "requestKey(선택, 64자까지)를 함께 보내면 같은 키로 다시 보낸 요청(더블클릭·재시도)은 새로 저장하지 않고 "
+			+ "이미 올린 자료를 200으로 돌려준다.")
 	@PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public ResponseEntity<ApiResponse<MaterialUploadResponse>> upload(
 			@AuthenticationPrincipal AuthUser authUser,
 			@Parameter(description = "연결할 내 과목 id. 비우면 과목 없이 올린다") @RequestParam(required = false) Long courseId,
 			@Parameter(description = "자료 제목 1~60자") @RequestParam(required = false) String title,
+			@Parameter(description = "화면이 올리기마다 만든 요청 키(UUID 등, 64자까지). 같은 키면 새로 저장하지 않는다")
+			@RequestParam(required = false) String requestKey,
 			@RequestPart MultipartFile file) {
-		return ResponseEntity.status(HttpStatus.CREATED)
-				.body(ApiResponse.success(materialService.upload(authUser.userId(), courseId, title, file)));
+		MaterialService.Uploaded uploaded = materialService.upload(authUser.userId(), courseId, title, requestKey, file);
+		return ResponseEntity.status(uploaded.reused() ? HttpStatus.OK : HttpStatus.CREATED)
+				.body(ApiResponse.success(uploaded.material()));
 	}
 
 	@Operation(summary = "내 학습자료 목록", description = "최신 자료가 위로 온다. 요약·개념 본문은 싣지 않는다.")

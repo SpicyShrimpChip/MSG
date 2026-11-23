@@ -1,10 +1,7 @@
 import { useEffect, useState, type SubmitEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import {
-  useMutation,
-  useQueryClient,
-  useSuspenseQuery,
-} from '@tanstack/react-query';
+import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
+import { useSingleFlightMutation } from '@/hooks';
 import { Briefcase, Sparkles } from 'lucide-react';
 import {
   CURRICULUM_QUERY_KEY,
@@ -158,7 +155,7 @@ function QuizForm({ quizId }: { quizId: number }) {
   useEffect(() => saveDraft(quizId, draft), [quizId, draft]);
 
   // 채점은 서버가 한다. 받은 결과를 결과 화면 캐시에 넣고 목록의 지난 점수를 새로 받는다
-  const mutation = useMutation({
+  const mutation = useSingleFlightMutation({
     mutationFn: (answers: QuizAnswer[]) => submitQuiz(quizId, answers),
     onSuccess: (result) => {
       clearDraft(quizId);

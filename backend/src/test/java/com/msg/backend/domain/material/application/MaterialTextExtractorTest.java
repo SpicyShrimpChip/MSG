@@ -87,6 +87,6 @@ class MaterialTextExtractorTest {
 		String key = "k" + files.size();
 		files.put(key, bytes);
 		return Material.upload(1L, 1L, "자료", "file." + format.name().toLowerCase(), format, bytes.length, key,
-				LocalDateTime.now());
+				null, LocalDateTime.now());
 	}
 }

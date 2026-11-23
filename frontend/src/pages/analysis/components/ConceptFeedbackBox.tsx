@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
+import { useSingleFlightMutation } from '@/hooks';
 import { BookOpen, Check, type LucideIcon } from 'lucide-react';
 import {
   analysisLatestKey,
@@ -8,7 +10,7 @@ import {
 } from '@/api';
 import type { ConceptFeedbackType, ConceptResult } from '@/types';
 import { Button } from '@/components';
-import { cn, conceptQuizLink } from '@/utils';
+import { cn, conceptQuizLink, createSubmitLock } from '@/utils';
 
 interface ConceptFeedbackBoxProps {
   courseId: number;
@@ -47,20 +49,28 @@ function ConceptFeedbackBox({
   const queryClient = useQueryClient();
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: analysisLatestKey(courseId) });
+  // 저장과 선택 취소가 서로 겹쳐 보내지 않게 잠금 하나를 같이 쓴다
+  const [lock] = useState(createSubmitLock);
 
-  const save = useMutation({
-    mutationFn: (feedback: ConceptFeedbackType) =>
-      saveConceptFeedback(courseId, {
-        concept: concept.concept,
-        feedback,
-        analysisRunId: runId,
-      }),
-    onSuccess: refresh,
-  });
-  const cancel = useMutation({
-    mutationFn: (id: number) => deleteConceptFeedback(id),
-    onSuccess: refresh,
-  });
+  const save = useSingleFlightMutation(
+    {
+      mutationFn: (feedback: ConceptFeedbackType) =>
+        saveConceptFeedback(courseId, {
+          concept: concept.concept,
+          feedback,
+          analysisRunId: runId,
+        }),
+      onSuccess: refresh,
+    },
+    lock,
+  );
+  const cancel = useSingleFlightMutation(
+    {
+      mutationFn: (id: number) => deleteConceptFeedback(id),
+      onSuccess: refresh,
+    },
+    lock,
+  );
 
   const current = concept.feedback?.feedback ?? null;
   const busy = save.isPending || cancel.isPending;

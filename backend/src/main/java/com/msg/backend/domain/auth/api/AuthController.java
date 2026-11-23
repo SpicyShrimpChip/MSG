@@ -66,7 +66,8 @@ public class AuthController {
 	}
 
 	@Operation(summary = "Access Token 갱신", description = "Refresh Token 쿠키를 확인하고 새 Access Token과 새 Refresh Token(쿠키)을 준다. "
-			+ "이미 쓴 Refresh Token을 다시 보내면 그 세션 전체가 폐기된다.")
+			+ "이미 쓴 Refresh Token을 다시 보내면 그 세션 전체가 폐기된다. "
+			+ "다만 회전된 지 유예 시간(app.auth.refresh-reuse-grace, 기본 10초) 안이고 세션이 살아 있으면 탭 여러 개의 동시 갱신으로 보고 다시 발급한다.")
 	@PostMapping("/refresh")
 	public ApiResponse<AccessTokenResponse> refresh(
 			@Parameter(description = "XMLHttpRequest", required = true) @RequestHeader(value = REQUESTED_WITH, required = false) String requestedWith,

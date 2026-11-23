@@ -5,3 +5,4 @@ export * from './useMe';
 export * from './useNotices';
 export * from './useQuizzes';
 export * from './useSavedMaskWords';
+export * from './useSingleFlightMutation';

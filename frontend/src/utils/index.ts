@@ -13,3 +13,4 @@ export * from './search';
 export * from './conceptStudy';
 export * from './routeError';
 export * from './requestKey';
+export * from './submitLock';

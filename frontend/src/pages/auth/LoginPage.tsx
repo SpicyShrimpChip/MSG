@@ -1,5 +1,6 @@
 import { useState, type SubmitEvent } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
+import { useSingleFlightMutation } from '@/hooks';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ME_QUERY_KEY, login } from '@/api';
 import {
@@ -26,7 +27,7 @@ function LoginPage() {
   const [email, setEmail] = useState(state.signedUpEmail ?? '');
   const [password, setPassword] = useState('');
 
-  const mutation = useMutation({
+  const mutation = useSingleFlightMutation({
     mutationFn: login,
     onSuccess: ({ user }) => {
       // 이전 사용자의 화면 데이터가 남지 않도록 비우고, 받은 내 정보를 넣어 둔다

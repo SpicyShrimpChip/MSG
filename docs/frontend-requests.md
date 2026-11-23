@@ -169,12 +169,14 @@ semester    = "2026-1" | "2026-summer" | "2026-2" | "2026-winter"
 
 화면: `/materials/upload`(올리기), `/materials`(목록, 과목별로 묶음), `/materials/{id}`(상세: 요약 / 핵심 개념 / 퀴즈 탭). 올린 본인만 볼 수 있다.
 
-| 메서드 | 경로                  | 요청 본문                                                | 응답 `data`                                |
-| ------ | --------------------- | -------------------------------------------------------- | ------------------------------------------ |
-| POST   | `/api/materials`      | `multipart/form-data`: `courseId`(선택), `title`, `file` | `Material` (201)                           |
-| GET    | `/api/materials`      | -                                                        | `MaterialSummary[]` (최신순)               |
-| GET    | `/api/materials/{id}` | -                                                        | `MaterialDetail`                           |
-| DELETE | `/api/materials/{id}` | -                                                        | 없음 (자료 정보와 원본 파일을 함께 지운다) |
+| 메서드 | 경로                  | 요청 본문                                                                    | 응답 `data`                                             |
+| ------ | --------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------- |
+| POST   | `/api/materials`      | `multipart/form-data`: `courseId`(선택), `title`, `file`, `requestKey`(선택) | `Material` (201, 같은 `requestKey`면 200으로 같은 자료) |
+| GET    | `/api/materials`      | -                                                                            | `MaterialSummary[]` (최신순)                            |
+| GET    | `/api/materials/{id}` | -                                                                            | `MaterialDetail`                                        |
+| DELETE | `/api/materials/{id}` | -                                                                            | 없음 (자료 정보와 원본 파일을 함께 지운다)              |
+
+- `requestKey`(11/24, #210): 화면이 올리기마다 만든 UUID(64자까지, 넘으면 400 "요청 키가 너무 길어요."). 같은 사용자가 같은 키로 다시 보내면(더블클릭·연타·응답을 못 받은 재시도) 파일을 새로 저장하지 않고 이미 올린 자료를 200으로 돌려준다. 동시에 온 같은 키 요청은 서버가 사용자 행을 잠가 차례로 처리한다. 화면은 응답을 못 받은 실패(시간 초과·연결 끊김)일 때만 같은 키로 다시 보내고, 다른 실패나 파일을 바꾸면 새 키를 만든다. 키 없이 보내면 예전처럼 매번 새로 저장한다.
 
 ```ts
 Material = { id: number, courseId: number | null, title: string }
@@ -299,7 +301,7 @@ GPT·Claude·Gemini가 과목 하나의 가져온 대화를 **같은 기준으�
 | ------ | ---------------------------------------------- | ------------------------------------------------- | ----------------------------------------------------------- |
 | GET    | `/api/analysis/providers`                      | -                                                 | `ProviderStatus[]` (모델별 설정 여부, 키는 안 줌)           |
 | POST   | `/api/analysis/courses/{courseId}/runs`        | -                                                 | `AnalysisRun` (201). 모델을 기다리므로 수십 초 걸릴 수 있다 |
-| GET    | `/api/analysis/courses/{courseId}/runs/latest` | -                                                 | `AnalysisRun` (가장 최근에 끝난 분석, 없으면 404)           |
+| GET    | `/api/analysis/courses/{courseId}/runs/latest` | -                                                 | `LatestAnalysis` (아래, 분석한 적이 없으면 404)             |
 | GET    | `/api/analysis/runs/{runId}`                   | -                                                 | `AnalysisRun`                                               |
 | GET    | `/api/analysis/courses/{courseId}/feedback`    | -                                                 | `ConceptFeedback[]`                                         |
 | PUT    | `/api/analysis/courses/{courseId}/feedback`    | `{ concept, feedback, comment?, analysisRunId? }` | `ConceptFeedback` (있으면 바꾼다)                           |
@@ -329,7 +331,17 @@ AnalysisRun = {
 }
 ConceptFeedback = { id, courseId, concept, feedback: "already_know" | "want_to_study", comment: string | null,
                     analysisRunId: number | null, updatedAt, nextAction: "confirm_quiz" | "prioritize_study" }
+// runs/latest (11/24, #209·#214). run: 모델이 하나 이상 판단한 가장 최근 분석(completed·partial)만.
+// lastAttempt: run보다 나중에 시작한 분석이 진행 중이거나 결과 없이 끝났으면 그 시도 (없으면 null)
+LatestAnalysis = {
+  run: AnalysisRun | null,
+  lastAttempt: { runId, status: "running" | "failed", startedAt, finishedAt: string | null,
+                 message: string | null /* 결과가 없는 이유, 진행 중이면 null */ } | null
+}
 ```
+
+- **모델이 모두 실패한 분석은 이전 결과를 덮지 않는다(11/24, #209).** `POST runs`는 그대로 `status: "failed"`인 `AnalysisRun`(201)을 돌려주지만, `runs/latest`의 `run`은 이전에 모델이 판단한 분석이고 실패는 `lastAttempt.status: "failed"`로만 알린다. 실패한 시도도 24시간 분석 횟수에는 센다(제공사가 시간 초과에도 요금을 매길 수 있다). 판단한 모델이 없는 분석은 숙련도 기록(`concept_mastery`)을 남기지 않고, 일부 모델이 실패한 분석(`partial`)은 대화 쪽 근거만 바뀌었으면 기록하지 않는다(모델이 빠져 생긴 변화와 구분할 수 없다. 퀴즈·산식이 바뀌었거나 첫 기록이면 남긴다).
+- **분석 중이면 `lastAttempt.status: "running"`(11/24, #214).** 새로고침해도 대시보드가 처음부터 "분석 중"을 보여 주고 끝날 때까지 다시 확인한다. 시작한 지 `app.analysis.running-timeout`(10분)이 지나도 끝나지 않은 분석(서버가 중간에 멈춤)은 `failed`로 준다. 진행 중 표시는 과목 단위다(새 분석을 막는 409는 사용자 단위).
 
 화면에 보여 줄 때 지킬 것:
 
@@ -632,6 +644,7 @@ layout = {
   - 지금 단계 규칙이 바뀌었다: 먼저 공부할 개념 중 학습 전·복습 필요가 있으면 개념 학습, 학습 완료 뒤 확인 퀴즈를 안 풀었으면 확인 퀴즈, 그 밖은 사후 평가
   - 과목 키워드뿐인 개념은 예전처럼 일반 퀴즈 결과로 본다
   - 사후 평가는 막지 않고, 남은 개념 수를 요약에 쓴다
+  - **단계 상태(11/24, #213):** `stages[].status`의 `done`은 지금 단계와 따로 센다. 앞 단계가 남아 있어도 끝낸 단계는 `done`이다(예: 개념 학습이 남았는데 사후 평가를 제출했으면 STEP 2 `current`, STEP 4 `done`). 사전·사후 평가는 제출, 개념 학습은 먼저 공부할 개념 중 학습 전·복습 필요가 없음, 확인 퀴즈는 먼저 공부할 개념을 모두 확인 퀴즈까지 마침(지금 단계 규칙과 같은 판정). 과목 키워드뿐인 개념은 사전 테스트 뒤 퀴즈로만 보므로 사전 테스트 전에는 끝낸 것으로 보지 않는다. `currentStep`(끝내지 않은 첫 단계)과 응답 모양은 그대로다
 - **프론트:**
   - 새 파일: `types/study.ts`, `api/study.api.ts`, `utils/conceptStudy.ts`, `components/common/StudyStatusBadge.tsx`, `pages/materials/components/ConceptStudyActions.tsx`, `pages/analysis/components/StudyProgressPanel.tsx`(대시보드)
   - 확인 퀴즈 모드: `/quizzes/new?checkMaterialId=&checkConceptId=&concept=`

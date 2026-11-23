@@ -94,6 +94,7 @@
 | `file_size` | BIGINT | 바이트 |
 | `storage_key` | VARCHAR(200) NULL **UNIQUE** | 저장소 위치 `materials/{user_id}/{UUID}.{확장자}`. 원본만 지우는 보관 정책을 위해 NULL 허용 |
 | `status` | VARCHAR(20) | `UPLOADED`(저장 완료·AI 분석 전) / `PROCESSING` / `READY` / `FAILED`. API는 소문자 |
+| `request_key` | VARCHAR(64) NULL, UNIQUE `(user_id, request_key)` | 화면이 올리기마다 만든 요청 키(V2, #210). 같은 사용자·같은 키면 새로 저장하지 않고 그 자료를 돌려준다(사용자 행을 잠가 확인). 키 없이 올린 자료는 NULL |
 
 ### `file_deletion_task`
 
@@ -225,6 +226,7 @@ erDiagram
 | Refresh Token | 256비트 난수, 14일, HttpOnly 쿠키(`Path=/api/auth`, `SameSite=Strict`, 운영 `Secure`). DB에는 SHA-256만 |
 | 토큰 회전 | 갱신할 때마다 새 Refresh Token 발급, 이전 것 폐기 |
 | 재사용 감지 | 폐기된 Refresh Token이 다시 오면 그 세션의 토큰을 모두 폐기 → 같은 세션의 Access Token도 즉시 401 |
+| 동시 갱신 유예(#211) | 회전으로 폐기된 지 `app.auth.refresh-reuse-grace`(10초) 안이고 같은 세션에 살아 있는 토큰이 있으면 재사용으로 보지 않고 한 번 더 회전한다(먼저 받은 새 토큰도 살려 둔다). 로그아웃·재사용 감지는 세션 전체를, 탈퇴는 행을 지우므로 "세션이 살아 있음 = 회전으로 폐기됨"이라 사유 칸은 두지 않았다. 끝난 세션의 토큰은 유예 안이어도 401 |
 | 로그아웃 | 세션 폐기 + 쿠키 삭제. Access Token은 요청마다 세션이 살아 있는지 확인하므로 만료 전이라도 바로 막힌다 |
 | CSRF | 인증은 Authorization 헤더라 일반 API는 CSRF 대상이 아니다. 쿠키를 쓰는 `/api/auth/login·refresh·logout`은 `SameSite=Strict` + `X-Requested-With: XMLHttpRequest` 헤더 필수 |
 | CORS | 허용 출처는 설정값(`app.cors.allowed-origins`). 개발·배포 모두 같은 출처(프록시·rewrite)라 평소엔 쓰이지 않는다 |
@@ -233,7 +235,7 @@ erDiagram
 
 알려진 한계 (다음 단계에서 다룸)
 
-- 여러 탭이 거의 동시에 갱신하면 한쪽이 재사용으로 판정되어 로그아웃될 수 있다. 프론트는 한 탭 안에서 갱신을 한 번만 보내도록 묶어 두었다.
+- (11/24 해결, #211) 여러 탭이 거의 동시에 갱신하면 한쪽이 재사용으로 판정되어 로그아웃되던 문제: 서버는 위의 동시 갱신 유예로, 프론트는 Web Locks(`msg-auth-refresh`)로 탭끼리 갱신 차례를 지킨다. 대신 유예 시간 안에는 회전 직후 훔친 토큰도 재사용으로 잡히지 않는다(10초로 짧게 둔 이유).
 - 폐기·만료된 `refresh_token` 행을 지우는 정리 작업이 아직 없다.
 - 로그인 실패 기록은 메모리에 있어 서버를 여러 대 띄우면 공유되지 않는다(배포 구성 미결).
 
