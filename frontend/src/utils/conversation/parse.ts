@@ -6,9 +6,24 @@ const UNTITLED = '제목 없는 대화';
 // 첫 질문으로 만드는 제목의 최대 글자 수
 const TITLE_MAX_LENGTH = 40;
 
+// 눈에 보이지 않는 NUL 문자(U+0000). 코드 실행 결과를 붙여 넣은 대화 등에 들어 있을 수 있는데,
+// 서버 DB(PostgreSQL)가 저장하지 못해 대화 묶음 전체가 실패했다(#215). 서버도 지우지만
+// 미리보기·가리기·보내기가 같은 글을 보도록 읽을 때 지운다. 다른 글자는 그대로 둔다.
+const NUL = '\u0000';
+// JSON 글자 안의 NUL은 늘 이스케이프(\u0000)로 적힌다(날것의 제어 문자는 JSON.parse가 거절한다)
+const ESCAPED_NUL = '\\u0000';
+
+function withoutNul(_key: string, value: unknown): unknown {
+  return typeof value === 'string' ? value.replaceAll(NUL, '') : value;
+}
+
+// 큰 파일에서 reviver는 JSON.parse를 크게 느리게 하므로 NUL이 있을 수 있는 파일에만 쓴다
+// (`\\u0000`처럼 역슬래시 글자 뒤에 온 경우도 걸리지만, NUL만 지우므로 결과는 같다)
 function readJson(text: string): unknown {
   try {
-    return JSON.parse(text);
+    return text.includes(ESCAPED_NUL)
+      ? JSON.parse(text, withoutNul)
+      : JSON.parse(text);
   } catch {
     return undefined;
   }

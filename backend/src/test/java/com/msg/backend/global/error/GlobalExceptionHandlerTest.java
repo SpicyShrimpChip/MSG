@@ -12,11 +12,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -59,11 +61,27 @@ class GlobalExceptionHandlerTest {
 	}
 
 	@Test
-	void DB_제약_위반은_저장하려던_값을_빼고_409를_돌려준다() throws Exception {
-		mockMvc.perform(get("/test/data-integrity"))
+	void UNIQUE_제약_위반은_저장하려던_값을_빼고_409를_돌려준다() throws Exception {
+		mockMvc.perform(get("/test/unique-violation"))
 				.andExpect(status().isConflict())
 				.andExpect(jsonPath("$.message").value(GlobalExceptionHandler.CONFLICT_MESSAGE))
 				.andExpect(content().string(not(containsString("비밀 대화 본문"))));
+		mockMvc.perform(get("/test/duplicate-key"))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.message").value(GlobalExceptionHandler.CONFLICT_MESSAGE));
+	}
+
+	// 다시 시도해도 같은 결과인 오류에 "잠시 뒤 다시 시도"를 보여 주지 않는다 (#215)
+	@Test
+	void 그_밖의_DB_제약_위반은_다시_시도를_권하지_않고_400을_돌려준다() throws Exception {
+		mockMvc.perform(get("/test/data-error"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value(GlobalExceptionHandler.UNSAVABLE_DATA_MESSAGE))
+				.andExpect(content().string(not(containsString("비밀 대화 본문"))))
+				.andExpect(content().string(not(containsString("0x00"))));
+		mockMvc.perform(get("/test/data-integrity-without-state"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value(GlobalExceptionHandler.UNSAVABLE_DATA_MESSAGE));
 	}
 
 	@Test
@@ -130,9 +148,29 @@ class GlobalExceptionHandlerTest {
 					Map.of("rejected", List.of("c-1")));
 		}
 
-		@GetMapping("/test/data-integrity")
-		void dataIntegrity() {
-			throw new DataIntegrityViolationException("duplicate key: 비밀 대화 본문");
+		// JPA가 감싼 모양처럼 원인 사슬 안쪽에 SQL 상태 코드가 있다
+		@GetMapping("/test/unique-violation")
+		void uniqueViolation() {
+			throw new DataIntegrityViolationException("could not execute statement",
+					new RuntimeException("wrapped",
+							new SQLException("duplicate key: 비밀 대화 본문", "23505")));
+		}
+
+		@GetMapping("/test/duplicate-key")
+		void duplicateKey() {
+			throw new DuplicateKeyException("duplicate key");
+		}
+
+		// PostgreSQL이 NUL 문자를 거절할 때의 상태 코드(22021)
+		@GetMapping("/test/data-error")
+		void dataError() {
+			throw new DataIntegrityViolationException("could not execute statement",
+					new SQLException("invalid byte sequence for encoding \"UTF8\": 0x00 비밀 대화 본문", "22021"));
+		}
+
+		@GetMapping("/test/data-integrity-without-state")
+		void dataIntegrityWithoutState() {
+			throw new DataIntegrityViolationException("비밀 대화 본문");
 		}
 
 		@PostMapping("/test/validation")

@@ -642,6 +642,7 @@ layout = {
   - 지금 단계 규칙이 바뀌었다: 먼저 공부할 개념 중 학습 전·복습 필요가 있으면 개념 학습, 학습 완료 뒤 확인 퀴즈를 안 풀었으면 확인 퀴즈, 그 밖은 사후 평가
   - 과목 키워드뿐인 개념은 예전처럼 일반 퀴즈 결과로 본다
   - 사후 평가는 막지 않고, 남은 개념 수를 요약에 쓴다
+  - **단계 상태(11/24, #213):** `stages[].status`의 `done`은 지금 단계와 따로 센다. 앞 단계가 남아 있어도 끝낸 단계는 `done`이다(예: 개념 학습이 남았는데 사후 평가를 제출했으면 STEP 2 `current`, STEP 4 `done`). 사전·사후 평가는 제출, 개념 학습은 먼저 공부할 개념 중 학습 전·복습 필요가 없음, 확인 퀴즈는 먼저 공부할 개념을 모두 확인 퀴즈까지 마침(지금 단계 규칙과 같은 판정). 과목 키워드뿐인 개념은 사전 테스트 뒤 퀴즈로만 보므로 사전 테스트 전에는 끝낸 것으로 보지 않는다. `currentStep`(끝내지 않은 첫 단계)과 응답 모양은 그대로다
 - **프론트:**
   - 새 파일: `types/study.ts`, `api/study.api.ts`, `utils/conceptStudy.ts`, `components/common/StudyStatusBadge.tsx`, `pages/materials/components/ConceptStudyActions.tsx`, `pages/analysis/components/StudyProgressPanel.tsx`(대시보드)
   - 확인 퀴즈 모드: `/quizzes/new?checkMaterialId=&checkConceptId=&concept=`
