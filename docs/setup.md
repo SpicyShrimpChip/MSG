@@ -63,7 +63,7 @@ cd ..
 ```
 
 - 앱용·마이그레이션용 계정 비밀번호를 물어봐요(12자 이상). 비밀번호는 `backend/.env`에만 저장되고, JWT 키는 자동으로 만들어져요.
-- `ai_lms`(서비스)와 `ai_lms_test`(테스트 전용) 두 DB가 만들어지고, 두 DB 모두에 `vector` 확장이 켜져요.
+- `msg`(서비스)와 `msg_test`(테스트 전용) 두 DB가 만들어지고, 두 DB 모두에 `vector` 확장이 켜져요.
 - PC에 `psql`이 있으면 관리자 비밀번호를 묻고 PC의 `psql`로, 없으면 도커 컨테이너 안의 `psql`로 접속해요(이때는 관리자 비밀번호를 묻지 않아요).
 
 **③ 실행과 테스트**
@@ -71,7 +71,7 @@ cd ..
 ```bash
 ./gradlew bootRun    # http://localhost:8080 , 처음 실행할 때 Flyway가 표를 만들어요
 ./gradlew test       # H2 메모리 DB로 테스트 (도커 불필요)
-./gradlew pgTest     # 같은 테스트를 실제 PostgreSQL(ai_lms_test)로
+./gradlew pgTest     # 같은 테스트를 실제 PostgreSQL(msg_test)로
 ```
 
 프론트를 이 백엔드에 연결하려면 `frontend/.env.development.local`(커밋 안 됨)에 `VITE_USE_MOCK=false`를 넣어요. 끝나면 지워요.
@@ -86,7 +86,7 @@ docker stop db-postgres-1
 docker ps                      # 켜진 컨테이너 보기
 ```
 
-DB 안을 보려면 `docker exec -it db-postgres-1 psql -U ai_lms_migrator ai_lms`. 나갈 때는 `\q`(슬래시가 아니라 백슬래시)예요. 확인용 SQL은 `docs/backend-design.md` 8번.
+DB 안을 보려면 `docker exec -it db-postgres-1 psql -U msg_migrator msg`. 나갈 때는 `\q`(슬래시가 아니라 백슬래시)예요. 확인용 SQL은 `docs/backend-design.md` 8번.
 
 ## VS Code로 DB 보기 (선택)
 
@@ -95,14 +95,42 @@ DB 안을 보려면 `docker exec -it db-postgres-1 psql -U ai_lms_migrator ai_lm
 | 칸 | 값 |
 | --- | --- |
 | SERVER NAME | `127.0.0.1` (포트는 기본 5432라 따로 안 적어도 돼요) |
-| USER NAME | `ai_lms_app` |
+| USER NAME | `msg_app` |
 | PASSWORD | `backend/.env`의 `DB_PASSWORD` |
-| DATABASE NAME | `ai_lms` |
+| DATABASE NAME | `msg` |
 
-- **계정과 비밀번호는 짝이에요.** `ai_lms_app`은 `DB_PASSWORD`, `ai_lms_migrator`는 `DB_MIGRATION_PASSWORD`예요. 보기만 할 거면 표를 바꿀 수 없는 `ai_lms_app`이 안전해요.
+- **계정과 비밀번호는 짝이에요.** `msg_app`은 `DB_PASSWORD`, `msg_migrator`는 `DB_MIGRATION_PASSWORD`예요. 보기만 할 거면 표를 바꿀 수 없는 `msg_app`이 안전해요.
 - 비밀번호는 각자 컴퓨터에만 저장되고 레포에는 안 올라가요.
 - 확장에는 Copilot AI 기능도 있어요. 실제 사용자 데이터가 든 DB에는 AI 기능을 쓰지 않아요.
 - 표 구조를 바꾸는 SQL은 여기서 직접 치지 말고 마이그레이션 파일(`V7__...sql`처럼 다음 번호, `backend/CLAUDE.md` 참고)로 만들어요. 직접 친 SQL은 그 컴퓨터의 DB에만 반영돼요.
+
+## 예전 이름(`ai_lms`)으로 만든 DB를 쓰고 있다면 (11/24)
+
+서비스 이름을 MSG로 통일하면서 DB·계정 이름이 `ai_lms` → `msg`, `ai_lms_test` → `msg_test`, `ai_lms_app` → `msg_app`, `ai_lms_migrator` → `msg_migrator`로 바뀌었어요. 11/24 전에 세팅한 컴퓨터는 `backend/.env`가 옛 이름을 가리키고 있어서 `bootRun`은 그대로 되지만, `pgTest`는 `msg_test`를 찾아요. 데이터를 지우지 않고 이름만 바꾸는 방법이에요.
+
+1. 백엔드(`bootRun`)와 VS Code DB 접속을 끄고(접속 중인 DB는 이름을 못 바꿔요), 컨테이너 안에서 이름을 바꿔요.
+
+   ```bash
+   docker exec db-postgres-1 psql -U postgres -v ON_ERROR_STOP=1 \
+     -c "ALTER DATABASE ai_lms RENAME TO msg" \
+     -c "ALTER DATABASE ai_lms_test RENAME TO msg_test" \
+     -c "ALTER ROLE ai_lms_app RENAME TO msg_app" \
+     -c "ALTER ROLE ai_lms_migrator RENAME TO msg_migrator"
+   ```
+
+2. `backend/.env`에서 세 줄을 고쳐요. 비밀번호는 그대로예요.
+
+   ```text
+   DB_URL=jdbc:postgresql://localhost:5432/msg
+   DB_USERNAME=msg_app
+   DB_MIGRATION_USERNAME=msg_migrator
+   ```
+
+3. `./gradlew pgTest`로 확인해요. VS Code 확장의 접속 정보(계정·DB 이름)도 새 이름으로 바꿔요.
+
+- 권한과 표는 이름이 아니라 내부 번호로 이어져 있어서 그대로 따라와요.
+- 계정 이름을 바꾼 뒤 로그인이 안 되면(옛 MD5 방식 비밀번호는 이름이 바뀌면 지워져요) `ALTER ROLE msg_app PASSWORD '<.env의 DB_PASSWORD>'`처럼 다시 넣어요. 이 PostgreSQL 16 컨테이너의 기본값(SCRAM)이면 그대로 돼요.
+- 다시 만드는 게 편하면 아래 "처음부터 다시 하고 싶을 때"를 따라 `setup-local-postgres.sh`를 다시 실행해도 돼요(데이터는 사라져요).
 
 ## 처음부터 다시 하고 싶을 때
 
@@ -130,8 +158,8 @@ mv backend/.env ~/lms-env.bak     # 스크립트는 .env가 이미 있으면 덮
 | 백엔드가 `password authentication failed` | `backend/.env`의 계정 비밀번호가 DB와 달라요. DB를 새로 만들고 스크립트를 다시 실행해요 |
 | VS Code 확장에서 `getaddrinfo failed` | SERVER NAME에 `localhost:5432`처럼 포트를 붙였어요. 이 칸은 호스트 이름만 받아요. `127.0.0.1`만 적어요 |
 | VS Code 확장에서 15초 뒤 시간 초과 | `localhost`가 IPv6로 먼저 시도돼서 그래요(컨테이너는 `127.0.0.1`에만 열려 있어요). SERVER NAME을 `127.0.0.1`로 바꿔요 |
-| VS Code 확장에서 `password authentication failed` | 계정과 비밀번호 짝이 안 맞아요. `ai_lms_app`↔`DB_PASSWORD`, `ai_lms_migrator`↔`DB_MIGRATION_PASSWORD`로 확인하고, 복사할 때 `+ / =` 앞에서 끊기거나 공백이 붙지 않았는지 봐요 |
-| 테스트가 `_test로 끝나는 DB` 오류로 멈춤 | 일부러 막은 거예요. 테스트는 회원 행을 지우니 `ai_lms_test`에서만 돌아요. `TEST_DB_URL` 환경변수를 설정했다면 이름이 `_test`로 끝나는 DB를 가리키는지 확인해요 |
+| VS Code 확장에서 `password authentication failed` | 계정과 비밀번호 짝이 안 맞아요. `msg_app`↔`DB_PASSWORD`, `msg_migrator`↔`DB_MIGRATION_PASSWORD`로 확인하고, 복사할 때 `+ / =` 앞에서 끊기거나 공백이 붙지 않았는지 봐요 |
+| 테스트가 `_test로 끝나는 DB` 오류로 멈춤 | 일부러 막은 거예요. 테스트는 회원 행을 지우니 `msg_test`에서만 돌아요. `TEST_DB_URL` 환경변수를 설정했다면 이름이 `_test`로 끝나는 DB를 가리키는지 확인해요 |
 | 마이그레이션 오류(`checksum`, 이미 적용됨) | 옛 DB에 남은 기록과 파일이 달라요. DB를 새로 만들어요 |
 | Windows에서 `.sh`가 안 돌아요 | PowerShell이 아니라 **Git Bash**에서 실행해요 |
 | PowerShell에서 `./gradlew`가 안 돌아요 | PowerShell에서는 `.\gradlew.bat bootRun`처럼 써요. Git Bash에서는 `./gradlew` 그대로 돼요 |

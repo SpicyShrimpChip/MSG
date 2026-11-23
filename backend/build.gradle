@@ -61,12 +61,12 @@ tasks.named('test') {
 	useJUnitPlatform()
 }
 
-// ./gradlew pgTest: 같은 테스트를 로컬·원격 PostgreSQL(pgvector)의 테스트 전용 DB(ai_lms_test)로 실행한다.
+// ./gradlew pgTest: 같은 테스트를 로컬·원격 PostgreSQL(pgvector)의 테스트 전용 DB(msg_test)로 실행한다.
 // 접속 계정·비밀번호는 backend/.env(커밋 안 됨) 또는 환경변수에서 읽고, DB 주소만 테스트 DB로 바꾼다.
 // 테스트는 데이터를 지우므로 이름이 _test로 끝나는 DB가 아니면 시작하지 않는다 (테스트 코드의 TestDatabaseGuard도 한 번 더 막는다)
-def testDbUrl = System.getenv('TEST_DB_URL') ?: 'jdbc:postgresql://localhost:5432/ai_lms_test'
+def testDbUrl = System.getenv('TEST_DB_URL') ?: 'jdbc:postgresql://localhost:5432/msg_test'
 tasks.register('pgTest', Test) {
-	description = 'PostgreSQL 테스트 DB(ai_lms_test)로 전체 테스트를 실행한다'
+	description = 'PostgreSQL 테스트 DB(msg_test)로 전체 테스트를 실행한다'
 	group = 'verification'
 	testClassesDirs = sourceSets.test.output.classesDirs
 	classpath = sourceSets.test.runtimeClasspath

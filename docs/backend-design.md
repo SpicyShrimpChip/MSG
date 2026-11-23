@@ -9,7 +9,7 @@
 
 | 저장소 | 상태 | 담는 것 |
 | --- | --- | --- |
-| **PostgreSQL** (`ai_lms`) | 사용 중 | 회원·인증 세션, 과목, 학습 기록, 숙련도·근거, 커리큘럼, 업로드 파일 메타데이터, 자료 조각(Chunk) 원문, AI 생성 결과 메타데이터, 대시보드 배치. **소유권(누구 데이터인지)의 기준** |
+| **PostgreSQL** (`msg`) | 사용 중 | 회원·인증 세션, 과목, 학습 기록, 숙련도·근거, 커리큘럼, 업로드 파일 메타데이터, 자료 조각(Chunk) 원문, AI 생성 결과 메타데이터, 대시보드 배치. **소유권(누구 데이터인지)의 기준** |
 | **벡터 검색** (pgvector) | 확장만 설치(`db/vector`). 임베딩 테이블은 챗봇 검색 구현 때 추가 | 자료 조각 임베딩, 유사도 검색용 인덱스. 같은 PostgreSQL 안에 두므로 `user_id` 조건을 SQL로 함께 건다 |
 | **파일 저장소** (`global/storage`) | `FileStorage` 인터페이스 + `LocalFileStorage`(로컬 폴더, `app.storage.local.root`) 구현. S3는 미결 | 업로드 원본(자료·과목을 지울 때까지 보관), 나중에 AI가 만든 이미지·영상 파일 |
 
@@ -214,7 +214,7 @@ erDiagram
 - 리포지토리 조회는 `findByIdAndUserId(id, userId)`처럼 항상 소유자 조건을 함께 건다. 없으면 403이 아니라 404로 응답해 남의 데이터 존재 여부를 알리지 않는다.
 - Spring Security: 공지 조회, `/api/auth/**`(가입·로그인·갱신·로그아웃), Swagger만 공개. 나머지는 로그인 필요. 로그인하지 않으면 없는 주소도 401이다.
 - **관리자:** `/api/admin/**`는 `ADMIN`만 열린다(`SecurityConfig`). 역할은 토큰에 넣지 않고 **요청마다 DB에서 읽는다**(`SessionValidator.findActiveRole`, 세션 확인과 같은 쿼리 한 번). 그래서 역할을 바꾸면 같은 토큰도 바로 달라진다. 규모가 커져 이 조회가 부담이 되면 캐시를 붙이거나 토큰에 역할을 넣는 방식을 검토한다(그땐 역할 변경이 토큰이 끝날 때까지 늦게 반영됨).
-- 앱 DB 계정(`ai_lms_app`)은 데이터 읽기·쓰기만 할 수 있고 테이블을 바꿀 수 없다. 테이블 변경은 마이그레이션 계정(`ai_lms_migrator`)만 한다.
+- 앱 DB 계정(`msg_app`)은 데이터 읽기·쓰기만 할 수 있고 테이블을 바꿀 수 없다. 테이블 변경은 마이그레이션 계정(`msg_migrator`)만 한다.
 
 ## 5. 인증 흐름
 
@@ -369,24 +369,24 @@ cd backend/db
 POSTGRES_PASSWORD='관리자비밀번호' docker compose up -d   # pgvector/pgvector:pg16 (127.0.0.1:5432에만 열림). Docker 대신 직접 설치해도 된다(pgvector 필요)
 cd ..
 ./db/setup-local-postgres.sh   # 관리자 비밀번호 + 새 계정 비밀번호 입력 → DB·계정·vector 확장 생성 → backend/.env 생성
-./gradlew bootRun              # 처음 실행할 때 Flyway가 ai_lms에 테이블을 만든다
+./gradlew bootRun              # 처음 실행할 때 Flyway가 msg에 테이블을 만든다
 ```
 
-- 스크립트는 `ai_lms`, `ai_lms_test` DB와 `ai_lms_migrator`(DDL, DB 소유자), `ai_lms_app`(읽기·쓰기만) 계정을 만든다. 이미 있으면 아무것도 바꾸지 않고 멈춘다.
-- 일반 DataSource는 `ai_lms_app`, Flyway는 `ai_lms_migrator`를 쓴다 (`application-local.yaml`).
+- 스크립트는 `msg`, `msg_test` DB와 `msg_migrator`(DDL, DB 소유자), `msg_app`(읽기·쓰기만) 계정을 만든다. 이미 있으면 아무것도 바꾸지 않고 멈춘다.
+- 일반 DataSource는 `msg_app`, Flyway는 `msg_migrator`를 쓴다 (`application-local.yaml`).
 - `vector` 확장은 슈퍼유저만 만들 수 있어 스크립트가 미리 설치한다. Flyway의 `db/vector` 마이그레이션은 `IF NOT EXISTS`라 그대로 통과한다.
 - 원격 공유 DB를 쓸 때는 5432를 공인망에 열지 말고 VPN 사설 주소 + SSL로 접속하며, 주소·비밀번호는 `backend/.env`로만 관리한다.
 
-### 테스트 전용 DB (`ai_lms_test`)
+### 테스트 전용 DB (`msg_test`)
 
-`./gradlew pgTest`는 같은 테스트를 실제 PostgreSQL에서 돌린다. 테스트는 매번 회원·세션 행을 지우므로 **서비스 DB(`ai_lms`)와 분리한 `ai_lms_test`에서만** 돈다. `ai_lms_test`는 위 스크립트가 함께 만든다. 다른 주소를 쓰려면 `TEST_DB_URL`을 지정한다.
+`./gradlew pgTest`는 같은 테스트를 실제 PostgreSQL에서 돌린다. 테스트는 매번 회원·세션 행을 지우므로 **서비스 DB(`msg`)와 분리한 `msg_test`에서만** 돈다. `msg_test`는 위 스크립트가 함께 만든다. 다른 주소를 쓰려면 `TEST_DB_URL`을 지정한다.
 
 - Gradle이 시작 전에 DB 이름이 `_test`로 끝나는지 확인하고, 테스트 코드(`TestDatabaseGuard`)가 스프링이 뜨기 전에 한 번 더 확인한다. 둘 다 통과하지 못하면 DB에 접속하지 않고 멈춘다.
 
 ### psql에서 확인할 SQL
 
 ```sql
-\c ai_lms
+\c msg
 \dt                                                     -- users, refresh_token, notice, course*, material, file_deletion_task, conversation*, analysis_*, concept_feedback, quiz*, flyway_schema_history
 SELECT version, description, success, installed_on FROM flyway_schema_history ORDER BY installed_rank;
 \d users                                                -- uk_users_email UNIQUE

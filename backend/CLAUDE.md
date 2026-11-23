@@ -12,7 +12,7 @@ Lombok, springdoc-openapi(Swagger)
 ```bash
 ./gradlew bootRun    # 로컬 실행 (http://localhost:8080)
 ./gradlew test       # 테스트 (H2)
-./gradlew pgTest     # 같은 테스트를 PostgreSQL(ai_lms_test)로
+./gradlew pgTest     # 같은 테스트를 PostgreSQL(msg_test)로
 ./gradlew build      # 빌드
 ```
 
@@ -65,8 +65,8 @@ Swagger UI: `/swagger-ui/index.html` — 프론트와 API를 맞출 때 이 문�
 - **머지된 `V*.sql`은 고치지 않고 새 번호를 추가한다.** 지금은 `V1__init_schema.sql`, `V2__create_course.sql`, `V3__create_material.sql`, `V4__create_conversation.sql`, `V5__create_learning_analysis.sql`, `V6__create_quiz.sql`, `V7__add_learning_purpose_and_quiz_modes.sql`, `V8__add_quiz_ai_consent_and_call_tracking.sql`, `V9__add_pre_post_assessment.sql`, `V10__create_material_concept.sql`, `V11__add_material_concept_study_note.sql`, `V12__create_concept_study_progress.sql`, `V13__create_concept_mastery.sql`, `V14__create_ai_daily_usage.sql`, `V15__create_withdrawn_account.sql`, `V16__create_user_ai_usage.sql`이고 다음은 `V17`이다. 새 번호는 팀원과 겹치지 않게 미리 말한다. 10/31에 `V1`부터 다시 쓴 것은 운영 DB가 없어서 가능했던 예외이고, 운영 DB가 생기면 하지 않는다(`docs/wiki/backend.md`).
 - 버전 번호는 `db/migration`과 `db/vector`가 **함께** 쓴다. 같은 번호를 두 폴더에 쓰지 않는다. pgvector 확장(`db/vector/V0_1`)은 H2에 없어 local·prod·`pgTest`에서만 읽고, 번호를 `0.1`로 둬서 항상 `V1`보다 먼저 돈다.
 - 샘플 데이터는 `db/seed/R__*.sql`(반복 실행)이고 운영 프로필은 읽지 않는다.
-- 앱 계정(`ai_lms_app`)은 데이터 읽기·쓰기만 하고, 표 만들기·변경은 마이그레이션 계정(`ai_lms_migrator`)만 한다.
-- 로컬 DB는 도커(`db/docker-compose.yml`)로 켜고 `db/setup-local-postgres.sh`로 DB·계정을 만든다. 순서와 막힐 때 대처는 `docs/setup.md`. 실제 PostgreSQL 테스트는 `./gradlew pgTest`이고 이름이 `_test`로 끝나는 DB(`ai_lms_test`)에서만 돈다.
+- 앱 계정(`msg_app`)은 데이터 읽기·쓰기만 하고, 표 만들기·변경은 마이그레이션 계정(`msg_migrator`)만 한다.
+- 로컬 DB는 도커(`db/docker-compose.yml`)로 켜고 `db/setup-local-postgres.sh`로 DB·계정을 만든다. 순서와 막힐 때 대처는 `docs/setup.md`. 실제 PostgreSQL 테스트는 `./gradlew pgTest`이고 이름이 `_test`로 끝나는 DB(`msg_test`)에서만 돈다.
 
 ## CI와 main 보호
 
@@ -85,7 +85,7 @@ Swagger UI: `/swagger-ui/index.html` — 프론트와 API를 맞출 때 이 문�
 - **AI가 하나뿐일 때:** 키와 모델 이름이 모두 있는 모델만 쓴다. 하나뿐이면 만들기·채점 모두 그 모델로 하고, 채점 판단이 하나면 다수결로 표시하지 않고 `SINGLE_MODEL`("추가 확인 필요")로 둔다. 하나도 없으면 503.
 - **학습 피드백:** 사용자 의견(`concept_feedback`)은 AI 결과와 따로 두고 AI 판단·숙련도를 바꾸지 않는다. 추천 순서만 코드 규칙으로 바꾼다.
 - **숙련도 점수 (산식 11/5 확정, 계산 클래스 구현함 `analysis/application/MasteryCalculator`, 설정 `app.mastery.*`, 분석 응답 `concepts[].mastery`, 기록 `MasteryHistoryService`·`concept_mastery`):** 최근 분석을 돌려줄 때(분석 실행·`runs/latest`) 개념의 마지막 기록과 단계·근거가 다르면 한 줄을 남기고 `mastery.history`(최근 30개)를 붙인다. 지난 분석(`runs/{id}`)은 기록하지 않고 붙이기만 한다. 기록은 `analysis_run`에 CASCADE로 달려 대화 삭제·동의 철회 때 함께 지워진다. 대화 분류 결과(이해 못 함 / 재설명 요청 / 스스로 활용)와 퀴즈 정답률을 받아 점수를 계산하는 클래스를 분리하고, 가중치는 설정값으로 둔다. 초기값과 계산은 `docs/frontend-requests.md` 5-10절(퀴즈 1.0 : 대화 0.5, (Σw·s+1)÷(Σw+2), 근거 무게 합 3.0 미만은 "근거 부족"). LLM이 점수를 직접 매기지 않는다. 계산 로직에는 단위 테스트를 작성한다.
-- **DB:** PostgreSQL 16 + pgvector(확정, MySQL에서 이주). 기본 프로필·`./gradlew test`는 H2(PostgreSQL 모드), 실제 DB 테스트는 `./gradlew pgTest`(`ai_lms_test`). H2에서도 돌도록 마이그레이션에는 특정 DB 전용 문법을 쓰지 않고, `CREATE EXTENSION vector`처럼 PostgreSQL 전용인 것은 `db/vector/`에 둔다(local·prod에서만 적용). 로컬 DB는 `backend/db/docker-compose.yml` + `setup-local-postgres.sh`.
+- **DB:** PostgreSQL 16 + pgvector(확정, MySQL에서 이주). 기본 프로필·`./gradlew test`는 H2(PostgreSQL 모드), 실제 DB 테스트는 `./gradlew pgTest`(`msg_test`). H2에서도 돌도록 마이그레이션에는 특정 DB 전용 문법을 쓰지 않고, `CREATE EXTENSION vector`처럼 PostgreSQL 전용인 것은 `db/vector/`에 둔다(local·prod에서만 적용). 로컬 DB는 `backend/db/docker-compose.yml` + `setup-local-postgres.sh`.
 - **배치 JSON:** LLM이 출력한 화면 배치 JSON은 서버에서도 허용 컴포넌트 목록 기준으로 1차 검증한 뒤 프론트에 전달한다.
 
 ## 대화 가져오기 API

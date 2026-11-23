@@ -11,8 +11,8 @@ class TestDatabaseGuardTest {
 	@ParameterizedTest
 	@ValueSource(strings = {
 			"jdbc:h2:mem:lms;MODE=PostgreSQL",
-			"jdbc:postgresql://localhost:5432/ai_lms_test",
-			"jdbc:postgresql://127.0.0.1:5432/ai_lms_test?sslmode=require"
+			"jdbc:postgresql://localhost:5432/msg_test",
+			"jdbc:postgresql://127.0.0.1:5432/msg_test?sslmode=require"
 	})
 	void H2_메모리_DB와_test_DB에서는_실행한다(String url) {
 		assertThatCode(() -> TestDatabaseGuard.check(url)).doesNotThrowAnyException();
@@ -20,9 +20,9 @@ class TestDatabaseGuardTest {
 
 	@ParameterizedTest
 	@ValueSource(strings = {
-			"jdbc:postgresql://localhost:5432/ai_lms?sslmode=require",
-			"jdbc:postgresql://localhost:5432/ai_lms",
-			"jdbc:postgresql://localhost:5432/ai_lms_testing",
+			"jdbc:postgresql://localhost:5432/msg?sslmode=require",
+			"jdbc:postgresql://localhost:5432/msg",
+			"jdbc:postgresql://localhost:5432/msg_testing",
 			"jdbc:postgresql://localhost:5432/",
 			""
 	})

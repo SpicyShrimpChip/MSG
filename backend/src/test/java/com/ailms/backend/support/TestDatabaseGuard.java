@@ -7,7 +7,7 @@ import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
 
 /**
- * 통합 테스트가 서비스 DB(ai_lms)를 지우지 않도록 막는다.
+ * 통합 테스트가 서비스 DB(msg)를 지우지 않도록 막는다.
  * 테스트는 매번 회원·세션 행을 지우므로, H2 메모리 DB이거나 이름이 _test로 끝나는 DB가 아니면
  * 스프링이 뜨기 전에(Flyway·테스트가 DB에 닿기 전에) 실패시킨다.
  */

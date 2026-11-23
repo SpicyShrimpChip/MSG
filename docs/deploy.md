@@ -148,7 +148,7 @@ AWS 콘솔 작업·비밀값 입력은 사람이 한다. 순서대로 하면 30�
   ```bash
   cd ~/MSG/deploy
   docker compose stop backend
-  docker compose exec -T db pg_restore -U postgres -d ai_lms --clean --if-exists < backups/db-<날짜>.dump
+  docker compose exec -T db pg_restore -U postgres -d msg --clean --if-exists < backups/db-<날짜>.dump
   docker compose run --rm --no-deps -T --entrypoint sh backend -c 'tar -C /data/uploads -xzf -' < backups/uploads-<날짜>.tar.gz
   ./deploy.sh
   ```

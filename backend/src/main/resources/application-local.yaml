@@ -2,14 +2,14 @@
 # DB와 계정은 backend/db/setup-local-postgres.sh로 만든다
 spring:
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/ai_lms}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/msg}
     # 앱 계정: 데이터 읽기·쓰기(SELECT, INSERT, UPDATE, DELETE)만 할 수 있다
-    username: ${DB_USERNAME:ai_lms_app}
+    username: ${DB_USERNAME:msg_app}
     password: ${DB_PASSWORD}
 
   # 마이그레이션 계정: 테이블 생성·변경(DDL) 권한. 앱 계정과 분리해 앱이 테이블을 바꾸지 못하게 한다
   flyway:
-    user: ${DB_MIGRATION_USERNAME:ai_lms_migrator}
+    user: ${DB_MIGRATION_USERNAME:msg_migrator}
     password: ${DB_MIGRATION_PASSWORD}
     locations: classpath:db/migration,classpath:db/seed,classpath:db/vector
 

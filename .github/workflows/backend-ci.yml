@@ -108,10 +108,10 @@ jobs:
           --health-retries=20
 
     env:
-      TEST_DB_URL: jdbc:postgresql://127.0.0.1:5432/ai_lms_test
-      DB_USERNAME: ai_lms_app
+      TEST_DB_URL: jdbc:postgresql://127.0.0.1:5432/msg_test
+      DB_USERNAME: msg_app
       DB_PASSWORD: ci-app-password
-      DB_MIGRATION_USERNAME: ai_lms_migrator
+      DB_MIGRATION_USERNAME: msg_migrator
       DB_MIGRATION_PASSWORD: ci-migrator-password
       PGPASSWORD: ci-root-password
 
@@ -133,18 +133,18 @@ jobs:
       - name: 테스트 DB·계정 만들기
         run: |
           psql -h 127.0.0.1 -U postgres <<'SQL'
-          CREATE ROLE ai_lms_migrator LOGIN PASSWORD 'ci-migrator-password';
-          CREATE ROLE ai_lms_app LOGIN PASSWORD 'ci-app-password';
-          CREATE DATABASE ai_lms_test OWNER ai_lms_migrator ENCODING 'UTF8' TEMPLATE template0;
-          REVOKE ALL ON DATABASE ai_lms_test FROM PUBLIC;
-          GRANT CONNECT ON DATABASE ai_lms_test TO ai_lms_app;
-          \connect ai_lms_test
+          CREATE ROLE msg_migrator LOGIN PASSWORD 'ci-migrator-password';
+          CREATE ROLE msg_app LOGIN PASSWORD 'ci-app-password';
+          CREATE DATABASE msg_test OWNER msg_migrator ENCODING 'UTF8' TEMPLATE template0;
+          REVOKE ALL ON DATABASE msg_test FROM PUBLIC;
+          GRANT CONNECT ON DATABASE msg_test TO msg_app;
+          \connect msg_test
           CREATE EXTENSION IF NOT EXISTS vector;
           REVOKE ALL ON SCHEMA public FROM PUBLIC;
-          GRANT USAGE ON SCHEMA public TO ai_lms_app;
-          GRANT ALL ON SCHEMA public TO ai_lms_migrator;
-          ALTER DEFAULT PRIVILEGES FOR ROLE ai_lms_migrator IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ai_lms_app;
-          ALTER DEFAULT PRIVILEGES FOR ROLE ai_lms_migrator IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO ai_lms_app;
+          GRANT USAGE ON SCHEMA public TO msg_app;
+          GRANT ALL ON SCHEMA public TO msg_migrator;
+          ALTER DEFAULT PRIVILEGES FOR ROLE msg_migrator IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO msg_app;
+          ALTER DEFAULT PRIVILEGES FOR ROLE msg_migrator IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO msg_app;
           SQL
 
       - name: PostgreSQL 통합 테스트

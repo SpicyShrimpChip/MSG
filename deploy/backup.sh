@@ -12,7 +12,7 @@ KEEP_DAYS="${KEEP_DAYS:-7}"
 mkdir -p backups
 
 stamp="$(date +%F-%H%M)"
-docker compose exec -T db pg_dump -U postgres --format=custom ai_lms > "backups/db-$stamp.dump"
+docker compose exec -T db pg_dump -U postgres --format=custom msg > "backups/db-$stamp.dump"
 docker compose exec -T backend tar -C /data/uploads -czf - . > "backups/uploads-$stamp.tar.gz"
 
 find backups -type f -mtime +"$KEEP_DAYS" -delete

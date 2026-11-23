@@ -53,8 +53,8 @@
 ## 머지 전 마이그레이션을 고치면 `pgTest`가 Flyway 검증 오류로 모두 실패한다 (2026-11-02, #107)
 
 - 상황: 새 `V6`으로 `pgTest`를 한 번 돌린 뒤 같은 파일의 표 이름을 바꾸고 다시 돌리자 모든 통합 테스트가 `FlywayValidateException`으로 멈췄다. H2 `test`는 통과했다.
-- 원인: `ai_lms_test`는 테스트 사이에 지워지지 않아 처음 적용한 `V6`의 체크섬이 `flyway_schema_history`에 남아 있다. H2는 매번 새로 만들어서 문제가 안 보인다.
-- 해결: 테스트 DB에서만 그 버전의 표를 지우고 `DELETE FROM flyway_schema_history WHERE version = '6'` 후 다시 돌렸다. 서비스 DB(`ai_lms`)에 적용했다면 같은 방법으로 로컬에서 되돌린다.
+- 원인: `msg_test`는 테스트 사이에 지워지지 않아 처음 적용한 `V6`의 체크섬이 `flyway_schema_history`에 남아 있다. H2는 매번 새로 만들어서 문제가 안 보인다.
+- 해결: 테스트 DB에서만 그 버전의 표를 지우고 `DELETE FROM flyway_schema_history WHERE version = '6'` 후 다시 돌렸다. 서비스 DB(`msg`)에 적용했다면 같은 방법으로 로컬에서 되돌린다.
 - 다음에는: 표 이름·열은 `pgTest` 전에 정한다. 머지된 번호라면 고치지 말고 새 번호를 쓴다(위 "머지된 마이그레이션은 고치지 않고").
 
 ## 응답에 새 필드를 더했더니 다른 사람의 계약 테스트가 깨졌다 (2026-11-03, PR 번호는 머지 때)

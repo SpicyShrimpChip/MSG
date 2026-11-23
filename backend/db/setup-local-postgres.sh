@@ -4,10 +4,10 @@
 #
 # 하는 일
 #   1. 관리자(postgres) 비밀번호를 입력받아 기존 DB·계정 목록을 보여 준다 (읽기만 함)
-#   2. ai_lms / ai_lms_test DB나 ai_lms_app / ai_lms_migrator 계정이 이미 있으면 아무것도 바꾸지 않고 멈춘다
+#   2. msg / msg_test DB나 msg_app / msg_migrator 계정이 이미 있으면 아무것도 바꾸지 않고 멈춘다
 #   3. DB 2개와 계정 2개를 만들고 각 DB에만 최소 권한을 준다
-#        ai_lms_migrator: 테이블 생성·변경(Flyway 마이그레이션 전용, DB 소유자)
-#        ai_lms_app     : 데이터 읽기·쓰기만 (애플리케이션이 쓰는 계정)
+#        msg_migrator: 테이블 생성·변경(Flyway 마이그레이션 전용, DB 소유자)
+#        msg_app     : 데이터 읽기·쓰기만 (애플리케이션이 쓰는 계정)
 #   4. backend/.env(커밋 안 됨, 권한 600)에 접속 정보와 JWT 시크릿을 저장한다
 #
 # 이 PC에 psql이 없으면 도커 컨테이너(backend/db/docker-compose.yml)의 psql로 대신한다. 이때는 컨테이너 안에서 접속하므로
@@ -21,9 +21,9 @@ PSQL="${PSQL:-psql}"
 ADMIN_USER="${PG_ADMIN_USER:-postgres}"
 DB_HOST="${DB_HOST:-localhost}"
 DB_PORT="${DB_PORT:-5432}"
-DATABASES=(ai_lms ai_lms_test)
-APP_USER="ai_lms_app"
-MIGRATION_USER="ai_lms_migrator"
+DATABASES=(msg msg_test)
+APP_USER="msg_app"
+MIGRATION_USER="msg_migrator"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ENV_FILE="$SCRIPT_DIR/../.env"
@@ -103,7 +103,7 @@ echo
 echo "== 기존 계정 (변경하지 않음)"
 run_sql -c "SELECT rolname FROM pg_roles WHERE rolname NOT LIKE 'pg\_%' ORDER BY 1;"
 
-existing_db=$(run_sql -c "SELECT datname FROM pg_database WHERE datname IN ('ai_lms', 'ai_lms_test');")
+existing_db=$(run_sql -c "SELECT datname FROM pg_database WHERE datname IN ('msg', 'msg_test');")
 existing_user=$(run_sql -c "SELECT rolname FROM pg_roles WHERE rolname IN ('$APP_USER', '$MIGRATION_USER');")
 if [ -n "$existing_db" ] || [ -n "$existing_user" ]; then
 	echo
@@ -164,7 +164,7 @@ JWT_SECRET=$(openssl rand -base64 48)
 umask 077
 cat >"$ENV_FILE" <<ENV
 # 로컬 전용 비밀값 (setup-local-postgres.sh가 만듦). 절대 커밋하지 않는다
-DB_URL=jdbc:postgresql://$DB_HOST:$DB_PORT/ai_lms
+DB_URL=jdbc:postgresql://$DB_HOST:$DB_PORT/msg
 DB_USERNAME=$APP_USER
 DB_PASSWORD=$(prop_escape "$APP_PASSWORD")
 DB_MIGRATION_USERNAME=$MIGRATION_USER
@@ -175,7 +175,7 @@ unset APP_PASSWORD MIGRATION_PASSWORD JWT_SECRET
 
 echo
 echo "== 만든 항목"
-run_sql -c "SELECT datname, pg_get_userbyid(datdba) FROM pg_database WHERE datname IN ('ai_lms', 'ai_lms_test') ORDER BY 1;"
+run_sql -c "SELECT datname, pg_get_userbyid(datdba) FROM pg_database WHERE datname IN ('msg', 'msg_test') ORDER BY 1;"
 echo
 echo "완료했어요. backend/.env를 만들었습니다 (권한 600)."
 echo "테이블은 서버를 처음 띄울 때 Flyway가 만듭니다: ./gradlew bootRun"
