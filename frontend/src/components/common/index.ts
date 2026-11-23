@@ -7,6 +7,7 @@ export { default as AiNote } from './AiNote';
 export { default as AiLegend } from './AiLegend';
 export { default as AiOrb } from './AiOrb';
 export { default as AiWaiting } from './AiWaiting';
+export { default as ResultBeam } from './ResultBeam';
 export { default as Button } from './Button';
 export { default as Card } from './Card';
 export { default as ConfirmDialog } from './ConfirmDialog';
