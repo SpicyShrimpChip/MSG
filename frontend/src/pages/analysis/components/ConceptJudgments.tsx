@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import { AiNote } from '@/components';
 import type {
   ConceptJudgment,
@@ -11,18 +10,7 @@ import {
   UNDERSTANDING_LABEL,
   describeComparison,
 } from '@/utils';
-import MasteryEvidence from './MasteryEvidence';
-import Panel from './Panel';
 import { UnderstandingBadge } from './UnderstandingBadge';
-
-interface ConceptDetailPanelProps {
-  courseId: number;
-  concept: ConceptResult | null;
-  models: ModelRun[];
-  layoutReason?: string | null;
-  // 판단 아래에 붙일 내용 (내 생각 남기기)
-  children?: ReactNode;
-}
 
 const EVIDENCE_KIND_LABEL: Record<JudgmentEvidence['kind'], string> = {
   user_explanation: '내 설명',
@@ -91,36 +79,19 @@ function JudgmentCard({ judgment }: { judgment: ConceptJudgment }) {
   );
 }
 
-// 고른 개념에 대한 모델별 판단과 근거. 이번 분석에 참여하지 않은 모델도 숨기지 않는다
-function ConceptDetailPanel({
-  courseId,
+// 한 개념에 대한 모델별 판단과 근거. 이번 분석에 참여하지 않은 모델도 숨기지 않는다
+function ConceptJudgments({
   concept,
   models,
-  layoutReason,
-  children,
-}: ConceptDetailPanelProps) {
-  if (!concept) {
-    return (
-      <Panel title="모델별 판단" layoutReason={layoutReason}>
-        <p className="text-body text-ink-soft">
-          왼쪽 표에서 개념을 고르면 모델마다 어떻게 판단했는지 보여 드려요.
-        </p>
-      </Panel>
-    );
-  }
-
+}: {
+  concept: ConceptResult;
+  models: ModelRun[];
+}) {
   const judged = new Set(concept.judgments.map((item) => item.provider));
   const absent = models.filter((model) => !judged.has(model.provider));
 
   return (
-    <Panel title={concept.concept} layoutReason={layoutReason}>
-      {concept.mastery && (
-        <MasteryEvidence
-          courseId={courseId}
-          concept={concept.concept}
-          mastery={concept.mastery}
-        />
-      )}
+    <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
         <h3 className="font-extrabold text-heading">모델별 판단</h3>
         <p className="text-caption text-ink-muted">
@@ -145,9 +116,8 @@ function ConceptDetailPanel({
           </li>
         ))}
       </ul>
-      {children}
-    </Panel>
+    </div>
   );
 }
 
-export default ConceptDetailPanel;
+export default ConceptJudgments;

@@ -3,20 +3,20 @@ import { DEFAULT_LAYOUT, parseDashboardLayout } from './dashboardLayout';
 
 const valid = {
   generatedAt: '2026-10-25T14:00:00',
-  aiSummary: '이해 부족 개념이 있어 추천 순서를 위에 두었어요.',
+  aiSummary: '이해 부족 개념이 있어 개념 목록을 위에 두었어요.',
   basis: { notUnderstoodCount: 3, disagreementCount: 2, conversationCount: 12 },
   items: [
     {
-      component: 'conceptDetail',
+      component: 'concepts',
       order: 2,
-      size: 'normal',
+      size: 'wide',
       aiReason: '근거 확인',
     },
     {
-      component: 'recommendation',
+      component: 'models',
       order: 1,
-      size: 'wide',
-      aiReason: '먼저 할 일',
+      size: 'normal',
+      aiReason: '먼저 볼 것',
     },
   ],
 };
@@ -26,13 +26,11 @@ describe('parseDashboardLayout', () => {
     const layout = parseDashboardLayout(valid);
     expect(layout.explanation?.basis.notUnderstoodCount).toBe(3);
     expect(layout.items.map((item) => item.component)).toEqual([
-      'recommendation',
-      'conceptDetail',
-      'summary',
-      'conceptTable',
       'models',
+      'concepts',
+      'summary',
     ]);
-    expect(layout.items.map((item) => item.order)).toEqual([1, 2, 3, 4, 5]);
+    expect(layout.items.map((item) => item.order)).toEqual([1, 2, 3]);
     expect(layout.items[2].aiReason).toBeNull();
   });
 
@@ -47,12 +45,12 @@ describe('parseDashboardLayout', () => {
     ],
     [
       '허용하지 않는 크기',
-      { component: 'models', order: 3, size: 'huge', aiReason: 'x' },
+      { component: 'summary', order: 3, size: 'huge', aiReason: 'x' },
     ],
     [
       '너무 긴 이유',
       {
-        component: 'models',
+        component: 'summary',
         order: 3,
         size: 'wide',
         aiReason: '가'.repeat(81),
@@ -60,15 +58,15 @@ describe('parseDashboardLayout', () => {
     ],
     [
       '빈 이유',
-      { component: 'models', order: 3, size: 'wide', aiReason: '  ' },
+      { component: 'summary', order: 3, size: 'wide', aiReason: '  ' },
     ],
     [
       '같은 영역 두 번',
-      { component: 'recommendation', order: 3, size: 'wide', aiReason: 'x' },
+      { component: 'concepts', order: 3, size: 'wide', aiReason: 'x' },
     ],
     [
       '겹치는 순서',
-      { component: 'models', order: 1, size: 'wide', aiReason: 'x' },
+      { component: 'summary', order: 1, size: 'wide', aiReason: 'x' },
     ],
   ])('%s → 기본 배치', (_, item) => {
     const layout = parseDashboardLayout({

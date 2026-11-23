@@ -159,12 +159,12 @@ export interface AnalysisRun {
 }
 
 // 대시보드 영역 id. 배치 JSON에는 이 값만 올 수 있다 (검증: utils/layout/dashboardLayout.ts)
+// summary: 맨 위 요약 칸(숙련도 분포·모델 의견·사전/사후·학습 진도), concepts: 공부할 순서대로 본 개념 목록(누르면 근거·모델별 판단),
+// models: 모델 연결 상태와 이번 분석 정보
 export const DASHBOARD_COMPONENT_IDS = [
   'summary',
-  'conceptTable',
-  'conceptDetail',
+  'concepts',
   'models',
-  'recommendation',
 ] as const;
 
 export type DashboardComponentId = (typeof DASHBOARD_COMPONENT_IDS)[number];

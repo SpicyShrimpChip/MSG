@@ -28,21 +28,20 @@ import { useCourses, useProviders } from '@/hooks';
 import type { AnalysisRun, Course, DashboardComponentId } from '@/types';
 import {
   DEFAULT_LAYOUT,
-  cn,
   isNoResponseError,
   parseDashboardLayout,
   sortByStudyOrder,
 } from '@/utils';
 import AnalysisSummaryPanel from './components/AnalysisSummaryPanel';
-import ConceptDetailPanel from './components/ConceptDetailPanel';
-import ConceptFeedbackBox from './components/ConceptFeedbackBox';
-import ConceptTablePanel from './components/ConceptTablePanel';
 import AssessmentComparisonPanel from './components/AssessmentComparisonPanel';
-import StudyProgressPanel from './components/StudyProgressPanel';
+import ConceptList from './components/ConceptList';
 import LayoutSummary from './components/LayoutSummary';
 import ModelStatusPanel from './components/ModelStatusPanel';
-import RecommendationPanel from './components/RecommendationPanel';
-
+import StudyProgressPanel from './components/StudyProgressPanel';
+import SummaryStrip, {
+  ASSESSMENT_ANCHOR,
+  PROGRESS_ANCHOR,
+} from './components/SummaryStrip';
 // 분석 결과를 배치대로 그린다. 배치 JSON은 검증을 통과할 때만 쓰고, 아니면 기본 배치
 interface AnalysisResultProps {
   run: AnalysisRun;
@@ -56,10 +55,6 @@ function AnalysisResult({
   highlight,
   onHighlightDone,
 }: AnalysisResultProps) {
-  // 처음엔 추천 순서 첫 개념을 자세히 보여 준다. 피드백으로 순서가 바뀌어도 보던 개념은 그대로 둔다
-  const [selected, setSelected] = useState<string | null>(
-    () => sortByStudyOrder(run.concepts)[0]?.concept ?? null,
-  );
   // AI 배치 대신 기본 배치로 보기 (사용자가 고른 경우)
   const [usingDefault, setUsingDefault] = useState(false);
 
@@ -72,8 +67,17 @@ function AnalysisResult({
     () => sortByStudyOrder(run.concepts),
     [run.concepts],
   );
-  const current =
-    concepts.find((item) => item.concept === selected) ?? concepts[0] ?? null;
+  // 펼친 개념. 처음엔 공부 순서 첫 개념만 펼친다. 피드백으로 순서가 바뀌어도 펼친 개념은 그대로 둔다
+  const [openConcepts, setOpenConcepts] = useState<ReadonlySet<string>>(
+    () => new Set(concepts[0] ? [concepts[0].concept] : []),
+  );
+  const toggleConcept = (concept: string) =>
+    setOpenConcepts((current) => {
+      const next = new Set(current);
+      if (next.has(concept)) next.delete(concept);
+      else next.add(concept);
+      return next;
+    });
 
   // 영역 id → 화면. 배치 JSON에는 이 id만 올 수 있다
   const renderComponent = (
@@ -82,38 +86,25 @@ function AnalysisResult({
   ): ReactNode => {
     switch (id) {
       case 'summary':
-        return <AnalysisSummaryPanel run={run} layoutReason={reason} />;
-      case 'conceptTable':
+        return <SummaryStrip run={run} layoutReason={reason} />;
+      case 'concepts':
         return (
-          <ConceptTablePanel
+          <ConceptList
             concepts={concepts}
-            selected={current?.concept ?? null}
-            onSelect={setSelected}
+            models={run.models}
+            courseId={run.courseId}
+            runId={run.id}
+            openConcepts={openConcepts}
+            onToggle={toggleConcept}
             layoutReason={reason}
           />
         );
-      case 'conceptDetail':
-        return (
-          <ConceptDetailPanel
-            courseId={run.courseId}
-            concept={current}
-            models={run.models}
-            layoutReason={reason}
-          >
-            {current && (
-              <ConceptFeedbackBox
-                courseId={run.courseId}
-                runId={run.id}
-                concept={current}
-              />
-            )}
-          </ConceptDetailPanel>
-        );
       case 'models':
-        return <ModelStatusPanel models={run.models} layoutReason={reason} />;
-      case 'recommendation':
         return (
-          <RecommendationPanel concepts={concepts} layoutReason={reason} />
+          <div className="grid gap-6 lg:grid-cols-2">
+            <ModelStatusPanel models={run.models} layoutReason={reason} />
+            <AnalysisSummaryPanel run={run} />
+          </div>
         );
     }
   };
@@ -125,21 +116,19 @@ function AnalysisResult({
         usingDefault={usingDefault}
         onToggleDefault={() => setUsingDefault((value) => !value)}
       />
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {layout.items.map((item, index) => (
-          // 영역이 위에서부터 차례로 나타난다
-          <m.div
-            key={item.component}
-            initial={FADE_UP.initial}
-            animate={FADE_UP.animate}
-            transition={{ ...FADE_UP.transition, delay: index * 0.06 }}
-            className={cn('relative', item.size === 'wide' && 'lg:col-span-2')}
-          >
-            {renderComponent(item.component, item.aiReason)}
-            <ResultBeam active={highlight} onDone={onHighlightDone} />
-          </m.div>
-        ))}
-      </div>
+      {layout.items.map((item, index) => (
+        // 영역이 위에서부터 차례로 나타난다. 영역은 모두 한 줄 전체를 쓴다(위에서 아래로 읽는 화면)
+        <m.div
+          key={item.component}
+          initial={FADE_UP.initial}
+          animate={FADE_UP.animate}
+          transition={{ ...FADE_UP.transition, delay: index * 0.06 }}
+          className="relative"
+        >
+          {renderComponent(item.component, item.aiReason)}
+          <ResultBeam active={highlight} onDone={onHighlightDone} />
+        </m.div>
+      ))}
     </div>
   );
 }
@@ -333,20 +322,22 @@ function Dashboard() {
         <AiLegend />
       </div>
 
-      {/* 맨 위: 사전평가 vs 사후평가 (평가가 없거나 불러오지 못해도 아래 분석은 그대로 보인다) */}
-      <AsyncBoundary key={`assessment-${course.id}`}>
-        <AssessmentComparisonPanel courseId={course.id} />
-      </AsyncBoundary>
-
-      {/* 개념별 학습 진도 (커리큘럼 응답 재사용, 대화 분석과 따로) */}
-      <AsyncBoundary key={`study-${course.id}`}>
-        <StudyProgressPanel courseId={course.id} />
-      </AsyncBoundary>
-
       {/* 과목을 바꾸면 그 과목의 분석을 새로 불러온다 */}
       <AsyncBoundary key={course.id}>
         <CourseAnalysis course={course} />
       </AsyncBoundary>
+
+      {/* 맨 위 요약 칸의 "자세히"가 내려오는 곳. 분석 결과와 따로 과목 기록으로 센다(분석 전에도 보인다) */}
+      <div id={ASSESSMENT_ANCHOR} className="scroll-mt-28">
+        <AsyncBoundary key={`assessment-${course.id}`}>
+          <AssessmentComparisonPanel courseId={course.id} />
+        </AsyncBoundary>
+      </div>
+      <div id={PROGRESS_ANCHOR} className="scroll-mt-28">
+        <AsyncBoundary key={`study-${course.id}`}>
+          <StudyProgressPanel courseId={course.id} />
+        </AsyncBoundary>
+      </div>
     </div>
   );
 }

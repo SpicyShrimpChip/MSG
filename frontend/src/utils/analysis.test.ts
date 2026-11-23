@@ -4,6 +4,7 @@ import {
   countJudgingModels,
   describeComparison,
   sortByStudyOrder,
+  summarizeConcepts,
 } from './analysis';
 
 const comparison = (
@@ -58,5 +59,49 @@ describe('sortByStudyOrder', () => {
       'B',
     ]);
     expect(concepts[0].concept).toBe('B');
+  });
+});
+
+describe('summarizeConcepts', () => {
+  const concept = (
+    level: NonNullable<ConceptResult['mastery']>['level'] | null,
+    outcome: ConceptComparison['outcome'],
+  ) =>
+    ({
+      concept: 'x',
+      comparison: comparison(outcome, 3, 3),
+      mastery: level === null ? null : { level },
+    }) as ConceptResult;
+
+  it('숙련도 단계와 모델 의견을 개념 수로 센다', () => {
+    const overview = summarizeConcepts([
+      concept('strong', 'unanimous'),
+      concept('needs_work', 'majority'),
+      concept('needs_work', 'disagreement'),
+      concept('normal', 'single_model'),
+      concept('insufficient_evidence', 'no_result'),
+    ]);
+    expect(overview.total).toBe(5);
+    expect(overview.mastery).toEqual({
+      strong: 1,
+      normal: 1,
+      needs_work: 2,
+      insufficient_evidence: 1,
+    });
+    expect(overview.comparison).toEqual({
+      unanimous: 1,
+      majority: 1,
+      disagreement: 1,
+      notCompared: 2,
+    });
+  });
+
+  it('숙련도가 아직 없는 개념은 근거 부족으로 센다', () => {
+    const overview = summarizeConcepts([concept(null, 'unanimous')]);
+    expect(overview.mastery.insufficient_evidence).toBe(1);
+  });
+
+  it('개념이 없으면 모두 0', () => {
+    expect(summarizeConcepts([]).total).toBe(0);
   });
 });

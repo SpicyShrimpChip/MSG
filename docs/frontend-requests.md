@@ -466,7 +466,7 @@ QuizCreateInput = {
 
 화면: `/analysis` (학습분석 > 학습 대시보드). 과목을 고르면 그 과목의 `runs/latest`를 보여 주고, "분석하기"로 `POST runs`를 부른다. 위 "학습 분석" 절의 응답을 그대로 쓰므로 **예전 제안 `GET /api/analysis/dashboard`(`DashboardData`: 숙련도 점수·강점/보완·과목별 학습량)는 만들지 않아도 된다.**
 
-- 영역은 `summary`(분석 요약) · `conceptTable`(개념별 판단) · `conceptDetail`(모델별 판단·근거) · `models`(모델 연결 상태) · `recommendation`(추천 학습 순서)이다. 숙련도 점수 막대·방사형 그래프·과목별 비중은 **점수 산식이 정해지면** 다시 붙인다(루트 `CLAUDE.md` 미결).
+- 영역은 `summary`(맨 위 요약 칸: 숙련도 분포·모델 의견·사전→사후평가·학습 진도) · `concepts`(공부할 순서대로 본 개념 목록, 줄을 누르면 숙련도 근거·모델별 판단이 펼쳐짐) · `models`(모델 연결 상태와 이번 분석 정보)이다. **11/24에 예전 5개(`summary`·`conceptTable`·`conceptDetail`·`models`·`recommendation`)를 3개로 줄였다:** 개념 표·개념 상세·추천 학습 순서가 같은 개념 순서를 세 번 보여 주고 좌우로 나뉘어 읽기 어려웠다. 백엔드가 배치를 만들게 되면 이 3개 id만 쓴다.
 - 키가 없어 모델이 하나도 연결되지 않으면 "연결된 AI 모델이 없어 지금은 분석할 수 없어요"를 보여 주고 분석 버튼을 막는다. 목업(배포 미리보기)에서는 "예시 데이터예요"를 표시한다.
 - 오류(403·400·409·429·503)는 서버 `message`를 그대로 보여 준다. 화면에 보일 문장이니 사용자에게 다음 행동을 알려 주는 말로 써 주기.
 
@@ -485,12 +485,7 @@ layout = {
   },
   items: [
     {
-      component:
-        "summary" |
-        "conceptTable" |
-        "conceptDetail" |
-        "models" |
-        "recommendation",
+      component: "summary" | "concepts" | "models",
       order: number, // 1부터, 겹치지 않게
       size: "wide" | "normal",
       aiReason: string, // 이 위치·크기인 이유 (AI), 80자까지
