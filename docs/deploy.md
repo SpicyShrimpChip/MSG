@@ -45,31 +45,126 @@ React Router로 화면을 나누기 때문에 `/analysis`처럼 바로 들어오
 }
 ```
 
-- TODO(미결): 백엔드 배포 주소 (`docs/frontend-requests.md` 5번 "배포")
+- 백엔드 주소는 EC2 탄력적 IP의 sslip.io 주소다(아래 "백엔드 배포" 3단계). 사용자에게는 보이지 않는다.
+- Vercel은 외부 백엔드의 **첫 응답을 120초까지만** 기다린다. 그래서 AI를 기다리는 요청의 서버 시간 예산은 100초, 프론트 timeout은 115초다(#197). 프록시가 낸 504는 화면이 시간 초과와 같게 다뤄 결과를 다시 확인한다.
 
-# 백엔드 이미지 (Docker)
+# 백엔드 배포 (AWS EC2, 11/23 확정)
 
-호스팅을 어디로 정하든(서버·데스크탑·PaaS) `backend/Dockerfile`로 만든 같은 이미지를 실행한다. 호스팅은 아직 미결이다(루트 `CLAUDE.md` "AWS 세부 서비스").
+## 구성
 
-```bash
-docker build -t msg-backend backend
-docker run -d -p 8080:8080 --env-file <운영 환경변수 파일> -v msg-uploads:/data/uploads msg-backend
+```
+브라우저 ──▶ Vercel (lms-seven-tawny.vercel.app: 화면 + /api rewrite)
+                │ HTTPS
+                ▼
+           EC2 한 대 (AWS 시드니 ap-southeast-2, t3.small 2GB)
+           └ Docker Compose (deploy/compose.yaml)
+               caddy  :80·443  자동 HTTPS(sslip.io 주소), /api만 넘김, 그 밖은 404
+               backend :8080   GHCR 이미지(backend/Dockerfile), prod 프로필
+               db      :5432   PostgreSQL 16 + pgvector (밖으로 열지 않음)
 ```
 
-- 이미지는 `prod` 프로필로 뜬다. 비밀값은 이미지에 넣지 않고(`backend/.dockerignore`가 `.env`를 뺀다) 실행할 때 환경변수로만 넘긴다. 환경변수 파일도 커밋하지 않는다.
-- root가 아닌 계정으로 실행한다. 쓸 수 있는 곳은 업로드 원본 폴더 `/data/uploads`뿐이고, **다시 배포해도 남도록 볼륨이나 호스트 폴더에 연결한다.**
-- 테스트는 이미지를 만들 때 돌리지 않는다(CI의 `build-and-test`·`postgres-test`가 맡는다). CI의 `docker-build`는 이미지가 만들어지는지만 확인하고 어디에도 올리지 않는다.
-- 메모리는 컨테이너 한도의 75%까지 JVM이 쓴다(`-XX:MaxRAMPercentage=75`). 같은 서버에 DB도 띄우면 2GB 이상을 권한다.
+- **주소는 Vercel 하나.** 브라우저는 같은 출처로 `/api`를 부르므로 로그인 쿠키(SameSite=Strict)·CORS가 단순하다.
+- **RDS·S3는 쓰지 않는다.** DB·업로드 파일은 도커 볼륨(`pgdata`·`uploads`)에 두고 매일 백업한다. 비용과 설정을 줄이려는 선택이다.
+- **시드니 리전:** AWS 무료 플랜은 가입 때 정해진 리전 하나만 열린다. 한국에서 요청마다 0.1~0.15초쯤 더 걸린다. 처리방침 7·8번에 적었다.
+- **이미지:** main에 백엔드 변경이 머지되면 CI(`backend-ci.yml`의 `docker-build`)가 테스트 통과 뒤 `ghcr.io/spicyshrimpchip/msg-backend:latest`와 `:sha-<7자리>`로 올린다. 서버에서는 빌드하지 않는다(2GB에서 Gradle 빌드와 DB를 같이 돌리면 메모리가 모자랄 수 있다).
 
-| 묶음 | 환경변수 (값은 쓰지 않는다)                                                                                                                          |
-| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| DB   | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`(앱 계정), `DB_MIGRATION_USERNAME`, `DB_MIGRATION_PASSWORD`(테이블 변경 계정)                                  |
-| 보안 | `JWT_SECRET`, `CORS_ALLOWED_ORIGINS`                                                                                                                 |
-| AI   | `OPENAI_API_KEY`·`OPENAI_MODEL`, `ANTHROPIC_API_KEY`·`ANTHROPIC_MODEL`, `GEMINI_API_KEY`·`GEMINI_MODEL` (키나 모델 이름이 없으면 그 모델은 "미설정"), `AI_DAILY_CALL_LIMIT` (서비스 전체 하루 모델 호출 상한, 기본 500, 0이면 상한 없음. 제공사 콘솔 지출 한도와 함께 정한다) |
+## 처음 띄우기
+
+AWS 콘솔 작업·비밀값 입력은 사람이 한다. 순서대로 하면 30분쯤 걸린다.
+
+1. **EC2 만들기** (리전: 아시아 태평양(시드니))
+   - AMI: Ubuntu Server 24.04 LTS (x86_64). 이미지가 x86용이라 Graviton(t4g)은 고르지 않는다
+   - 인스턴스 유형: `t3.small`(2GB). 스토리지: gp3 20GB
+   - 키 페어: 새로 만들어 내려받은 `.pem`은 커밋·공유하지 않는다
+   - 보안 그룹: SSH(22)는 **내 IP만**, HTTP(80)·HTTPS(443)는 모든 곳. 80은 인증서 발급에 필요하다
+2. **탄력적 IP** 할당 → 인스턴스에 연결. 인스턴스를 지워도 탄력적 IP는 남아 요금이 나오므로 같이 해제한다
+3. **백엔드 주소:** 탄력적 IP가 `3.25.10.20`이면 `3-25-10-20.sslip.io` (sslip.io는 주소 이름을 IP로 바로 풀어 주는 무료 DNS)
+4. **서버 준비** (SSH 접속 뒤)
+   ```bash
+   sudo apt update && sudo apt install -y docker.io docker-compose-v2 git
+   sudo usermod -aG docker ubuntu && exit   # 다시 접속하면 sudo 없이 docker를 쓴다
+   # 메모리 2GB라 스왑 2GB를 둔다
+   sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile
+   echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+   git clone https://github.com/SpicyShrimpChip/MSG.git && cd MSG/deploy
+   ```
+5. **비밀값** (값은 채팅·문서·커밋에 남기지 않는다)
+   ```bash
+   cp env.example .env && cp backend.env.example backend.env && chmod 600 .env backend.env
+   nano .env          # BACKEND_HOST, DB 비밀번호 3개
+   nano backend.env   # JWT_SECRET, AI 키·모델, TURNSTILE_SECRET_KEY, REJOIN_HASH_SECRET
+   ```
+6. **이미지 받을 권한:** CI가 처음 올린 패키지는 비공개다. GitHub 조직 → Packages → `msg-backend` → Package settings → Change visibility → **Public**(공개 레포라 코드와 같은 수준, 이미지에 비밀값 없음). 비공개로 두려면 서버에서 `docker login ghcr.io`(패키지 읽기 권한만 있는 토큰)
+7. **띄우기:** `./deploy.sh` → "백엔드가 응답해요"가 나오면 바깥에서 확인: `curl https://<BACKEND_HOST>/api/notices`
+8. **백업 예약:** `crontab -e`에 `0 4 * * * /home/ubuntu/MSG/deploy/backup.sh >> /home/ubuntu/msg-backup.log 2>&1`
+9. **Vercel 연결:** `frontend/vercel.json`에 위 `/api` rewrite(주소는 3단계)를 맨 앞에 넣는 PR, Vercel 환경변수 `VITE_USE_MOCK=false`·`VITE_TURNSTILE_SITE_KEY`, Cloudflare Turnstile 위젯 호스트에 운영 주소 확인 → 다시 배포
+10. 아래 **배포 뒤 점검표**
+
+## 업데이트와 되돌리기
+
+- 백엔드 변경이 main에 머지되고 CI가 끝나면 서버에서 `cd ~/MSG && git pull && cd deploy && ./deploy.sh`. DB·업로드 파일·인증서는 볼륨에 있어 그대로 남는다.
+- 새 이미지에 문제가 있으면 `.env`에 `BACKEND_IMAGE=ghcr.io/spicyshrimpchip/msg-backend:sha-<이전 커밋 7자리>`를 넣고 `./deploy.sh`. 고친 뒤 그 줄을 지운다. **DB 마이그레이션이 들어간 변경은 이미지만 되돌리면 안 맞을 수 있다**(백업에서 복원).
+
+## 배포 뒤 점검표
+
+- [ ] 가입(Turnstile) → 로그인 → 새로고침해도 로그인 유지(Refresh 쿠키) → 로그아웃
+- [ ] 접속 IP: `docker compose logs backend`에서 로그인 실패를 여러 번 내 본 뒤, 다른 기기(휴대폰 데이터)에서는 막히지 않는지
+- [ ] 자료 업로드 15MB 안팎(Vercel 전달에서 크기 제한이 있는지 문서로 확인하지 못함)
+- [ ] 분석: 세 모델 결과와 걸린 시간(100초 안), 퀴즈 만들기·주관식 채점
+- [ ] 탈퇴 → 같은 이메일 재가입이 30일 막히는지
+- [ ] `https://<BACKEND_HOST>/swagger-ui/index.html`이 404인지
+- [ ] 다음 날 `deploy/backups/`에 백업 파일이 생겼는지
+
+## 백엔드 환경변수
+
+`deploy/backend.env`(백엔드만 읽음)와 `deploy/.env`(compose가 읽음)에 넣는다. DB 접속 주소·계정 이름은 `compose.yaml`이 넣어 준다.
+
+| 묶음 | 환경변수 (값은 쓰지 않는다) |
+| ---- | --------------------------- |
+| `.env` | `BACKEND_HOST`, `POSTGRES_PASSWORD`(관리자, 백업·복원용), `APP_DB_PASSWORD`(앱 계정), `MIGRATION_DB_PASSWORD`(테이블 변경 계정). 두 계정 비밀번호는 처음 띄울 때 DB에 그대로 만들어진다 |
+| 보안 | `JWT_SECRET`, `CORS_ALLOWED_ORIGINS`(Vercel 주소) |
+| AI | `OPENAI_API_KEY`·`OPENAI_MODEL`, `ANTHROPIC_API_KEY`·`ANTHROPIC_MODEL`, `GEMINI_API_KEY`·`GEMINI_MODEL` (키나 모델 이름이 없으면 그 모델은 "미설정"), `AI_DAILY_CALL_LIMIT` (서비스 전체 하루 모델 호출 상한, 기본 500, 0이면 상한 없음. 제공사 콘솔 지출 한도와 함께 정한다) |
 | 가입 | `TURNSTILE_SECRET_KEY` (Cloudflare Turnstile 비밀 키, 비우면 자동 가입 방지 확인 안 함. 프론트 `VITE_TURNSTILE_SITE_KEY`와 같이 켠다) |
 | 재가입 제한 | `REJOIN_HASH_SECRET` (탈퇴한 이메일의 HMAC 키, 32자 이상 무작위 값. 비우면 탈퇴 뒤 30일 재가입 제한이 꺼진다. 운영 중에는 바꾸지 않는다) |
-| 선택 | `MATERIAL_CONTENT_ENABLED` (기본 꺼짐. 처리방침에 확정한 뒤에만 켠다)                                                                                |
+| 선택 | `MATERIAL_CONTENT_ENABLED` (기본 꺼짐. 처리방침에 확정한 뒤에만 켠다) |
 
-- DB는 PostgreSQL 16 + pgvector이고 계정 두 개가 필요하다. 만드는 SQL은 `.github/workflows/backend-ci.yml`의 "테스트 DB·계정 만들기"와 `backend/db/setup-local-postgres.sh`가 같은 구성이다. `vector` 확장은 관리자 계정으로 미리 설치한다. 테이블은 서버가 처음 뜰 때 Flyway가 만들고, 운영 프로필은 샘플 데이터를 넣지 않는다.
+- 이미지는 `prod` 프로필로 뜨고 root가 아닌 계정으로 실행한다. 쓸 수 있는 곳은 업로드 폴더 `/data/uploads`(볼륨 `uploads`)뿐이다.
+- 백엔드 컨테이너 메모리 한도는 1GB이고 JVM은 그 75%까지 쓴다. DB는 나머지를 쓴다.
+- DB 계정 두 개와 `vector` 확장은 `deploy/db-init/01-create-app-db.sh`가 **처음 띄울 때 한 번** 만든다(`backend/db/setup-local-postgres.sh`·CI와 같은 구성). 테이블은 백엔드가 처음 뜰 때 Flyway가 만들고, 운영 프로필은 샘플 데이터를 넣지 않는다.
 - 로그인·갱신·로그아웃 API는 `X-Requested-With: XMLHttpRequest` 헤더가 있어야 받는다(프론트 axios가 붙인다). curl로 확인할 때도 이 헤더를 넣는다.
-- TODO(미결): 프록시 뒤의 실제 접속 IP(`server.forward-headers-strategy`, `AuthController`)는 배포 구성을 정한 뒤 설정한다.
+- 운영에서는 Swagger(`/swagger-ui`, `/v3/api-docs`)를 끈다(`application-prod.yaml`, Caddy도 `/api` 밖은 404). API 확인은 로컬에서 한다.
+
+## 실제 접속 IP
+
+요청은 브라우저 → Vercel → Caddy → 백엔드로 온다. Vercel이 `X-Forwarded-For`에 브라우저 IP를 넣어 보내고, Caddy가 그 첫 값 하나만 `X-Forwarded-For`로 넘기며(`Caddyfile`의 `trusted_proxies`·`header_up`), 백엔드는 `server.forward-headers-strategy: native`로 도커 사설망에서 온 이 값을 `getRemoteAddr()`로 쓴다. 이 설정이 없으면 모든 사용자가 Caddy의 IP로 보여 로그인 시도 제한(같은 IP 50번)이 전체에 같이 걸린다.
+
+- **남는 위험:** Vercel은 고정 IP가 없어 "Vercel에서 온 요청만" 믿을 수 없다. 그래서 EC2 주소로 직접 요청하면 `X-Forwarded-For`로 IP를 속일 수 있다. 로그인 시도 제한은 이메일 기준으로도 걸리므로 계정 무차별 대입은 막힌다.
+
+## 백업과 복원
+
+- `deploy/backup.sh`가 매일 DB(`pg_dump` custom 형식)와 업로드 파일(tar)을 `deploy/backups/`에 남기고 **7일 지난 것은 지운다.** 백업에도 개인정보가 있으므로 서버 밖으로 옮기지 않는다. 탈퇴한 사용자의 정보도 백업에서 7일 안에 지워진다(처리방침 5번).
+- 서버(디스크)가 통째로 망가지면 백업도 같이 잃는다. 시연 직전 등 중요한 시점에는 EBS 스냅샷을 수동으로 하나 만든다(콘솔 → EC2 → 볼륨 → 스냅샷 생성).
+- **복원** (같은 서버나 새 서버, 백엔드를 멈춘 상태에서):
+  ```bash
+  cd ~/MSG/deploy
+  docker compose stop backend
+  docker compose exec -T db pg_restore -U postgres -d ai_lms --clean --if-exists < backups/db-<날짜>.dump
+  docker compose run --rm --no-deps -T --entrypoint sh backend -c 'tar -C /data/uploads -xzf -' < backups/uploads-<날짜>.tar.gz
+  ./deploy.sh
+  ```
+
+## 다른 서버·AWS 계정으로 옮기기
+
+EC2는 계정 사이에 그대로 넘길 수 없어서, 새 서버를 띄우고 데이터를 옮긴다.
+
+1. 옛 서버에서 `./backup.sh`, 백업 두 파일을 새 서버로 복사(`scp`, 내 PC를 거쳐도 된다. 옮긴 뒤 PC의 사본은 지운다)
+2. 새 서버에서 "처음 띄우기" 1~6단계. **`.env`·`backend.env`의 값은 옛 서버와 같게**(특히 `JWT_SECRET`이 바뀌면 모두 로그아웃되고, `REJOIN_HASH_SECRET`이 바뀌면 재가입 제한 대조가 깨진다)
+3. `docker compose up -d db` → 위 **복원** → `./deploy.sh`
+4. 새 탄력적 IP라면 `vercel.json`의 rewrite 주소를 바꾸는 PR. 같은 리전이면 탄력적 IP를 계정 사이에 넘길 수도 있다(주소 유지)
+5. 리전·국가가 바뀌면 처리방침 7·8번을 같은 PR에서 고친다
+6. 옛 서버의 인스턴스·탄력적 IP·볼륨·스냅샷 삭제
+
+## 비용 관리
+
+- 예산 알림(월 10달러)과 크레딧 잔액을 주마다 본다. 인스턴스를 **중지**해도 디스크(EBS)와 연결 안 된 탄력적 IP는 요금이 나온다.
+- AI 요금은 AWS가 아니라 제공사(OpenAI·Anthropic·Google) 콘솔에서 나간다. 지출 한도는 제공사 콘솔과 `AI_DAILY_CALL_LIMIT`로 함께 건다.

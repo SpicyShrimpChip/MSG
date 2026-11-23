@@ -1,7 +1,20 @@
 # 운영 설정 (SPRING_PROFILES_ACTIVE=prod). 접속 정보·시크릿·출처는 모두 환경변수로만 받는다
+# 운영 구성(11/23 확정): AWS EC2 한 대 + Docker Compose(Caddy → 백엔드 → PostgreSQL), deploy/·docs/deploy.md
+
+# Caddy가 넘긴 X-Forwarded-For(브라우저 IP 하나)를 접속 IP로 쓴다. Tomcat은 사설망(도커 네트워크)에서 온 값만 믿는다.
+# 없으면 모든 요청이 Caddy의 IP로 보여 로그인 시도 제한이 사용자 전체에 같이 걸린다
+server:
+  forward-headers-strategy: native
+
+# 운영에서는 API 문서를 열지 않는다 (Caddy도 /api 밖은 404)
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
 spring:
-  # 예: jdbc:postgresql://<호스트>:5432/ai_lms
-  # TODO(미결): AWS 세부 서비스(RDS 등)는 정해지지 않았다
+  # 예: jdbc:postgresql://db:5432/ai_lms (deploy/compose.yaml이 넣어 준다)
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
@@ -14,8 +27,7 @@ spring:
     locations: classpath:db/migration,classpath:db/vector
 
 app:
-  # 운영 서버의 업로드 원본 폴더. 서버를 다시 배포해도 지워지지 않는 위치(별도 디스크 등)로 지정한다
-  # TODO(미결): AWS 세부 서비스(S3 등)가 정해지면 FileStorage 구현을 추가하고 type을 바꾼다
+  # 운영 서버의 업로드 원본 폴더. 서버를 다시 배포해도 지워지지 않는 위치(도커 볼륨 uploads)로 지정한다
   storage:
     local:
       root: ${STORAGE_LOCAL_ROOT}

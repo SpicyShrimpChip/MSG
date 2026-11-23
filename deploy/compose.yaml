@@ -1,0 +1,69 @@
+# 운영 서버(EC2 한 대)에서 띄우는 묶음: Caddy(HTTPS) → 백엔드 → PostgreSQL 16(+pgvector).
+# 사용자는 Vercel 주소 하나만 쓰고, Vercel이 /api 요청을 이 서버(BACKEND_HOST)로 넘긴다. 순서·명령은 docs/deploy.md
+#
+# 값은 이 폴더의 두 파일에서 읽는다(둘 다 커밋하지 않는다. 예시는 env.example·backend.env.example):
+#   .env          compose가 쓰는 값(주소, DB 관리자·계정 비밀번호)
+#   backend.env   백엔드만 쓰는 값(JWT·AI 키 등)
+# DB 포트는 밖으로 열지 않는다. 바깥에서 들어오는 길은 Caddy의 80·443뿐이다.
+name: msg
+
+services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    environment:
+      BACKEND_HOST: ${BACKEND_HOST:?BACKEND_HOST를 .env에 넣어 주세요}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # 발급받은 인증서. 지우면 다시 발급받는다(발급 횟수 제한이 있으니 지우지 않는다)
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+
+  backend:
+    # main에 머지되면 CI가 올리는 이미지(.github/workflows/backend-ci.yml). 로컬에서 만든 이미지로 시험할 때는 .env에서 바꾼다
+    image: ${BACKEND_IMAGE:-ghcr.io/spicyshrimpchip/msg-backend:latest}
+    restart: unless-stopped
+    env_file: backend.env
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/ai_lms
+      DB_USERNAME: ai_lms_app
+      DB_PASSWORD: ${APP_DB_PASSWORD:?APP_DB_PASSWORD를 .env에 넣어 주세요}
+      DB_MIGRATION_USERNAME: ai_lms_migrator
+      DB_MIGRATION_PASSWORD: ${MIGRATION_DB_PASSWORD:?MIGRATION_DB_PASSWORD를 .env에 넣어 주세요}
+      STORAGE_LOCAL_ROOT: /data/uploads
+    volumes:
+      - uploads:/data/uploads
+    # 2GB 서버에서 DB와 나눠 쓴다. JVM은 이 한도의 75%까지 쓴다(Dockerfile의 MaxRAMPercentage)
+    mem_limit: 1g
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD를 .env에 넣어 주세요}
+      # db-init 스크립트가 처음 한 번 계정을 만들 때만 쓴다
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+      MIGRATION_DB_PASSWORD: ${MIGRATION_DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # 데이터 폴더가 비어 있을 때(처음 띄울 때)만 실행된다
+      - ./db-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ai_lms"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  pgdata:
+  uploads:
+  caddy_data:
+  caddy_config:
