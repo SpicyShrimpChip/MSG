@@ -30,3 +30,7 @@ backend/uploads/
 .claude/settings.local.json
 todo.md
 graphify-out/
+
+# 운영 서버 비밀값·백업 (deploy/)
+deploy/backend.env
+deploy/backups/
