@@ -60,6 +60,20 @@ function statusBadge(item: QuizResultItem): {
   };
 }
 
+type RubricRow = QuizResultItem['rubric'][number];
+
+// 평가 기준 한 줄의 칸 글자. 넓은 화면의 표와 휴대폰의 카드가 같은 글자를 쓴다
+const levelText = (row: RubricRow) =>
+  row.level ? LEVEL_LABEL[row.level] : '의견 갈림';
+const earnedText = (row: RubricRow) =>
+  `${row.earned === null ? '-' : row.earned}/${row.points}`;
+const opinionText = (row: RubricRow) =>
+  row.judgedCount === 1
+    ? 'AI 1개 판단'
+    : row.judgedCount > 0
+      ? `${row.judgedCount}개 중 ${row.agreeCount}개 같음`
+      : '-';
+
 interface QuestionResultCardProps {
   index: number;
   question: QuizQuestion;
@@ -74,6 +88,8 @@ function QuestionResultCard({
 }: QuestionResultCardProps) {
   const badge = statusBadge(item);
   const Icon = badge.icon;
+  const levelHeader =
+    item.aiJudgedCount === 1 ? '판단 (AI 1개)' : '판단 (다수 의견)';
   return (
     <Card as="li" className="flex flex-col gap-3 p-5">
       <div className="flex items-start justify-between gap-3">
@@ -149,19 +165,45 @@ function QuestionResultCard({
       )}
 
       {item.rubric.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[480px] text-left text-caption">
-            <caption className="mb-2 text-left text-body font-bold text-heading">
-              평가 기준별 결과
-            </caption>
+        <div>
+          <h3
+            id={`rubric-${item.questionId}`}
+            className="mb-2 text-body font-bold text-heading"
+          >
+            평가 기준별 결과
+          </h3>
+          {/* 휴대폰 폭에서는 표 대신 기준마다 작은 카드로 쌓는다 (표 안 가로 스크롤 없이) */}
+          <ul
+            aria-labelledby={`rubric-${item.questionId}`}
+            className="flex flex-col gap-2 sm:hidden"
+          >
+            {item.rubric.map((row) => (
+              <li
+                key={row.criterion}
+                className="flex flex-col gap-1.5 rounded-xl border border-line p-3 text-caption"
+              >
+                <p className="text-body font-medium text-heading">
+                  {row.criterion}
+                </p>
+                <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1">
+                  <dt className="text-ink-muted">{levelHeader}</dt>
+                  <dd className="text-ink">{levelText(row)}</dd>
+                  <dt className="text-ink-muted">점수</dt>
+                  <dd className="font-bold text-primary">{earnedText(row)}</dd>
+                  <dt className="text-ink-muted">모델 의견</dt>
+                  <dd className="text-ink-soft">{opinionText(row)}</dd>
+                </dl>
+              </li>
+            ))}
+          </ul>
+          <table
+            aria-labelledby={`rubric-${item.questionId}`}
+            className="w-full text-left text-caption max-sm:hidden"
+          >
             <thead className="bg-surface-muted text-ink-soft">
               <tr>
                 <th className="px-3 py-2 font-medium">기준</th>
-                <th className="px-3 py-2 font-medium">
-                  {item.aiJudgedCount === 1
-                    ? '판단 (AI 1개)'
-                    : '판단 (다수 의견)'}
-                </th>
+                <th className="px-3 py-2 font-medium">{levelHeader}</th>
                 <th className="px-3 py-2 font-medium">점수</th>
                 <th className="px-3 py-2 font-medium">모델 의견</th>
               </tr>
@@ -170,18 +212,12 @@ function QuestionResultCard({
               {item.rubric.map((row) => (
                 <tr key={row.criterion}>
                   <td className="px-3 py-2 text-heading">{row.criterion}</td>
-                  <td className="px-3 py-2 text-ink">
-                    {row.level ? LEVEL_LABEL[row.level] : '의견 갈림'}
-                  </td>
+                  <td className="px-3 py-2 text-ink">{levelText(row)}</td>
                   <td className="px-3 py-2 font-bold text-primary">
-                    {row.earned === null ? '-' : row.earned}/{row.points}
+                    {earnedText(row)}
                   </td>
                   <td className="px-3 py-2 text-ink-soft">
-                    {row.judgedCount === 1
-                      ? 'AI 1개 판단'
-                      : row.judgedCount > 0
-                        ? `${row.judgedCount}개 중 ${row.agreeCount}개 같음`
-                        : '-'}
+                    {opinionText(row)}
                   </td>
                 </tr>
               ))}

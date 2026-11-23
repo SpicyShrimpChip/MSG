@@ -41,6 +41,10 @@ const applyTheme = (preference: ThemePreference) => {
       root.classList.toggle('dark', pendingDark ?? dark);
       pendingDark = null;
     });
+    // 전환이 시간 초과·건너뛰기로 끝나면 세 promise가 모두 거부될 수 있다. 화면 모드는 콜백에서 이미 바뀌므로
+    // 오류로 다루지 않고 조용히 넘긴다(처리하지 않으면 콘솔에 "처리 안 된 promise 거부"가 남는다)
+    transition.ready.catch(() => undefined);
+    transition.updateCallbackDone.catch(() => undefined);
     transition.finished
       .catch(() => undefined)
       .finally(() => {

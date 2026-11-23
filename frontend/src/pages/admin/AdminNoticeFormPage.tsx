@@ -41,6 +41,11 @@ function NoticeForm({ notice }: { notice?: NoticeDetail }) {
 
   const empty = !title.trim() || !content.trim();
 
+  // 입력을 고치면 지난 저장 실패 문구를 지운다
+  const clearError = () => {
+    if (mutation.isError) mutation.reset();
+  };
+
   const handleSubmit = (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (empty) return;
@@ -55,7 +60,10 @@ function NoticeForm({ notice }: { notice?: NoticeDetail }) {
           type="text"
           required
           value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          onChange={(e) => {
+            setTitle(e.target.value);
+            clearError();
+          }}
           maxLength={NOTICE_TITLE_MAX_LENGTH}
           placeholder="공지 제목"
         />
@@ -71,7 +79,10 @@ function NoticeForm({ notice }: { notice?: NoticeDetail }) {
           required
           rows={12}
           value={content}
-          onChange={(e) => setContent(e.target.value)}
+          onChange={(e) => {
+            setContent(e.target.value);
+            clearError();
+          }}
           maxLength={NOTICE_CONTENT_MAX_LENGTH}
           aria-describedby="notice-content-count"
           placeholder="공지 내용을 입력해 주세요"
@@ -124,7 +135,9 @@ function AdminNoticeFormPage() {
       {!editing ? (
         <NoticeForm />
       ) : validId ? (
-        <AsyncBoundary>
+        <AsyncBoundary
+          notFoundAction={{ label: '공지 관리로 가기', to: '/admin/notices' }}
+        >
           <EditNotice noticeId={id} />
         </AsyncBoundary>
       ) : (

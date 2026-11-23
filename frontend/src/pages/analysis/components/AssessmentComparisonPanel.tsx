@@ -366,10 +366,13 @@ function AssessmentComparisonPanel({ courseId }: { courseId: number }) {
                 ))}
               </ul>
             )}
-            <p className="text-caption text-ink-muted">
-              정답률이 기준보다 낮은 개념이에요(서버 규칙). 복습한 뒤 사후평가를
-              다시 보면 비교가 새로 바뀌어요.
-            </p>
+            {/* 목록이 비면 "기준 미만인 개념이 없어요"만 두고, 목록을 설명하는 문장은 뺀다 */}
+            {groups.needsReview.length > 0 && (
+              <p className="text-caption text-ink-muted">
+                정답률이 기준보다 낮은 개념이에요(서버 규칙). 복습한 뒤
+                사후평가를 다시 보면 비교가 새로 바뀌어요.
+              </p>
+            )}
           </div>
         </div>
       )}

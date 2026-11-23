@@ -24,7 +24,7 @@ export interface QuizSummary {
   lastScore: number | null;
   lastMaxScore: number | null;
   lastPendingCount: number | null;
-  // 가장 최근 제출에서 AI 판단이 엇갈려 확인이 필요한 답 수
+  // 가장 최근 제출에서 AI 판단이 엇갈리거나 확신하지 못해 확인이 필요한 답 수
   lastReviewCount: number | null;
   mockExam: boolean;
   // 사전·사후평가. 일반 퀴즈는 null

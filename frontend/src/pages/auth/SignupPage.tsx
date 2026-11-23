@@ -64,6 +64,11 @@ function SignupPage() {
     },
   });
 
+  // 입력을 고치면 지난 가입 실패 문구(이메일 중복 등)를 지운다
+  const clearError = () => {
+    if (mutation.isError) mutation.reset();
+  };
+
   const handleSubmit = (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!isPasswordValid(password) || password !== confirm) return;
@@ -100,7 +105,10 @@ function SignupPage() {
               required
               placeholder="name@example.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                clearError();
+              }}
             />
           </FormRow>
           <FormRow label="비밀번호" htmlFor="signup-password" required>
@@ -109,7 +117,10 @@ function SignupPage() {
               autoComplete="new-password"
               required
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                clearError();
+              }}
               aria-describedby="signup-password-rules"
             />
             <PasswordRules id="signup-password-rules" password={password} />
@@ -127,7 +138,10 @@ function SignupPage() {
               autoComplete="new-password"
               required
               value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
+              onChange={(e) => {
+                setConfirm(e.target.value);
+                clearError();
+              }}
               aria-invalid={mismatch ? true : undefined}
               aria-describedby="signup-password-confirm-error"
             />
@@ -140,7 +154,10 @@ function SignupPage() {
               required
               maxLength={30}
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value);
+                clearError();
+              }}
             />
           </FormRow>
         </div>

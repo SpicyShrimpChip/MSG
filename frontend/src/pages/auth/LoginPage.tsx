@@ -36,6 +36,11 @@ function LoginPage() {
     },
   });
 
+  // 입력을 고치면 지난 로그인 실패 문구를 지운다
+  const clearError = () => {
+    if (mutation.isError) mutation.reset();
+  };
+
   const handleSubmit = (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (mutation.isPending) return;
@@ -59,7 +64,10 @@ function LoginPage() {
             required
             placeholder="name@example.com"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              clearError();
+            }}
           />
         </FormRow>
         <FormRow label="비밀번호" htmlFor="login-password">
@@ -68,7 +76,10 @@ function LoginPage() {
             autoComplete="current-password"
             required
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              clearError();
+            }}
           />
         </FormRow>
         <ErrorText error={mutation.error} />
