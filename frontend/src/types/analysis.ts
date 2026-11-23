@@ -158,6 +158,25 @@ export interface AnalysisRun {
   layout?: unknown;
 }
 
+// 결과가 없는 분석 시도: 아직 모델을 기다리는 중(running)이거나 판단한 모델 없이 끝남(failed: 모두 실패·끝나지 못함)
+export interface LastAnalysisAttempt {
+  runId: number;
+  status: 'running' | 'failed';
+  startedAt: string;
+  // 끝난 시각. 진행 중이거나 끝나지 못했으면 null
+  finishedAt: string | null;
+  // 결과가 없는 이유 (서버 문구). 진행 중이면 null
+  message: string | null;
+}
+
+// 과목의 최근 분석 (runs/latest). 모델이 모두 실패한 분석은 run이 되지 않고 lastAttempt로만 알린다
+export interface LatestAnalysis {
+  // 모델이 하나 이상 판단한 가장 최근 분석. 없으면 null
+  run: AnalysisRun | null;
+  // run보다 나중에 시작한 분석이 진행 중이거나 결과 없이 끝났으면 그 시도
+  lastAttempt: LastAnalysisAttempt | null;
+}
+
 // 대시보드 영역 id. 배치 JSON에는 이 값만 올 수 있다 (검증: utils/layout/dashboardLayout.ts)
 // summary: 맨 위 요약 칸(숙련도 분포·모델 의견·사전/사후·학습 진도), concepts: 공부할 순서대로 본 개념 목록(누르면 근거·모델별 판단),
 // models: 모델 연결 상태와 이번 분석 정보

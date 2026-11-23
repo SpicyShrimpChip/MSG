@@ -22,6 +22,8 @@ import com.msg.backend.support.IntegrationTest;
 import com.msg.backend.support.TestApi;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,6 +56,8 @@ class AnalysisApiTest {
 	private JdbcTemplate jdbcTemplate;
 	@Autowired
 	private FakeLlmClients models;
+	@Autowired
+	private Clock clock;
 
 	private String token;
 	private long courseId;
@@ -310,7 +314,8 @@ class AnalysisApiTest {
 		mockMvc.perform(get("/api/analysis/courses/" + courseId + "/runs/latest")
 						.header(HttpHeaders.AUTHORIZATION, bearer(token)))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.id").value(runId));
+				.andExpect(jsonPath("$.data.run.id").value(runId))
+				.andExpect(jsonPath("$.data.lastAttempt").doesNotExist());
 	}
 
 	// ---------- 삭제 정책 ----------
@@ -363,9 +368,9 @@ class AnalysisApiTest {
 		mockMvc.perform(get("/api/analysis/courses/" + courseId + "/runs/latest")
 						.header(HttpHeaders.AUTHORIZATION, bearer(token)))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.concepts[?(@.concept == '교착 상태')].mastery.history[*].level")
+				.andExpect(jsonPath("$.data.run.concepts[?(@.concept == '교착 상태')].mastery.history[*].level")
 						.value(contains("insufficient_evidence")))
-				.andExpect(jsonPath("$.data.concepts[?(@.concept == '교착 상태')].mastery.history[*].conversationCount")
+				.andExpect(jsonPath("$.data.run.concepts[?(@.concept == '교착 상태')].mastery.history[*].conversationCount")
 						.value(contains(1)));
 		assertThat(count("concept_mastery")).isEqualTo(first);
 
@@ -374,9 +379,123 @@ class AnalysisApiTest {
 		mockMvc.perform(get("/api/analysis/courses/" + courseId + "/runs/latest")
 						.header(HttpHeaders.AUTHORIZATION, bearer(token)))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.concepts[?(@.concept == '교착 상태')].mastery.history[*]", hasSize(2)));
+				.andExpect(jsonPath("$.data.run.concepts[?(@.concept == '교착 상태')].mastery.history[*]", hasSize(2)));
 		assertThat(count("concept_mastery")).isEqualTo(first + 1);
 	}
+
+	// ---------- 모델이 모두 실패한 분석·진행 중인 분석 (#209, #214) ----------
+
+	@Test
+	void 세_모델이_모두_실패하면_이전_결과를_덮지_않고_실패를_따로_알린다() throws Exception {
+		for (LlmProvider provider : LlmProvider.values()) {
+			models.get(provider).answer(answer(
+					concept("교착 상태", "understood", evidence(m.get(0), "user_explanation"))));
+		}
+		long good = runId(run(token, courseId).andExpect(status().isCreated()));
+		int recorded = count("concept_mastery");
+
+		failAll(LlmException.Code.AUTH_FAILED);
+		long failed = runId(run(token, courseId)
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.status").value("failed")));
+
+		latest(token, courseId)
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.run.id").value(good))
+				.andExpect(jsonPath("$.data.run.status").value("completed"))
+				.andExpect(jsonPath("$.data.run.concepts[?(@.concept == '교착 상태')].comparison.outcome")
+						.value("unanimous"))
+				.andExpect(jsonPath("$.data.lastAttempt.runId").value(failed))
+				.andExpect(jsonPath("$.data.lastAttempt.status").value("failed"))
+				.andExpect(jsonPath("$.data.lastAttempt.startedAt").exists())
+				.andExpect(jsonPath("$.data.lastAttempt.finishedAt").exists())
+				.andExpect(jsonPath("$.data.lastAttempt.message")
+						.value("연결된 모델 3개가 모두 결과를 주지 못했어요. API 키가 맞지 않아 부르지 못했어요."));
+		// 모델 장애로 생긴 변화는 숙련도 기록에 남기지 않는다
+		assertThat(count("concept_mastery")).isEqualTo(recorded);
+		// 제공사가 시간 초과에도 요금을 매길 수 있어 실패한 시도도 24시간 횟수에 센다
+		assertThat(jdbcTemplate.queryForObject("select count(*) from user_ai_usage where kind = 'ANALYSIS_RUN'",
+				Integer.class)).isEqualTo(2);
+	}
+
+	@Test
+	void 처음_분석이_모두_실패하면_결과_없이_실패만_알린다() throws Exception {
+		models.get(LlmProvider.GPT).respond(request -> {
+			throw new LlmException(LlmException.Code.AUTH_FAILED, "401");
+		});
+		run(token, courseId).andExpect(status().isCreated()).andExpect(jsonPath("$.data.status").value("failed"));
+
+		latest(token, courseId)
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.run").doesNotExist())
+				.andExpect(jsonPath("$.data.lastAttempt.status").value("failed"))
+				.andExpect(jsonPath("$.data.lastAttempt.message")
+						.value("연결된 모델이 결과를 주지 못했어요. API 키가 맞지 않아 부르지 못했어요."));
+		assertThat(count("concept_mastery")).isZero();
+	}
+
+	@Test
+	void 분석_중이면_진행_중인_시도를_알리고_오래_멈춘_시도는_끝나지_못한_것으로_본다() throws Exception {
+		models.get(LlmProvider.GPT).answer(answer(concept("교착 상태", "insufficient_evidence")));
+		long good = runId(run(token, courseId).andExpect(status().isCreated()));
+		LocalDateTime now = LocalDateTime.now(clock);
+		insertRunning(now.minusSeconds(30));
+
+		latest(token, courseId)
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.run.id").value(good))
+				.andExpect(jsonPath("$.data.lastAttempt.status").value("running"))
+				.andExpect(jsonPath("$.data.lastAttempt.startedAt").exists())
+				.andExpect(jsonPath("$.data.lastAttempt.finishedAt").doesNotExist())
+				.andExpect(jsonPath("$.data.lastAttempt.message").doesNotExist());
+
+		// runningTimeout(10분)이 지나도 RUNNING이면 서버가 중간에 멈춘 것: 진행 중으로 보이지 않게 한다
+		jdbcTemplate.update("update analysis_run set created_at = ? where status = 'RUNNING'", now.minusMinutes(11));
+		latest(token, courseId)
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.run.id").value(good))
+				.andExpect(jsonPath("$.data.lastAttempt.status").value("failed"))
+				.andExpect(jsonPath("$.data.lastAttempt.message").value("분석이 제시간에 끝나지 않아 결과를 받지 못했어요."));
+	}
+
+	@Test
+	void 처음_분석이_진행_중이면_결과_없이_진행_중임을_알린다() throws Exception {
+		insertRunning(LocalDateTime.now(clock));
+
+		latest(token, courseId)
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.run").doesNotExist())
+				.andExpect(jsonPath("$.data.lastAttempt.status").value("running"));
+	}
+
+	@Test
+	void 일부_모델이_실패한_분석에서_대화_근거만_바뀌면_숙련도_기록을_남기지_않는다() throws Exception {
+		models.get(LlmProvider.GPT).answer(answer(
+				concept("교착 상태", "understood", evidence(m.get(0), "user_explanation"))));
+		models.get(LlmProvider.CLAUDE).answer(answer(
+				concept("교착 상태", "understood", evidence(m.get(0), "user_explanation"))));
+		run(token, courseId).andExpect(status().isCreated()).andExpect(jsonPath("$.data.status").value("completed"));
+		int recorded = count("concept_mastery");
+
+		// GPT가 빠지고 Claude만 근거 없이 판단: 대화 수가 1 → 0이 되지만 모델이 빠져서일 수 있다
+		models.get(LlmProvider.GPT).respond(request -> {
+			throw new LlmException(LlmException.Code.AUTH_FAILED, "401");
+		});
+		models.get(LlmProvider.CLAUDE).answer(answer(concept("교착 상태", "insufficient_evidence")));
+		run(token, courseId)
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.status").value("partial"))
+				.andExpect(jsonPath("$.data.concepts[?(@.concept == '교착 상태')].mastery.conversationCount").value(0));
+		latest(token, courseId).andExpect(status().isOk());
+		assertThat(count("concept_mastery")).isEqualTo(recorded);
+	}
+
+	private void insertRunning(LocalDateTime createdAt) {
+		jdbcTemplate.update("insert into analysis_run (user_id, course_id, status, prompt_version, conversation_count,"
+				+ " message_count, truncated_message_count, input_chars, created_at) values (?, ?, 'RUNNING', 'v', 1, 1, 0,"
+				+ " 1, ?)", userId("me@example.com"), courseId, createdAt);
+	}
+
 
 	// ---------- 학습 피드백 ----------
 
@@ -474,6 +593,20 @@ class AnalysisApiTest {
 	private ResultActions run(String accessToken, long course) throws Exception {
 		return mockMvc.perform(post("/api/analysis/courses/" + course + "/runs")
 				.header(HttpHeaders.AUTHORIZATION, bearer(accessToken)));
+	}
+
+	private ResultActions latest(String accessToken, long course) throws Exception {
+		return mockMvc.perform(get("/api/analysis/courses/" + course + "/runs/latest")
+				.header(HttpHeaders.AUTHORIZATION, bearer(accessToken)));
+	}
+
+	// 세 모델 모두 같은 오류를 돌려준다
+	private void failAll(LlmException.Code code) {
+		for (LlmProvider provider : LlmProvider.values()) {
+			models.get(provider).respond(request -> {
+				throw new LlmException(code, code.name());
+			});
+		}
 	}
 
 	private long runId(ResultActions result) throws Exception {

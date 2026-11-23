@@ -121,7 +121,7 @@ src/
 
 ## 학습 대시보드 (학습 분석 API, 11/2)
 
-- `/analysis`는 과목을 골라 백엔드 학습 분석 API(`api/analysis.api.ts`: `providers`, `runs/latest`(없으면 404 → `null`), `runs` 시작)로 그린다. 타입은 백엔드 `AnalysisRun` 그대로(`types/analysis.ts`). GPT·Claude·Gemini가 따로 판단한 결과를 개념마다 비교해 보여 준다.
+- `/analysis`는 과목을 골라 백엔드 학습 분석 API(`api/analysis.api.ts`: `providers`, `runs/latest`(`LatestAnalysis`: 모델이 판단한 최근 결과 `run` + 그 뒤의 진행 중·실패한 시도 `lastAttempt`, 없으면 404 → 둘 다 `null`), `runs` 시작)로 그린다. 타입은 백엔드 `AnalysisRun` 그대로(`types/analysis.ts`). 모델이 모두 실패한 분석은 이전 결과를 덮지 않고 안내(`FailedAttemptNotice`)로만 보여 주고, 서버가 분석 중이라고 하면(새로고침해도) `AiWaiting`을 띄우고 버튼을 막은 채 끝날 때까지 다시 확인한다(11/24, #209·#214). GPT·Claude·Gemini가 따로 판단한 결과를 개념마다 비교해 보여 준다.
 - **비교는 정확도·숙련도가 아니다.** "2개 모두 같음", "3개 중 2개 같음"처럼 모델 개수로만 보여 준다(`describeComparison`, 퍼센트 금지). 판단 근거 부족은 이해 부족과 다른 모양(회색 점선, 물음표)으로 그린다(`UnderstandingBadge`). 연결 안 된 모델은 "연결 안 됨"으로 숨기지 않고 보여 준다.
 - 모델이 하나도 연결되지 않았거나 과목 키워드가 없으면 분석 버튼을 막고 이유를 보여 준다. 분석 오류는 서버 `message`를 그대로 보여 준다. 목업에서는 화면마다 "예시 데이터"를 붙이지 않고 맨 위 체험 띠(`DemoBanner`) 하나로 알린다.
 - **화면 구성(11/24):** 위에서 아래로 맨 위 요약 칸 4개(`SummaryStrip`: 숙련도 분포·모델 의견 개수·사전→사후평가·학습 진도) → 공부할 순서대로 본 개념 목록(`ConceptList`) → 모델 연결 상태·분석 요약 → 사전·사후평가 비교·학습 진도 자세히. 개념 한 줄에 순서·이름·숙련도·모델마다 판단 칩(`ModelVerdictChip`)을 두고, 누르면 그 자리에서 왼쪽은 코드 값(숙련도 근거·변화·내 피드백), 오른쪽은 AI(추천 공부 방법·모델별 판단과 근거 `ConceptJudgments`)가 펼쳐진다. 처음엔 1번 개념만 펼친다. 새 분석이 도착하면 영역마다 테두리 빛이 한 바퀴 돈다(`ResultBeam`).
