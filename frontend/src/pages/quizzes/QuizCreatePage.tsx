@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type SubmitEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FileText, Lock, Sparkles, Target } from 'lucide-react';
 import { QUIZZES_QUERY_KEY, createQuiz, getGenerationStatus } from '@/api';
 import { useMockData } from '@/store';
@@ -26,7 +26,12 @@ import {
   QUIZ_MAX_QUESTIONS,
   QUIZ_MODES,
 } from '@/constants';
-import { useCourses, useProviders, useSuspenseMe } from '@/hooks';
+import {
+  useCourses,
+  useProviders,
+  useSuspenseMe,
+  useSingleFlightMutation,
+} from '@/hooks';
 import type { JobField, QuizDifficulty, QuizMode, User } from '@/types';
 import {
   cn,
@@ -159,7 +164,7 @@ function QuizCreateForm({ me }: { me: User | null }) {
       : QUIZ_MAX_QUESTIONS;
   const keywords = useMemo(() => course?.keywords ?? [], [course]);
 
-  const mutation = useMutation({
+  const mutation = useSingleFlightMutation({
     mutationFn: createQuiz,
     onMutate: (input) => savePendingKey(input.requestKey),
     onSuccess: (quiz) => {

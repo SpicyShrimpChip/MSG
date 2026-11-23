@@ -94,6 +94,7 @@
 | `file_size` | BIGINT | 바이트 |
 | `storage_key` | VARCHAR(200) NULL **UNIQUE** | 저장소 위치 `materials/{user_id}/{UUID}.{확장자}`. 원본만 지우는 보관 정책을 위해 NULL 허용 |
 | `status` | VARCHAR(20) | `UPLOADED`(저장 완료·AI 분석 전) / `PROCESSING` / `READY` / `FAILED`. API는 소문자 |
+| `request_key` | VARCHAR(64) NULL, UNIQUE `(user_id, request_key)` | 화면이 올리기마다 만든 요청 키(V2, #210). 같은 사용자·같은 키면 새로 저장하지 않고 그 자료를 돌려준다(사용자 행을 잠가 확인). 키 없이 올린 자료는 NULL |
 
 ### `file_deletion_task`
 

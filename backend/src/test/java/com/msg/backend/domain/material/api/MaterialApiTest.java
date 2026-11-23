@@ -37,6 +37,12 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -251,7 +257,7 @@ class MaterialApiTest {
 		TransactionTemplate transaction = new TransactionTemplate(transactionManager);
 
 		assertThatThrownBy(() -> transaction.executeWithoutResult(status -> {
-			materialService.upload(userId, courseId, "노트", pdf("노트.pdf"));
+			materialService.upload(userId, courseId, "노트", null, pdf("노트.pdf"));
 			throw new IllegalStateException("DB 저장 뒤 실패를 흉내 낸다");
 		})).isInstanceOf(IllegalStateException.class);
 
@@ -268,7 +274,7 @@ class MaterialApiTest {
 		faultyFileStorage.failDelete(true);
 
 		assertThatThrownBy(() -> transaction.executeWithoutResult(status -> {
-			materialService.upload(userId, courseId, "노트", pdf("노트.pdf"));
+			materialService.upload(userId, courseId, "노트", null, pdf("노트.pdf"));
 			throw new IllegalStateException("DB 저장 뒤 실패를 흉내 낸다");
 		})).isInstanceOf(IllegalStateException.class);
 		assertThat(storedFileCount()).isEqualTo(filesBefore + 1);
@@ -278,6 +284,107 @@ class MaterialApiTest {
 		assertThat(fileCleanupService.retryPending()).isEqualTo(1);
 		assertThat(storedFileCount()).isEqualTo(filesBefore);
 		assertThat(taskCount()).isZero();
+	}
+
+	// ---------- 같은 올리기가 두 번 올 때 (#210) ----------
+
+	@Test
+	void 같은_요청_키로_다시_보내면_새로_저장하지_않고_이미_올린_자료를_200으로_돌려준다() throws Exception {
+		long filesBefore = storedFileCount();
+		long id = uploadedId(upload(token, courseId, "노트", pdf("노트.pdf"), "key-1"));
+
+		for (int i = 0; i < 3; i++) {
+			upload(token, courseId, "노트", pdf("노트.pdf"), "key-1")
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.data.id").value(id))
+					.andExpect(jsonPath("$.data.courseId").value(courseId))
+					.andExpect(jsonPath("$.data.title").value("노트"));
+		}
+
+		assertThat(materialCount()).isEqualTo(1);
+		assertThat(storedFileCount()).isEqualTo(filesBefore + 1);
+		assertThat(jdbcTemplate.queryForObject("select request_key from material", String.class)).isEqualTo("key-1");
+	}
+
+	@Test
+	void 다른_요청_키나_키_없이_보내면_따로_저장하고_남의_같은_키와도_겹치지_않는다() throws Exception {
+		long first = uploadedId(upload(token, courseId, "노트", pdf("노트.pdf"), "key-1"));
+		long second = uploadedId(upload(token, courseId, "노트", pdf("노트.pdf"), "key-2"));
+		long noKey1 = uploadedId(upload(token, courseId, "노트", pdf("노트.pdf")));
+		long noKey2 = uploadedId(upload(token, courseId, "노트", pdf("노트.pdf")));
+		long blankKey = uploadedId(upload(token, courseId, "노트", pdf("노트.pdf"), "   "));
+		long others = uploadedId(upload(otherToken, null, "남의 노트", pdf("노트.pdf"), "key-1"));
+
+		assertThat(List.of(first, second, noKey1, noKey2, blankKey, others)).doesNotHaveDuplicates();
+		assertThat(materialCount()).isEqualTo(6);
+	}
+
+	@Test
+	void 요청_키가_64자를_넘으면_400이고_아무것도_남지_않는다() throws Exception {
+		long filesBefore = storedFileCount();
+
+		upload(token, courseId, "노트", pdf("노트.pdf"), "k".repeat(65))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("요청 키가 너무 길어요."));
+		uploadedId(upload(token, courseId, "노트", pdf("노트.pdf"), "k".repeat(64)));
+
+		assertThat(materialCount()).isEqualTo(1);
+		assertThat(storedFileCount()).isEqualTo(filesBefore + 1);
+	}
+
+	@Test
+	void 같은_키를_지운_뒤_다시_보내면_새로_올린다() throws Exception {
+		long id = uploadedId(upload(token, courseId, "노트", pdf("노트.pdf"), "key-1"));
+		deleteMaterial(token, id).andExpect(status().isOk());
+
+		long again = uploadedId(upload(token, courseId, "노트", pdf("노트.pdf"), "key-1"));
+
+		assertThat(again).isNotEqualTo(id);
+		assertThat(materialCount()).isEqualTo(1);
+	}
+
+	@Test
+	void 같은_키로_동시에_여러_번_보내도_자료와_파일은_하나만_남는다() throws Exception {
+		long filesBefore = storedFileCount();
+		int requests = 5;
+		CountDownLatch start = new CountDownLatch(1);
+		ExecutorService pool = Executors.newFixedThreadPool(requests);
+		try {
+			Callable<String> send = () -> {
+				start.await();
+				return upload(token, courseId, "노트", pdf("노트.pdf"), "same-key").andReturn().getResponse()
+						.getContentAsString();
+			};
+			List<Future<String>> results = Stream.generate(() -> pool.submit(send)).limit(requests).toList();
+			start.countDown();
+			List<Long> ids = new java.util.ArrayList<>();
+			for (Future<String> result : results) {
+				String body = result.get(30, TimeUnit.SECONDS);
+				assertThat((Boolean) JsonPath.read(body, "$.success")).as(body).isTrue();
+				ids.add(((Number) JsonPath.read(body, "$.data.id")).longValue());
+			}
+			assertThat(ids).containsOnly(ids.get(0));
+		} finally {
+			pool.shutdownNow();
+		}
+
+		assertThat(materialCount()).isEqualTo(1);
+		assertThat(storedFileCount()).isEqualTo(filesBefore + 1);
+		assertThat(taskCount()).isZero();
+	}
+
+	@Test
+	void DB도_같은_사용자의_같은_키_행을_두_개_받지_않는다() throws Exception {
+		uploadedId(upload(token, courseId, "노트", pdf("노트.pdf"), "key-1"));
+		String copy = "insert into material (user_id, course_id, title, original_file_name, file_format, content_type,"
+				+ " file_size, storage_key, status, request_key, created_at, updated_at)"
+				+ " select user_id, course_id, title, original_file_name, file_format, content_type, file_size, ?,"
+				+ " status, request_key, created_at, updated_at from material";
+
+		// 확인을 지나쳐 같은 키로 저장하려 하면 UNIQUE에 걸려 트랜잭션이 롤백되고, 올리기는 그때 저장한 파일을 지운다(위 롤백 테스트)
+		assertThatThrownBy(() -> jdbcTemplate.update(copy, "materials/copy.pdf"))
+				.isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+		assertThat(materialCount()).isEqualTo(1);
 	}
 
 	// ---------- 목록·상세 ----------
@@ -471,9 +578,17 @@ class MaterialApiTest {
 	// ---------- 도우미 ----------
 
 	private ResultActions upload(String token, Long courseId, String title, MockMultipartFile file) throws Exception {
+		return upload(token, courseId, title, file, null);
+	}
+
+	private ResultActions upload(String token, Long courseId, String title, MockMultipartFile file, String requestKey)
+			throws Exception {
 		MockMultipartHttpServletRequestBuilder request = multipart("/api/materials").file(file);
 		if (courseId != null) {
 			request.param("courseId", String.valueOf(courseId));
+		}
+		if (requestKey != null) {
+			request.param("requestKey", requestKey);
 		}
 		return mockMvc.perform(request.param("title", title).header(HttpHeaders.AUTHORIZATION, bearer(token)));
 	}

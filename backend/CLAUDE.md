@@ -57,12 +57,13 @@ Swagger UI: `/swagger-ui/index.html` — 프론트와 API를 맞출 때 이 문�
 - 회원가입은 Cloudflare Turnstile로 자동 가입(봇)을 막는다(`SignupBotCheck`, `app.turnstile`, 11/20). 비밀 키(`TURNSTILE_SECRET_KEY`)가 없으면 확인하지 않고, 확인 서버에 닿지 못하면 가입을 막는다(503). 외부 확인은 DB 트랜잭션 밖(컨트롤러)에서 먼저 한다.
 - CORS 허용 출처는 설정값으로 관리한다 (로컬: `http://localhost:5173`·`5174`, 운영: 환경변수 `CORS_ALLOWED_ORIGINS`).
 - 업로드 파일은 확장자·크기와 **파일 내용**(실제 형식)을 검증한다(`MaterialFileInspector`). 브라우저가 보낸 MIME은 믿지 않고, 저장 위치(key)는 서버가 만들며 사용자가 보낸 파일 이름을 쓰지 않는다.
+- 자료 올리기는 선택 `requestKey`(64자까지, `material.request_key`, UNIQUE `(user_id, request_key)`)를 받는다(11/24, #210). 같은 사용자·같은 키면 사용자 행을 잠근 채 이미 올린 자료를 찾아 200으로 돌려주고 파일을 다시 저장하지 않는다.
 - DB 행과 저장소 파일을 함께 지울 때는 행 삭제 트랜잭션에서 `FileCleanupService.deleteAfterCommit`으로 삭제 작업을 남긴다(커밋 뒤 파일 삭제, 실패하면 주기 작업이 다시 시도). 파일을 먼저 지우지 않는다.
 
 ## DB 마이그레이션 (Flyway)
 
 - 테이블 구조는 Flyway(`src/main/resources/db/migration`)로만 바꾼다. Hibernate는 `ddl-auto: validate`라 엔티티와 표가 맞는지 검사만 한다.
-- **머지된 `V*.sql`은 고치지 않고 새 번호를 추가한다.** 지금은 `V1__init_schema.sql` 하나이고 다음은 `V2`다. 새 번호는 팀원과 겹치지 않게 미리 말한다. 11/24에 운영 DB를 처음 만들기 전 V1~V16을 V1 하나로 합쳤다(10/31에 이어 두 번째, 합치기 전 스키마와 `pg_dump --schema-only`로 같은 것을 확인). 운영 DB를 만든 뒤로는 **다시 합치지 않는다**(`docs/wiki/backend.md`). 코드 주석의 "V6 퀴즈"·"V11" 같은 표기는 합치기 전 버전 이력이다.
+- **머지된 `V*.sql`은 고치지 않고 새 번호를 추가한다.** 지금은 `V1__init_schema.sql`·`V2__material_request_key.sql`(#210)이고 다음은 `V3`다. 새 번호는 팀원과 겹치지 않게 미리 말한다. 11/24에 운영 DB를 처음 만들기 전 V1~V16을 V1 하나로 합쳤다(10/31에 이어 두 번째, 합치기 전 스키마와 `pg_dump --schema-only`로 같은 것을 확인). 운영 DB를 만든 뒤로는 **다시 합치지 않는다**(`docs/wiki/backend.md`). 코드 주석의 "V6 퀴즈"·"V11" 같은 표기는 합치기 전 버전 이력이다.
 - 버전 번호는 `db/migration`과 `db/vector`가 **함께** 쓴다. 같은 번호를 두 폴더에 쓰지 않는다. pgvector 확장(`db/vector/V0_1`)은 H2에 없어 local·prod·`pgTest`에서만 읽고, 번호를 `0.1`로 둬서 항상 `V1`보다 먼저 돈다.
 - 샘플 데이터는 `db/seed/R__*.sql`(반복 실행)이고 운영 프로필은 읽지 않는다.
 - 앱 계정(`msg_app`)은 데이터 읽기·쓰기만 하고, 표 만들기·변경은 마이그레이션 계정(`msg_migrator`)만 한다.

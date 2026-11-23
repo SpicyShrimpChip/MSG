@@ -1,10 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  useMutation,
-  useQueryClient,
-  useSuspenseQuery,
-} from '@tanstack/react-query';
+import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { FileText, Trash2 } from 'lucide-react';
 import { MATERIALS_QUERY_KEY, deleteMaterial, getMaterials } from '@/api';
 import {
@@ -18,7 +14,7 @@ import {
   ErrorText,
   Spinner,
 } from '@/components';
-import { useCourses } from '@/hooks';
+import { useCourses, useSingleFlightMutation } from '@/hooks';
 import type { Course, MaterialSummary } from '@/types';
 import { formatDate, formatSemester } from '@/utils';
 
@@ -124,7 +120,7 @@ function MaterialList() {
   const { data: courses } = useCourses();
   const [deleting, setDeleting] = useState<MaterialSummary | null>(null);
 
-  const removal = useMutation({
+  const removal = useSingleFlightMutation({
     mutationFn: deleteMaterial,
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: MATERIALS_QUERY_KEY }),

@@ -1,10 +1,9 @@
-import { useMutation } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { CircleCheck, Info, TriangleAlert } from 'lucide-react';
 import { ApiError, importConversations } from '@/api';
 import { useMockData } from '@/store';
 import { Button, Card, ErrorText, Notice } from '@/components';
-import { useCourses } from '@/hooks';
+import { useCourses, useSingleFlightMutation } from '@/hooks';
 import type { ConversationImportRejection } from '@/types';
 import {
   buildImportRequests,
@@ -97,7 +96,7 @@ function SendStep({ items, onBack, onRestart }: SendStepProps) {
   const { data: courses } = useCourses();
   // 보내기 한 번 = 가져오기 작업 하나. 고른 대화가 바뀌면 이 화면이 새로 열려 새 id를 만든다
   const [importId] = useState(createRequestKey);
-  const mutation = useMutation({ mutationFn: sendAll });
+  const mutation = useSingleFlightMutation({ mutationFn: sendAll });
   const rejected =
     mutation.error instanceof ConversationRejectedError
       ? mutation.error.rejected

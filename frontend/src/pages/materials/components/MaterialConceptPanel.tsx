@@ -1,9 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  useMutation,
-  useQueryClient,
-  useSuspenseQuery,
-} from '@tanstack/react-query';
+import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { BookOpen, ChevronDown, Lock, Quote } from 'lucide-react';
 import {
   CURRICULUM_QUERY_KEY,
@@ -25,7 +21,7 @@ import {
   Notice,
   StudyStatusBadge,
 } from '@/components';
-import { useMe, useQuizAiStatus } from '@/hooks';
+import { useMe, useQuizAiStatus, useSingleFlightMutation } from '@/hooks';
 import type { ConceptStudy, MaterialConcept, QuizAiStatus } from '@/types';
 import { CONTENT_DISABLED_MESSAGE } from '@/constants';
 import { cn, isReadable } from '@/utils';
@@ -124,7 +120,7 @@ function ConceptCard({
     if (defaultOpen) ref.current?.scrollIntoView({ block: 'start' });
   }, [defaultOpen]);
 
-  const mutation = useMutation({
+  const mutation = useSingleFlightMutation({
     mutationFn: () =>
       createConceptStudyNote(materialId, {
         conceptId: concept.conceptId,
@@ -305,7 +301,7 @@ function MaterialConceptPanel({
   });
   const [confirmed, setConfirmed] = useState(false);
 
-  const mutation = useMutation({
+  const mutation = useSingleFlightMutation({
     mutationFn: () =>
       extractMaterialConcepts(materialId, { materialContentConsent: true }),
     onSuccess: (next) => {

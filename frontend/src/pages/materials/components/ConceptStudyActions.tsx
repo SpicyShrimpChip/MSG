@@ -1,4 +1,5 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
+import { useSingleFlightMutation } from '@/hooks';
 import { BookCheck, CircleAlert, ListChecks, RotateCcw } from 'lucide-react';
 import {
   CURRICULUM_QUERY_KEY,
@@ -26,7 +27,7 @@ function ConceptStudyActions({
 }) {
   const mockData = useMockData();
   const queryClient = useQueryClient();
-  const mutation = useMutation({
+  const mutation = useSingleFlightMutation({
     mutationFn: () => completeConceptStudy(materialId, study.conceptId),
     onSuccess: (next) => {
       queryClient.setQueryData<ConceptStudy[]>(

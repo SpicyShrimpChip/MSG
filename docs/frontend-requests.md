@@ -169,12 +169,14 @@ semester    = "2026-1" | "2026-summer" | "2026-2" | "2026-winter"
 
 화면: `/materials/upload`(올리기), `/materials`(목록, 과목별로 묶음), `/materials/{id}`(상세: 요약 / 핵심 개념 / 퀴즈 탭). 올린 본인만 볼 수 있다.
 
-| 메서드 | 경로                  | 요청 본문                                                | 응답 `data`                                |
-| ------ | --------------------- | -------------------------------------------------------- | ------------------------------------------ |
-| POST   | `/api/materials`      | `multipart/form-data`: `courseId`(선택), `title`, `file` | `Material` (201)                           |
-| GET    | `/api/materials`      | -                                                        | `MaterialSummary[]` (최신순)               |
-| GET    | `/api/materials/{id}` | -                                                        | `MaterialDetail`                           |
-| DELETE | `/api/materials/{id}` | -                                                        | 없음 (자료 정보와 원본 파일을 함께 지운다) |
+| 메서드 | 경로                  | 요청 본문                                                                    | 응답 `data`                                             |
+| ------ | --------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------- |
+| POST   | `/api/materials`      | `multipart/form-data`: `courseId`(선택), `title`, `file`, `requestKey`(선택) | `Material` (201, 같은 `requestKey`면 200으로 같은 자료) |
+| GET    | `/api/materials`      | -                                                                            | `MaterialSummary[]` (최신순)                            |
+| GET    | `/api/materials/{id}` | -                                                                            | `MaterialDetail`                                        |
+| DELETE | `/api/materials/{id}` | -                                                                            | 없음 (자료 정보와 원본 파일을 함께 지운다)              |
+
+- `requestKey`(11/24, #210): 화면이 올리기마다 만든 UUID(64자까지, 넘으면 400 "요청 키가 너무 길어요."). 같은 사용자가 같은 키로 다시 보내면(더블클릭·연타·응답을 못 받은 재시도) 파일을 새로 저장하지 않고 이미 올린 자료를 200으로 돌려준다. 동시에 온 같은 키 요청은 서버가 사용자 행을 잠가 차례로 처리한다. 화면은 응답을 못 받은 실패(시간 초과·연결 끊김)일 때만 같은 키로 다시 보내고, 다른 실패나 파일을 바꾸면 새 키를 만든다. 키 없이 보내면 예전처럼 매번 새로 저장한다.
 
 ```ts
 Material = { id: number, courseId: number | null, title: string }

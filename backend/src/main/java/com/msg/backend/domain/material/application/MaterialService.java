@@ -9,6 +9,7 @@ import com.msg.backend.domain.material.dto.MaterialUploadResponse;
 import com.msg.backend.domain.material.entity.Material;
 import com.msg.backend.domain.quiz.dao.QuizRepository;
 import com.msg.backend.domain.quiz.dao.QuizRepository.MaterialQuizCount;
+import com.msg.backend.domain.user.dao.UserRepository;
 import com.msg.backend.global.error.BusinessException;
 import com.msg.backend.global.storage.FileCleanupService;
 import com.msg.backend.global.storage.FileStorage;
@@ -44,6 +45,10 @@ import org.springframework.web.multipart.MultipartFile;
  * <li>올리기: 검사 → 저장소에 저장 → DB 행 저장. DB 저장이나 커밋이 실패하면 방금 저장한 파일을 지운다.</li>
  * <li>삭제: DB 행 삭제와 파일 삭제 작업(file_deletion_task)을 한 트랜잭션에 남기고, 커밋된 뒤 파일을 지운다.</li>
  * </ul>
+ *
+ * <p>같은 올리기가 두 번 오는 경우(더블클릭·연타·응답을 못 받은 재시도, #210): 화면이 올리기마다 만든 요청 키를 함께 보내면
+ * 같은 사용자·같은 키의 두 번째 요청은 파일을 저장하지 않고 이미 올린 자료를 돌려준다. 동시에 온 경우는 사용자 행을 잠가
+ * 차례로 처리하고, 그래도 (user_id, request_key) UNIQUE에 걸리면 트랜잭션이 롤백되며 방금 저장한 파일을 지운다.
  */
 @Slf4j
 @Service
@@ -53,7 +58,10 @@ public class MaterialService {
 
 	static final String STORE_FAILED_MESSAGE = "파일을 저장하지 못했어요. 잠시 뒤 다시 시도해 주세요.";
 
+	static final String REQUEST_KEY_TOO_LONG_MESSAGE = "요청 키가 너무 길어요.";
+
 	private final MaterialRepository materialRepository;
+	private final UserRepository userRepository;
 	private final CourseRepository courseRepository;
 	private final QuizRepository quizRepository;
 	private final com.msg.backend.domain.material.dao.MaterialConceptRepository conceptRepository;
@@ -79,11 +87,28 @@ public class MaterialService {
 	}
 
 	/**
+	 * 올리기 결과. reused면 같은 요청 키로 이미 올린 자료를 그대로 돌려준 것이다(새로 저장하지 않음)
+	 */
+	public record Uploaded(MaterialUploadResponse material, boolean reused) {
+	}
+
+	/**
 	 * @param courseId 연결할 과목. null이면 과목 없이 올린다. 있으면 로그인한 사용자의 과목이어야 한다
+	 * @param rawRequestKey 화면이 올리기마다 만든 요청 키(선택, 64자까지). 같은 키로 이미 올린 내 자료가 있으면 그 자료를 돌려준다
 	 */
 	@Transactional
-	public MaterialUploadResponse upload(Long userId, Long courseId, String rawTitle, MultipartFile file) {
+	public Uploaded upload(Long userId, Long courseId, String rawTitle, String rawRequestKey, MultipartFile file) {
 		String title = title(rawTitle);
+		String requestKey = requestKey(rawRequestKey);
+		if (requestKey != null) {
+			// 사용자 행을 잠가 같은 사용자의 키 있는 올리기를 차례로 처리한다.
+			// 같은 키로 동시에 온 요청은 앞 요청이 커밋될 때까지 기다렸다가 그 자료를 찾아 돌려준다 (파일을 두 번 저장하지 않는다)
+			userRepository.lockLoginUser(userId);
+			var existing = materialRepository.findByUserIdAndRequestKey(userId, requestKey);
+			if (existing.isPresent()) {
+				return new Uploaded(MaterialUploadResponse.from(existing.get()), true);
+			}
+		}
 		if (courseId != null) {
 			courseRepository.checkOwned(courseId, userId);
 		}
@@ -94,8 +119,9 @@ public class MaterialService {
 			String storageKey = "materials/" + userId + "/" + UUID.randomUUID() + "." + inspected.format().extension();
 			store(storageKey, received);
 			Material material = materialRepository.save(Material.upload(userId, courseId, title,
-					inspected.fileName(), inspected.format(), inspected.size(), storageKey, LocalDateTime.now(clock)));
-			return MaterialUploadResponse.from(material);
+					inspected.fileName(), inspected.format(), inspected.size(), storageKey, requestKey,
+					LocalDateTime.now(clock)));
+			return new Uploaded(MaterialUploadResponse.from(material), false);
 		} finally {
 			deleteQuietly(received);
 		}
@@ -182,6 +208,18 @@ public class MaterialService {
 		} catch (IOException e) {
 			log.warn("업로드 임시 파일을 지우지 못했다", e);
 		}
+	}
+
+	// 요청 키는 선택이다. 비었으면 키 없이 올린 것으로 본다 (퀴즈 requestKey와 같은 64자 제한)
+	private static String requestKey(String raw) {
+		String key = raw == null ? "" : raw.strip();
+		if (key.isEmpty()) {
+			return null;
+		}
+		if (key.length() > Material.REQUEST_KEY_MAX_LENGTH) {
+			throw new BusinessException(HttpStatus.BAD_REQUEST, REQUEST_KEY_TOO_LONG_MESSAGE);
+		}
+		return key;
 	}
 
 	// 앞뒤 공백을 지우고 안쪽 공백은 한 칸으로 줄인다 (프론트 MaterialUploadPage와 같은 정리)

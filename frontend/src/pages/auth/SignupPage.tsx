@@ -1,5 +1,5 @@
 import { useState, type SubmitEvent } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useSingleFlightMutation } from '@/hooks';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { signup } from '@/api';
 import { NO_BACKEND } from '@/store';
@@ -52,7 +52,7 @@ function SignupPage() {
   const [botResetKey, setBotResetKey] = useState(0);
   const botCheckPending = BOT_CHECK_ON && !botToken;
 
-  const mutation = useMutation({
+  const mutation = useSingleFlightMutation({
     mutationFn: signup,
     onSuccess: (user) => {
       // 로그인하면 가입 전에 고른 화면으로 이어진다

@@ -1,5 +1,6 @@
 import { useState, type SubmitEvent } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
+import { useSingleFlightMutation } from '@/hooks';
 import { COURSES_QUERY_KEY, createCourse, updateCourse } from '@/api';
 import {
   Button,
@@ -43,7 +44,7 @@ function CourseForm({
   const [keywords, setKeywords] = useState(editing?.keywords ?? []);
   const [nameError, setNameError] = useState<string>();
 
-  const mutation = useMutation({
+  const mutation = useSingleFlightMutation({
     mutationFn: (input: CourseInput) =>
       editing ? updateCourse(editing.id, input) : createCourse(input),
     onSuccess: () => {
