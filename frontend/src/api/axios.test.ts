@@ -4,9 +4,9 @@ import {
   type AxiosResponse,
   type InternalAxiosRequestConfig,
 } from 'axios';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAuthStore } from '@/store/useAuthStore';
-import { api } from './axios';
+import { api, REFRESH_LOCK_NAME, refreshAccessToken } from './axios';
 import { request } from './request';
 
 // 가짜 서버: validToken이 붙은 요청만 성공, /auth/refresh는 refreshOk에 따라 새 토큰을 주거나 401
@@ -76,6 +76,7 @@ beforeEach(() => {
 
 afterEach(() => {
   api.defaults.adapter = originalAdapter;
+  vi.unstubAllGlobals();
 });
 
 describe('Access Token 만료 처리', () => {
@@ -143,5 +144,89 @@ describe('Access Token 만료 처리', () => {
     await request({ url: '/courses' });
 
     expect(calls[0].requestedWith).toBe('XMLHttpRequest');
+  });
+});
+
+// 가짜 Web Locks: 같은 이름의 잠금을 요청한 순서대로 하나씩 준다 (탭 여러 개를 흉내 낸다)
+function stubLocks({ fail = false } = {}) {
+  const requested: string[] = [];
+  let tail: Promise<unknown> = Promise.resolve();
+  const locks = {
+    request(name: string, callback: () => Promise<unknown>) {
+      requested.push(name);
+      if (fail) return Promise.reject(new Error('SecurityError'));
+      const run = tail.then(() => callback());
+      tail = run.catch(() => undefined);
+      return run;
+    },
+  };
+  vi.stubGlobal('navigator', { locks });
+  return { locks, requested };
+}
+
+describe('탭끼리 갱신 차례 지키기 (Web Locks)', () => {
+  it('다른 탭이 갱신 중이면 끝날 때까지 기다렸다가 보낸다', async () => {
+    startServer({ refreshOk: true });
+    const { locks, requested } = stubLocks();
+    let releaseOtherTab = () => {};
+    const otherTab = locks.request(
+      REFRESH_LOCK_NAME,
+      () =>
+        new Promise<void>((resolve) => {
+          releaseOtherTab = resolve;
+        }),
+    );
+
+    const refreshing = refreshAccessToken();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(refreshCount).toBe(0);
+
+    releaseOtherTab();
+    await otherTab;
+    await expect(refreshing).resolves.toBe('new-token');
+    expect(refreshCount).toBe(1);
+    expect(requested).toEqual([REFRESH_LOCK_NAME, REFRESH_LOCK_NAME]);
+  });
+
+  it('한 탭 안에서는 잠금을 한 번만 요청하고 갱신도 한 번만 보낸다', async () => {
+    startServer({ refreshOk: true });
+    const { requested } = stubLocks();
+    useAuthStore.getState().setAccessToken('expired-token');
+
+    const results = await Promise.all([
+      request<string>({ url: '/courses' }),
+      request<string>({ url: '/materials' }),
+    ]);
+
+    expect(results).toEqual(['ok', 'ok']);
+    expect(refreshCount).toBe(1);
+    expect(requested).toEqual([REFRESH_LOCK_NAME]);
+    expect(
+      calls.find((call) => call.url === '/auth/refresh')?.requestedWith,
+    ).toBe('XMLHttpRequest');
+  });
+
+  it('잠금을 쓸 수 없으면 기다리지 않고 바로 갱신한다', async () => {
+    startServer({ refreshOk: true });
+    stubLocks({ fail: true });
+
+    await expect(refreshAccessToken()).resolves.toBe('new-token');
+    expect(refreshCount).toBe(1);
+  });
+
+  it('Web Locks가 없는 브라우저도 지금처럼 갱신한다', async () => {
+    startServer({ refreshOk: true });
+    vi.stubGlobal('navigator', {});
+
+    await expect(refreshAccessToken()).resolves.toBe('new-token');
+    expect(refreshCount).toBe(1);
+  });
+
+  it('잠금 안에서 갱신이 실패하면 다시 보내지 않고 실패를 알린다', async () => {
+    startServer({ refreshOk: false });
+    stubLocks();
+
+    await expect(refreshAccessToken()).rejects.toBeTruthy();
+    expect(refreshCount).toBe(1);
   });
 });

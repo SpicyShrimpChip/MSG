@@ -178,6 +178,10 @@ app:
 
   auth:
     refresh-token-ttl: 14d
+    # 회전으로 방금 폐기된 Refresh Token이 이 시간 안에 다시 오면 재사용(탈취)으로 보지 않고 같은 세션에서 한 번 더 회전한다.
+    # 탭 여러 개가 같은 쿠키로 거의 동시에 갱신하면 한쪽이 폐기된 토큰을 보내게 되기 때문이다 (#211).
+    # 로그아웃·탈퇴·재사용 감지로 끝난 세션의 토큰은 이 시간 안이어도 받지 않는다. 0s면 유예 없이 바로 세션을 끊는다
+    refresh-reuse-grace: 10s
     refresh-cookie:
       name: refresh_token
       # 인증 API에만 쿠키가 실리게 한다

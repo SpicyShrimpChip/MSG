@@ -20,6 +20,9 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
 	@Query("select t from RefreshToken t where t.tokenHash = :tokenHash")
 	Optional<RefreshToken> findByTokenHashForUpdate(String tokenHash);
 
+	// 세션이 아직 살아 있는지 (회전으로 폐기된 토큰의 유예 판단에 쓴다, RefreshTokenService.isRotatedWithinGrace)
+	boolean existsBySessionIdAndRevokedAtIsNullAndExpiresAtAfter(String sessionId, LocalDateTime now);
+
 	@Modifying(flushAutomatically = true, clearAutomatically = true)
 	@Query("update RefreshToken t set t.revokedAt = :now where t.sessionId = :sessionId and t.revokedAt is null")
 	int revokeSession(String sessionId, LocalDateTime now);
