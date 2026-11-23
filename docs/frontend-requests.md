@@ -46,7 +46,7 @@ API는 **제안**이다. 확정은 백엔드 API 문서(Swagger)에서 하고, �
 
 - 팀이 정한 건 Spring Boot **3.x**인데, Spring Initializr(start.spring.io)는 2026-10-25 기준 4.x만 보여 준다. 4.x로 만들면 의존성 이름이 달라서 `backend/CLAUDE.md`와 맞지 않는다. 그래서 Initializr에서 Gradle 프로젝트를 만든 뒤 `build.gradle`의 `org.springframework.boot` 플러그인 버전을 `3.5.6`으로 직접 바꾸는 방법을 제안한다. 4.x로 가고 싶으면 먼저 알려 주기.
 - 의존성: `spring-boot-starter-web`, `-validation`, `-data-jpa`, `-security`, `org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9`, Lombok, H2(`runtimeOnly`), DB 드라이버(`runtimeOnly`, 아래 DB 참고), 테스트 `spring-boot-starter-test`
-- 기본 패키지는 `com.ailms.backend`를 제안한다. 폴더 구조는 `backend/CLAUDE.md`를 따른다.
+- 기본 패키지는 `com.msg.backend`를 제안한다. 폴더 구조는 `backend/CLAUDE.md`를 따른다.
 - 내 PC의 JDK가 17이 아니어도 `tasks.withType(JavaCompile) { options.release = 17 }`로 Java 17 문법만 쓰게 맞출 수 있다. CI는 Java 17(temurin)으로 돌린다.
 - `gradlew` 줄바꿈이 윈도우에서 바뀌면 리눅스(CI)에서 실행이 안 된다. `backend/.gitattributes`에 `gradlew text eol=lf`를 넣는다.
 
