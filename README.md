@@ -6,21 +6,44 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/banner-dark.svg">
-  <img src="docs/images/banner-light.svg" alt="MSG 학습 대시보드 예시 화면: 개념마다 GPT, Claude, Gemini가 따로 내린 판단과 같은 판단 수, AI가 쓴 설명" width="100%">
+  <img src="docs/images/banner-light.svg" alt="MSG(My Study Guide) 학습 대시보드 예시: 공부할 순서대로 본 개념 목록에 개념마다 규칙 코드로 계산한 숙련도 단계와 GPT, Claude, Gemini가 따로 내린 판단, AI가 쓴 설명" width="100%">
 </picture>
 
 <div align="center">
 
-![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black) ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?style=flat-square&logo=typescript&logoColor=white) ![Vite](https://img.shields.io/badge/Vite-8-646CFF?style=flat-square&logo=vite&logoColor=white) ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white) ![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.5-6DB33F?style=flat-square&logo=springboot&logoColor=white) ![Java](https://img.shields.io/badge/Java-17-ED8B00?style=flat-square&logo=openjdk&logoColor=white) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat-square&logo=postgresql&logoColor=white) ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white) ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-CI-2088FF?style=flat-square&logo=githubactions&logoColor=white) ![Claude](https://img.shields.io/badge/Claude-Code-D97757?style=flat-square&logo=claude&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black) ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?style=flat-square&logo=typescript&logoColor=white) ![Vite](https://img.shields.io/badge/Vite-8-646CFF?style=flat-square&logo=vite&logoColor=white) ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white) ![Rust](https://img.shields.io/badge/Rust-WebAssembly-B7410E?style=flat-square&logo=rust&logoColor=white) ![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.5-6DB33F?style=flat-square&logo=springboot&logoColor=white) ![Java](https://img.shields.io/badge/Java-17-ED8B00?style=flat-square&logo=openjdk&logoColor=white) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat-square&logo=postgresql&logoColor=white) ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white) ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-CI-2088FF?style=flat-square&logo=githubactions&logoColor=white) ![Claude](https://img.shields.io/badge/Claude-Code-D97757?style=flat-square&logo=claude&logoColor=white)
 
-**[화면 둘러보기 (예시 데이터)](https://lms-seven-tawny.vercel.app/?demo=1)** · **[주요 화면](#주요-화면)** · **[진행 현황](#진행-현황)** · **[로컬 실행](#로컬-실행)**
+**[체험 바로 시작 (예시 데이터)](https://lms-seven-tawny.vercel.app/?demo=1)** · **[시연 영상 (YouTube)](https://youtu.be/cMIesU6opUY)** · **[문서·발표자료 (Notion)](https://heliotrope-danthus-56e.notion.site/MSG-My-Study-Guide-40f9aac9e83581b096e2cd04f7a6de40)**
 
 </div>
 
-학습 자료와 ChatGPT, Claude에서 나눈 공부 대화를 분석해 개념별 강점과 보완할 점을 보여 주고,
-다음에 공부할 순서를 계속 다시 짜 주는 개인 맞춤형 LMS입니다.
+**MSG(My Study Guide)**는 학습 자료와 ChatGPT, Claude에서 나눈 공부 대화를 분석해 개념별로 무엇을 알고 무엇이 부족한지 보여 주고,
+다음에 공부할 순서를 계속 다시 짜 주는 개인 맞춤형 학습 서비스입니다.
 
-**[체험 바로 시작 (예시 데이터)](https://lms-seven-tawny.vercel.app/?demo=1)** · **[시연 영상 보기 (YouTube)](https://youtu.be/cMIesU6opUY)** · **[문서·발표자료 (Notion)](https://heliotrope-danthus-56e.notion.site/MSG-My-Study-Guide-40f9aac9e83581b096e2cd04f7a6de40)**
+> [!TIP]
+> [체험 링크](https://lms-seven-tawny.vercel.app/?demo=1)로 들어가면 가입 없이 바로 모든 화면을 예시 데이터로 볼 수 있습니다. 첫 화면에서 **로그인 없이 체험해 보기**를 눌러도 됩니다. 체험 중 입력한 내용은 브라우저에만 저장됩니다.
+
+**[왜 만드나요](#왜-만드나요)** · **[무엇이 다른가요](#무엇이-다른가요)** · **[주요 화면](#주요-화면)** · **[전체 구조](#전체-구조)** · **[진행 현황](#진행-현황)** · **[로컬 실행](#로컬-실행)**
+
+## 왜 만드나요
+
+생성형 AI로 공부하는 대학생을 위한 서비스입니다.
+
+- AI로 공부한 기록은 여러 서비스에 흩어지고, 과목이 끝나면 지워지기 쉽습니다.
+- 새 대화를 열 때마다 "나는 이 과목을 이만큼 안다"는 배경 설명을 다시 해야 합니다.
+- 공부는 많이 했는데 **무엇을 알고 어디가 부족한지**는 스스로 알기 어렵습니다.
+
+팀이 50명(대학생 35명·고등학생 10명·기타 5명)에게 받은 설문에서 50명 중 46명이 주 1회 이상 AI로 공부한다고 답했고, 해당 문항에 답한 49명 중 41명이 새 대화를 열 때 배경을 다시 설명한 적이 있다고 답했습니다. 다만 응답자 50명 중 32명이 공학·IT 계열이라 일반화하기는 어렵습니다.
+
+시작 경로는 가진 데이터에 따라 두 가지입니다.
+
+- **AI 대화 기록이 많다면** ChatGPT, Claude 공식 내보내기 파일을 가져와 바로 분석합니다.
+- **AI 대화 기록이 적다면** 학습 자료를 올려 핵심 개념과 퀴즈로 시작하고, 퀴즈 기록이 쌓이면 같은 숙련도 계산에 들어갑니다. 자료 요약과 자료 기반 챗봇은 AI 호출 비용 때문에 뒤 순서로 미뤘습니다.
+
+> [!IMPORTANT]
+> 설문에서 찾은 문제가 어떤 기능과 설계로 이어졌는지는 [프로젝트 문서 (Notion)](https://heliotrope-danthus-56e.notion.site/MSG-My-Study-Guide-40f9aac9e83581b096e2cd04f7a6de40)에 자세히 적었습니다. 이 README는 화면과 진행 현황을 빠르게 훑어보는 용도입니다.
+
+## 무엇이 다른가요
 
 <table>
   <tr>
@@ -29,17 +52,22 @@
     <th width="33%">점수는 코드, 설명은 AI</th>
   </tr>
   <tr>
-    <td valign="top">대화 파일은 브라우저에서 읽고 개인정보를 가린 뒤, 내가 고른 대화만 서버로 보냅니다.</td>
-    <td valign="top">GPT, Claude, Gemini가 서로의 답을 보지 않고 판단하고, 의견이 갈린 개념은 그대로 보여 줍니다.</td>
+    <td valign="top">대화 파일은 브라우저에서 읽고 개인정보를 가린 뒤, 내가 고른 대화만 서버로 보냅니다. 원본 파일은 서버로 가지 않습니다.</td>
+    <td valign="top">GPT, Claude, Gemini가 서로의 답을 보지 않고 판단합니다. 의견이 갈린 개념은 하나로 정하지 않고 갈렸다고 보여 줍니다.</td>
     <td valign="top">숙련도는 정해진 규칙의 코드가 계산하고, AI는 그 근거를 설명합니다. AI가 쓴 글은 보라색으로 구분합니다.</td>
   </tr>
 </table>
 
-> [!TIP]
-> [체험 링크](https://lms-seven-tawny.vercel.app/?demo=1)로 들어가면 가입 없이 바로 모든 화면을 예시 데이터로 볼 수 있습니다. 첫 화면에서 **로그인 없이 체험해 보기**를 눌러도 됩니다. 체험 중 입력한 내용은 브라우저에만 저장됩니다.
+<details>
+<summary>설계 원칙 자세히 (개인정보·점수·화면 배치·학습 자료·보안)</summary>
 
-> [!IMPORTANT]
-> 설문에서 찾은 문제가 어떤 기능과 설계로 이어졌는지는 [프로젝트 문서 (Notion)](https://heliotrope-danthus-56e.notion.site/MSG-My-Study-Guide-40f9aac9e83581b096e2cd04f7a6de40)에 자세히 적었습니다. 이 README는 화면과 진행 현황을 빠르게 훑어보는 용도입니다.
+- **원본 대화 파일:** 브라우저에서 파싱 → 학습 키워드 필터 → 개인정보 마스킹을 거친 뒤, 사용자가 미리 보기로 확인하고 고른 대화만 보냅니다. 직접 넣은 가릴 단어 목록도 서버로 보내지 않고 브라우저에만 저장합니다. 서버는 받은 대화에 개인정보 형식이 남아 있으면 저장하지 않습니다.
+- **점수와 근거:** 숙련도는 대화만으로 단정하지 않고 대화 분류 결과와 퀴즈 결과를 명시적인 규칙으로 계산합니다. 규칙의 숫자(가중치·기준)는 초기값이라 설정값으로 두고, 근거가 적으면 단계를 내지 않고 '근거 부족'으로 보여 줍니다. 여러 모델의 판단이 갈리면 하나로 정하지 않고 갈렸다고 보여 줍니다.
+- **화면 배치:** LLM에게서는 미리 정한 영역의 순서, 크기, 이유만 JSON으로 받고, 스키마 검증을 통과한 경우에만 씁니다. 실패하면 기본 배치를 씁니다.
+- **학습 자료:** 자료와 그로부터 만든 요약·퀴즈는 다른 사용자와 공유하지 않습니다. 외부 AI(OpenAI, Anthropic, Google)는 보낸 데이터를 학습에 쓰지 않는 조건의 API로 쓰고, Gemini는 결제가 연결된 프로젝트의 키만 씁니다. 제공사·국가·보관 기간은 개인정보 처리방침에 적었습니다.
+- **보안:** 비밀번호는 BCrypt로 저장하고, 로그인 유지 토큰은 쓸 때마다 새로 바꾸며 재사용을 감지합니다. 로그인 시도 횟수를 제한하고, 앱과 테이블 변경용 DB 계정을 분리했습니다. 로그인 쿠키는 HttpOnly·SameSite=Strict이고, 허용하는 접속 주소는 목록으로 명시했으며, 관리자 API는 관리자만 부를 수 있습니다. 모든 기능은 로그인한 본인의 데이터만 조회합니다. 비밀값은 환경변수로만 관리합니다. 코드를 읽는 보안 점검(11/4)에서 심각한 문제는 찾지 못했지만, 실제 공격을 재현한 점검은 아닙니다. 배포 전에는 운영 프로필 지정, Swagger 끄기, CSP 적용을 다시 확인합니다.
+
+</details>
 
 ## 이렇게 공부합니다
 
@@ -64,12 +92,16 @@ flowchart LR
 
 ## 주요 화면
 
+<img src="docs/images/screen-dashboard.png" alt="학습 대시보드의 공부할 순서대로 본 개념 목록: 개념마다 순서, 규칙으로 계산한 숙련도 단계(보완 필요, 보통, 강점, 근거 부족), GPT·Claude·Gemini 각각의 판단 칩, 몇 개 모델이 같은 판단을 했는지" width="100%"><br>
+<b>학습 대시보드: 공부할 순서대로 본 개념</b><br>
+더 공부하겠다고 고른 개념, 이해 부족, 의견이 갈린 개념, 근거 부족 순으로 줄을 세우고, 줄마다 규칙으로 계산한 숙련도와 세 모델의 판단을 나란히 보여 줍니다.
+
 <table>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/images/screen-dashboard.png" alt="학습 대시보드의 개념별 판단 표: 개념마다 숙련도 단계(보완 필요, 근거 부족, 보통, 강점), 모델들의 판단(이해 부족, 의견이 갈렸어요, 판단 근거 부족, 부분 이해, 이해)과 같은 판단을 한 모델 수" width="100%"><br>
-      <b>학습 대시보드</b><br>
-      개념마다 규칙으로 계산한 숙련도 단계와 모델들의 판단, 몇 개 모델이 같은 판단을 했는지 보여 줍니다.
+      <img src="docs/images/screen-concept-detail.png" alt="개념 한 줄을 펼친 모습: 숙련도 보완 필요와 바로 앞 기록 대비 변화, 반영한 근거(퀴즈 채점 문제 수와 얻은 점수, AI 대화 수와 모델 판단)" width="100%"><br>
+      <b>개념 펼치기: 숙련도 근거</b><br>
+      숫자 점수 대신 단계와 그 근거(반영한 퀴즈·대화), 이전 기록 대비 변화를 보여 줍니다.
     </td>
     <td width="50%" valign="top">
       <img src="docs/images/screen-import-select.png" alt="공부한 대화 고르기: 내 과목 키워드로 대화를 과목별로 나눈 목록" width="100%"><br>
@@ -86,7 +118,7 @@ flowchart LR
     <td width="50%" valign="top">
       <img src="docs/images/screen-quiz-result.png" alt="퀴즈 결과: 맞힌 문제 수와 문제별 정답, 관련 개념, AI 해설" width="100%"><br>
       <b>퀴즈 결과</b><br>
-      서버가 채점하고, 문제마다 관련 개념과 해설을 붙입니다.
+      서버가 채점하고, 문제마다 관련 개념과 해설을 붙입니다. 결과는 숙련도 계산에 다시 들어갑니다.
     </td>
   </tr>
 </table>
@@ -109,6 +141,25 @@ flowchart LR
 | 판단 근거를 사람이 읽을 수 있게 설명 | 화면 코드 만들기 (정해진 영역의 순서, 크기, 이유만 JSON으로) |
 | 다음에 공부할 순서와 그 이유를 제안 | 원본 대화 파일 받기 (브라우저에서 처리한 결과만 받음) |
 
+## 전체 구조
+
+```mermaid
+flowchart LR
+  B["<b>내 브라우저</b><br/>대화 파일 읽기<br/>Web Worker + Rust WASM<br/>zip 풀기 · 개인정보 가리기"]:::browser
+  V["<b>Vercel</b><br/>화면 배포<br/>/api 전달"]:::code
+  E["<b>AWS EC2</b> · Docker Compose<br/>Caddy 자동 HTTPS<br/>Spring Boot: 숙련도 계산 · 호출 한도<br/>PostgreSQL 16 + pgvector"]:::code
+  G["<b>OpenAI · Anthropic · Google</b><br/>세 모델이<br/>따로 판단"]:::ai
+  B -- "고른 대화만" --> V --> E -- "같은 요청을 따로" --> G
+
+  classDef browser fill:#f4f7fd,stroke:#5f6b80,stroke-width:1.5px,color:#0f1b33
+  classDef code fill:#eef3ff,stroke:#1d4ed8,stroke-width:1.5px,color:#0f1b33
+  classDef ai fill:#f8f5ff,stroke:#6d28d9,stroke-width:1.5px,color:#0f1b33
+```
+
+- **브라우저:** 대화 파일을 서버로 올리지 않고 브라우저 안에서 읽습니다. 화면이 멈추지 않게 Web Worker에서 처리하고, zip 풀기와 개인정보 가리기는 Rust로 만든 WebAssembly가 맡습니다(3GB가 넘는 zip도 통째로 메모리에 올리지 않음).
+- **서버:** 사용자에게 보이는 주소는 Vercel 하나이고, Vercel이 `/api` 요청을 EC2로 넘깁니다. 세 모델은 같은 요청을 따로 받고, 숙련도·채점 상태·공부 순서는 서버 코드가 규칙으로 계산합니다. AI 비용이 넘치지 않게 사용자별·서비스 전체 하루 호출 상한을 둡니다.
+- **배포:** EC2 한 대에 Caddy·백엔드·PostgreSQL을 Docker Compose로 띄우고 DB는 매일 백업합니다(7일 보관). 백엔드 서버는 올리는 중이라, 지금 배포 주소는 예시 데이터로 동작합니다. 구성과 순서는 [`docs/deploy.md`](docs/deploy.md)에 있습니다.
+
 ## 진행 현황
 
 | 기능 | 내용 |
@@ -121,7 +172,7 @@ flowchart LR
 | **맞춤 커리큘럼, 사전·사후평가, 검색**<br>🔵 API 연결 | 사전 테스트 → 핵심 개념 학습 → 개념별 확인 퀴즈 → 사후 평가 4단계와 학습 진도, 통합 검색 |
 | **숙련도**<br>🟠 로직 구현 | 퀴즈 결과와 대화 판단을 규칙으로 계산(숫자는 초기값), 단계·근거·변화 추이 표시 |
 | **AI 분석, 퀴즈 만들기, AI 채점 (LLM 호출)**<br>🔵 API 연결 | 세 모델 판단과 비교, 학습 모드별 퀴즈 만들기, 주관식·서술형 다수결 채점. GPT·Gemini는 실제 호출로 동작 확인, Claude는 코드는 연결했고 API 크레딧 충전 전이라 동작 미확인 |
-| **자료 요약, 챗봇**<br>⚪ 예정 | 대화 기록이 적은 사용자의 시작 경로로 2단계에 만듭니다 |
+| **자료 요약, 챗봇**<br>⚪ 예정 | 대화 기록이 적은 사용자의 시작 경로. AI 호출 비용 때문에 배포·사용자 테스트 뒤로 미뤘습니다 |
 
 <details>
 <summary>상태 뜻과 기능별 자세한 내용</summary>
@@ -140,40 +191,6 @@ flowchart LR
 [![Frontend CI](https://github.com/SpicyShrimpChip/MSG/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/SpicyShrimpChip/MSG/actions/workflows/frontend-ci.yml) [![Backend CI](https://github.com/SpicyShrimpChip/MSG/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/SpicyShrimpChip/MSG/actions/workflows/backend-ci.yml)
 
 프론트와 백엔드 테스트가 해당 코드가 바뀐 PR마다 GitHub Actions에서 실행됩니다. 백엔드는 H2와 실제 PostgreSQL 16(pgvector) 두 환경에서 같은 테스트를 돌립니다.
-
-## 왜 만드나요
-
-생성형 AI로 공부하는 대학생을 위한 서비스입니다.
-
-- AI로 공부한 기록은 여러 서비스에 흩어지고, 과목이 끝나면 지워지기 쉽습니다.
-- 새 대화를 열 때마다 "나는 이 과목을 이만큼 안다"는 배경 설명을 다시 해야 합니다.
-- 공부는 많이 했는데 **무엇을 알고 어디가 부족한지**는 스스로 알기 어렵습니다.
-
-팀이 50명(대학생 35명·고등학생 10명·기타 5명)에게 받은 설문에서 50명 중 46명이 주 1회 이상 AI로 공부한다고 답했고, 해당 문항에 답한 49명 중 41명이 새 대화를 열 때 배경을 다시 설명한 적이 있다고 답했습니다. 다만 응답자 50명 중 32명이 공학·IT 계열이라 일반화하기는 어렵습니다.
-
-시작 경로는 가진 데이터에 따라 두 가지입니다.
-
-- **AI 대화 기록이 많다면** ChatGPT, Claude 공식 내보내기 파일을 가져와 바로 분석합니다.
-- **AI 대화 기록이 적다면** 학습 자료를 올려 요약과 퀴즈로 시작하고, 사이트 안의 챗봇과 퀴즈 기록이 쌓이면 같은 방식으로 분석합니다.
-
-## 설계 원칙
-
-- **원본 대화 파일은 서버로 보내지 않습니다.**
-- **점수는 코드로 계산하고, 화면에는 판단 근거를 함께 보여 줍니다.**
-- **LLM은 화면 코드를 만들지 않습니다.**
-- **학습 자료는 올린 본인만 봅니다.**
-- **비밀값과 로그인 정보를 안전하게 다룹니다.**
-
-<details>
-<summary>원칙별 자세한 내용</summary>
-
-- **원본 대화 파일:** 브라우저에서 파싱 → 학습 키워드 필터 → 개인정보 마스킹을 거친 뒤, 사용자가 미리 보기로 확인하고 고른 대화만 보냅니다. 직접 넣은 가릴 단어 목록도 서버로 보내지 않고 브라우저에만 저장합니다. 서버는 받은 대화에 개인정보 형식이 남아 있으면 저장하지 않습니다.
-- **점수와 근거:** 숙련도는 대화만으로 단정하지 않고 대화 분류 결과와 퀴즈 결과를 명시적인 규칙으로 계산합니다. 규칙의 숫자(가중치·기준)는 초기값이라 설정값으로 두고, 근거가 적으면 단계를 내지 않고 '근거 부족'으로 보여 줍니다. 여러 모델의 판단이 갈리면 하나로 정하지 않고 갈렸다고 보여 줍니다.
-- **화면 배치:** LLM에게서는 미리 정한 영역의 순서, 크기, 이유만 JSON으로 받고, 스키마 검증을 통과한 경우에만 씁니다. 실패하면 기본 배치를 씁니다.
-- **학습 자료:** 자료와 그로부터 만든 요약·퀴즈는 다른 사용자와 공유하지 않습니다. 외부 AI(OpenAI, Anthropic, Google)는 보낸 데이터를 학습에 쓰지 않는 조건의 API로 쓰고, Gemini는 결제가 연결된 프로젝트의 키만 씁니다. 제공사·국가·보관 기간은 개인정보 처리방침에 적었습니다.
-- **보안:** 비밀번호는 BCrypt로 저장하고, 로그인 유지 토큰은 쓸 때마다 새로 바꾸며 재사용을 감지합니다. 로그인 시도 횟수를 제한하고, 앱과 테이블 변경용 DB 계정을 분리했습니다. 로그인 쿠키는 HttpOnly·SameSite=Strict이고, 허용하는 접속 주소는 목록으로 명시했으며, 관리자 API는 관리자만 부를 수 있습니다. 모든 기능은 로그인한 본인의 데이터만 조회합니다. 비밀값은 환경변수로만 관리합니다. 코드를 읽는 보안 점검(11/4)에서 심각한 문제는 찾지 못했지만, 실제 공격을 재현한 점검은 아닙니다. 배포 전에는 운영 프로필 지정, Swagger 끄기, CSP 적용을 다시 확인합니다.
-
-</details>
 
 ## 기술 스택
 
@@ -230,10 +247,12 @@ flowchart LR
 
 ```text
 .
-├── frontend/   React 앱
-├── backend/    Spring Boot API
-├── docs/       세팅 매뉴얼, 기획 문서, 백엔드 설계, 프론트–백엔드 API 요청
-└── .github/    CI 워크플로, Renovate 설정
+├── frontend/          React 앱
+│   └── wasm/          대화 파일 처리 Rust 크레이트 (WebAssembly로 빌드)
+├── backend/           Spring Boot API
+├── deploy/            EC2 배포 구성 (Docker Compose, Caddy, 백업)
+├── docs/              세팅·배포 매뉴얼, 기획 문서, 백엔드 설계, 프론트–백엔드 API 요청, 개발 교훈 위키
+└── .github/           CI 워크플로, Renovate 설정
 ```
 
 ## 로컬 실행
