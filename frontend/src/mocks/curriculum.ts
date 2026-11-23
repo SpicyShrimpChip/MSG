@@ -32,13 +32,18 @@ const NO_TEST: FlowAssessment = {
 
 type Need = 'study' | 'quiz' | 'ok';
 
-// 서버 CurriculumFlowBuilder.need와 같은 규칙
-function need(concept: FlowConcept, practiceStarted: boolean): Need {
+// 서버 CurriculumFlowBuilder.need와 같은 규칙 (과목 키워드뿐인 개념은 사전 테스트 뒤 퀴즈로만 본다)
+function need(
+  concept: FlowConcept,
+  practiceStarted: boolean,
+  preDone: boolean,
+): Need {
   if (concept.study) {
     if (['not_studied', 'review_needed'].includes(concept.study.status))
       return 'study';
     return concept.study.status === 'studied' ? 'quiz' : 'ok';
   }
+  if (!preDone) return 'study';
   if (concept.practiceGradedCount > 0) return 'ok';
   return practiceStarted ? 'quiz' : 'study';
 }
@@ -125,7 +130,9 @@ function buildFlow(courseId: number, keywords: string[]): CurriculumFlow {
   const priority = concepts.filter((concept) => concept.priority);
   const targets = priority.length > 0 ? priority : concepts;
   const practiceStarted = concepts.some((c) => c.practiceGradedCount > 0);
-  const needs = targets.map((concept) => need(concept, practiceStarted));
+  const needs = targets.map((concept) =>
+    need(concept, practiceStarted, sample),
+  );
   const remaining = needs.filter((item) => item !== 'ok').length;
   const progress = progressOf(concepts);
   const weakNames = priority.map((concept) => concept.name);
@@ -138,8 +145,15 @@ function buildFlow(courseId: number, keywords: string[]): CurriculumFlow {
         : 'post_test';
   const order = ['pre_test', 'concept_study', 'concept_quiz', 'post_test'];
   const currentIndex = order.indexOf(currentStep);
+  // 단계마다 끝냈는지는 지금 단계와 따로 센다 (서버와 같은 규칙, 예시는 사후 평가 전)
+  const completed = [
+    sample,
+    targets.length > 0 && !needs.includes('study'),
+    targets.length > 0 && needs.every((item) => item === 'ok'),
+    false,
+  ];
   const status = (index: number) =>
-    index < currentIndex
+    index < currentIndex || completed[index]
       ? 'done'
       : index === currentIndex
         ? 'current'
