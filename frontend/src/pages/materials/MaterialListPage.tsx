@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { FileText, Trash2 } from 'lucide-react';
-import { MATERIALS_QUERY_KEY, deleteMaterial, getMaterials } from '@/api';
+import { MATERIALS_QUERY_KEY, deleteMaterial } from '@/api';
 import {
   AsyncBoundary,
   Button,
@@ -14,7 +14,7 @@ import {
   ErrorText,
   Spinner,
 } from '@/components';
-import { useCourses, useSingleFlightMutation } from '@/hooks';
+import { useCourses, useMaterials, useSingleFlightMutation } from '@/hooks';
 import type { Course, MaterialSummary } from '@/types';
 import { formatDate, formatSemester } from '@/utils';
 
@@ -113,10 +113,7 @@ function MaterialCard({
 
 function MaterialList() {
   const queryClient = useQueryClient();
-  const { data: materials } = useSuspenseQuery({
-    queryKey: MATERIALS_QUERY_KEY,
-    queryFn: getMaterials,
-  });
+  const { data: materials } = useMaterials();
   const { data: courses } = useCourses();
   const [deleting, setDeleting] = useState<MaterialSummary | null>(null);
 

@@ -1,11 +1,19 @@
+import { queryOptions } from '@tanstack/react-query';
 import type { ConceptStudy } from '@/types';
 import { mockCompleteConceptStudy, mockGetConceptStudies } from '@/mocks';
 // 스토어 배럴(화면 모드 등 window 사용)까지 불러오지 않도록 파일을 직접 가져온다
 import { isMockData } from '@/store/useDemoStore';
 import { request } from './request';
 
-// 자료의 개념별 학습 상태. 키는 [...STUDY_QUERY_KEY, materialId]
+// 자료의 개념별 학습 상태. 자료 하나는 conceptStudiesQuery, 확인 퀴즈를 내면 이 키 전체를 무효화한다
 export const STUDY_QUERY_KEY = ['concept-study'] as const;
+
+// 자료 하나의 개념별 학습 상태. 개념 탭과 확인 퀴즈 결과가 같은 캐시를 쓴다
+export const conceptStudiesQuery = (materialId: number) =>
+  queryOptions({
+    queryKey: [...STUDY_QUERY_KEY, materialId],
+    queryFn: () => getConceptStudies(materialId),
+  });
 
 // 자료의 핵심 개념마다 학습 기록·확인 퀴즈 결과 (Swagger `개념 학습 기록`). 목업은 브라우저에만 저장하고 서버로 보내지 않는다
 export function getConceptStudies(materialId: number): Promise<ConceptStudy[]> {

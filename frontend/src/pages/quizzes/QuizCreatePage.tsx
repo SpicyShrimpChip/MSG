@@ -1,17 +1,12 @@
 import { useEffect, useMemo, useState, type SubmitEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import {
-  useQuery,
-  useQueryClient,
-  useSuspenseQuery,
-} from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { BookText, FileText, Lock, Sparkles, Target } from 'lucide-react';
 import {
-  MATERIALS_QUERY_KEY,
   QUIZZES_QUERY_KEY,
   createQuiz,
   getGenerationStatus,
-  getMaterials,
+  quizQuery,
 } from '@/api';
 import { useMockData } from '@/store';
 import {
@@ -39,6 +34,7 @@ import {
 } from '@/constants';
 import {
   useCourses,
+  useMaterials,
   useProviders,
   useQuizAiStatus,
   useSuspenseMe,
@@ -136,10 +132,7 @@ function QuizCreateForm({ me }: { me: User | null }) {
   const [recoveredMessage, setRecoveredMessage] = useState<string | null>(null);
   const { data: providers } = useProviders();
   const { data: ai } = useQuizAiStatus();
-  const { data: materials } = useSuspenseQuery({
-    queryKey: MATERIALS_QUERY_KEY,
-    queryFn: getMaterials,
-  });
+  const { data: materials } = useMaterials();
 
   // 확인 퀴즈 링크(대시보드 "이미 알아요")는 과목·모드·개념을 주소로 넘긴다
   const paramMode = params.get('mode');
@@ -220,7 +213,7 @@ function QuizCreateForm({ me }: { me: User | null }) {
     onMutate: (input) => savePendingKey(input.requestKey),
     onSuccess: (quiz) => {
       savePendingKey(null);
-      queryClient.setQueryData([...QUIZZES_QUERY_KEY, quiz.id], quiz);
+      queryClient.setQueryData(quizQuery(quiz.id).queryKey, quiz);
       void queryClient.invalidateQueries({
         queryKey: QUIZZES_QUERY_KEY,
         exact: true,

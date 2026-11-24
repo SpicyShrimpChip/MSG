@@ -1,3 +1,4 @@
+import { queryOptions } from '@tanstack/react-query';
 import type {
   ConceptExtractInput,
   ConceptStudyNoteInput,
@@ -25,8 +26,27 @@ import {
 import { isMockData } from '@/store/useDemoStore';
 import { AI_REQUEST_TIMEOUT_MS, request } from './request';
 
-// React Query에서 내 학습자료를 담는 키. 상세는 [...MATERIALS_QUERY_KEY, id]
+// React Query에서 내 학습자료를 담는 키. 목록은 materialsQuery, 상세는 materialQuery, 핵심 개념은 materialConceptsQuery,
+// 요약본은 [...MATERIALS_QUERY_KEY, id, 'summary', purpose](StudySummaryPanel)
 export const MATERIALS_QUERY_KEY = ['materials'] as const;
+
+// 내 자료 목록
+export const materialsQuery = () =>
+  queryOptions({ queryKey: MATERIALS_QUERY_KEY, queryFn: getMaterials });
+
+// 자료 하나의 상세
+export const materialQuery = (id: number) =>
+  queryOptions({
+    queryKey: [...MATERIALS_QUERY_KEY, id],
+    queryFn: () => getMaterial(id),
+  });
+
+// 자료의 핵심 개념 목록
+export const materialConceptsQuery = (id: number) =>
+  queryOptions({
+    queryKey: [...MATERIALS_QUERY_KEY, id, 'concepts'],
+    queryFn: () => getMaterialConcepts(id),
+  });
 
 // 20MB 파일을 느린 망에서 올려도 끊기지 않게 기본 5초보다 길게 기다린다
 const UPLOAD_TIMEOUT_MS = 120_000;

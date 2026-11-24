@@ -1,13 +1,13 @@
 import { useEffect, useState, type SubmitEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
-import { useSingleFlightMutation } from '@/hooks';
+import { useQueryClient } from '@tanstack/react-query';
+import { useQuiz, useSingleFlightMutation } from '@/hooks';
 import { Briefcase, Sparkles } from 'lucide-react';
 import {
   CURRICULUM_QUERY_KEY,
   QUIZZES_QUERY_KEY,
   STUDY_QUERY_KEY,
-  getQuiz,
+  quizResultQuery,
   submitQuiz,
 } from '@/api';
 import {
@@ -145,10 +145,7 @@ function ElapsedTime() {
 function QuizForm({ quizId }: { quizId: number }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { data: quiz } = useSuspenseQuery({
-    queryKey: [...QUIZZES_QUERY_KEY, quizId],
-    queryFn: () => getQuiz(quizId),
-  });
+  const { data: quiz } = useQuiz(quizId);
   // 쓰던 답은 이 탭에서만 기억한다 (새로고침해도 남고, 제출하거나 탭을 닫으면 지운다)
   const [draft, setDraft] = useState<Draft>(() => loadDraft(quizId));
   const [confirming, setConfirming] = useState(false);
@@ -159,10 +156,7 @@ function QuizForm({ quizId }: { quizId: number }) {
     mutationFn: (answers: QuizAnswer[]) => submitQuiz(quizId, answers),
     onSuccess: (result) => {
       clearDraft(quizId);
-      queryClient.setQueryData(
-        [...QUIZZES_QUERY_KEY, quizId, 'result'],
-        result,
-      );
+      queryClient.setQueryData(quizResultQuery(quizId).queryKey, result);
       void queryClient.invalidateQueries({
         queryKey: QUIZZES_QUERY_KEY,
         exact: true,

@@ -9,7 +9,7 @@ import {
   Info,
   Table2,
 } from 'lucide-react';
-import { ASSESSMENTS_QUERY_KEY, getAssessmentComparison } from '@/api';
+import { assessmentComparisonQuery } from '@/api';
 import { Button, Card, Notice } from '@/components';
 import { cn, conceptQuizLink } from '@/utils';
 import type { ConceptDeltaStatus } from '@/types';
@@ -85,10 +85,7 @@ function Legend() {
 
 // 대시보드 맨 위: 최신 사전평가 vs 그 사후평가 (전체 → 개념별). 점수는 서버가 채점이 끝난 답만 더한 값이다
 function AssessmentComparisonPanel({ courseId }: { courseId: number }) {
-  const { data } = useSuspenseQuery({
-    queryKey: [...ASSESSMENTS_QUERY_KEY, 'comparison', courseId],
-    queryFn: () => getAssessmentComparison({ courseId }),
-  });
+  const { data } = useSuspenseQuery(assessmentComparisonQuery(courseId));
   const [hovered, setHovered] = useState<string | null>(null);
   const [asTable, setAsTable] = useState(false);
 
