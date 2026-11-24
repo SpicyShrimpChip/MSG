@@ -66,6 +66,7 @@
 - 개발 서버를 다른 포트로 띄우면 실제 API 요청이 전부 403이다
 - 쌓은 PR을 squash 머지하면 다음 PR이 충돌하고, base가 main이 아니면 백엔드 CI가 돌지 않는다
 - Git Bash에서 `docker compose exec ... /data/...`의 경로가 Windows 경로로 바뀐다
+- Claude의 명령에 읽기 금지 파일이 섞이면 같은 명령의 다른 수정도 실행되지 않는다
 - 셸 `cat >`로 새 파일을 만들다 같은 이름의 기존 파일을 덮었다
 
 ### [process.md](process.md): 문서·진행 방식

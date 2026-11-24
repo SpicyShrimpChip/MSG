@@ -251,7 +251,7 @@ public class QuizGenerationService {
 		if (usage.modelCallBudgetExhausted(userId)) {
 			throw new BusinessException(HttpStatus.TOO_MANY_REQUESTS, MODEL_BUDGET_MESSAGE);
 		}
-		aiCallQuota.ensureRemaining();
+		aiCallQuota.ensureRemaining(userId, 1);
 		Instant deadline = clock.instant().plus(properties.generationDeadline());
 		QuizGeneration generation;
 		try {

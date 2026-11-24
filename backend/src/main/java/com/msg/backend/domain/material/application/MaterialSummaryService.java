@@ -265,7 +265,7 @@ public class MaterialSummaryService {
 				>= contentProperties.summaryDailyLimit() || usage.modelCallBudgetExhausted(userId)) {
 			throw new BusinessException(HttpStatus.TOO_MANY_REQUESTS, LIMIT_MESSAGE);
 		}
-		aiCallQuota.ensureRemaining();
+		aiCallQuota.ensureRemaining(userId, 1);
 		MaterialTextExtractor.Extracted extracted = extractor.extract(material, contentProperties.sourceMaxChars());
 		if (extracted.status() != MaterialTextExtractor.Status.OK) {
 			throw new BusinessException(HttpStatus.UNPROCESSABLE_ENTITY,

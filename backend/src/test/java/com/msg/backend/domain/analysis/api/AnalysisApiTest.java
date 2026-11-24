@@ -14,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.msg.backend.domain.auth.dao.RefreshTokenRepository;
 import com.msg.backend.domain.user.dao.UserRepository;
+import com.msg.backend.global.llm.AiCallQuota;
 import com.msg.backend.global.llm.LlmException;
 import com.msg.backend.global.llm.LlmProvider;
 import com.msg.backend.global.llm.LlmRequest;
@@ -23,7 +24,9 @@ import com.msg.backend.support.TestApi;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
 import java.time.Clock;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -507,6 +510,31 @@ class AnalysisApiTest {
 	}
 
 
+	// ---------- 하루 AI 호출 몫 (app.ai-daily-limit.user-calls) ----------
+
+	@Test
+	void 분석은_부른_모델_수만큼_사용자_몫에서_센다() throws Exception {
+		answerAllInsufficient();
+
+		run(token, courseId).andExpect(status().isCreated());
+
+		assertThat(userCallsToday(userId("me@example.com"))).isEqualTo(3);
+	}
+
+	@Test
+	void 사용자_몫이_모델_수만큼_남지_않으면_429이고_분석을_시작하지_않는다() throws Exception {
+		answerAllInsufficient();
+		// 테스트 설정의 몫은 1,000,000(TestLlm). 두 번만 남겨 두면 모델 세 개를 부를 수 없다
+		fillUserCalls(userId("me@example.com"), 1_000_000 - 2);
+
+		run(token, courseId)
+				.andExpect(status().isTooManyRequests())
+				.andExpect(jsonPath("$.message").value(AiCallQuota.USER_EXHAUSTED_MESSAGE));
+
+		assertThat(count("analysis_run")).isZero();
+		assertThat(models.get(LlmProvider.GPT).requests()).isEmpty();
+	}
+
 	// ---------- 학습 피드백 ----------
 
 	@Test
@@ -603,6 +631,31 @@ class AnalysisApiTest {
 	// 학습 행동을 붙인 근거 (concept-analysis-v2)
 	private static Map<String, Object> evidence(long messageId, String kind, String behavior) {
 		return Map.of("messageId", messageId, "kind", kind, "note", "근거 설명", "behavior", behavior);
+	}
+
+	private void answerAllInsufficient() {
+		String insufficient = answer(concept("교착 상태", "insufficient_evidence"),
+				concept("페이징", "insufficient_evidence"), concept("스케줄링", "insufficient_evidence"));
+		for (LlmProvider provider : LlmProvider.values()) {
+			models.get(provider).answer(insufficient);
+		}
+	}
+
+	private LocalDate seoulToday() {
+		return LocalDate.now(clock.withZone(ZoneId.of("Asia/Seoul")));
+	}
+
+	private void fillUserCalls(Long user, int count) {
+		jdbcTemplate.update("DELETE FROM user_ai_call_daily WHERE user_id = ?", user);
+		jdbcTemplate.update("INSERT INTO user_ai_call_daily (user_id, usage_date, call_count) VALUES (?, ?, ?)",
+				user, seoulToday(), count);
+	}
+
+	private int userCallsToday(Long user) {
+		List<Integer> counts = jdbcTemplate.queryForList(
+				"SELECT call_count FROM user_ai_call_daily WHERE user_id = ? AND usage_date = ?", Integer.class,
+				user, seoulToday());
+		return counts.isEmpty() ? 0 : counts.get(0);
 	}
 
 	private ResultActions run(String accessToken, long course) throws Exception {

@@ -292,6 +292,7 @@ public class AnalysisQueryService {
 			case NETWORK -> "제공사에 연결하지 못했어요.";
 			case BAD_RESPONSE -> "응답을 읽지 못했어요.";
 			case DAILY_LIMIT -> "오늘 서비스 전체 AI 사용량이 다 차서 부르지 않았어요.";
+			case USER_DAILY_LIMIT -> "오늘 쓸 수 있는 AI 사용량을 다 써서 부르지 않았어요.";
 		};
 	}
 }

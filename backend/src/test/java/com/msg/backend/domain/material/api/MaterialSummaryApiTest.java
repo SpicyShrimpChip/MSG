@@ -14,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.msg.backend.domain.auth.dao.RefreshTokenRepository;
 import com.msg.backend.domain.user.dao.UserRepository;
+import com.msg.backend.global.llm.AiCallQuota;
 import com.msg.backend.global.llm.LlmProvider;
 import com.msg.backend.support.FakeLlmClients;
 import com.msg.backend.support.IntegrationTest;
@@ -21,6 +22,9 @@ import com.msg.backend.support.TestApi;
 import com.msg.backend.support.TestPdfs;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -68,6 +72,8 @@ class MaterialSummaryApiTest {
 	private FakeLlmClients fakeLlm;
 	@Autowired
 	private JdbcTemplate jdbcTemplate;
+	@Autowired
+	private Clock clock;
 
 	private String token;
 	private long courseId;
@@ -203,6 +209,23 @@ class MaterialSummaryApiTest {
 				.contentType(MediaType.APPLICATION_JSON).content("{\"aiQuiz\":false}")).andExpect(status().isOk());
 		generate("exam_prep", true, false).andExpect(status().isForbidden());
 		assertThat(fakeLlm.get(LlmProvider.GPT).requests()).isEmpty();
+	}
+
+	@Test
+	void 사용자_하루_AI_몫을_다_쓰면_요약을_만들지_않고_429이지만_저장한_요약은_다시_쓴다() throws Exception {
+		fakeLlm.get(LlmProvider.GPT).answer(SUMMARY);
+		generate("exam_prep", true, false).andExpect(status().isOk());
+		Long userId = jdbcTemplate.queryForObject("select id from users where email = 'me@example.com'", Long.class);
+		// 테스트 설정의 사용자 몫은 1,000,000(TestLlm). 몫을 모두 쓴 것처럼 채운다 (user_ai_call_daily, #234)
+		jdbcTemplate.update("DELETE FROM user_ai_call_daily WHERE user_id = ?", userId);
+		jdbcTemplate.update("INSERT INTO user_ai_call_daily (user_id, usage_date, call_count) VALUES (?, ?, ?)", userId,
+				LocalDate.now(clock.withZone(ZoneId.of("Asia/Seoul"))), 1_000_000);
+
+		generate("exam_prep", true, false).andExpect(status().isOk()).andExpect(jsonPath("$.data.reused").value(true));
+		generate("exam_prep", true, true).andExpect(status().isTooManyRequests())
+				.andExpect(jsonPath("$.message").value(AiCallQuota.USER_EXHAUSTED_MESSAGE));
+		generate("work", true, false).andExpect(status().isTooManyRequests());
+		assertThat(fakeLlm.get(LlmProvider.GPT).requests()).hasSize(1);
 	}
 
 	@Test
