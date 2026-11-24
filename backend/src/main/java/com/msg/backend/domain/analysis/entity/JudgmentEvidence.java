@@ -38,6 +38,11 @@ public class JudgmentEvidence {
 	@Column(length = NOTE_MAX_LENGTH)
 	private String note;
 
+	// 학습 행동 (V5, AI 분류, 사용자 근거만). concept-analysis-v1 결과는 null
+	@Enumerated(EnumType.STRING)
+	@Column(length = 30)
+	private LearningBehavior behavior;
+
 	public static JudgmentEvidence of(Long judgmentId, Long messageId, EvidenceKind kind, String note) {
 		JudgmentEvidence evidence = new JudgmentEvidence();
 		evidence.judgmentId = judgmentId;
@@ -45,5 +50,10 @@ public class JudgmentEvidence {
 		evidence.kind = kind;
 		evidence.note = note;
 		return evidence;
+	}
+
+	public JudgmentEvidence withBehavior(LearningBehavior behavior) {
+		this.behavior = behavior;
+		return this;
 	}
 }

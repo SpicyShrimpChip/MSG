@@ -8,3 +8,4 @@ export * from './quizzes';
 export * from './search';
 export * from './curriculum';
 export * from './study';
+export * from './studySummary';

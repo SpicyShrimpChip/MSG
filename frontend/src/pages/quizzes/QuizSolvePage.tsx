@@ -29,7 +29,7 @@ import {
   quizKindLabel,
 } from '@/constants';
 import type { QuizAnswer, QuizQuestion } from '@/types';
-import { cn } from '@/utils';
+import { BLOOM_LABEL, cn } from '@/utils';
 import {
   answeredCount,
   loadDraft,
@@ -210,7 +210,8 @@ function QuizForm({ quizId }: { quizId: number }) {
         )}
         {quiz.generatedBy && quiz.materialContentUsed && (
           <p className="text-caption text-ink-soft">
-            학습자료 본문(발췌)을 바탕으로 만든 문제예요.
+            학습자료 본문({quiz.materialScope ?? '발췌'})을 바탕으로 만든
+            문제예요. 문제별 원문 근거는 제출한 뒤 결과에서 보여 줘요.
           </p>
         )}
         {quiz.generatedBy && !quiz.materialContentUsed && (
@@ -240,7 +241,10 @@ function QuizForm({ quizId }: { quizId: number }) {
                 <span className="mr-2 text-primary">Q{index + 1}.</span>
                 <span className="mr-2 text-caption font-medium text-ink-muted">
                   [{QUESTION_TYPE_LABELS[question.type]}
-                  {question.type === 'essay' && ` · ${question.maxScore}점`}]
+                  {question.type === 'essay' && ` · ${question.maxScore}점`}
+                  {question.bloomLevel &&
+                    ` · ${BLOOM_LABEL[question.bloomLevel]} 수준`}
+                  ]
                 </span>
                 {question.text}
               </legend>

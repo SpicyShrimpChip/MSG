@@ -12,6 +12,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
+import com.msg.backend.global.common.VerificationStatus;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.AccessLevel;
@@ -102,6 +103,39 @@ public class QuizQuestion {
 	@OrderColumn(name = "sort_order")
 	private List<QuizConcept> concepts = new ArrayList<>();
 
+	// ---------- 근거 기반 학습 (V5). 이 버전 전에 만든 문제는 모두 null ----------
+
+	public static final int OBJECTIVE_MAX_LENGTH = 300;
+	public static final int SOURCE_QUOTE_MAX_LENGTH = 300;
+	public static final int SOURCE_LOCATION_MAX_LENGTH = 40;
+	public static final int SOURCE_NOTE_MAX_LENGTH = 200;
+
+	// 평가하려는 인지 수준 (AI가 지정, 서버는 형식만 확인)
+	@Enumerated(EnumType.STRING)
+	@Column(length = 20)
+	private BloomLevel bloomLevel;
+
+	// 출제 목표 (AI)
+	@Column(length = OBJECTIVE_MAX_LENGTH)
+	private String learningObjective;
+
+	// 자료 근거: 서버가 보낸 자료 부분에서 확인한 인용문과 위치(서버가 찾은 값), 검증 상태와 메모
+	@Column(length = SOURCE_QUOTE_MAX_LENGTH)
+	private String sourceQuote;
+
+	@Column(length = SOURCE_LOCATION_MAX_LENGTH)
+	private String sourceLocation;
+
+	@Enumerated(EnumType.STRING)
+	@Column(length = 20)
+	private VerificationStatus sourceCheck;
+
+	@Column(length = SOURCE_NOTE_MAX_LENGTH)
+	private String sourceNote;
+
+	// 정답 표현이 근거 부분에 나오는지 (참고 신호)
+	private Boolean answerInSource;
+
 	// 객관식 문제 (V6부터 쓰던 형태)
 	public static QuizQuestion create(Long quizId, int sortOrder, String content, List<String> choices,
 			int correctChoiceIndex, String aiExplanation, List<QuizConcept> concepts) {
@@ -142,6 +176,24 @@ public class QuizQuestion {
 	public QuizQuestion withWorkContext(String scenario, String workRole) {
 		this.scenario = scenario;
 		this.workRole = workRole;
+		return this;
+	}
+
+	// 인지 수준·출제 목표 (만들 때만)
+	public QuizQuestion withLearningMeta(BloomLevel bloomLevel, String learningObjective) {
+		this.bloomLevel = bloomLevel;
+		this.learningObjective = learningObjective;
+		return this;
+	}
+
+	// 자료 근거 검증 결과 (만들 때만)
+	public QuizQuestion withSource(VerificationStatus check, String quote, String location, String note,
+			Boolean answerInSource) {
+		this.sourceCheck = check;
+		this.sourceQuote = quote;
+		this.sourceLocation = location;
+		this.sourceNote = note;
+		this.answerInSource = answerInSource;
 		return this;
 	}
 

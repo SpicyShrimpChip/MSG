@@ -5,6 +5,11 @@
 export type QuizMode = 'exam_prep' | 'self_development' | 'work';
 export type QuestionType = 'multiple_choice' | 'short_answer' | 'essay';
 export type QuizDifficulty = 'easy' | 'medium' | 'hard';
+// 개정 블룸 인지 수준 (평가하려는 사고). 난이도와 별개다. 문제의 수준은 AI가 지정한 값이고 서버는 형식만 확인한다
+export type BloomLevel =
+  'remember' | 'understand' | 'apply' | 'analyze' | 'evaluate' | 'create';
+// 원문 근거 검증 상태 (서버가 원문과 문자열로 대조한 결과). 인용이 원문에 있다는 것만 확인한 값이다
+export type SourceCheck = 'verified' | 'partial' | 'failed' | 'insufficient';
 
 // 퀴즈 목록 한 줄 (GET /api/quizzes)
 export interface QuizSummary {
@@ -47,6 +52,8 @@ export interface QuizQuestion {
   // 무엇을 보고 평가하는지 (업무 활용 서술형만, 기준 이름만)
   criteria: string[];
   maxScore: number;
+  // 평가하려는 인지 수준 (AI가 지정). 이 기능 전 문제는 null
+  bloomLevel?: BloomLevel | null;
 }
 
 // 풀기 화면용 퀴즈 (GET /api/quizzes/{id}). 정답·허용 답·모범 답안은 들어 있지 않다
@@ -75,7 +82,21 @@ export interface Quiz {
   topicSource: 'material' | 'course' | null;
   // 개념 확인 퀴즈가 다루는 자료 개념 (topicId = 개념 conceptId). 그 밖의 퀴즈는 null
   checkTopic: { materialId: number; topicId: string; name: string } | null;
+  // 평가하려고 고른 인지 수준 (낮은 수준부터). 이 기능 전 퀴즈는 빈 배열
+  bloomTargets?: BloomLevel[];
+  // 자료 본문으로 만든 퀴즈: 서버가 골라 AI에 보낸 자료 위치 (예: "p. 3, p. 4")
+  materialScope?: string | null;
   questions: QuizQuestion[];
+}
+
+// 문제의 자료 근거 (자료 본문으로 만든 문제만). 위치는 서버가 원문에서 찾은 값
+export interface QuestionSource {
+  check: SourceCheck;
+  quote: string | null;
+  location: string | null;
+  note: string | null;
+  // 정답 표현이 근거 부분에 나오는지 (참고 신호, 객관식·주관식만). 사실성 검증이 아니다
+  answerInSource: boolean | null;
 }
 
 // NO_TEXT: 글이 없는 PDF(스캔본, OCR 미지원) / ENCRYPTED: 암호 PDF / DISABLED: 운영 설정으로 본문 전송이 꺼짐
@@ -144,6 +165,11 @@ export interface QuizResultItem {
     improvements: string | null;
     practical: string | null;
   } | null;
+  // 평가하려는 인지 수준 (AI가 지정)과 출제 목표 (AI). 이 기능 전 문제는 null
+  bloomLevel?: BloomLevel | null;
+  aiObjective?: string | null;
+  // 자료 근거. 자료 없이 만든 문제는 null
+  source?: QuestionSource | null;
 }
 
 export interface QuizConceptStat {
@@ -193,6 +219,20 @@ export interface QuizResult {
     concept: string;
     aiReason: string | null;
   }[];
+  // 출제 설계와 자료 근거 요약 (코드가 센 값). 이 기능 전 백엔드 응답에는 없다
+  learningDesign?: {
+    bloomTargets: BloomLevel[];
+    promptVersion: string | null;
+    materialContentUsed: boolean;
+    materialScope: string | null;
+    missingConcepts: string[];
+    grounding: {
+      verified: number;
+      partial: number;
+      failed: number;
+      insufficient: number;
+    };
+  };
 }
 
 // AI로 퀴즈 만들기 (POST /api/quizzes)
@@ -213,6 +253,11 @@ export interface QuizCreateInput {
   mockExam?: boolean;
   // 개념 확인 퀴즈: materialId의 자료에서 뽑은 개념 하나만 다룬다 (concepts는 무시)
   checkConceptId?: string;
+  // 평가할 인지 수준. 없으면 학습 모드 기본값
+  bloomLevels?: BloomLevel[];
+  // 자료 본문(서버가 고른 관련 부분)을 외부 AI로 보내 만들기. materialId와 이번 요청의 확인이 필요하다
+  useMaterialContent?: boolean;
+  materialContentConsent?: boolean;
 }
 
 // 만들기 요청 상태 (GET /api/quizzes/generations/{requestKey}). 새로 고친 화면이 같은 요청의 결과를 찾는다

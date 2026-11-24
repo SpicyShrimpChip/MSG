@@ -44,7 +44,7 @@ public class Quiz {
 	private Long courseId;
 
 	// 이 퀴즈와 연결한 자료. 자료 없이 만든 퀴즈는 null.
-	// 자료 본문 추출이 아직 없어서, AI로 만든 퀴즈에 자료가 연결돼 있어도 본문은 읽지 않았다(materialContentUsed=false)
+	// 자료가 연결돼 있어도 본문을 AI에 보냈는지는 materialContentUsed로 따로 본다(사용자가 고르고 확인한 경우만)
 	private Long materialId;
 
 	@Column(nullable = false, length = TITLE_MAX_LENGTH)
@@ -111,6 +111,26 @@ public class Quiz {
 	@Column(nullable = false)
 	private LocalDateTime createdAt;
 
+	// ---------- 근거 기반 학습 (V5) ----------
+
+	public static final int MATERIAL_SCOPE_MAX_LENGTH = 300;
+
+	// 평가하려고 고른 인지 수준 (쉼표로 이은 BloomLevel 이름). 난이도와 별개
+	@Column(length = 100)
+	private String bloomTargets;
+
+	// 문제를 만든 지시문 버전 (QuizPrompt.VERSION)
+	@Column(length = 40)
+	private String promptVersion;
+
+	// 자료 본문을 쓴 퀴즈: 서버가 골라 AI에 보낸 자료 위치 ("p. 3, p. 4")
+	@Column(length = MATERIAL_SCOPE_MAX_LENGTH)
+	private String materialScope;
+
+	// 자료 본문을 쓴 퀴즈: 요청한 개념 중 자료에서 찾지 못한 개념 (쉼표로 이음)
+	@Column(length = MATERIAL_SCOPE_MAX_LENGTH)
+	private String materialMissingConcepts;
+
 	public static Quiz create(Long userId, Long courseId, Long materialId, String title, LocalDateTime now) {
 		Quiz quiz = new Quiz();
 		quiz.userId = userId;
@@ -160,5 +180,28 @@ public class Quiz {
 	public Quiz withMaterialContentUsed(boolean used) {
 		this.materialContentUsed = used;
 		return this;
+	}
+
+	// 인지 수준·지시문 버전 (만들 때만)
+	public Quiz withLearningDesign(String bloomTargets, String promptVersion) {
+		this.bloomTargets = bloomTargets;
+		this.promptVersion = promptVersion;
+		return this;
+	}
+
+	// 자료 본문으로 만든 퀴즈의 범위 (만들 때만). 길면 자른다
+	public Quiz withMaterialScope(List<String> locations, List<String> missingConcepts) {
+		this.materialScope = joinClipped(locations);
+		this.materialMissingConcepts = joinClipped(missingConcepts);
+		return this;
+	}
+
+	private static String joinClipped(List<String> values) {
+		if (values == null || values.isEmpty()) {
+			return null;
+		}
+		String joined = String.join(", ", values);
+		return joined.length() <= MATERIAL_SCOPE_MAX_LENGTH ? joined
+				: joined.substring(0, MATERIAL_SCOPE_MAX_LENGTH - 1) + "…";
 	}
 }

@@ -1,6 +1,8 @@
 import type {
   AssessmentComparison,
   AssessmentCreateInput,
+  BloomLevel,
+  QuestionSource,
   Quiz,
   QuizAnswer,
   QuizCreateInput,
@@ -26,6 +28,10 @@ interface MockQuestion {
   conceptIds: string[];
   // AI가 쓴 해설이라고 가정한 글
   aiExplanation: string;
+  // 인지 수준·출제 목표·자료 근거 (예시. 실제 서버는 근거를 원문과 대조해 정한다)
+  bloomLevel?: BloomLevel;
+  objective?: string;
+  source?: QuestionSource;
 }
 
 interface MockQuiz extends Omit<
@@ -47,6 +53,9 @@ interface MockQuiz extends Omit<
 > {
   mode?: Quiz['mode'];
   checkTopic?: Quiz['checkTopic'];
+  // 자료 본문으로 만든 예시 퀴즈의 자료 위치 (없으면 자료를 읽지 않은 퀴즈)
+  materialScope?: string;
+  bloomTargets?: BloomLevel[];
   questions: MockQuestion[];
 }
 
@@ -65,9 +74,21 @@ const QUIZZES: MockQuiz[] = [
     title: '공개키 암호와 전자서명',
     courseId: 1,
     materialId: 1,
+    materialScope: '문단 1, 문단 2, 문단 3',
+    bloomTargets: ['remember', 'understand', 'apply'],
     questions: [
       {
         id: 11,
+        bloomLevel: 'apply',
+        objective:
+          '비밀 메시지를 보낼 때 어떤 키로 암호화해야 하는지 상황에 적용할 수 있다',
+        source: {
+          check: 'verified',
+          quote: '받는 사람의 공개키로 잠그고',
+          location: '문단 1',
+          note: null,
+          answerInSource: false,
+        },
         text: '친구에게 비밀 메시지를 보내려고 해요. 어떤 키로 암호화해야 친구만 열 수 있을까요?',
         choices: ['내 개인키', '내 공개키', '친구의 공개키', '친구의 개인키'],
         answerIndex: 2,
@@ -88,6 +109,16 @@ const QUIZZES: MockQuiz[] = [
         conceptIds: ['digital-signature', 'public-key'],
         aiExplanation:
           '서명은 나만 만들 수 있어야 하니 내 개인키로 만들고, 다른 사람은 내 공개키로 검증해요. 암호화와 쓰는 방향이 반대예요.',
+        bloomLevel: 'understand',
+        objective:
+          '전자서명과 암호화에서 키를 쓰는 방향의 차이를 설명할 수 있다',
+        source: {
+          check: 'partial',
+          quote: '보내는 사람이 개인키로 서명하고',
+          location: '문단 2',
+          note: 'AI가 적은 위치(문단 4)가 실제 위치와 달라 실제 위치로 고쳤어요.',
+          answerInSource: true,
+        },
       },
       {
         id: 13,
@@ -95,6 +126,15 @@ const QUIZZES: MockQuiz[] = [
         choices: ['솔트', '인증서', '세션 키', '해시값'],
         answerIndex: 1,
         conceptIds: ['pki'],
+        bloomLevel: 'remember',
+        objective: '공개키의 주인을 보증하는 수단을 떠올릴 수 있다',
+        source: {
+          check: 'verified',
+          quote: '인증 기관이 발급한 인증서로 확인한다',
+          location: '문단 3',
+          note: null,
+          answerInSource: true,
+        },
         aiExplanation:
           '인증 기관이 "이 공개키는 이 사람 것"이라고 서명한 인증서로 공개키의 주인을 확인해요.',
       },
@@ -261,7 +301,9 @@ export function mockGetQuiz(id: number): Promise<Quiz> {
       jobFieldOther: null,
       examScope: null,
       generatedBy: null,
-      materialContentUsed: false,
+      materialContentUsed: Boolean(quiz.materialScope),
+      materialScope: quiz.materialScope ?? null,
+      bloomTargets: quiz.bloomTargets ?? [],
       mockExam: false,
       assessmentKind: null,
       preAssessmentId: null,
@@ -278,6 +320,7 @@ export function mockGetQuiz(id: number): Promise<Quiz> {
         guide: null,
         criteria: [],
         maxScore: maxScoreOf(question),
+        bloomLevel: question.bloomLevel ?? null,
       })),
     });
   } catch (error) {
@@ -348,8 +391,14 @@ export function mockSubmitQuiz(
           aiReason: null,
         })),
         aiFeedback: null,
+        bloomLevel: question.bloomLevel ?? null,
+        aiObjective: question.objective ?? null,
+        source: question.source ?? null,
       };
     });
+    const sources = quiz.questions.flatMap((question) =>
+      question.source ? [question.source.check] : [],
+    );
     const graded = results.filter((item) => item.gradingStatus === 'graded');
     const pendingCount = results.length - graded.length;
     const score = graded.reduce((sum, item) => sum + item.score, 0);
@@ -377,6 +426,20 @@ export function mockSubmitQuiz(
         byConcept: [],
       },
       suggestions: [],
+      learningDesign: {
+        bloomTargets: quiz.bloomTargets ?? [],
+        promptVersion: null,
+        materialContentUsed: Boolean(quiz.materialScope),
+        materialScope: quiz.materialScope ?? null,
+        missingConcepts: [],
+        grounding: {
+          verified: sources.filter((check) => check === 'verified').length,
+          partial: sources.filter((check) => check === 'partial').length,
+          failed: sources.filter((check) => check === 'failed').length,
+          insufficient: sources.filter((check) => check === 'insufficient')
+            .length,
+        },
+      },
     };
     setResult(id, result);
     return mockDelay(result, 600);
@@ -414,6 +477,7 @@ export function mockCreateQuiz(input: QuizCreateInput): Promise<Quiz> {
       answerIndex: 2,
       conceptIds: ['public-key'],
       aiExplanation: '받는 사람의 공개키로 잠그면 그 사람의 개인키로만 열려요.',
+      bloomLevel: 'apply',
     },
     short_answer: {
       id: id * 10 + 2,
@@ -424,6 +488,7 @@ export function mockCreateQuiz(input: QuizCreateInput): Promise<Quiz> {
       acceptedAnswers: ['충돌 저항성', '충돌 회피성'],
       conceptIds: ['hash'],
       aiExplanation: '같은 값이 나오는 두 입력을 찾기 어려운 성질이에요.',
+      bloomLevel: 'remember',
     },
     essay: {
       id: id * 10 + 3,
@@ -437,6 +502,7 @@ export function mockCreateQuiz(input: QuizCreateInput): Promise<Quiz> {
       ],
       conceptIds: ['digital-signature', 'public-key'],
       aiExplanation: '',
+      bloomLevel: 'understand',
     },
   };
   // 개념 확인 퀴즈면 그 개념으로 표시만 한다 (목업 문제는 예시 그대로, AI가 만든 것처럼 보이지 않게 제목에 목업을 붙인다)
@@ -453,6 +519,7 @@ export function mockCreateQuiz(input: QuizCreateInput): Promise<Quiz> {
       courseId: input.courseId,
       materialId: input.checkConceptId ? (input.materialId ?? null) : null,
       mode: input.mode,
+      bloomTargets: input.bloomLevels,
       checkTopic:
         input.checkConceptId && input.materialId
           ? {

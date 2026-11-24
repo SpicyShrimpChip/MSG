@@ -50,12 +50,32 @@ public record AnalysisRunResponse(
 			@Schema(description = "이 개념의 퀴즈 결과 (코드 집계, AI 판단과 따로). 퀴즈 기록이 없으면 null")
 			ConceptQuizStatsResponse quiz,
 			@Schema(description = "숙련도 단계와 근거 (코드 계산, AI 판단·점수와 따로). 화면은 숫자 대신 단계와 근거를 보여 준다")
-			Mastery mastery) {
+			Mastery mastery,
+			@Schema(description = "오개념 후보: 잘못된 자기 설명을 지적한 모델 수. 확정이 아니라 확인 퀴즈로 확인할 후보")
+			Misconception misconception,
+			@Schema(description = "검증 상태 (코드 규칙): 모델 의견 비교와 실제 퀴즈 결과를 함께 본 값. 정확도가 아니다")
+			Verification verification) {
 
 		public ConceptResult withMastery(Mastery next) {
 			return new ConceptResult(concept, comparison, judgments, feedback, studyOrder, recommendConfirmQuiz, quiz,
-					next);
+					next, misconception, verification);
 		}
+	}
+
+	public record Misconception(
+			@Schema(description = "오개념 후보를 낸 모델 수") int flaggedCount,
+			@Schema(description = "이 개념을 판단한 모델 수") int judgedCount) {
+	}
+
+	public record Verification(
+			@Schema(allowableValues = {"verified", "partial", "needs_check", "insufficient", "failed"},
+					description = "verified: AI 판단과 확인 퀴즈가 같은 방향(모든 모델 판단) / partial: AI 추정만 있거나 모델 하나·일부 실패 / "
+							+ "needs_check: 의견 불일치·퀴즈와 반대·오개념 후보 / insufficient: 근거 부족으로 판단 보류 / failed: 판단한 모델 없음") String status,
+			@Schema(description = "판단 이유 (코드가 만든 문장)") List<String> reasons,
+			@Schema(description = "판단 보류·확인이 필요한 이유. 없으면 null") String holdReason,
+			@Schema(allowableValues = {"consistent", "contradicts", "not_compared", "no_quiz"},
+					description = "AI 판단과 실제 퀴즈 결과 비교") String quizComparison,
+			@Schema(description = "확인 퀴즈를 권하는지 (검증 완료가 아니면 true)") boolean recommendCheckQuiz) {
 	}
 
 	@Schema(description = "개념 하나의 숙련도. 점수는 LLM이 아니라 규칙(app.mastery)으로 계산한 값이고 정확도가 아니다. 설계: docs/frontend-requests.md 5-10절")
@@ -110,7 +130,8 @@ public record AnalysisRunResponse(
 			String aiReason,
 			String aiNeedsCheck,
 			String aiRecommendedActivity,
-			List<Evidence> evidence) {
+			List<Evidence> evidence,
+			@Schema(description = "오개념 후보: 사용자가 혼동했다고 본 내용 (AI). 잘못된 설명 근거가 없으면 null") String aiMisconception) {
 	}
 
 	public record Evidence(
@@ -120,6 +141,9 @@ public record AnalysisRunResponse(
 			@Schema(allowableValues = {"user", "assistant"}) String role,
 			@Schema(allowableValues = {"user_explanation", "user_solution", "user_question", "ai_explanation"}) String kind,
 			String aiNote,
-			@Schema(description = "메시지 앞부분. 마크다운 표시(제목·목록·굵게·코드·링크)를 걷어 내고 120자 안쪽에서 단어 경계로 자르며, 잘렸으면 끝에 …") String excerpt) {
+			@Schema(description = "메시지 앞부분. 마크다운 표시(제목·목록·굵게·코드·링크)를 걷어 내고 120자 안쪽에서 단어 경계로 자르며, 잘렸으면 끝에 …") String excerpt,
+			@Schema(allowableValues = {"confusion_expressed", "re_explanation_request", "deepening_question",
+					"incorrect_explanation", "correct_explanation", "application", "no_signal"},
+					description = "학습 행동 (AI 분류, 사용자 메시지만). concept-analysis-v1 결과와 AI 메시지는 null") String behavior) {
 	}
 }

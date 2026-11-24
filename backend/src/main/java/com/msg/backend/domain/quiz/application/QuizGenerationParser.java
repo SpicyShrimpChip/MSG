@@ -1,6 +1,8 @@
 package com.msg.backend.domain.quiz.application;
 
 import com.msg.backend.domain.course.entity.Course;
+import com.msg.backend.domain.material.application.SourceText;
+import com.msg.backend.domain.quiz.entity.BloomLevel;
 import com.msg.backend.domain.quiz.entity.QuestionType;
 import com.msg.backend.domain.quiz.entity.QuizConcept;
 import com.msg.backend.domain.quiz.entity.QuizMode;
@@ -8,6 +10,7 @@ import com.msg.backend.domain.quiz.entity.QuizQuestion;
 import com.msg.backend.domain.quiz.entity.QuizRubricItem;
 import com.msg.backend.domain.quiz.entity.QuizSuggestion;
 import com.msg.backend.domain.quiz.entity.SuggestionKind;
+import com.msg.backend.global.common.VerificationStatus;
 import com.msg.backend.global.llm.LlmJson;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -31,6 +34,11 @@ import org.springframework.stereotype.Component;
  * <li>업무 활용: 모든 문제에 상황과 역할 필수.</li>
  * <li>개념은 요청한 개념만, 문제마다 1개 이상.</li>
  * <li>"반드시 출제"처럼 출제를 보장하는 표현이 있으면 거절한다.</li>
+ * <li>인지 수준(평가할 수준이 정해진 경우): 문제마다 bloomLevel·objective 필수, 정한 수준 안, 창조는 서술형만,
+ * 서로 다른 수준을 minDistinct개 이상. 실제 사고 수준이 맞는지는 코드로 판정하지 않는다(형식 검증).</li>
+ * <li>자료 근거(자료 발췌를 보낸 경우): 문제마다 source.quote를 보낸 발췌에서 글자 단위로 확인한다(SourceText.check).
+ * 위치는 서버가 찾고, AI가 적은 위치가 다르면 일부 일치로 낮추고 메모를 남긴다. 근거를 확인한(일치·일부 일치) 문제가
+ * 절반이 안 되면 퀴즈 전체를 버린다. 정답 표현이 근거 부분에 나오는지는 참고 신호로만 남긴다(사실성 검증이 아니다).</li>
  * </ul>
  * 다음 학습 제안(자기개발)은 문제와 달리 틀린 항목만 버린다. 실패 이유는 로그용이고 모델 답변 내용은 넣지 않는다.
  */
@@ -59,9 +67,26 @@ class QuizGenerationParser {
 		}
 	}
 
+	/** 형식 검증 외에 확인할 것: 평가할 인지 수준(비면 확인하지 않음)과 보낸 자료 발췌(없으면 null) */
+	record Expectation(List<BloomLevel> bloomTargets, int minDistinctLevels, String materialExcerpt) {
+
+		static final Expectation NONE = new Expectation(List.of(), 0, null);
+	}
+
+	/** 자료 근거 검증 결과. check가 null이면 자료 없이 만든 문제 */
+	record Source(VerificationStatus check, String quote, String location, String note, Boolean answerInSource) {
+
+		static final Source NONE = new Source(null, null, null, null, null);
+
+		boolean grounded() {
+			return check == VerificationStatus.VERIFIED || check == VerificationStatus.PARTIAL;
+		}
+	}
+
 	record ParsedQuestion(QuestionType type, String text, List<String> choices, Integer answerIndex,
 			List<String> acceptedAnswers, List<QuizRubricItem> rubric, String modelAnswer, String guide,
-			String explanation, List<QuizConcept> concepts, String scenario, String role) {
+			String explanation, List<QuizConcept> concepts, String scenario, String role, BloomLevel bloomLevel,
+			String objective, Source source) {
 
 		QuizQuestion toEntity(Long quizId, int sortOrder) {
 			QuizQuestion question = switch (type) {
@@ -72,7 +97,8 @@ class QuizGenerationParser {
 				case ESSAY -> QuizQuestion.essay(quizId, sortOrder, text, rubric, modelAnswer, guide, explanation,
 						concepts);
 			};
-			return question.withWorkContext(scenario, role);
+			return question.withWorkContext(scenario, role).withLearningMeta(bloomLevel, objective)
+					.withSource(source.check(), source.quote(), source.location(), source.note(), source.answerInSource());
 		}
 	}
 
@@ -81,6 +107,11 @@ class QuizGenerationParser {
 
 	ParsedQuiz parse(String raw, QuizMode mode, Map<QuestionType, Integer> plan, List<String> concepts)
 			throws InvalidOutputException {
+		return parse(raw, mode, plan, concepts, Expectation.NONE);
+	}
+
+	ParsedQuiz parse(String raw, QuizMode mode, Map<QuestionType, Integer> plan, List<String> concepts,
+			Expectation expectation) throws InvalidOutputException {
 		JsonNode root = LlmJson.readObject(objectMapper, raw)
 				.orElseThrow(() -> new InvalidOutputException("JSON 객체가 아니다"));
 		JsonNode items = root.get("questions");
@@ -93,20 +124,32 @@ class QuizGenerationParser {
 		Map<QuestionType, Integer> counted = new EnumMap<>(QuestionType.class);
 		List<ParsedQuestion> questions = new ArrayList<>();
 		for (JsonNode item : items) {
-			ParsedQuestion question = question(item, mode, conceptByKey);
+			ParsedQuestion question = question(item, mode, conceptByKey, expectation);
 			counted.merge(question.type(), 1, Integer::sum);
 			questions.add(question);
 		}
 		if (!counted.equals(new EnumMap<>(plan))) {
 			throw new InvalidOutputException("유형별 문제 수가 다르다");
 		}
+		if (!expectation.bloomTargets().isEmpty()) {
+			long distinct = questions.stream().map(ParsedQuestion::bloomLevel).distinct().count();
+			if (distinct < expectation.minDistinctLevels()) {
+				throw new InvalidOutputException("다룬 인지 수준이 모자라다");
+			}
+		}
+		if (expectation.materialExcerpt() != null) {
+			long grounded = questions.stream().filter(question -> question.source().grounded()).count();
+			if (grounded * 2 < questions.size()) {
+				throw new InvalidOutputException("자료 근거를 확인한 문제가 절반이 안 된다");
+			}
+		}
 		List<QuizSuggestion> suggestions = mode == QuizMode.SELF_DEVELOPMENT ? suggestions(root.get("suggestions"))
 				: List.of();
 		return new ParsedQuiz(questions, suggestions);
 	}
 
-	private ParsedQuestion question(JsonNode item, QuizMode mode, Map<String, String> conceptByKey)
-			throws InvalidOutputException {
+	private ParsedQuestion question(JsonNode item, QuizMode mode, Map<String, String> conceptByKey,
+			Expectation expectation) throws InvalidOutputException {
 		if (item == null || !item.isObject()) {
 			throw new InvalidOutputException("문제가 객체가 아니다");
 		}
@@ -147,8 +190,66 @@ class QuizGenerationParser {
 		for (String choice : choices) {
 			rejectGuarantee(choice);
 		}
+		BloomLevel bloomLevel = BloomLevel.fromApiValue(LlmJson.text(item.get("bloomLevel"))).orElse(null);
+		String objective = optional(item.get("objective"), QuizQuestion.OBJECTIVE_MAX_LENGTH, "출제 목표");
+		if (!expectation.bloomTargets().isEmpty()) {
+			if (bloomLevel == null || !expectation.bloomTargets().contains(bloomLevel)) {
+				throw new InvalidOutputException("인지 수준이 없거나 정한 수준 밖이다");
+			}
+			if (objective == null) {
+				throw new InvalidOutputException("출제 목표가 없다");
+			}
+		}
+		if (bloomLevel == BloomLevel.CREATE && type != QuestionType.ESSAY) {
+			throw new InvalidOutputException("창조 수준은 서술형만");
+		}
+		Source source = expectation.materialExcerpt() == null ? Source.NONE
+				: source(item.get("source"), expectation.materialExcerpt(), type, choices, answerIndex, accepted);
 		return new ParsedQuestion(type, text, choices, answerIndex, accepted, rubric, modelAnswer, guide, explanation,
-				concepts, scenario, role);
+				concepts, scenario, role, bloomLevel, objective, source);
+	}
+
+	// 근거 문장을 보낸 발췌에서 확인한다. 위치는 서버가 찾은 값을 쓴다
+	private static Source source(JsonNode node, String excerpt, QuestionType type, List<String> choices,
+			Integer answerIndex, List<String> accepted) {
+		String quote = node == null ? null : LlmJson.text(node.get("quote"));
+		String claimed = node == null ? null : LlmJson.text(node.get("location"));
+		SourceText.QuoteCheck check = SourceText.check(excerpt, quote);
+		VerificationStatus status = check.status();
+		String note = switch (status) {
+			case INSUFFICIENT -> "AI가 근거 문장을 들지 않았어요.";
+			case FAILED -> "AI가 든 근거 문장을 보낸 자료에서 찾지 못했어요.";
+			case PARTIAL -> "근거 문장이 자료와 일부만 일치해요.";
+			default -> null;
+		};
+		if ((status == VerificationStatus.VERIFIED || status == VerificationStatus.PARTIAL) && claimed != null
+				&& check.location() != null && !sameLocation(claimed, check.location())) {
+			status = VerificationStatus.PARTIAL;
+			String fixed = "AI가 적은 위치(" + clip(claimed, 20) + ")가 실제 위치와 달라 실제 위치로 고쳤어요.";
+			note = note == null ? fixed : note + " " + fixed;
+		}
+		Boolean answerInSource = null;
+		if (check.sectionText() != null) {
+			if (type == QuestionType.MULTIPLE_CHOICE && answerIndex != null) {
+				answerInSource = SourceText.mentions(check.sectionText(), choices.get(answerIndex));
+			} else if (type == QuestionType.SHORT_ANSWER) {
+				answerInSource = accepted.stream().anyMatch(answer -> SourceText.mentions(check.sectionText(), answer));
+			}
+		}
+		String storedQuote = check.quote() == null ? null
+				: clip(check.quote(), QuizQuestion.SOURCE_QUOTE_MAX_LENGTH);
+		return new Source(status, storedQuote, check.location(), note == null ? null
+				: clip(note, QuizQuestion.SOURCE_NOTE_MAX_LENGTH), answerInSource);
+	}
+
+	// "[p. 3]", "p.3", "P. 3"을 같은 위치로 본다
+	private static boolean sameLocation(String a, String b) {
+		return a.replaceAll("[\\[\\]\\s]", "").toLowerCase(Locale.ROOT)
+				.equals(b.replaceAll("[\\[\\]\\s]", "").toLowerCase(Locale.ROOT));
+	}
+
+	private static String clip(String text, int max) {
+		return text.length() <= max ? text : text.substring(0, max - 1) + "…";
 	}
 
 	private static List<QuizConcept> concepts(JsonNode node, Map<String, String> conceptByKey)

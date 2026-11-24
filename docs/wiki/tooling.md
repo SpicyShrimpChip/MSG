@@ -68,6 +68,7 @@
 - 해결: `./gradlew clean test`로 빌드 폴더를 지우고 다시 만든다. 소스·`git status`에는 영향이 없다.
 - 다음에는: 같은 오류가 나면 `find backend/build -name "* 2*"`로 확인한다. 자주 생기면 레포를 동기화하지 않는 폴더로 옮긴다.
 - 재발(2026-11-03): `build/classes`에 `BackendApplication 2.class`가 생겨 `bootRun`이 `Unable to find a single main class`로 멈췄다. 같은 날 `build/resources`의 마이그레이션 사본도 다시 생겼다. 해결은 같고(`clean`), `src/`에는 생기지 않았다.
+- 재발(2026-11-24): `clean test`로 고쳐도 다음 실행 사이에 사본(`V1__init_schema 2.sql`, `application-local 2.yaml`)이 다시 생겨 264개가 실패했다. 레포를 옮기지 않고 Gradle 초기화 스크립트로 빌드 폴더만 동기화하지 않는 곳에 두어 피했다(`allprojects { layout.buildDirectory = file('<동기화 안 되는 폴더>') }`를 담은 파일을 `./gradlew -I <파일> test`). 레포 파일은 바꾸지 않는다.
 
 ## `bootRun`이 MySQL 드라이버를 찾으며 뜨지 않는다 (2026-11-01, #96)
 
@@ -103,3 +104,10 @@
 - 원인: Git Bash(MSYS)가 `/`로 시작하는 인자를 Windows 경로로 바꿔 컨테이너 안 경로가 깨진다. 리눅스 서버에서는 생기지 않는다.
 - 해결: 그 명령 앞에 `MSYS_NO_PATHCONV=1`을 붙여 실행했다(스크립트는 고치지 않음). `docker run -v`에 PC 경로를 넘길 때는 `$(pwd -W)`를 썼다.
 - 다음에는: 윈도우에서 컨테이너 안 경로를 인자로 넘기는 도커 명령이 이상하면 먼저 `MSYS_NO_PATHCONV=1`로 다시 해 본다.
+
+## 셸 `cat >`로 새 파일을 만들다 같은 이름의 기존 파일을 덮었다 (2026-11-24, feat/evidence-based-ai-learning)
+
+- 상황: Claude Code가 요약본 DTO를 `cat > dto/MaterialSummaryResponse.java <<EOF`로 만들었는데, 자료 목록 DTO가 이미 그 이름이라 덮어써져 컴파일이 깨졌다.
+- 원인: 셸 리다이렉션은 덮어쓰기 전에 파일을 확인하지 않는다(편집 도구는 읽지 않은 파일을 덮지 못하게 막는다).
+- 해결: `git show HEAD:<경로>`로 원래 파일을 되살리고 새 DTO는 다른 이름(`StudySummaryResponse`)으로 만들었다.
+- 다음에는: 새 파일은 Write 도구로 만들거나, 셸로 만들 때는 `ls`로 같은 이름이 없는지 먼저 본다. 컴파일 오류가 "없는 메서드"로 나면 덮어쓴 파일부터 의심한다.

@@ -40,3 +40,5 @@ export {
   type LegalSection,
 } from './LegalDocument';
 export { default as StartPaths } from './StartPaths';
+export { default as VerificationBadge } from './VerificationBadge';
+export { default as SourceQuote } from './SourceQuote';

@@ -100,7 +100,7 @@ public class CurriculumService {
 					item.stage().apiValue(), item.reasons(), item.evidence(), item.actions()));
 		}
 		return new CurriculumResponse(course.getId(), course.getName(), purpose.apiValue(), mode, steps, materials,
-				aiSuggestions(userId, courseId), flowBuilder.build(userId, course, courseMaterials));
+				aiSuggestions(userId, courseId), flowBuilder.build(userId, course, courseMaterials, consensus));
 	}
 
 	private record Planned(Stage stage, int keywordOrder, ConceptQuizStatsResponse stat, List<String> reasons,

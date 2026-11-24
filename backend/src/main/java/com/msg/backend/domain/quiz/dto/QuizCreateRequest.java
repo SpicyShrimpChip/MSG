@@ -35,19 +35,32 @@ public record QuizCreateRequest(
 		@Schema(description = "모의시험으로 만들기 (exam_prep만, 문제 20개까지). 없으면 false") Boolean mockExam,
 		@Schema(description = "사전·사후평가: pre / post. 학습자료(materialId) 필수. post는 같은 자료의 최신 사전평가와 개념·유형·문항 수·난이도를 서버가 맞춘다")
 		String assessmentKind,
-		@Schema(description = "학습자료 본문(발췌, 12,000자까지)을 외부 AI로 보내 문제 만들기. TXT·MD·PPTX만 읽고 PDF는 아직 못 읽는다")
+		@Schema(description = "학습자료 본문을 외부 AI로 보내 문제 만들기 (PDF·PPTX·TXT·MD). 서버가 개념이 나오는 부분만 골라 12,000자까지 보내고, 문제마다 원문 근거를 확인한다")
 		Boolean useMaterialContent,
 		@Schema(description = "자료 본문을 외부 AI로 보내는 데 대한 이번 요청의 확인 (useMaterialContent일 때 필수)")
 		Boolean materialContentConsent,
 		@Schema(description = "개념 확인 퀴즈: 자료(materialId, 필수)에서 뽑은 개념의 conceptId. 있으면 그 개념 하나만 다루고 concepts는 무시한다. "
 				+ "사전·사후평가·모의시험과 함께 쓸 수 없다")
-		@Size(max = 40, message = "개념을 다시 골라 주세요.") String checkConceptId) {
+		@Size(max = 40, message = "개념을 다시 골라 주세요.") String checkConceptId,
+		@Schema(description = "평가할 인지 수준(개정 블룸): remember / understand / apply / analyze / evaluate / create 중 1~6개. "
+				+ "없으면 학습 모드 기본값. 난이도와 별개. 사후평가는 사전평가의 수준을 쓴다")
+		@Size(max = 6, message = "인지 수준을 다시 골라 주세요.") List<String> bloomLevels) {
 
 	// 일반 퀴즈 만들기 (사전·사후평가·자료 본문 없이)
 	public QuizCreateRequest(String requestKey, Long courseId, String mode, List<String> questionTypes,
 			Integer questionCount, String difficulty, List<String> concepts, String examScope, String jobField,
 			String jobFieldOther, Long materialId, Boolean mockExam) {
 		this(requestKey, courseId, mode, questionTypes, questionCount, difficulty, concepts, examScope, jobField,
-				jobFieldOther, materialId, mockExam, null, null, null, null);
+				jobFieldOther, materialId, mockExam, null, null, null, null, null);
+	}
+
+	// 평가·자료 본문·개념 확인까지 (인지 수준은 모드 기본값)
+	public QuizCreateRequest(String requestKey, Long courseId, String mode, List<String> questionTypes,
+			Integer questionCount, String difficulty, List<String> concepts, String examScope, String jobField,
+			String jobFieldOther, Long materialId, Boolean mockExam, String assessmentKind, Boolean useMaterialContent,
+			Boolean materialContentConsent, String checkConceptId) {
+		this(requestKey, courseId, mode, questionTypes, questionCount, difficulty, concepts, examScope, jobField,
+				jobFieldOther, materialId, mockExam, assessmentKind, useMaterialContent, materialContentConsent,
+				checkConceptId, null);
 	}
 }

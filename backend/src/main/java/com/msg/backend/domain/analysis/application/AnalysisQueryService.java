@@ -26,6 +26,7 @@ import com.msg.backend.domain.conversation.entity.Conversation;
 import com.msg.backend.domain.conversation.entity.ConversationMessage;
 import com.msg.backend.domain.conversation.entity.MessageRole;
 import com.msg.backend.domain.course.dao.CourseRepository;
+import com.msg.backend.domain.quiz.application.QuizProperties;
 import com.msg.backend.domain.quiz.application.QuizStatsService;
 import com.msg.backend.domain.quiz.dto.ConceptQuizStatsResponse;
 import com.msg.backend.global.error.BusinessException;
@@ -71,6 +72,7 @@ public class AnalysisQueryService {
 	private final QuizStatsService quizStatsService;
 	private final MasteryCalculator masteryCalculator;
 	private final AnalysisProperties properties;
+	private final QuizProperties quizProperties;
 	private final Clock clock;
 
 	public AnalysisRunResponse getRun(Long userId, Long runId) {
@@ -171,6 +173,7 @@ public class AnalysisQueryService {
 					.map(judgment -> toJudgment(judgment, resultById.get(judgment.getModelResultId()),
 							evidenceByJudgment.getOrDefault(judgment.getId(), List.of()), messages, conversations))
 					.toList();
+			int misconceptions = (int) modelJudgments.stream().filter(j -> j.aiMisconception() != null).count();
 			concepts.add(new AnalysisRunResponse.ConceptResult(item.getConceptName(),
 					new AnalysisRunResponse.Comparison(item.getOutcome().apiValue(),
 							item.getStatus() == null ? null : item.getStatus().apiValue(), item.getJudgedCount(),
@@ -178,7 +181,9 @@ public class AnalysisQueryService {
 					modelJudgments, mine == null ? null : FeedbackResponse.from(mine), i + 1,
 					mine != null && mine.getFeedback() == FeedbackType.ALREADY_KNOW,
 					quizStats.get(item.getConceptKey()),
-					mastery(item, modelJudgments, quizStats.get(item.getConceptKey()))));
+					mastery(item, modelJudgments, quizStats.get(item.getConceptKey())),
+					new AnalysisRunResponse.Misconception(misconceptions, item.getJudgedCount()),
+					verification(item, misconceptions, quizStats.get(item.getConceptKey()))));
 		}
 		return new AnalysisRunResponse(run.getId(), run.getCourseId(), run.getStatus().apiValue(),
 				run.getPromptVersion(), run.getCreatedAt(), run.getCompletedAt(),
@@ -206,6 +211,19 @@ public class AnalysisQueryService {
 				result.formulaVersion(), result.quizNeeded(), List.of());
 	}
 
+	// 검증 상태: 모델 의견 비교 + 실제 퀴즈 결과 (ConceptVerification, 코드 규칙)
+	private AnalysisRunResponse.Verification verification(ConceptConsensus item, int misconceptions,
+			ConceptQuizStatsResponse quiz) {
+		ConceptVerification.Result result = ConceptVerification.evaluate(new ConceptVerification.Input(
+				item.getOutcome(), item.getStatus(), item.getJudgedCount(), item.getAgreeCount(), item.getCalledCount(),
+				misconceptions, quiz == null ? null
+						: new ConceptVerification.Quiz(quiz.gradedCount(), quiz.score(), quiz.maxScore(),
+								quiz.pendingCount() + quiz.reviewCount())),
+				QuizStatsService.CONFIRM_MIN_GRADED, quizProperties.assessment().conceptMinRate());
+		return new AnalysisRunResponse.Verification(result.status().apiValue(), result.reasons(), result.holdReason(),
+				result.quizComparison(), result.recommendCheckQuiz());
+	}
+
 	private static AnalysisRunResponse.Judgment toJudgment(ConceptJudgment judgment, AnalysisModelResult result,
 			List<JudgmentEvidence> evidence, Map<Long, ConversationMessage> messages,
 			Map<Long, Conversation> conversations) {
@@ -221,9 +239,11 @@ public class AnalysisQueryService {
 									conversation == null ? null : conversation.getTitle(),
 									message.getRole() == MessageRole.USER ? "user" : "assistant",
 									item.getKind().apiValue(), item.getNote(),
-									EvidenceExcerpt.of(message.getContent()));
+									EvidenceExcerpt.of(message.getContent()),
+									item.getBehavior() == null ? null : item.getBehavior().apiValue());
 						})
-						.toList());
+						.toList(),
+				judgment.getMisconception());
 	}
 
 	private static boolean wantsToStudy(ConceptFeedback feedback) {

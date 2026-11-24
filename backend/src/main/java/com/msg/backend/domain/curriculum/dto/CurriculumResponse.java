@@ -97,7 +97,12 @@ public record CurriculumResponse(
 			String postStatus,
 			@Schema(description = "사전 테스트에서 부족했거나 아직 확인하지 않아 먼저 공부하면 좋은 개념인지") boolean priority,
 			@Schema(description = "자료에서 뽑은 개념의 학습 상태 (학습 완료·확인 퀴즈). 과목 키워드뿐인 개념은 null")
-			ConceptStudyResponse study) {
+			ConceptStudyResponse study,
+			@Schema(description = "이 개념을 먼저(또는 나중에) 공부하는 이유. 저장된 사전평가·확인 퀴즈·대화 분석 결과로 코드가 만든 문장")
+			List<String> priorityReasons,
+			@Schema(allowableValues = {"understood", "partial", "not_understood", "insufficient_evidence", "disagreement"},
+					description = "최근 대화 분석의 모델 비교 결과 (AI 추정, 실제 퀴즈 결과와 따로). 분석이 없으면 null")
+			String analysisStatus) {
 	}
 
 	public record Step(

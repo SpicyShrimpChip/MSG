@@ -76,7 +76,7 @@ public class MaterialTextExtractor {
 		try (InputStream in = fileStorage.open(material.getStorageKey())) {
 			int[] pages = {0, 0};
 			String text = switch (format) {
-				case PDF -> pdf(in, pages);
+				case PDF -> pdf(in, pages, maxChars);
 				case PPTX -> pptx(in);
 				case TXT, MD -> utf8(in, maxChars);
 			};
@@ -103,7 +103,7 @@ public class MaterialTextExtractor {
 	}
 
 	// 암호가 걸렸으면 null. pages[0] = 읽은 쪽 수, pages[1] = 전체 쪽 수
-	private String pdf(InputStream in, int[] pages) throws IOException {
+	private String pdf(InputStream in, int[] pages, int maxChars) throws IOException {
 		byte[] bytes = in.readAllBytes();
 		try (PDDocument document = Loader.loadPDF(new RandomAccessReadBuffer(bytes))) {
 			if (document.isEncrypted() && !document.getCurrentAccessPermission().canExtractContent()) {
@@ -122,7 +122,7 @@ public class MaterialTextExtractor {
 				if (!body.isEmpty()) {
 					text.append("[p. ").append(page).append("]\n").append(body).append("\n\n");
 				}
-				if (text.length() > properties.maxChars() * 2) {
+				if (text.length() > maxChars * 2) {
 					break;
 				}
 			}

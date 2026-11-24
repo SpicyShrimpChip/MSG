@@ -99,7 +99,7 @@ const RUN: AnalysisRun = {
   id: 1,
   courseId: 1,
   status: 'completed',
-  promptVersion: 'example',
+  promptVersion: 'example-v2',
   createdAt: '2026-11-02T16:19:00+09:00',
   completedAt: '2026-11-02T16:20:00+09:00',
   input: { conversationCount: 12, messageCount: 340, truncatedMessageCount: 0 },
@@ -144,33 +144,55 @@ const RUN: AnalysisRun = {
         judgment(
           'gpt',
           'not_understood',
-          '공개키와 개인키 중 어느 쪽으로 암호화하는지를 두 번 다시 물었어요. 서명과 암호화의 차이를 헷갈리는 것으로 보여요.',
+          '서명할 때도 공개키를 쓴다고 스스로 설명했어요. 질문을 다시 한 것만으로 판단하지 않았고, 잘못된 자기 설명을 근거로 봤어요.',
           [
-            question(
-              101,
-              '그럼 공개키로 암호화하면 누가 풀 수 있는 거야? 아까랑 반대 아니야?',
-            ),
-            question(104, '다시 설명해 줘. 서명할 때도 공개키를 쓰는 거지?'),
+            {
+              ...question(
+                101,
+                '그럼 공개키로 암호화하면 누가 풀 수 있는 거야? 아까랑 반대 아니야?',
+              ),
+              behavior: 'confusion_expressed',
+            },
+            {
+              ...explanation(
+                104,
+                '서명할 때도 공개키로 하는 거니까 누구나 서명을 만들 수 있는 거지.',
+              ),
+              behavior: 'incorrect_explanation',
+            },
           ],
           {
             aiRecommendedActivity: '서명과 암호화를 나눠 그림으로 정리해 보기',
+            aiMisconception: '전자서명과 암호화에서 쓰는 키의 방향을 혼동',
+            aiNeedsCheck: '서명에 개인키를 쓰는지 확인 퀴즈로 확인해 보세요.',
           },
         ),
         judgment(
           'claude',
           'not_understood',
-          '키 쌍의 역할을 스스로 설명한 메시지가 없고, 같은 질문을 다시 했어요.',
-          [question(104, '다시 설명해 줘. 서명할 때도 공개키를 쓰는 거지?')],
+          '서명에도 공개키를 쓴다고 잘못 설명했어요.',
+          [
+            {
+              ...explanation(
+                104,
+                '서명할 때도 공개키로 하는 거니까 누구나 서명을 만들 수 있는 거지.',
+              ),
+              behavior: 'incorrect_explanation',
+            },
+          ],
         ),
         judgment(
           'gemini',
           'not_understood',
-          '받는 사람의 공개키로 잠근다는 설명을 들은 뒤에도 내 공개키로 잠그는 것으로 다시 물었어요.',
+          '받는 사람의 공개키로 잠근다는 설명을 들은 뒤에도 "아까랑 반대 아니야?"라며 모르겠다고 했어요.',
           [
-            question(
-              101,
-              '그럼 공개키로 암호화하면 누가 풀 수 있는 거야? 아까랑 반대 아니야?',
-            ),
+            {
+              ...question(
+                101,
+                '그럼 공개키로 암호화하면 누가 풀 수 있는 거야? 아까랑 반대 아니야?',
+              ),
+              behavior: 'confusion_expressed',
+            },
           ],
         ),
       ],
@@ -470,12 +492,89 @@ const latest = new Map<number, AnalysisRun>([[1, RUN]]);
 // 내가 남긴 피드백 (과목 id → 개념 → 피드백)
 const feedbacks = new Map<number, Map<string, ConceptFeedback>>();
 
+// 개념별 검증 상태 예시. 값은 서버 ConceptVerification 규칙(모델 의견 비교 + 확인 퀴즈 결과)으로 직접 정한 것이다
+const VERIFICATIONS: Record<
+  string,
+  Pick<ConceptResult, 'verification' | 'misconception'>
+> = {
+  '공개키 암호': {
+    misconception: { flaggedCount: 1, judgedCount: 3 },
+    verification: {
+      status: 'verified',
+      reasons: [
+        '판단한 모델 3개가 같은 의견이에요(의견 일치는 정확도가 아니에요).',
+        'AI 판단과 확인 퀴즈 결과(33%, 채점된 문제 6개)가 같은 방향이에요.',
+      ],
+      holdReason: null,
+      quizComparison: 'consistent',
+      recommendCheckQuiz: false,
+    },
+  },
+  '해시 함수': {
+    misconception: { flaggedCount: 0, judgedCount: 3 },
+    verification: {
+      status: 'needs_check',
+      reasons: [
+        '판단한 모델 3개의 의견이 서로 달라요.',
+        '확인 퀴즈 결과는 60%, 채점된 문제 5개예요(AI 판단과 따로 봐요).',
+      ],
+      holdReason: '판단한 모델 3개의 의견이 서로 달라요.',
+      quizComparison: 'not_compared',
+      recommendCheckQuiz: true,
+    },
+  },
+  '대칭키 암호': {
+    misconception: { flaggedCount: 0, judgedCount: 3 },
+    verification: {
+      status: 'partial',
+      reasons: [
+        '판단한 모델 3개가 같은 의견이에요(의견 일치는 정확도가 아니에요).',
+        'AI 추정만 있고 확인 퀴즈로 확인하지 않았어요(채점된 문제 2개 이상 필요).',
+      ],
+      holdReason: null,
+      quizComparison: 'no_quiz',
+      recommendCheckQuiz: true,
+    },
+  },
+  '인증서(PKI)': {
+    misconception: { flaggedCount: 0, judgedCount: 3 },
+    verification: {
+      status: 'insufficient',
+      reasons: [
+        '사용자 발언에 판단 근거가 부족해 AI가 판단을 보류했어요. 근거 부족은 이해 부족이 아니에요.',
+        '확인 퀴즈 결과는 67%, 채점된 문제 3개예요(AI 판단과 따로 봐요).',
+      ],
+      holdReason:
+        '사용자 발언에 판단 근거가 부족해 AI가 판단을 보류했어요. 근거 부족은 이해 부족이 아니에요.',
+      quizComparison: 'not_compared',
+      recommendCheckQuiz: true,
+    },
+  },
+  전자서명: {
+    misconception: { flaggedCount: 0, judgedCount: 3 },
+    verification: {
+      status: 'partial',
+      reasons: [
+        '판단한 모델 3개 중 2개가 같은 의견(다수 의견)이에요.',
+        '부분 이해는 퀴즈 결과와 방향을 비교하지 않아요. 퀴즈 결과는 따로 보세요.',
+      ],
+      holdReason: null,
+      quizComparison: 'not_compared',
+      recommendCheckQuiz: true,
+    },
+  },
+};
+
 // 서버처럼 읽을 때마다 피드백을 붙이고 순서를 다시 매긴다: "더 공부할래요"가 맨 앞, 나머지는 원래 순서.
 // AI 판단(comparison·judgments)은 바꾸지 않는다
 function withFeedback(run: AnalysisRun): AnalysisRun {
   const mine = feedbacks.get(run.courseId);
   const concepts = run.concepts
-    .map((item) => ({ ...item, feedback: mine?.get(item.concept) ?? null }))
+    .map((item) => ({
+      ...item,
+      ...VERIFICATIONS[item.concept],
+      feedback: mine?.get(item.concept) ?? null,
+    }))
     .sort(
       (a, b) =>
         Number(b.feedback?.feedback === 'want_to_study') -

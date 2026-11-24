@@ -29,6 +29,30 @@ export interface JudgmentEvidence {
   aiNote: string | null;
   // 메시지 앞 120자
   excerpt: string;
+  // 학습 행동 (AI 분류, 사용자 메시지만). 예전 분석(concept-analysis-v1)과 AI 메시지는 null
+  behavior?: LearningBehavior | null;
+}
+
+// 근거 메시지의 학습 행동. 재설명 요청·심화 질문·"알겠어"는 판단에 쓰지 않는 신호다
+export type LearningBehavior =
+  | 'confusion_expressed'
+  | 're_explanation_request'
+  | 'deepening_question'
+  | 'incorrect_explanation'
+  | 'correct_explanation'
+  | 'application'
+  | 'no_signal';
+
+// 개념 검증 상태 (코드 규칙): 모델 의견 비교와 실제 퀴즈 결과를 함께 본 값. 정확도가 아니다
+export type VerificationStatus =
+  'verified' | 'partial' | 'needs_check' | 'insufficient' | 'failed';
+
+export interface ConceptVerification {
+  status: VerificationStatus;
+  reasons: string[];
+  holdReason: string | null;
+  quizComparison: 'consistent' | 'contradicts' | 'not_compared' | 'no_quiz';
+  recommendCheckQuiz: boolean;
 }
 
 // 모델 하나의 판단
@@ -44,6 +68,8 @@ export interface ConceptJudgment {
   aiNeedsCheck: string | null;
   aiRecommendedActivity: string | null;
   evidence: JudgmentEvidence[];
+  // 오개념 후보: 사용자가 혼동했다고 본 내용 (AI). 잘못된 설명 근거가 없으면 null
+  aiMisconception?: string | null;
 }
 
 // 판단한 모델 모두 같음 / 3개 중 2개 같음 / 모두 다름 / 하나만 판단 / 판단한 모델 없음
@@ -93,6 +119,10 @@ export interface ConceptResult {
   quiz?: ConceptQuizStats | null;
   // 숙련도 단계와 근거 (코드 계산, AI 판단과 따로). 화면은 단계와 근거만 보여 주고 숫자 점수는 보여 주지 않는다
   mastery?: ConceptMastery | null;
+  // 오개념 후보를 낸 모델 수 / 판단한 모델 수
+  misconception?: { flaggedCount: number; judgedCount: number } | null;
+  // 검증 상태와 이유 (코드 규칙)
+  verification?: ConceptVerification | null;
 }
 
 // 근거 부족(insufficient_evidence)은 이해 부족과 다르다

@@ -13,9 +13,18 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param enabled     자료 본문(발췌)을 외부 AI로 보낼 수 있는지
  * @param maxChars    한 번에 보내는 본문 발췌 글자 수 상한
  * @param maxPdfPages PDF에서 읽는 쪽 수 상한 (넘으면 앞쪽만)
+ * @param sourceMaxChars 관련 부분을 고르기 전에 본문에서 읽는 글자 수 상한 (여기서 maxChars만큼 골라 보낸다)
+ * @param summaryDailyLimit 요약본 만들기 24시간 모델 요청 수 (사용자 한 명, daily-model-call-limit도 함께 적용)
  */
 @ConfigurationProperties(prefix = "app.material-content")
-public record MaterialContentProperties(boolean enabled, int maxChars, int maxPdfPages) {
+public record MaterialContentProperties(boolean enabled, int maxChars, int maxPdfPages, int sourceMaxChars,
+		int summaryDailyLimit) {
+
+	public MaterialContentProperties {
+		if (sourceMaxChars < maxChars) {
+			sourceMaxChars = maxChars;
+		}
+	}
 
 	/** 자료 본문 전송 기능이 꺼져 있을 때 (개념 뽑기·설명, 자료 본문을 쓰는 퀴즈 만들기) */
 	public static final String DISABLED_MESSAGE = "학습자료 본문을 외부 AI로 보내는 기능은 아직 꺼져 있어요(운영 설정·처리방침 확정 전). 과목 개념으로 평가를 만들 수 있어요.";

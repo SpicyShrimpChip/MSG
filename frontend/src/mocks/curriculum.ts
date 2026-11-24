@@ -124,6 +124,14 @@ function buildFlow(courseId: number, keywords: string[]): CurriculumFlow {
       delta: null,
       postStatus: null,
       priority: sample && preStatus !== 'ok',
+      // 서버 CurriculumFlowBuilder.priorityReasons와 같은 규칙의 문장 (체험 예시 값으로)
+      priorityReasons: mockPriorityReasons(
+        sample,
+        preRate,
+        preStatus,
+        base.study?.status ?? null,
+      ),
+      analysisStatus: null,
     };
   });
 
@@ -289,4 +297,31 @@ export async function mockGetCurriculum(courseId: number): Promise<Curriculum> {
     aiSuggestions: [],
     flow: buildFlow(courseId, course.keywords),
   });
+}
+
+// 먼저 공부할 이유: 실제 평가(사전평가·확인 퀴즈)를 앞에 둔다 (서버와 같은 문장)
+function mockPriorityReasons(
+  preDone: boolean,
+  preRate: number | null,
+  preStatus: FlowConcept['preStatus'],
+  studyStatus: string | null,
+): string[] {
+  const reasons: string[] = [];
+  if (!preDone) {
+    reasons.push(
+      '아직 사전평가를 보지 않아 이 개념의 현재 수준을 모르는 상태예요.',
+    );
+  } else if (preStatus === 'weak') {
+    reasons.push(`사전평가 정답률 ${preRate}%로 기준(60%)보다 낮아요.`);
+  } else if (preStatus === 'not_taken') {
+    reasons.push(
+      '사전평가에서 이 개념을 채점한 결과가 없어 먼저 확인이 필요해요.',
+    );
+  } else {
+    reasons.push(`사전평가 정답률 ${preRate}%로 기준(60%) 이상이에요.`);
+  }
+  if (studyStatus === 'review_needed') {
+    reasons.push('최근 확인 퀴즈가 기준보다 낮아 복습이 필요해요.');
+  }
+  return reasons;
 }

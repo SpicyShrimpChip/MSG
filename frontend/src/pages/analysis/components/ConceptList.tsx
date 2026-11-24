@@ -9,6 +9,7 @@ import {
 } from '@/utils';
 import ConceptFeedbackBox from './ConceptFeedbackBox';
 import ConceptJudgments from './ConceptJudgments';
+import ConceptVerificationBox from './ConceptVerificationBox';
 import MasteryEvidence from './MasteryEvidence';
 import MasteryMeter from './MasteryMeter';
 import Panel from './Panel';
@@ -126,6 +127,7 @@ function ConceptRow({
         >
           {/* 왼쪽: 코드가 계산한 값(숙련도 근거·변화) */}
           <div className="flex min-w-0 flex-col gap-4">
+            <ConceptVerificationBox courseId={courseId} concept={concept} />
             {concept.mastery ? (
               <MasteryEvidence
                 courseId={courseId}

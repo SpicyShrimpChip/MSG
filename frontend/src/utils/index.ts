@@ -16,3 +16,4 @@ export * from './requestKey';
 export * from './submitLock';
 export * from './socialLogin';
 export * from './accountDeletion';
+export * from './evidence';
