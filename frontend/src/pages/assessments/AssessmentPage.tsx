@@ -245,52 +245,52 @@ function MaterialAssessment({
           </FormRow>
         </div>
 
-        <fieldset className="flex flex-col gap-2 rounded-xl border border-line p-4">
-          <legend className="px-1 text-body font-bold text-heading">
-            자료 본문 쓰기 (선택)
-          </legend>
-          <label className="flex items-start gap-3 text-body text-heading">
-            <input
-              type="checkbox"
-              checked={useContent}
-              disabled={!contentAllowed}
-              onChange={(e) => {
-                setUseContent(e.target.checked);
-                if (!e.target.checked) setContentConsent(false);
-              }}
-              className="mt-1 size-4 accent-primary"
-            />
-            <span>
-              자료 본문(앞부분 12,000자까지)으로 문제 만들기
-              <span className="block text-caption text-ink-soft">
-                {/* 꺼진 이유는 위 "핵심 개념 뽑기" 칸에 한 번만 보여 준다 */}
-                {!ai.materialContentEnabled
-                  ? '자료 본문 보내기는 지금 꺼져 있어요(이유는 위 “핵심 개념 뽑기”에 있어요). 본문 없이 개념으로만 만들어요.'
-                  : readable
-                    ? 'TXT·MD·PPTX와 글이 들어 있는 PDF(100쪽까지)를 읽어요. 스캔한 PDF는 읽지 못해요. 체크하지 않으면 개념 목록으로만 만들어요.'
-                    : '이 형식은 본문을 읽지 못해요. 개념 목록으로만 만들어요.'}
-              </span>
-            </span>
-          </label>
-          {useContent && (
+        {/* 본문 보내기가 꺼져 있으면(꺼진 이유는 위 "핵심 개념 뽑기" 칸에 있다) 이 칸을 그리지 않는다. useContent는 false로 시작해 요청에 본문 사용이 실리지 않는다 */}
+        {ai.materialContentEnabled && (
+          <fieldset className="flex flex-col gap-2 rounded-xl border border-line p-4">
+            <legend className="px-1 text-body font-bold text-heading">
+              자료 본문 쓰기 (선택)
+            </legend>
             <label className="flex items-start gap-3 text-body text-heading">
               <input
                 type="checkbox"
-                checked={contentConsent}
-                onChange={(e) => setContentConsent(e.target.checked)}
+                checked={useContent}
+                disabled={!contentAllowed}
+                onChange={(e) => {
+                  setUseContent(e.target.checked);
+                  if (!e.target.checked) setContentConsent(false);
+                }}
                 className="mt-1 size-4 accent-primary"
               />
               <span>
-                이 자료의 본문을 문제를 만들기 위해 외부 생성형 AI로 보내는 것을
-                확인했어요. 본인이 이용 권한이 있는 자료예요.
+                자료 본문(앞부분 12,000자까지)으로 문제 만들기
                 <span className="block text-caption text-ink-soft">
-                  이메일·전화번호 같은 개인정보가 보이면 보내지 않아요. 교수님
-                  강의자료·시험 문제 원문은 올리지 말아 주세요.
+                  {readable
+                    ? 'TXT·MD·PPTX와 글이 들어 있는 PDF(100쪽까지)를 읽어요. 스캔한 PDF는 읽지 못해요. 체크하지 않으면 개념 목록으로만 만들어요.'
+                    : '이 형식은 본문을 읽지 못해요. 개념 목록으로만 만들어요.'}
                 </span>
               </span>
             </label>
-          )}
-        </fieldset>
+            {useContent && (
+              <label className="flex items-start gap-3 text-body text-heading">
+                <input
+                  type="checkbox"
+                  checked={contentConsent}
+                  onChange={(e) => setContentConsent(e.target.checked)}
+                  className="mt-1 size-4 accent-primary"
+                />
+                <span>
+                  이 자료의 본문을 문제를 만들기 위해 외부 생성형 AI로 보내는
+                  것을 확인했어요. 본인이 이용 권한이 있는 자료예요.
+                  <span className="block text-caption text-ink-soft">
+                    이메일·전화번호 같은 개인정보가 보이면 보내지 않아요. 교수님
+                    강의자료·시험 문제 원문은 올리지 말아 주세요.
+                  </span>
+                </span>
+              </label>
+            )}
+          </fieldset>
+        )}
 
         <Notice icon={Lock} size="caption" iconClassName="text-primary">
           외부 AI로는 과목 이름·개념{useContent ? '·자료 본문 발췌' : ''}만

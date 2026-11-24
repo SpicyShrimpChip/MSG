@@ -19,7 +19,12 @@ import {
 } from '@/api';
 import { ScoreBar } from '@/components';
 import type { AnalysisRun, MasteryStage } from '@/types';
-import { MASTERY_LABEL, cn, summarizeConcepts } from '@/utils';
+import {
+  MASTERY_LABEL,
+  cn,
+  keywordQuizProgress,
+  summarizeConcepts,
+} from '@/utils';
 import { deltaText, scorePercent, submitted } from '@/utils/assessment';
 import Panel from './Panel';
 
@@ -158,6 +163,36 @@ function ProgressTile({ courseId }: { courseId: number }) {
     queryFn: () => getCurriculum(courseId),
   });
   const progress = data?.flow.progress;
+  const keyword = data ? keywordQuizProgress(data.flow.concepts) : null;
+  // 자료 개념이 없고 과목 키워드만 있으면 퀴즈로 확인한 키워드 수를 센다
+  if (progress && progress.studiableConcepts === 0 && keyword?.total) {
+    if (data?.flow.preTest.status !== 'submitted' || keyword.percent === null) {
+      return (
+        <Tile label="학습 진도">
+          <p className="text-body text-ink-soft">사전 테스트 뒤부터 세요</p>
+        </Tile>
+      );
+    }
+    return (
+      <Tile
+        label="학습 진도"
+        more={
+          <a href={`#${PROGRESS_ANCHOR}`} className={MORE_LINK}>
+            자세히
+          </a>
+        }
+      >
+        <p className="text-2xl font-extrabold text-heading">
+          {keyword.checked}
+          <span className="text-lg text-ink-muted"> / {keyword.total}개</span>
+        </p>
+        <ScoreBar value={keyword.percent} />
+        <p className="text-caption text-ink-soft">
+          퀴즈로 확인 {keyword.percent}% (과목 키워드)
+        </p>
+      </Tile>
+    );
+  }
   if (
     isPending ||
     isError ||

@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { CheckAttempt } from '@/types';
+import type { CheckAttempt, ConceptStudy } from '@/types';
 import {
   checkQuizLink,
   conceptQuizLink,
   judgeCheck,
+  keywordQuizProgress,
   resolveStudyStatus,
 } from './conceptStudy';
 
@@ -78,5 +79,26 @@ describe('checkQuizLink', () => {
     expect(params.get('checkMaterialId')).toBe('2');
     expect(params.get('checkConceptId')).toBe('인증서(pki)');
     expect(params.get('concept')).toBe('인증서(PKI)');
+  });
+});
+
+describe('keywordQuizProgress', () => {
+  const studied = { status: 'studied' } as unknown as ConceptStudy;
+  it('학습 기록이 없는 키워드 개념만 세고, 채점된 퀴즈가 있는 개념을 확인한 것으로 센다', () => {
+    expect(
+      keywordQuizProgress([
+        { study: null, practiceGradedCount: 2 },
+        { study: null, practiceGradedCount: 0 },
+        { study: null, practiceGradedCount: 0 },
+        { study: studied, practiceGradedCount: 3 }, // 자료 개념은 제외
+      ]),
+    ).toEqual({ total: 3, checked: 1, percent: 33 });
+  });
+  it('키워드 개념이 없으면 percent는 null', () => {
+    expect(keywordQuizProgress([])).toEqual({
+      total: 0,
+      checked: 0,
+      percent: null,
+    });
   });
 });

@@ -52,7 +52,7 @@ function groupByCourse(
 
 function StatusChip({ status }: { status: MaterialSummary['status'] }) {
   if (status === 'uploaded') {
-    return <span className="text-caption">AI 분석 전</span>;
+    return <span className="text-caption">저장됨</span>;
   }
   if (status === 'processing') {
     return (

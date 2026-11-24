@@ -68,6 +68,7 @@
 - Git Bash에서 `docker compose exec ... /data/...`의 경로가 Windows 경로로 바뀐다
 - Claude의 명령에 읽기 금지 파일이 섞이면 같은 명령의 다른 수정도 실행되지 않는다
 - 셸 `cat >`로 새 파일을 만들다 같은 이름의 기존 파일을 덮었다
+- 워크트리에서 미리보기 서버를 띄우면 원래 체크아웃의 화면이 뜬다
 
 ### [process.md](process.md): 문서·진행 방식
 

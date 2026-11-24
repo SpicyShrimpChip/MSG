@@ -27,7 +27,7 @@ import {
   SubPage,
 } from '@/components';
 import { useMockData } from '@/store';
-import { useCourses, useCurriculum } from '@/hooks';
+import { useCourses, useCurriculum, useQuizAiStatusQuery } from '@/hooks';
 import type {
   Curriculum,
   CurriculumFlow,
@@ -44,6 +44,7 @@ import {
   conceptStudyLink,
   formatDate,
   formatSemester,
+  keywordQuizProgress,
 } from '@/utils';
 import { percentOf } from '@/utils/assessment';
 
@@ -257,6 +258,27 @@ function PreTestStep({ flow }: { flow: CurriculumFlow }) {
 // 학습 진행률: 실제 "학습 완료" 기록으로 센 서버 값 (페이지를 열거나 퀴즈를 만든 것만으로는 세지 않음)
 function StudyProgressBar({ flow }: { flow: CurriculumFlow }) {
   const { progress } = flow;
+  const keyword = keywordQuizProgress(flow.concepts);
+  if (progress.studiableConcepts === 0 && keyword.total > 0) {
+    if (flow.preTest.status !== 'submitted' || keyword.percent === null) {
+      return (
+        <p className="text-caption text-ink-soft">
+          사전 테스트를 본 뒤부터 개념마다 퀴즈로 확인한 수를 세요.
+        </p>
+      );
+    }
+    return (
+      <div className="flex flex-col gap-1.5">
+        <ScoreBar value={keyword.percent} />
+        <p className="text-body text-ink">
+          과목 키워드 {keyword.total}개 중{' '}
+          <strong className="text-primary">
+            {keyword.checked}개를 퀴즈로 확인했어요 ({keyword.percent}%)
+          </strong>
+        </p>
+      </div>
+    );
+  }
   if (progress.studiableConcepts === 0 || progress.percent === null) {
     return (
       <p className="text-caption text-ink-soft">
@@ -286,7 +308,16 @@ function StudyProgressBar({ flow }: { flow: CurriculumFlow }) {
   );
 }
 
-function ConceptStudyStep({ flow }: { flow: CurriculumFlow }) {
+function ConceptStudyStep({
+  flow,
+  courseId,
+  mode,
+}: {
+  flow: CurriculumFlow;
+  courseId: number;
+  mode: string;
+}) {
+  const { data: ai } = useQuizAiStatusQuery();
   const ordered = [
     ...flow.concepts.filter((concept) => concept.priority),
     ...flow.concepts.filter((concept) => !concept.priority),
@@ -296,8 +327,9 @@ function ConceptStudyStep({ flow }: { flow: CurriculumFlow }) {
       <StudyProgressBar flow={flow} />
       {flow.conceptSource === 'course' && (
         <p className="text-caption text-ink-soft">
-          지금 개념은 과목 키워드예요. 자료 상세의 "핵심 개념" 탭에서 개념을
-          뽑으면 자료를 근거로 한 자세한 설명으로 공부할 수 있어요.
+          {ai?.materialContentEnabled
+            ? '지금 개념은 과목 키워드예요. 자료 상세의 "핵심 개념" 탭에서 개념을 뽑으면 자료를 근거로 한 자세한 설명으로 공부할 수 있어요.'
+            : '지금은 자료에서 개념을 뽑지 않아 과목 키워드로 공부해요.'}
         </p>
       )}
       {ordered.length > 0 && (
@@ -323,7 +355,7 @@ function ConceptStudyStep({ flow }: { flow: CurriculumFlow }) {
                   {concept.study ? (
                     <StudyStatusBadge status={concept.study.status} />
                   ) : (
-                    <Chip tone="neutral">학습 기록 없음 (과목 키워드)</Chip>
+                    <Chip tone="neutral">퀴즈로 확인 (과목 키워드)</Chip>
                   )}
                   <PreStatusBadge concept={concept} />
                   {concept.hasStudyNote && (
@@ -351,7 +383,15 @@ function ConceptStudyStep({ flow }: { flow: CurriculumFlow }) {
                       </ul>
                     </details>
                   )}
-                {link ? (
+                {concept.study === null ? (
+                  <Button
+                    variant={concept.priority ? 'primary' : 'secondary'}
+                    to={conceptQuizLink(courseId, concept.name, mode)}
+                  >
+                    <ListChecks size={16} aria-hidden="true" />
+                    퀴즈로 확인하기
+                  </Button>
+                ) : link ? (
                   <Button
                     variant={
                       concept.priority || review ? 'primary' : 'secondary'
@@ -365,11 +405,7 @@ function ConceptStudyStep({ flow }: { flow: CurriculumFlow }) {
                     )}
                     {review ? '다시 학습하기' : '개념 보기'}
                   </Button>
-                ) : (
-                  <p className="text-caption text-ink-soft">
-                    이 과목에 자료를 올리면 자료로 개념을 공부할 수 있어요.
-                  </p>
-                )}
+                ) : null}
               </li>
             );
           })}
@@ -794,7 +830,11 @@ function CourseCurriculum({ courseId }: { courseId: number }) {
         </Card>
       )}
       <PreTestStep flow={flow} />
-      <ConceptStudyStep flow={flow} />
+      <ConceptStudyStep
+        flow={flow}
+        courseId={courseId}
+        mode={data.recommendedMode}
+      />
       <ConceptQuizStep
         flow={flow}
         courseId={courseId}
