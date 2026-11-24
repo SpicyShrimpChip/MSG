@@ -1,3 +1,5 @@
+import { isRecord } from './shared';
+
 // Claude 데이터 내보내기는 먼저 "다운로드 목록 파일"(manifest-....json)을 주고,
 // 그 안의 링크로 zip을 하나씩 받는 방식이다(2026-10-31 실제 파일로 확인). 목록 파일에는 대화가 없다.
 // 우리 사이트·서버가 링크를 대신 열지 않는다(claude.ai 로그인이 필요하고, 원본이 서버로 오면 안 된다).
@@ -13,10 +15,6 @@ export interface ClaudeManifest {
   fileName: string;
   // 링크가 끝나는 시각 (ISO). 알 수 없으면 없다
   expiresAt?: string;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 // 올린 파일 안의 주소라서 그대로 믿지 않는다. https의 claude.ai /export/ 주소만 통과시킨다

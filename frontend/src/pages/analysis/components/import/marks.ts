@@ -1,4 +1,4 @@
-import { MASK_LABELS, escapeRegExp } from '@/utils';
+import { MASK_LABELS, MASK_LABEL_PATTERN, escapeRegExp } from '@/utils';
 
 // 대화 보기에서 가린 표시(파랑)와 찾은 키워드·검색어(형광펜)를 찾아 칠하는 부분
 
@@ -37,11 +37,10 @@ export function splitMarks(
 // 화면에 그려진 글 안에서 가린 표시(`[IP]` 등)의 index번째 자리를 찾는다 (코드 블록 안도 센다).
 // 가린 표시가 글 조각 하나에 통째로 들어 있어서 조각마다 찾아 순서대로 센다
 export function findMaskLabelRange(root: Node, index: number): Range | null {
-  const labels = new RegExp([...MASK_SET].map(escapeRegExp).join('|'), 'g');
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   let count = 0;
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-    for (const found of (node.nodeValue ?? '').matchAll(labels)) {
+    for (const found of (node.nodeValue ?? '').matchAll(MASK_LABEL_PATTERN)) {
       if (count === index) {
         const range = document.createRange();
         range.setStart(node, found.index);

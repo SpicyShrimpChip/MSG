@@ -25,8 +25,9 @@ import {
   type SearchHit,
   type ParsedConversation,
 } from '@/utils';
-import ConversationView from './ConversationView';
+import ConversationView, { SOURCE_NAME } from './ConversationView';
 import CourseQuickForm from './CourseQuickForm';
+import { MARK_CLASS } from './marks';
 
 // 대화마다 들어갈 과목과 보낼지 여부 (키: conversationKey)
 export type ConversationChoices = Record<
@@ -87,6 +88,35 @@ function SelectStep({
   const deferredQuery = useDeferredValue(query);
   const [order, setOrder] = useState<ConversationOrder>('latest');
   const [openKey, setOpenKey] = useState<string | null>(null);
+  // 제목이나 본문에 검색어가 있는 대화만, 고른 순서로.
+  // 체크·펼치기로 다시 그릴 때는 전체 대화를 다시 찾거나 정렬하지 않는다
+  const { hits, visible } = useMemo(() => {
+    const hits = new Map<string, SearchHit>();
+    for (const { conversation } of assigned) {
+      const hit = searchConversation(conversation, deferredQuery);
+      if (hit) hits.set(conversationKey(conversation), hit);
+    }
+    const visible = sortConversations(
+      assigned.filter(({ conversation }) =>
+        hits.has(conversationKey(conversation)),
+      ),
+      (item) => item.conversation,
+      order,
+    );
+    return { hits, visible };
+  }, [assigned, deferredQuery, order]);
+  // 보이는 대화를 들어갈 과목별로 한 번에 나눈다 (과목을 바꾸거나 체크하면 다시 나눈다)
+  const visibleByCourse = useMemo(() => {
+    const groups = new Map<number, AssignedConversation[]>();
+    for (const item of visible) {
+      const courseId = choices[conversationKey(item.conversation)]?.courseId;
+      if (courseId === undefined) continue;
+      const group = groups.get(courseId);
+      if (group) group.push(item);
+      else groups.set(courseId, [item]);
+    }
+    return groups;
+  }, [visible, choices]);
   // 나눠 보낼 대화가 있는지 (어떤 대화인지는 보내기 단계에서 보여 준다)
   const hasLongConversation = useMemo(
     () => assigned.some(({ conversation }) => partCountOf(conversation) > 1),
@@ -123,20 +153,6 @@ function SelectStep({
       ...prev,
       [key]: { ...(prev[key] ?? choices[key]), ...patch },
     }));
-
-  // 제목이나 본문에 검색어가 있는 대화만, 고른 순서로
-  const hits = new Map<string, SearchHit>();
-  for (const { conversation } of assigned) {
-    const hit = searchConversation(conversation, deferredQuery);
-    if (hit) hits.set(conversationKey(conversation), hit);
-  }
-  const visible = sortConversations(
-    assigned.filter(({ conversation }) =>
-      hits.has(conversationKey(conversation)),
-    ),
-    (item) => item.conversation,
-    order,
-  );
 
   return (
     <Card
@@ -212,11 +228,7 @@ function SelectStep({
               key={course.id}
               course={course}
               courses={courses}
-              items={visible.filter(
-                ({ conversation }) =>
-                  choices[conversationKey(conversation)]?.courseId ===
-                  course.id,
-              )}
+              items={visibleByCourse.get(course.id) ?? []}
               choices={choices}
               hits={hits}
               query={deferredQuery}
@@ -377,11 +389,7 @@ function CourseGroup({
                       {conversation.title}
                     </label>
                     <p className="flex flex-wrap gap-x-3 text-caption text-ink-muted">
-                      <span>
-                        {conversation.source === 'chatgpt'
-                          ? 'ChatGPT'
-                          : 'Claude'}
-                      </span>
+                      <span>{SOURCE_NAME[conversation.source]}</span>
                       {date && <span>{date}</span>}
                       <span>메시지 {conversation.messages.length}개</span>
                     </p>
@@ -404,7 +412,7 @@ function CourseGroup({
                         />
                         <span className="truncate">
                           {snippet.before}
-                          <mark className="rounded bg-highlight px-0.5 text-on-highlight">
+                          <mark className={MARK_CLASS.keyword}>
                             {snippet.match}
                           </mark>
                           {snippet.after}

@@ -1,6 +1,5 @@
 /// <reference lib="webworker" />
-import { loadConversationCore } from '../core';
-import { maskConversationWithSpots } from '../mask';
+import { maskConversations } from '../mask';
 import { readExportFiles } from '../readExportFiles';
 import type { WorkerRequest, WorkerResponse } from './protocol';
 
@@ -13,10 +12,7 @@ async function handle(request: WorkerRequest) {
     case 'read':
       return readExportFiles(request.files);
     case 'mask':
-      await loadConversationCore();
-      return request.conversations.map((conversation) =>
-        maskConversationWithSpots(conversation, request.options),
-      );
+      return maskConversations(request.conversations, request.options);
   }
 }
 

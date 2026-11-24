@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type {
   MaskOptions,
   MaskedConversationWithSpots,
@@ -62,13 +62,14 @@ export function useMaskedConversations(
     };
   }, [conversations, options, enabled]);
 
-  const current =
+  const matchesInput =
     result !== null &&
     result.conversations === conversations &&
     result.options === options;
-  return {
-    items: result?.items ?? null,
-    current: current && !result.failed,
-    failed: current && result.failed,
-  };
+  const items = result?.items ?? null;
+  const current = matchesInput && !result.failed;
+  const failed = matchesInput && result.failed;
+  // 값이 같으면 같은 객체를 돌려준다. 받는 쪽(보낼 대화 목록, 나눠 보낼 대화 계산)이
+  // 다시 그릴 때마다 새로 계산하지 않게 한다
+  return useMemo(() => ({ items, current, failed }), [items, current, failed]);
 }

@@ -1,4 +1,5 @@
 import type { ClaudeManifest } from './manifest';
+import { compareLatestFirst } from './shared';
 import type { ParseResult, ParsedConversation } from './types';
 
 export interface FileParseResult {
@@ -57,8 +58,6 @@ export function mergeParseResults(files: FileParseResult[]): MergedImport {
   }
 
   // 날짜가 없는 대화는 맨 뒤로
-  const conversations = [...byKey.values()].sort((a, b) =>
-    (b.createdAt ?? '').localeCompare(a.createdAt ?? ''),
-  );
+  const conversations = [...byKey.values()].sort(compareLatestFirst);
   return { conversations, skippedCount, duplicateCount, errors, notices: [] };
 }

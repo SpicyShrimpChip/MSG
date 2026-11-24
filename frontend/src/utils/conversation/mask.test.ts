@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { maskConversationWithSpots, maskText } from './mask';
+import {
+  MASK_LABELS,
+  MASK_LABEL_PATTERN,
+  maskConversationWithSpots,
+  maskText,
+  type MaskKind,
+} from './mask';
 import type { ParsedConversation } from './types';
 
 describe('maskText', () => {
@@ -224,5 +230,38 @@ describe('maskConversationWithSpots: 가린 곳 목록', () => {
         messages: [],
       }).spots,
     ).toEqual([]);
+  });
+});
+
+// 가린 표시 글자는 러스트(mask.rs의 MaskKind::label)가 넣고, 화면은 MASK_LABELS로 찾아 칠하고 센다.
+// 한쪽만 바꾸면 가린 표시가 칠해지지 않거나 가린 곳 "보기"가 엉뚱한 자리를 짚으므로 종류마다 맞춰 본다
+describe('가린 표시 글자: 러스트와 MASK_LABELS', () => {
+  // 종류별로 하나씩만 걸리는 글 (Record라 종류가 늘면 여기서 타입 오류가 난다)
+  const SAMPLES: Record<MaskKind, string> = {
+    secret: 'sk-proj-abcdefghijklmnop1234',
+    email: 'test@example.com',
+    rrn: '900101-1234567',
+    card: '4111 1111 1111 1111',
+    phone: '010-1234-5678',
+    ip: '192.168.0.1',
+    name: '홍길동',
+    custom: '비밀단어',
+  };
+
+  it.each(Object.keys(SAMPLES) as MaskKind[])('%s', (kind) => {
+    const { text, matches } = maskText(`앞 ${SAMPLES[kind]} 뒤`, {
+      names: ['홍길동'],
+      terms: ['비밀단어'],
+    });
+    expect(matches.map((match) => match.kind)).toEqual([kind]);
+    expect(text.slice(matches[0].start, matches[0].end)).toBe(
+      MASK_LABELS[kind],
+    );
+    expect(text).toBe(`앞 ${MASK_LABELS[kind]} 뒤`);
+  });
+
+  it('가린 표시 정규식이 모든 표시를 찾는다', () => {
+    const labels = Object.values(MASK_LABELS);
+    expect(labels.join(' ').match(MASK_LABEL_PATTERN)).toEqual(labels);
   });
 });
