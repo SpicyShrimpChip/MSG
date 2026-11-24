@@ -32,9 +32,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class QuizStatsService {
 
-	// 확인 퀴즈로 "확인됨"이라고 말하려면 이만큼은 채점이 끝나야 한다
-	public static final int CONFIRM_MIN_GRADED = 2;
-
 	private final QuizSubmissionRepository submissionRepository;
 	private final QuizAnswerRepository answerRepository;
 	private final QuizQuestionRepository questionRepository;
@@ -72,7 +69,8 @@ public class QuizStatsService {
 					stat == null ? 0 : stat.reviewCount(), stat != null && stat.weak(),
 					mine == null ? null : mine.getFeedback().apiValue(),
 					mine == null || mine.getFeedback() != FeedbackType.ALREADY_KNOW ? null
-							: confirmation(key, mine.getUpdatedAt(), answered, minRate),
+							: confirmation(key, mine.getUpdatedAt(), answered, minRate,
+									properties.assessment().confirmMinGraded()),
 					answered.stream()
 							.filter(a -> a.graded().question().getConcepts().stream()
 									.anyMatch(c -> c.getConceptKey().equals(key)))
@@ -120,7 +118,7 @@ public class QuizStatsService {
 
 	// 피드백을 남긴(또는 바꾼) 뒤에 낸 답만 본다
 	private static String confirmation(String conceptKey, LocalDateTime since, List<Answered> answered,
-			double minRate) {
+			double minRate, int minGraded) {
 		List<QuizAssessor.Graded> after = answered.stream()
 				.filter(a -> !a.submittedAt().isBefore(since))
 				.map(Answered::graded)
@@ -132,7 +130,7 @@ public class QuizStatsService {
 		if (stat == null) {
 			return "not_taken";
 		}
-		if (stat.gradedCount() < CONFIRM_MIN_GRADED || stat.pendingCount() > 0 || stat.reviewCount() > 0) {
+		if (stat.gradedCount() < minGraded || stat.pendingCount() > 0 || stat.reviewCount() > 0) {
 			return "needs_check";
 		}
 		return stat.weak() ? "not_confirmed" : "confirmed";

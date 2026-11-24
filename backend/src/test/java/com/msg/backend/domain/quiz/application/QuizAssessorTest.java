@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 
 class QuizAssessorTest {
 
-	private static final QuizProperties.Assessment RULE = new QuizProperties.Assessment(3, 0.8, 0.6);
+	private static final QuizProperties.Assessment RULE = new QuizProperties.Assessment(3, 0.8, 0.6, 2);
 
 	@Test
 	void 전체_득점률과_모든_개념_득점률이_기준_이상이면_다음_단계_준비() {

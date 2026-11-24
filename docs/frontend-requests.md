@@ -634,7 +634,7 @@ layout = {
   - 학습 완료는 이해 여부·숙련도·대화 분석을 바꾸지 않는다
   - 오류: 남의 자료·없는 개념 404, 과목 없는 자료 400
 - **판정 규칙 (`ConceptStudyRules`):** 확인 퀴즈의 가장 최근 제출이 마지막 학습 완료와 같거나 그 뒤면 그 결과로 정한다.
-  - 대기·확인 필요 답이 있거나, 채점이 끝난 문제가 2개(`QuizStatsService.CONFIRM_MIN_GRADED`) 미만이면 `needs_check`
+  - 대기·확인 필요 답이 있거나, 채점이 끝난 문제가 2개(`app.quiz.assessment.confirm-min-graded`, 기본 2) 미만이면 `needs_check`
   - 정답률이 0.6(`app.quiz.assessment.concept-min-rate`) 이상이면 `understood`, 미만이면 `review_needed`
   - 채점이 끝나지 않은 답은 틀린 답으로 세지 않는다
 - **개념 확인 퀴즈:** 기존 `POST /api/quizzes`에 `checkConceptId`를 더했다(`materialId` 필수).

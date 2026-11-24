@@ -57,8 +57,10 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>보내기 전 조건(모두 서버가 확인, 핵심 개념 뽑기와 같다): 자료 본문 전송 기능이 켜져 있음(기본 꺼짐), AI 퀴즈 처리 동의,
  * 이번 요청의 확인, 연결된 모델, 24시간 한도(요약 요청 수·모델 요청 수·서비스 전체 상한), 본문을 읽을 수 있음, 보낼 부분에 개인정보 패턴이 없음.
  *
- * <p>재사용: 같은 자료·같은 목적의 요약이 있고 원본 파일(SHA-256)과 지시문 버전이 같으면 모델을 부르지 않고 저장한 요약을 돌려준다.
- * 파일이나 지시문이 바뀌었으면 조회 응답에 stale을 표시한다. 다시 만들기(regenerate)는 한도 안에서만.
+ * <p>재사용: 같은 자료·같은 목적의 요약이 있고 지시문 버전이 같으면 모델을 부르지 않고 저장한 요약을 돌려준다.
+ * 지시문이 바뀌었으면 조회 응답에 stale을 표시한다. 다시 만들기(regenerate)는 한도 안에서만.
+ * 자료 파일을 바꾸는 API가 없어(올릴 때만 storageKey가 정해짐) 조회·재사용 때 원본 파일 해시는 비교하지 않는다(11/25).
+ * 해시는 요약을 새로 만들 때만 계산해 어느 파일로 만들었는지 기록으로 남긴다.
  *
  * <p>동시 요청: 사용자 행을 잠근 채 진행 중 기록(RUNNING + 마감)을 남기고, 진행 중이면 409. 모델은 트랜잭션 밖에서 부르고,
  * 저장할 때 아직 진행 중·마감 전인지 확인한다. 실패하면 이전 요약이 있으면 그대로 둔다.
@@ -111,7 +113,6 @@ public class MaterialSummaryService {
 	static final String INVALID_MESSAGE = "AI가 쓴 요약을 자료에서 확인하지 못해 저장하지 않았어요. 다시 시도해 주세요.";
 	static final String FAILED_MESSAGE = "AI 모델의 응답을 받지 못해 요약을 만들지 못했어요. 잠시 뒤 다시 시도해 주세요.";
 	static final String TIMED_OUT_MESSAGE = "AI가 정해진 시간 안에 요약을 만들지 못했어요. 잠시 뒤 다시 시도해 주세요.";
-	static final String FILE_CHANGED_REASON = "요약을 만든 뒤 자료 파일이 바뀌었어요. 다시 만들어 주세요.";
 	static final String PROMPT_CHANGED_REASON = "요약 방식이 바뀌었어요. 다시 만들면 새 방식으로 만들어요.";
 
 	private final UserRepository userRepository;
@@ -162,11 +163,11 @@ public class MaterialSummaryService {
 		this.clock = clock;
 	}
 
-	/** 저장한 요약 (없으면 status none). 파일·지시문이 바뀌었으면 stale */
+	/** 저장한 요약 (없으면 status none). 지시문이 바뀌었으면 stale. 원본 파일은 읽지 않는다 */
 	public StudySummaryResponse get(Long userId, Long materialId, String purposeValue) {
 		QuizMode purpose = purpose(purposeValue);
 		return transaction.execute(status -> {
-			Material material = materialRepository.getOwned(materialId, userId);
+			materialRepository.getOwned(materialId, userId); // 소유 확인 (없거나 남의 자료면 404)
 			Optional<MaterialSummary> found = summaryRepository.findByMaterialIdAndUserIdAndPurpose(materialId, userId,
 					purpose);
 			if (found.isEmpty()) {
@@ -180,7 +181,7 @@ public class MaterialSummaryService {
 								null, null, null, List.of(), false, null, List.of())
 						: StudySummaryResponse.none(materialId, purpose.apiValue());
 			}
-			return toResponse(summary, false, staleReason(summary, hash(material)), summary.isRunningAt(now));
+			return toResponse(summary, false, staleReason(summary), summary.isRunningAt(now));
 		});
 	}
 
@@ -189,7 +190,7 @@ public class MaterialSummaryService {
 			StudySummaryResponse reused) {
 	}
 
-	/** 요약 만들기 (같은 파일·같은 지시문의 요약이 있고 regenerate가 아니면 다시 쓴다) */
+	/** 요약 만들기 (같은 지시문의 요약이 있고 regenerate가 아니면 다시 쓴다) */
 	public StudySummaryResponse generate(Long userId, Long materialId, String purposeValue, boolean confirmed,
 			boolean regenerate) {
 		QuizMode purpose = purpose(purposeValue);
@@ -236,14 +237,13 @@ public class MaterialSummaryService {
 		LocalDateTime now = LocalDateTime.now(clock);
 		Optional<MaterialSummary> existing = summaryRepository.findByMaterialIdAndUserIdAndPurpose(materialId, userId,
 				purpose);
-		String hash = hash(material);
 		if (existing.isPresent()) {
 			MaterialSummary summary = existing.get();
 			if (summary.isRunningAt(now)) {
 				throw new BusinessException(HttpStatus.CONFLICT, RUNNING_MESSAGE);
 			}
-			if (!regenerate && summary.hasResult() && staleReason(summary, hash) == null) {
-				// 같은 파일·같은 지시문: 모델을 부르지 않는다 (동의·한도와 관계없이 저장한 결과를 보여 준다)
+			if (!regenerate && summary.hasResult() && staleReason(summary) == null) {
+				// 같은 지시문: 모델을 부르지 않는다 (동의·한도와 관계없이 저장한 결과를 보여 준다)
 				return new Prepared(null, purpose, null, null, false, null, null, null, null, null,
 						toResponse(summary, true, null, false));
 			}
@@ -294,6 +294,8 @@ public class MaterialSummaryService {
 			throw new BusinessException(HttpStatus.UNPROCESSABLE_ENTITY,
 					"자료 본문에 이메일·전화번호 같은 개인정보가 있어 외부 AI로 보내지 않았어요.", Map.of("reason", "PERSONAL_INFO"));
 		}
+		// 어느 파일로 만들었는지 기록으로만 남긴다 (조회·재사용 때 비교하지 않는다)
+		String hash = hash(material);
 		Instant deadline = clock.instant().plus(quizProperties.generationDeadline());
 		LocalDateTime deadlineAt = LocalDateTime.ofInstant(deadline, clock.getZone());
 		MaterialSummary summary;
@@ -373,17 +375,14 @@ public class MaterialSummaryService {
 				summary.isSourceTruncated(), stored.content(), stored.sources() == null ? List.of() : stored.sources());
 	}
 
-	private static String staleReason(MaterialSummary summary, String currentHash) {
-		if (currentHash != null && summary.getContentHash() != null && !currentHash.equals(summary.getContentHash())) {
-			return FILE_CHANGED_REASON;
-		}
+	private static String staleReason(MaterialSummary summary) {
 		if (!PROMPT_VERSION.equals(summary.getPromptVersion())) {
 			return PROMPT_CHANGED_REASON;
 		}
 		return null;
 	}
 
-	// 원본 파일의 SHA-256 (자료 버전). 읽지 못하면 null (stale로 보지 않는다)
+	// 원본 파일의 SHA-256 (어느 파일로 만들었는지 기록용). 읽지 못하면 null
 	private String hash(Material material) {
 		if (material.getStorageKey() == null) {
 			return null;

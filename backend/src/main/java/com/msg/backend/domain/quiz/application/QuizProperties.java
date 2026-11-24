@@ -39,7 +39,9 @@ public record QuizProperties(List<LlmProvider> generationProviders, int maxQuest
 	 * @param minGradedQuestions 채점이 끝난 문제가 이보다 적으면 "추가 확인 필요"
 	 * @param readyRate          전체 득점률이 이 이상이고
 	 * @param conceptMinRate     모든 개념의 득점률이 이 이상이면 "다음 단계 준비됨". 개념 득점률이 이보다 낮으면 보완 개념
+	 * @param confirmMinGraded   확인 퀴즈(개념 확인·"이미 알아요" 확인·대화 판단 확인)로 "확인됨"이라고 말하려면
+	 *                           그 개념에서 채점이 끝나야 하는 문제 수. 이보다 적으면 "추가 확인 필요"
 	 */
-	public record Assessment(int minGradedQuestions, double readyRate, double conceptMinRate) {
+	public record Assessment(int minGradedQuestions, double readyRate, double conceptMinRate, int confirmMinGraded) {
 	}
 }

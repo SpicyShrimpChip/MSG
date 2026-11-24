@@ -175,6 +175,8 @@ app:
       min-graded-questions: 3
       ready-rate: 0.8
       concept-min-rate: 0.6
+      # 확인 퀴즈로 "확인됨"이라고 말하려면 그 개념에서 채점이 끝나야 하는 문제 수. 근거 없는 초기값이라 사용자 테스트 뒤 조정한다
+      confirm-min-graded: 2
 
   # 학습자료 본문을 외부 AI로 보내는 기능. 기본은 꺼짐: 제공사·이전 국가·보관 기간과 처리 근거를 처리방침에 확정한 뒤에만 켠다
   # (MATERIAL_CONTENT_ENABLED=true). 꺼져 있으면 자료 본문·핵심 개념 뽑기 요청을 거절하고 과목 개념으로만 문제를 만든다

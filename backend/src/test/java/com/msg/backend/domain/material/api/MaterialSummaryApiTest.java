@@ -138,7 +138,7 @@ class MaterialSummaryApiTest {
 	}
 
 	@Test
-	void 같은_파일_같은_목적이면_재사용하고_다시_만들기나_파일이_바뀌면_새로_만든다() throws Exception {
+	void 같은_목적이면_재사용하고_다시_만들기나_지시문이_바뀌면_새로_만든다() throws Exception {
 		fakeLlm.get(LlmProvider.GPT).answer(SUMMARY);
 		generate("exam_prep", true, false).andExpect(status().isOk());
 
@@ -148,10 +148,16 @@ class MaterialSummaryApiTest {
 		generate("exam_prep", true, true).andExpect(jsonPath("$.data.reused").value(false));
 		assertThat(fakeLlm.get(LlmProvider.GPT).requests()).hasSize(2);
 
-		// 파일이 바뀐 것처럼 (요약을 만든 파일의 해시가 지금 파일과 다름)
+		// 저장한 해시가 달라도 비교하지 않는다 (자료 파일을 바꾸는 API가 없어 지시문 버전만 본다)
 		jdbcTemplate.update("update material_summary set content_hash = 'old'");
+		view("exam_prep").andExpect(jsonPath("$.data.stale").value(false));
+		generate("exam_prep", true, false).andExpect(jsonPath("$.data.reused").value(true));
+		assertThat(fakeLlm.get(LlmProvider.GPT).requests()).hasSize(2);
+
+		// 지시문이 바뀐 것처럼 (요약을 만든 지시문 버전이 지금과 다름)
+		jdbcTemplate.update("update material_summary set prompt_version = 'summary-v0'");
 		view("exam_prep").andExpect(jsonPath("$.data.stale").value(true))
-				.andExpect(jsonPath("$.data.staleReason").value(containsString("파일이 바뀌었어요")));
+				.andExpect(jsonPath("$.data.staleReason").value(containsString("요약 방식이 바뀌었어요")));
 		generate("exam_prep", true, false).andExpect(jsonPath("$.data.reused").value(false))
 				.andExpect(jsonPath("$.data.stale").value(false));
 		assertThat(fakeLlm.get(LlmProvider.GPT).requests()).hasSize(3);

@@ -19,7 +19,7 @@ import lombok.NoArgsConstructor;
 /**
  * 학습자료 요약본 (material_summary, V5). 자료 하나·학습 목적 하나에 한 행이고, 다시 만들면 같은 행을 바꾼다.
  * summaryJson은 AI가 쓴 요약을 서버가 검증해 다시 쓴 JSON이다(인용문·위치·검증 상태는 서버가 원문에서 확인한 값).
- * contentHash는 요약을 만든 원본 파일의 SHA-256이라 파일이 바뀌었는지 알 수 있다.
+ * contentHash는 요약을 만든 원본 파일의 SHA-256 기록이다. 자료 파일을 바꾸는 API가 없어 조회·재사용 때 비교하지 않는다(11/25).
  */
 @Entity
 @Table(name = "material_summary")
