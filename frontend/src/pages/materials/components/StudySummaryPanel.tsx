@@ -25,13 +25,7 @@ import type {
   StudySummaryItem,
   StudySummaryPurpose,
 } from '@/types';
-import {
-  SOURCE_CHECK_LABEL,
-  cn,
-  formatDate,
-  isReadable,
-  sourceCheckTone,
-} from '@/utils';
+import { SOURCE_CHECK_LABEL, cn, formatDate, isReadable } from '@/utils';
 
 // 항목 하나: AI가 쓴 글 + 원문 근거 상태. 글은 모두 AI가 썼으므로 AI 표시를 붙이고(서버가 확인한 것은 인용뿐),
 // 자료에 없는 AI 보충 설명은 보라색 상자로 따로 보여 준다
@@ -59,7 +53,7 @@ function SummaryItemView({ item }: { item: StudySummaryItem }) {
             </span>
             {item.check && (
               <VerificationBadge
-                status={sourceCheckTone(item.check)}
+                status={item.check}
                 label={SOURCE_CHECK_LABEL[item.check]}
               />
             )}

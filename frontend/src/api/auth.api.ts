@@ -79,22 +79,17 @@ export function getMe(): Promise<User> {
   return request<User>({ method: 'GET', url: '/users/me' });
 }
 
-// AI 대화 분석 동의를 바꾼다. 철회(false)하면 서버가 가져온 대화와 그로부터 계산한 분석 결과를 함께 지운다
-// 확정: Swagger `회원` PATCH /api/users/me/consents. 바뀐 내 정보를 돌려준다
-export function updateAiConsent(aiAnalysis: boolean): Promise<User> {
+// AI 동의를 바꾼다. 확정: Swagger `회원` PATCH /api/users/me/consents. 넘긴 항목만 보내고, 바뀐 내 정보를 돌려준다
+// - aiAnalysis: AI 대화 분석 동의. 철회(false)하면 서버가 가져온 대화와 그로부터 계산한 분석 결과를 함께 지운다
+// - aiQuiz: AI 퀴즈 처리 동의(대화 분석 동의와 별도). 철회해도 만든 퀴즈·결과는 남고 이후 AI 처리만 멈춘다
+export function updateConsents(patch: {
+  aiAnalysis?: boolean;
+  aiQuiz?: boolean;
+}): Promise<User> {
   return request<User>({
     method: 'PATCH',
     url: '/users/me/consents',
-    data: { aiAnalysis },
-  });
-}
-
-// AI 퀴즈 처리 동의를 바꾼다(대화 분석 동의와 별도). 철회해도 만든 퀴즈·결과는 남고 이후 AI 처리만 멈춘다
-export function updateAiQuizConsent(aiQuiz: boolean): Promise<User> {
-  return request<User>({
-    method: 'PATCH',
-    url: '/users/me/consents',
-    data: { aiQuiz },
+    data: patch,
   });
 }
 

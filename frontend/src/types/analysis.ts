@@ -1,4 +1,4 @@
-import type { ConceptQuizStats } from './quiz';
+import type { ConceptFeedbackType, ConceptQuizStats } from './quiz';
 // 학습 분석 (여러 AI 모델 비교). 백엔드 /api/analysis 응답과 같은 모양 (docs/frontend-requests.md "학습 분석")
 // 상태 비교·개수·순서는 코드가 정한 값, ai로 시작하는 필드만 AI가 쓴 글이다
 // (화면에서 AI 글은 보라색 + "AI" 표시로 구분하므로 필드를 섞지 않는다)
@@ -18,6 +18,11 @@ export interface ProviderStatus {
 // 이해·부분 이해·이해 부족·판단 근거 부족. 근거 부족은 이해 부족과 다르다
 export type UnderstandingStatus =
   'understood' | 'partial' | 'not_understood' | 'insufficient_evidence';
+// 숙련도에 적용한 대화 판단. 근거 부족은 오지 않는다 (백엔드 AnalysisRunResponse allowableValues)
+type ConversationUnderstanding = Exclude<
+  UnderstandingStatus,
+  'insufficient_evidence'
+>;
 
 export interface JudgmentEvidence {
   messageId: number;
@@ -85,8 +90,6 @@ export interface ConceptComparison {
   calledCount: number;
 }
 
-export type ConceptFeedbackType = 'already_know' | 'want_to_study';
-
 export interface ConceptFeedback {
   id: number;
   courseId: number;
@@ -137,7 +140,7 @@ export interface ConceptMastery {
   quizGradedCount: number;
   quizRate: number | null;
   conversationCount: number;
-  conversationStatus: 'understood' | 'partial' | 'not_understood' | null;
+  conversationStatus: ConversationUnderstanding | null;
   formulaVersion: string;
   // 근거 부족일 때 단계가 나오려면 더 풀어야 하는 퀴즈 문제 수. 근거가 충분하면 null
   quizNeeded: number | null;
@@ -152,7 +155,7 @@ export interface MasteryRecord {
   quizGradedCount: number;
   quizRate: number | null;
   conversationCount: number;
-  conversationStatus: 'understood' | 'partial' | 'not_understood' | null;
+  conversationStatus: ConversationUnderstanding | null;
   formulaVersion: string;
 }
 

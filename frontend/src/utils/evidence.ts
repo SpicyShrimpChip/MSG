@@ -99,11 +99,6 @@ export function behaviorSignal(
   return 'neutral';
 }
 
-// 원문 근거 검증 상태를 공통 검증 상태 색으로 (원문 일치 → 검증 완료 색 등)
-export function sourceCheckTone(check: SourceCheck): VerificationStatus {
-  return check === 'insufficient' ? 'insufficient' : check;
-}
-
 // 퀴즈 결과 위쪽 한 줄: 자료 근거를 몇 문제에서 확인했는지 (자료 본문을 쓰지 않았으면 null)
 export function describeGrounding(
   design: QuizResult['learningDesign'],

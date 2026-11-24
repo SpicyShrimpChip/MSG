@@ -16,7 +16,7 @@ import RequireAuth from './RequireAuth';
    - 메인·404만 처음부터 불러오고, 나머지는 처음 방문할 때 코드를 불러온다 (pages/index.ts 같은 한 곳 모음 파일을 거치면 쪼개지지 않는다)
    - 내 데이터를 보여 주는 화면은 RequireAuth(로그인 가드) 아래에 넣는다
 */
-// 라우터가 주소를 읽기 전에 `?demo=1`을 처리한다 (목업 모드에서만)
+// 라우터가 주소를 읽기 전에 `?demo=1`을 처리한다 (체험을 켤 수 있는 빌드에서만, DEMO_AVAILABLE)
 enterDemoFromUrl();
 
 export const router = createBrowserRouter([
@@ -30,7 +30,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <MainPage /> },
 
-      // 로그인이 필요한 화면 (목업 모드에서는 검사하지 않는다)
+      // 로그인이 필요한 화면 (체험 중이면 로그인 없이 연다)
       {
         element: <RequireAuth />,
         children: [

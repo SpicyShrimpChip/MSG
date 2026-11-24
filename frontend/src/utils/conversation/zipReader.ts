@@ -1,4 +1,4 @@
-import { coreCrc32, coreInflateEntry } from './core';
+import { coreInflateEntry } from './core';
 
 // zip을 통째로 메모리에 올리지 않고 Blob.slice로 필요한 부분만 읽는 작은 리더.
 // ChatGPT 내보내기는 첨부 파일 때문에 3GB를 넘을 수 있어서 zip 전체를 메모리에 올리는 방식은 쓰지 않는다.
@@ -43,11 +43,6 @@ export class ZipFormatError extends Error {}
 
 // 압축 데이터가 깨졌을 때 (풀리지 않거나 크기·CRC가 다름)
 export class ZipDataError extends Error {}
-
-// CRC-32는 러스트 WebAssembly(core.ts)로 센다
-export function crc32(data: Uint8Array): number {
-  return coreCrc32(data);
-}
 
 async function readBytes(
   blob: Blob,

@@ -5,8 +5,7 @@ import { Lock, UserRound } from 'lucide-react';
 import {
   ME_QUERY_KEY,
   deleteAccount,
-  updateAiConsent,
-  updateAiQuizConsent,
+  updateConsents,
   updateLearningProfile,
 } from '@/api';
 import {
@@ -29,7 +28,7 @@ import {
   useSuspenseMe,
   useSingleFlightMutation,
 } from '@/hooks';
-import { useAuthStore, useMockData } from '@/store';
+import { useAuthStore } from '@/store';
 import type { User } from '@/types';
 import { DELETE_CONFIRM_TEXT, deleteAccountRequest } from '@/utils';
 import {
@@ -66,7 +65,7 @@ function AiQuizConsentSection({ me }: { me: User }) {
   const queryClient = useQueryClient();
   const [confirming, setConfirming] = useState(false);
   const mutation = useSingleFlightMutation({
-    mutationFn: updateAiQuizConsent,
+    mutationFn: (aiQuiz: boolean) => updateConsents({ aiQuiz }),
     onSuccess: (user) => queryClient.setQueryData(ME_QUERY_KEY, user),
   });
   return (
@@ -221,7 +220,7 @@ function AiConsentSection({ me }: { me: User }) {
   const [confirming, setConfirming] = useState(false);
   const { clear: clearMaskWords } = useSavedMaskWords(me.id);
   const mutation = useSingleFlightMutation({
-    mutationFn: updateAiConsent,
+    mutationFn: (aiAnalysis: boolean) => updateConsents({ aiAnalysis }),
     onSuccess: (user) => {
       queryClient.setQueryData(ME_QUERY_KEY, user);
       // 철회하면 이 브라우저에 저장한 가릴 단어도 함께 지운다
@@ -447,7 +446,6 @@ function MyAccount() {
 }
 
 function MyPage() {
-  const mockData = useMockData();
   const authenticated = useAuthStore(
     (state) => state.status === 'authenticated',
   );
@@ -462,20 +460,14 @@ function MyPage() {
         <AsyncBoundary>
           <MyAccount />
         </AsyncBoundary>
-      ) : mockData ? (
-        // 목업(체험)에는 계정이 없어서 로그인으로 보내지 않는다 (로그인 화면도 아직 열려 있지 않다)
+      ) : (
+        // RequireAuth를 지났는데 로그인하지 않았으면 목업(체험 또는 VITE_MOCK_OPEN_ACCESS)이다.
+        // 목업에는 계정이 없어서 예시 화면 대신 안내만 보여 준다
         <EmptyState
           icon={<UserRound size={24} aria-hidden="true" />}
           title="체험에서는 보여 드리지 않아요"
           description="마이페이지는 가입한 계정의 정보와 동의 상태를 다루는 곳이라 예시 화면이 없어요."
           action={{ label: '학습 대시보드로 가기', to: '/analysis' }}
-        />
-      ) : (
-        <EmptyState
-          icon={<UserRound size={24} aria-hidden="true" />}
-          title="로그인하면 볼 수 있어요"
-          description="AI 대화 분석 동의를 철회하고 저장된 데이터를 관리할 수 있어요."
-          action={{ label: '로그인하기', to: '/login' }}
         />
       )}
     </SubPage>
