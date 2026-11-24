@@ -5,6 +5,7 @@ import {
   type ConversationSourceReader,
   type ParsedConversation,
 } from '../types';
+import { isRecord } from '../shared';
 
 // ChatGPT 내보내기(conversations.json)의 대화는 메시지가 트리(mapping)로 들어 있다.
 // 다시 생성하기·수정으로 가지가 갈라질 수 있어서, 마지막으로 본 가지(current_node)에서
@@ -32,10 +33,6 @@ interface RawNode {
 const MARKER = /([ \t]*)\ue200([^\ue201\ue202]+)(?:\ue202([^\ue201]*))?\ue201/g;
 // 짝이 맞지 않고 남은 표시 문자
 const STRAY_MARKER = /[\ue200-\ue202]/g;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function toIso(seconds: unknown): string | undefined {
   if (typeof seconds !== 'number' || !Number.isFinite(seconds))

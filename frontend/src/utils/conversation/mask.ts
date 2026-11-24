@@ -1,4 +1,5 @@
-import { coreMaskTexts } from './core';
+import { coreMaskTexts, loadConversationCore } from './core';
+import { oneLine } from './shared';
 import type { ParsedConversation } from './types';
 
 export type MaskKind =
@@ -84,15 +85,15 @@ export interface MaskedSpot {
 // 앞뒤로 보여 줄 글자 수
 const SPOT_CONTEXT_LENGTH = 20;
 
-const oneLine = (text: string) => text.replace(/\s+/g, ' ');
-
-// 가린 결과 글 안의 대체 표시(`[이메일]` 등)를 모두 찾는 정규식
-const LABEL_PATTERN = new RegExp(
+// 가린 결과 글 안의 대체 표시(`[이메일]` 등)를 모두 찾는 정규식 (g 플래그라 `match`·`matchAll`로만 쓴다.
+// 둘은 lastIndex를 남기지 않아 여러 곳에서 같이 써도 된다)
+export const MASK_LABEL_PATTERN = new RegExp(
   Object.values(MASK_LABELS).map(escapeRegExp).join('|'),
   'g',
 );
 
-const countLabels = (text: string) => text.match(LABEL_PATTERN)?.length ?? 0;
+const countLabels = (text: string) =>
+  text.match(MASK_LABEL_PATTERN)?.length ?? 0;
 
 // 가린 결과 글 하나에서 가린 곳 목록을 만든다 (messageIndex: 제목이면 -1).
 // 가린 표시 순서(labelIndex)는 앞 가린 곳부터 이어서 센다 (가린 곳마다 글 앞부분을 처음부터 세면 가린 곳이 많을 때 느리다).
@@ -160,4 +161,16 @@ export function maskConversationWithSpots(
     })),
   };
   return { conversation: masked, counts, totalCount, spots };
+}
+
+// 대화 여러 개를 한꺼번에 가린다. 가리기 규칙(러스트 WebAssembly)을 먼저 불러온다.
+// Web Worker와, Worker를 쓸 수 없을 때 화면 스레드가 같이 쓴다. 화면은 worker/client.ts의 maskConversationsOffThread를 부른다
+export async function maskConversations(
+  conversations: ParsedConversation[],
+  options: MaskOptions,
+): Promise<MaskedConversationWithSpots[]> {
+  await loadConversationCore();
+  return conversations.map((conversation) =>
+    maskConversationWithSpots(conversation, options),
+  );
 }

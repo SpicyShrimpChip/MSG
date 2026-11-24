@@ -11,6 +11,7 @@ import {
   type ParsedConversation,
 } from '@/utils';
 import ConversationView from './ConversationView';
+import { MARK_CLASS } from './marks';
 import type { useMaskedConversations } from './useMaskedConversations';
 import WordList from './WordList';
 
@@ -117,7 +118,7 @@ function MaskPreview({ id, masked, spots }: MaskPreviewProps) {
                 <span className="truncate text-ink-soft">
                   {spot.messageIndex < 0 && '제목: '}
                   {withoutMarkdown(spot.before)}
-                  <mark className="rounded bg-primary-soft px-0.5 font-medium text-heading">
+                  <mark className={MARK_CLASS.mask}>
                     {MASK_LABELS[spot.kind]}
                   </mark>
                   {withoutMarkdown(spot.after)}

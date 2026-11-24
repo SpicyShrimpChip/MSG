@@ -5,6 +5,7 @@ import {
   type ConversationSourceReader,
   type ParsedConversation,
 } from '../types';
+import { isRecord } from '../shared';
 
 // Claude 내보내기(conversations-000.zip 안의 conversations.json)는 대화마다 chat_messages 배열이 있다.
 // 2026-10-31 실제 내보내기 파일로 확인함. 형식은 바뀔 수 있다.
@@ -23,10 +24,6 @@ const IMAGE_EXTENSIONS = new Set([
   'heic',
   'bmp',
 ]);
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function toIso(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;

@@ -17,7 +17,7 @@ import { MARKDOWN_COMPONENTS } from './markdownComponents';
 // 사용자의 기록이라 AI 말풍선도 보라색(이 서비스의 AI가 쓴 것)으로 칠하지 않고 서비스 이름만 붙인다.
 // HTML 문자열로 그리지 않는다: 마크다운은 react-markdown이 React 요소로 만들고, 대화 속 HTML은 그리지 않는다
 
-const SOURCE_NAME: Record<ConversationSource, string> = {
+export const SOURCE_NAME: Record<ConversationSource, string> = {
   chatgpt: 'ChatGPT',
   claude: 'Claude',
 };
