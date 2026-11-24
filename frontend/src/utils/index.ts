@@ -14,3 +14,5 @@ export * from './conceptStudy';
 export * from './routeError';
 export * from './requestKey';
 export * from './submitLock';
+export * from './socialLogin';
+export * from './accountDeletion';

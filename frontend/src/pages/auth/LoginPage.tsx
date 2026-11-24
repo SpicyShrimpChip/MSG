@@ -1,7 +1,12 @@
 import { useState, type SubmitEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSingleFlightMutation } from '@/hooks';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import {
+  Link,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from 'react-router-dom';
 import { ME_QUERY_KEY, login } from '@/api';
 import {
   Button,
@@ -10,7 +15,9 @@ import {
   PasswordInput,
   TextInput,
 } from '@/components';
+import { socialErrorMessage } from '@/utils';
 import AuthCard from './components/AuthCard';
+import KakaoLoginButton from './components/KakaoLoginButton';
 import MockAuthNotice from './components/MockAuthNotice';
 
 interface LoginLocationState {
@@ -26,6 +33,9 @@ function LoginPage() {
   const state = (useLocation().state ?? {}) as LoginLocationState;
   const [email, setEmail] = useState(state.signedUpEmail ?? '');
   const [password, setPassword] = useState('');
+  // 카카오 로그인이 실패해 돌아온 경우 (?socialError=코드). 취소는 문구 없이 돌아온다
+  const [searchParams] = useSearchParams();
+  const socialError = socialErrorMessage(searchParams.get('socialError'));
 
   const mutation = useSingleFlightMutation({
     mutationFn: login,
@@ -52,6 +62,11 @@ function LoginPage() {
     <AuthCard title="로그인" description="계정으로 계속해요">
       <form onSubmit={handleSubmit} className="flex w-full flex-col gap-5">
         <MockAuthNotice from={state.from} />
+        {socialError && (
+          <p role="alert" className="text-body text-danger">
+            {socialError}
+          </p>
+        )}
         {state.signedUpEmail && (
           <p role="status" className="text-body text-ink-soft">
             가입이 완료됐어요. 로그인해 주세요.
@@ -92,6 +107,7 @@ function LoginPage() {
         >
           로그인
         </Button>
+        <KakaoLoginButton returnTo={state.from} divider="before" />
         <p className="text-body text-ink-soft">
           아직 계정이 없나요?{' '}
           <Link

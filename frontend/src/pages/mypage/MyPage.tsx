@@ -20,6 +20,7 @@ import {
   PasswordInput,
   SubPage,
   ErrorText,
+  TextInput,
   type LearningProfileValue,
 } from '@/components';
 import { LEARNING_PURPOSES, jobFieldLabel } from '@/constants';
@@ -30,6 +31,7 @@ import {
 } from '@/hooks';
 import { useAuthStore, useMockData } from '@/store';
 import type { User } from '@/types';
+import { DELETE_CONFIRM_TEXT, deleteAccountRequest } from '@/utils';
 import {
   AI_CONSENT_NOTICE,
   AI_QUIZ_CONSENT_NOTICE,
@@ -337,11 +339,14 @@ function DeleteAccountSection({ me }: { me: User }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [confirming, setConfirming] = useState(false);
-  // 본인 확인: 지금 비밀번호를 다시 받는다 (서버가 확인)
+  // 본인 확인: 지금 비밀번호를 다시 받는다 (서버가 확인).
+  // 카카오로만 가입해 비밀번호가 없는 계정은 확인 문구 "탈퇴"를 받는다
   const [password, setPassword] = useState('');
+  const [confirmText, setConfirmText] = useState('');
+  const request = deleteAccountRequest(me.hasPassword, password, confirmText);
   const { clear: clearMaskWords } = useSavedMaskWords(me.id);
   const mutation = useSingleFlightMutation({
-    mutationFn: () => deleteAccount(password),
+    mutationFn: deleteAccount,
     onSuccess: () => {
       clearMaskWords();
       queryClient.clear();
@@ -365,25 +370,48 @@ function DeleteAccountSection({ me }: { me: User }) {
         퀴즈·사전·사후평가와 채점 결과, 가져온 AI 대화, 분석 결과와 피드백, 이
         브라우저에 저장한 가릴 단어가 모두 지워지고 되돌릴 수 없어요. 내가 쓴
         공지사항이 있으면 글은 남고 작성자만 지워져요. 탈퇴한 뒤 30일 동안은
-        같은 이메일로 다시 가입할 수 없어요.
+        같은 이메일로 다시 가입할 수 없어요. 카카오 로그인을 연결했다면 카카오
+        연결도 함께 끊어요.
       </p>
-      <FormRow label="지금 비밀번호" htmlFor="mypage-delete-password" required>
-        <PasswordInput
-          id="mypage-delete-password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(e) => {
-            setPassword(e.target.value);
-            // 비밀번호를 고치면 "맞지 않아요" 같은 지난 오류를 지운다
-            if (mutation.isError) mutation.reset();
-          }}
-        />
-      </FormRow>
+      {me.hasPassword ? (
+        <FormRow
+          label="지금 비밀번호"
+          htmlFor="mypage-delete-password"
+          required
+        >
+          <PasswordInput
+            id="mypage-delete-password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              // 비밀번호를 고치면 "맞지 않아요" 같은 지난 오류를 지운다
+              if (mutation.isError) mutation.reset();
+            }}
+          />
+        </FormRow>
+      ) : (
+        <FormRow
+          label={`확인을 위해 "${DELETE_CONFIRM_TEXT}"라고 입력해 주세요`}
+          htmlFor="mypage-delete-confirm"
+          required
+        >
+          <TextInput
+            id="mypage-delete-confirm"
+            autoComplete="off"
+            value={confirmText}
+            onChange={(e) => {
+              setConfirmText(e.target.value);
+              if (mutation.isError) mutation.reset();
+            }}
+          />
+        </FormRow>
+      )}
       <ErrorText error={mutation.error} />
       <div>
         <Button
           variant="secondary"
-          disabled={password === '' || mutation.isPending}
+          disabled={request === null || mutation.isPending}
           onClick={() => setConfirming(true)}
         >
           {mutation.isPending ? '지우는 중…' : '탈퇴하기'}
@@ -396,7 +424,7 @@ function DeleteAccountSection({ me }: { me: User }) {
         confirmLabel="탈퇴하고 모두 지우기"
         onConfirm={() => {
           setConfirming(false);
-          mutation.mutate();
+          if (request) mutation.mutate(request);
         }}
         onCancel={() => setConfirming(false)}
       />

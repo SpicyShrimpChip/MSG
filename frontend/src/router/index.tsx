@@ -170,6 +170,19 @@ export const router = createBrowserRouter([
         path: 'signup',
         lazy: lazyPage(() => import('@/pages/auth/SignupPage')),
       },
+      // 카카오 로그인이 끝나 돌아오는 화면 (서버 콜백이 보낸다, 로그인 없이 연다)
+      {
+        path: 'signup/social',
+        lazy: lazyPage(() => import('@/pages/auth/SocialSignupPage')),
+      },
+      {
+        path: 'auth/social/done',
+        lazy: lazyPage(() => import('@/pages/auth/SocialDonePage')),
+      },
+      {
+        path: 'auth/social/link',
+        lazy: lazyPage(() => import('@/pages/auth/SocialLinkPage')),
+      },
       {
         path: 'search',
         lazy: lazyPage(() => import('@/pages/search/SearchPage')),
