@@ -4,6 +4,7 @@ import {
   AI_QUIZ_CONSENT_NOTICE,
   NoticeList,
   REQUIRED_NOTICE,
+  type Notice,
 } from './ConsentNotice';
 
 // 회원가입의 이용 안내와 선택 동의.
@@ -19,9 +20,12 @@ interface SignupAgreementsProps {
   onAiConsentChange: (checked: boolean) => void;
   aiQuizConsent: boolean;
   onAiQuizConsentChange: (checked: boolean) => void;
+  // 개인정보 수집·이용 안내 항목. 카카오 가입은 KAKAO_SIGNUP_NOTICE(비밀번호 없음, 카카오 회원번호)
+  requiredNotice?: Notice[];
 }
 
 function SignupAgreements({
+  requiredNotice = REQUIRED_NOTICE,
   acknowledged,
   onAcknowledgedChange,
   aiConsent,
@@ -38,7 +42,7 @@ function SignupAgreements({
         <h2 id="signup-notice-title" className="font-bold text-heading">
           개인정보 수집·이용 안내
         </h2>
-        <NoticeList items={REQUIRED_NOTICE} />
+        <NoticeList items={requiredNotice} />
         <p className="text-caption text-ink-muted">
           자세한 내용은{' '}
           <Link to="/privacy" className="font-bold text-primary underline">
