@@ -19,6 +19,7 @@ public class PersonalInfoDetector {
 	private static final String WORD_START = "(?<![A-Za-z0-9_])";
 	private static final String WORD_END = "(?![A-Za-z0-9_])";
 	private static final String OCTET = "(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)";
+	private static final Pattern IPV4 = Pattern.compile("(?<![\\d.])(?:" + OCTET + "\\.){3}" + OCTET + "(?![\\d.])");
 
 	// 규칙 종류. IP만 따로 빼서 검사할 수 있게 이름을 붙인다 (목록 순서에 기대지 않는다)
 	private enum Kind {
@@ -49,7 +50,10 @@ public class PersonalInfoDetector {
 			new Rule(Kind.PHONE, "(?<![\\d-])(?:\\+82[-.\\s]?0?|0)(?:10|1[16789]|2|[3-6][1-5]|70)[-.\\s]?\\d{3,4}[-.\\s]?\\d{4}"
 					+ "(?![\\d-])"),
 			// IPv4
-			new Rule(Kind.IP, "(?<![\\d.])(?:" + OCTET + "\\.){3}" + OCTET + "(?![\\d.])"));
+			new Rule(Kind.IP, IPV4, matched -> true));
+
+	// 학습 글 검사용: IP를 뺀 규칙 (IP는 공인 주소만 따로 본다)
+	private static final List<Rule> RULES_EXCEPT_IP = RULES.stream().filter(rule -> rule.kind() != Kind.IP).toList();
 
 	public boolean containsPersonalInfo(String text) {
 		return matchesAny(text, RULES);
@@ -62,7 +66,7 @@ public class PersonalInfoDetector {
 	 * 공인 주소는 집·회사 주소일 수 있어 막는다.
 	 */
 	public boolean containsPersonalInfoExceptIp(String text) {
-		if (matchesAny(text, RULES.stream().filter(rule -> rule.kind() != Kind.IP).toList())) {
+		if (matchesAny(text, RULES_EXCEPT_IP)) {
 			return true;
 		}
 		if (text == null || text.isEmpty()) {
@@ -76,8 +80,6 @@ public class PersonalInfoDetector {
 		}
 		return false;
 	}
-
-	private static final Pattern IPV4 = Pattern.compile("(?<![\\d.])(?:" + OCTET + "\\.){3}" + OCTET + "(?![\\d.])");
 
 	static boolean isExampleIp(String ip) {
 		String[] parts = ip.split("\\.");

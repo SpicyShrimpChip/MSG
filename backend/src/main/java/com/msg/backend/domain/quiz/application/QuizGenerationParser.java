@@ -10,6 +10,7 @@ import com.msg.backend.domain.quiz.entity.QuizQuestion;
 import com.msg.backend.domain.quiz.entity.QuizRubricItem;
 import com.msg.backend.domain.quiz.entity.QuizSuggestion;
 import com.msg.backend.domain.quiz.entity.SuggestionKind;
+import com.msg.backend.global.common.Texts;
 import com.msg.backend.global.common.VerificationStatus;
 import com.msg.backend.global.llm.LlmJson;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -70,8 +71,6 @@ class QuizGenerationParser {
 
 	/** 형식 검증 외에 확인할 것: 평가할 인지 수준(비면 확인하지 않음)과 보낸 자료 발췌(없으면 null) */
 	record Expectation(List<BloomLevel> bloomTargets, int minDistinctLevels, String materialExcerpt) {
-
-		static final Expectation NONE = new Expectation(List.of(), 0, null);
 	}
 
 	/** 자료 근거 검증 결과. check가 null이면 자료 없이 만든 문제 */
@@ -106,17 +105,12 @@ class QuizGenerationParser {
 	record ParsedQuiz(List<ParsedQuestion> questions, List<QuizSuggestion> suggestions) {
 	}
 
-	ParsedQuiz parse(String raw, QuizMode mode, Map<QuestionType, Integer> plan, List<String> concepts)
-			throws InvalidOutputException {
-		return parse(raw, mode, plan, concepts, Expectation.NONE);
-	}
-
 	ParsedQuiz parse(String raw, QuizMode mode, Map<QuestionType, Integer> plan, List<String> concepts,
 			Expectation expectation) throws InvalidOutputException {
 		JsonNode root = LlmJson.readObject(objectMapper, raw)
 				.orElseThrow(() -> new InvalidOutputException("JSON 객체가 아니다"));
 		JsonNode items = root.get("questions");
-		int expected = plan.values().stream().mapToInt(Integer::intValue).sum();
+		int expected = QuizTypePlan.total(plan);
 		if (items == null || !items.isArray() || items.size() != expected) {
 			throw new InvalidOutputException("문제 수가 다르다");
 		}
@@ -223,7 +217,7 @@ class QuizGenerationParser {
 		if ((status == VerificationStatus.VERIFIED || status == VerificationStatus.PARTIAL) && claimed != null
 				&& check.location() != null && !sameLocation(claimed, check.location())) {
 			status = VerificationStatus.PARTIAL;
-			String fixed = "AI가 적은 위치(" + clip(claimed, 20) + ")가 실제 위치와 달라 실제 위치로 고쳤어요.";
+			String fixed = "AI가 적은 위치(" + Texts.clip(claimed, 20) + ")가 실제 위치와 달라 실제 위치로 고쳤어요.";
 			note = note == null ? fixed : note + " " + fixed;
 		}
 		Boolean answerInSource = null;
@@ -235,19 +229,15 @@ class QuizGenerationParser {
 			}
 		}
 		String storedQuote = check.quote() == null ? null
-				: clip(check.quote(), QuizQuestion.SOURCE_QUOTE_MAX_LENGTH);
+				: Texts.clip(check.quote(), QuizQuestion.SOURCE_QUOTE_MAX_LENGTH);
 		return new Source(status, storedQuote, check.location(), note == null ? null
-				: clip(note, QuizQuestion.SOURCE_NOTE_MAX_LENGTH), answerInSource);
+				: Texts.clip(note, QuizQuestion.SOURCE_NOTE_MAX_LENGTH), answerInSource);
 	}
 
 	// "[p. 3]", "p.3", "P. 3"을 같은 위치로 본다
 	private static boolean sameLocation(String a, String b) {
 		return a.replaceAll("[\\[\\]\\s]", "").toLowerCase(Locale.ROOT)
 				.equals(b.replaceAll("[\\[\\]\\s]", "").toLowerCase(Locale.ROOT));
-	}
-
-	private static String clip(String text, int max) {
-		return text.length() <= max ? text : text.substring(0, max - 1) + "…";
 	}
 
 	private static List<QuizConcept> concepts(JsonNode node, Map<String, String> conceptByKey)
@@ -339,10 +329,7 @@ class QuizGenerationParser {
 					|| !seen.add(kind.get() + ":" + concept.toLowerCase(Locale.ROOT))) {
 				continue;
 			}
-			String reason = LlmJson.text(item.get("reason"));
-			if (reason != null && reason.length() > QuizSuggestion.REASON_MAX_LENGTH) {
-				reason = reason.substring(0, QuizSuggestion.REASON_MAX_LENGTH);
-			}
+			String reason = Texts.cut(LlmJson.text(item.get("reason")), QuizSuggestion.REASON_MAX_LENGTH);
 			suggestions.add(QuizSuggestion.of(kind.get(), concept, reason));
 		}
 		return suggestions;

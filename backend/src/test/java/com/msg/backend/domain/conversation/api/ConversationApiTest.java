@@ -268,7 +268,9 @@ class ConversationApiTest {
 		send(token, importBody(importId, 2, 2, secondCourse, List.of(simple("c-2"))))
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.data.importCompleted").value(true));
-		assertThat(analyzableClientIds("me@example.com")).containsExactlyInAnyOrder("c-1", "c-2");
+		// 한 작업이 두 과목에 걸쳐도 작업이 끝나면 과목마다 분석 대상이 된다
+		assertThat(analyzableClientIds("me@example.com", courseId, secondCourse)).containsExactlyInAnyOrder("c-1",
+				"c-2");
 	}
 
 	@Test
@@ -481,9 +483,15 @@ class ConversationApiTest {
 		return message;
 	}
 
-	private List<String> analyzableClientIds(String email) {
+	// 분석이 읽는 조건(findAnalyzableInCourse)으로 과목들의 대화를 읽는다. 과목을 주지 않으면 이 테스트의 기본 과목
+	private List<String> analyzableClientIds(String email, long... courseIds) {
 		Long userId = jdbcTemplate.queryForObject("select id from users where email = ?", Long.class, email);
-		return conversationRepository.findAnalyzable(userId).stream().map(Conversation::getClientId).toList();
+		long[] courses = courseIds.length == 0 ? new long[] {courseId} : courseIds;
+		return java.util.Arrays.stream(courses)
+				.mapToObj(course -> conversationRepository.findAnalyzableInCourse(userId, course))
+				.flatMap(List::stream)
+				.map(Conversation::getClientId)
+				.toList();
 	}
 
 	private int count(String table) {

@@ -269,7 +269,7 @@ public class QuizService {
 	private void executeRun(Long userId, Quiz quiz, Reserved reserved, List<AnswerGradingService.Item> items) {
 		Map<Long, GradeOutcome> outcomes = Map.of();
 		try {
-			List<LlmClient> clients = llmClients.all().stream().filter(LlmClient::isConfigured).toList();
+			List<LlmClient> clients = llmClients.configured();
 			outcomes = gradingService.grade(clients, quiz.getMode(), jobLabel(quiz), items,
 					properties.gradingMaxOutputTokens(), userId, reserved.runId(),
 					reserved.deadlineAt().atZone(clock.getZone()).toInstant());
@@ -284,13 +284,15 @@ public class QuizService {
 			boolean active = run != null && run.isActiveAt(now);
 			List<QuizAnswer> answers = answerRepository.findAllBySubmissionId(reserved.submissionId());
 			for (QuizAnswer answer : answers) {
-				if (answer.getGradingStatus() != GradingStatus.PENDING
-						|| !GradingNotes.GRADING.equals(answer.getGradingNote())) {
+				if (!answer.isBeingGraded()) {
 					continue;
 				}
 				GradeOutcome outcome = active ? results.get(answer.getQuestionId()) : null;
-				answer.apply(outcome != null ? outcome
-						: GradeOutcome.pending(GradingNotes.MODEL_FAILED, answer.getMaxScore(), 0));
+				if (outcome != null) {
+					answer.apply(outcome);
+				} else {
+					answer.markGradingFailed();
+				}
 			}
 			Totals totals = Totals.ofAnswers(answers);
 			submissionRepository.findById(reserved.submissionId()).ifPresent(submission -> submission
@@ -310,7 +312,7 @@ public class QuizService {
 		if (userAiUsage.countLast24Hours(userId, UserAiUsage.Kind.QUIZ_GRADING) >= properties.dailyGradingLimit()) {
 			return GradingNotes.LIMIT_EXCEEDED;
 		}
-		int modelCount = (int) llmClients.all().stream().filter(LlmClient::isConfigured).count();
+		int modelCount = llmClients.configured().size();
 		if (usage.modelCallBudgetExhausted(userId) || !aiCallQuota.hasUserRemaining(userId, modelCount)
 				|| !aiCallQuota.hasRemaining()) {
 			return GradingNotes.BUDGET_EXCEEDED;
@@ -330,18 +332,13 @@ public class QuizService {
 		for (QuizGradingRun run : gradingRunRepository.findAllByUserIdAndStatus(userId, QuizGradingRun.Status.RUNNING)) {
 			if (!run.isActiveAt(now) && run.finish(QuizGradingRun.Status.TIMED_OUT, now)) {
 				List<QuizAnswer> answers = answerRepository.findAllBySubmissionId(run.getSubmissionId());
-				answers.stream()
-						.filter(answer -> answer.getGradingStatus() == GradingStatus.PENDING
-								&& GradingNotes.GRADING.equals(answer.getGradingNote()))
-						.forEach(answer -> answer.apply(
-								GradeOutcome.pending(GradingNotes.MODEL_FAILED, answer.getMaxScore(), 0)));
+				answers.stream().filter(QuizAnswer::isBeingGraded).forEach(QuizAnswer::markGradingFailed);
 			}
 		}
 	}
 
 	private static String jobLabel(Quiz quiz) {
-		return quiz.getJobField() == null ? null
-				: quiz.getJobField() == JobField.OTHER ? quiz.getJobFieldOther() : quiz.getJobField().label();
+		return JobField.labelOf(quiz.getJobField(), quiz.getJobFieldOther());
 	}
 
 	// 과목의 개념별 퀴즈 결과 (학습 분석 대시보드와 나란히 쓴다)
@@ -357,7 +354,7 @@ public class QuizService {
 		if (!consent) {
 			return GradingNotes.NO_CONSENT;
 		}
-		return llmClients.all().stream().anyMatch(LlmClient::isConfigured) ? null : GradingNotes.NOT_CONFIGURED;
+		return llmClients.configured().isEmpty() ? GradingNotes.NOT_CONFIGURED : null;
 	}
 
 	private void rejectPersonalInfo(List<AnswerGradingService.Item> items) {

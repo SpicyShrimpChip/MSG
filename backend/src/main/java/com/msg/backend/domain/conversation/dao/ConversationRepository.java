@@ -21,17 +21,10 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
 			Collection<String> clientIds);
 
 	/**
-	 * AI 분석에 쓸 수 있는 대화: 사용자가 지금 AI 대화 분석에 동의했고, 마지막으로 보낸 가져오기 작업이 끝났고,
+	 * 과목 하나에서 AI 분석에 쓸 수 있는 대화: 사용자가 지금 AI 대화 분석에 동의했고, 마지막으로 보낸 가져오기 작업이 끝났고,
 	 * 조각을 모두 받은 대화. 분석 기능을 만들 때 이 조건으로만 대화를 읽는다
 	 * (철회하면 대화를 지우지만, 지우는 것과 분석이 엇갈려도 철회한 사용자의 대화는 읽지 않게 동의도 함께 본다).
 	 */
-	@Query("select c from Conversation c, ConversationImport i, User u where i.id = c.importId and u.id = c.userId"
-			+ " and c.userId = :userId and u.aiAnalysisConsent = true"
-			+ " and i.status = com.msg.backend.domain.conversation.entity.ConversationImportStatus.COMPLETED"
-			+ " and c.receivedPartCount >= c.partCount order by c.id")
-	List<Conversation> findAnalyzable(Long userId);
-
-	// findAnalyzable과 같은 조건으로 과목 하나의 대화만
 	@Query("select c from Conversation c, ConversationImport i, User u where i.id = c.importId and u.id = c.userId"
 			+ " and c.userId = :userId and c.courseId = :courseId and u.aiAnalysisConsent = true"
 			+ " and i.status = com.msg.backend.domain.conversation.entity.ConversationImportStatus.COMPLETED"

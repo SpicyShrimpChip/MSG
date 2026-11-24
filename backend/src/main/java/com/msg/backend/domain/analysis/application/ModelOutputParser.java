@@ -7,7 +7,8 @@ import com.msg.backend.domain.analysis.entity.LearningBehavior;
 import com.msg.backend.domain.analysis.entity.UnderstandingStatus;
 import com.msg.backend.domain.conversation.entity.MessageRole;
 import com.msg.backend.domain.course.entity.Course;
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.msg.backend.global.common.Texts;
+import com.msg.backend.global.llm.LlmJson;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
@@ -47,11 +48,6 @@ class ModelOutputParser {
 	private final ObjectMapper objectMapper;
 
 	record ParsedEvidence(Long messageId, EvidenceKind kind, String note, LearningBehavior behavior) {
-
-		ParsedEvidence(Long messageId, EvidenceKind kind, String note) {
-			this(messageId, kind, note, null);
-		}
-
 		// 상태를 받쳐 주는 신호. 행동이 없으면 종류로 본다: 설명·풀이는 어느 쪽이든(UNSPECIFIED), 질문은 판단에 쓰지 않음
 		Support support() {
 			if (!kind.writtenByUser()) {
@@ -88,7 +84,9 @@ class ModelOutputParser {
 	}
 
 	ParsedOutput parse(String text, AnalysisInput input) throws InvalidOutputException {
-		JsonNode root = readJson(text);
+		// 코드 블록 표시(```json)나 앞뒤 글이 붙어 와도 첫 { 부터 마지막 } 까지를 읽는다
+		JsonNode root = LlmJson.readObject(objectMapper, text)
+				.orElseThrow(() -> new InvalidOutputException("JSON 객체를 읽을 수 없다"));
 		JsonNode concepts = root.get("concepts");
 		if (concepts == null || !concepts.isArray()) {
 			throw new InvalidOutputException("concepts 목록이 없다");
@@ -100,7 +98,7 @@ class ModelOutputParser {
 		Set<String> seen = new HashSet<>();
 		int dropped = 0;
 		for (JsonNode node : concepts) {
-			String name = node.path("concept").asText("").strip().replaceAll("\\s+", " ");
+			String name = Course.normalizeKeyword(node.path("concept").asText(""));
 			AnalysisInput.Concept concept = known.get(Course.nameKey(name));
 			var reported = UnderstandingStatus.fromApiValue(node.path("status").asText(null));
 			if (concept == null || reported.isEmpty() || !seen.add(concept.key())) {
@@ -175,27 +173,6 @@ class ModelOutputParser {
 		return deepeningOnly ? DEEPENING_ONLY_REASON : QUESTION_ONLY_REASON;
 	}
 
-	// 코드 블록 표시(```json)나 앞뒤 글이 붙어 와도 첫 { 부터 마지막 } 까지를 읽는다
-	private JsonNode readJson(String text) throws InvalidOutputException {
-		if (text == null) {
-			throw new InvalidOutputException("답변이 비어 있다");
-		}
-		int start = text.indexOf('{');
-		int end = text.lastIndexOf('}');
-		if (start < 0 || end <= start) {
-			throw new InvalidOutputException("JSON 객체가 없다");
-		}
-		try {
-			JsonNode root = objectMapper.readTree(text.substring(start, end + 1));
-			if (!root.isObject()) {
-				throw new InvalidOutputException("JSON 객체가 아니다");
-			}
-			return root;
-		} catch (JsonProcessingException e) {
-			throw new InvalidOutputException("JSON으로 읽을 수 없다");
-		}
-	}
-
 	// 123, "123", "m123" 모두 받는다
 	private static Long messageId(JsonNode node) {
 		if (node == null) {
@@ -215,14 +192,8 @@ class ModelOutputParser {
 		}
 	}
 
+	// 공백을 걷어 낸 글을 maxLength자까지 (말줄임 없음). 글이 아니거나 비었으면 null
 	private static String text(JsonNode node, int maxLength) {
-		if (node == null || !node.isTextual()) {
-			return null;
-		}
-		String text = node.asText().strip();
-		if (text.isEmpty()) {
-			return null;
-		}
-		return text.length() <= maxLength ? text : text.substring(0, maxLength);
+		return Texts.cut(LlmJson.text(node), maxLength);
 	}
 }

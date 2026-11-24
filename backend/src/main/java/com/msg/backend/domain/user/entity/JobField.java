@@ -30,6 +30,14 @@ public enum JobField {
 		return label;
 	}
 
+	// 모델에 보낼 분야 이름. 분야가 없으면 null, 기타면 사용자가 쓴 이름(other)
+	public static String labelOf(JobField field, String other) {
+		if (field == null) {
+			return null;
+		}
+		return field == OTHER ? other : field.label();
+	}
+
 	public String apiValue() {
 		return ApiEnumValues.of(this);
 	}

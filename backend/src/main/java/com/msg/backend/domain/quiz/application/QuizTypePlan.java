@@ -38,4 +38,9 @@ public final class QuizTypePlan {
 		}
 		return plan;
 	}
+
+	// 계획한 문제 수 합계
+	public static int total(Map<QuestionType, Integer> plan) {
+		return plan.values().stream().mapToInt(Integer::intValue).sum();
+	}
 }

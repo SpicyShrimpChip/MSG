@@ -24,6 +24,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
 	@Query("select u from User u where u.id = :id")
 	Optional<User> findByIdForUpdate(Long id);
 
+	// 로그인한 사용자 행을 읽는다(잠그지 않음). 토큰은 유효하지만 계정이 사라졌으면(탈퇴 직후 등) 401
+	default User getLoginUser(Long id) {
+		return findById(id)
+				.orElseThrow(() -> new BusinessException(HttpStatus.UNAUTHORIZED, ApiErrorResponder.UNAUTHORIZED_MESSAGE));
+	}
+
 	// 로그인한 사용자 행을 잠가 읽는다 (findByIdForUpdate). 토큰은 유효하지만 계정이 사라졌으면(탈퇴 직후 등) 401
 	default User lockLoginUser(Long id) {
 		return findByIdForUpdate(id)

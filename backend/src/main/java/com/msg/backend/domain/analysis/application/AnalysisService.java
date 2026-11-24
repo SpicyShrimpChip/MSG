@@ -15,7 +15,6 @@ import com.msg.backend.domain.analysis.entity.AnalysisRunStatus;
 import com.msg.backend.domain.analysis.entity.ConceptConsensus;
 import com.msg.backend.domain.analysis.entity.ConceptJudgment;
 import com.msg.backend.domain.analysis.entity.JudgmentEvidence;
-import com.msg.backend.domain.analysis.entity.ModelResultStatus;
 import com.msg.backend.domain.analysis.entity.UnderstandingStatus;
 import com.msg.backend.domain.conversation.dao.ConversationMessageRepository;
 import com.msg.backend.domain.conversation.dao.ConversationRepository;
@@ -132,7 +131,7 @@ public class AnalysisService {
 
 	public AnalysisRunResponse run(Long userId, Long courseId) {
 		List<LlmClient> clients = llmClients.all();
-		List<LlmClient> configured = clients.stream().filter(LlmClient::isConfigured).toList();
+		List<LlmClient> configured = llmClients.configured();
 		if (configured.isEmpty()) {
 			throw new BusinessException(HttpStatus.SERVICE_UNAVAILABLE, NO_MODEL_MESSAGE);
 		}
@@ -206,12 +205,10 @@ public class AnalysisService {
 	private void save(Long userId, Prepared prepared, List<LlmClient> clients,
 			Map<LlmProvider, ModelInvoker.Outcome> outcomes) {
 		User user = userRepository.lockLoginUser(userId);
-		// 철회하거나 쓴 대화를 지우면 분석 행이 지워진다(AnalysisCleanup). 동의만 꺼진 경우도 저장하지 않는다
+		// 철회하거나 쓴 대화를 지우면 분석 행이 지워진다(AnalysisCleanup). 동의만 꺼진 경우도 저장하지 않는다.
+		// 이 예외로 트랜잭션이 롤백되므로 여기서 행을 지워도 남지 않는다(진행 중 행은 runningTimeout이 지나면 끝난 것으로 본다)
 		AnalysisRun run = runRepository.findByIdAndUserId(prepared.runId(), userId).orElse(null);
 		if (run == null || !user.isAiAnalysisConsent()) {
-			if (run != null) {
-				runRepository.delete(run);
-			}
 			throw new BusinessException(HttpStatus.CONFLICT, CHANGED_MESSAGE);
 		}
 		LocalDateTime now = LocalDateTime.now(clock);
@@ -223,15 +220,13 @@ public class AnalysisService {
 		for (LlmClient client : clients) {
 			ModelInvoker.Outcome outcome = outcomes.get(client.provider());
 			if (outcome == null) {
-				modelResultRepository.save(AnalysisModelResult.of(run.getId(), client.provider(), null,
-						ModelResultStatus.NOT_CONFIGURED, null, null, null, null, 0, null, 0, now));
+				modelResultRepository.save(AnalysisModelResult.notConfigured(run.getId(), client.provider(), now));
 				continue;
 			}
 			called++;
 			if (outcome.errorCode() != null) {
-				modelResultRepository.save(AnalysisModelResult.of(run.getId(), client.provider(), client.model(),
-						ModelResultStatus.FAILED, outcome.errorCode().name(), null, null, null, outcome.attempts(),
-						outcome.latencyMs(), 0, now));
+				modelResultRepository.save(AnalysisModelResult.failed(run.getId(), client.provider(), client.model(),
+						outcome.errorCode().name(), outcome.attempts(), outcome.latencyMs(), now));
 				continue;
 			}
 			String raw = outcome.response().text();
@@ -240,16 +235,16 @@ public class AnalysisService {
 				parsed = outputParser.parse(raw, input);
 			} catch (ModelOutputParser.InvalidOutputException e) {
 				log.warn("{} 모델 답변이 약속한 형식이 아니다: {}", client.provider(), e.getMessage());
-				modelResultRepository.save(AnalysisModelResult.of(run.getId(), client.provider(), client.model(),
-						ModelResultStatus.INVALID_OUTPUT, "INVALID_OUTPUT", raw, outcome.response().inputTokens(),
-						outcome.response().outputTokens(), outcome.attempts(), outcome.latencyMs(), 0, now));
+				modelResultRepository.save(AnalysisModelResult.invalidOutput(run.getId(), client.provider(),
+						client.model(), raw, outcome.response().inputTokens(), outcome.response().outputTokens(),
+						outcome.attempts(), outcome.latencyMs(), now));
 				continue;
 			}
 			succeeded++;
-			AnalysisModelResult result = modelResultRepository.save(AnalysisModelResult.of(run.getId(),
-					client.provider(), client.model(), ModelResultStatus.SUCCEEDED, null, raw,
-					outcome.response().inputTokens(), outcome.response().outputTokens(), outcome.attempts(),
-					outcome.latencyMs(), parsed.droppedEvidenceCount(), now));
+			AnalysisModelResult result = modelResultRepository.save(AnalysisModelResult.succeeded(run.getId(),
+					client.provider(), client.model(), raw, outcome.response().inputTokens(),
+					outcome.response().outputTokens(), outcome.attempts(), outcome.latencyMs(),
+					parsed.droppedEvidenceCount(), now));
 			for (ModelOutputParser.ParsedJudgment item : parsed.judgments()) {
 				ConceptJudgment judgment = judgmentRepository.save(ConceptJudgment.of(result.getId(),
 						item.concept().key(), item.concept().name(), item.reportedStatus(), item.status(),

@@ -4,6 +4,7 @@ import com.msg.backend.domain.course.dao.CourseRepository;
 import com.msg.backend.domain.course.entity.Course;
 import com.msg.backend.domain.material.dao.MaterialConceptRepository;
 import com.msg.backend.domain.material.dao.MaterialRepository;
+import com.msg.backend.domain.material.application.SourceText;
 import com.msg.backend.domain.material.entity.Material;
 import com.msg.backend.domain.material.entity.MaterialConcept;
 import com.msg.backend.domain.notice.dao.NoticeRepository;
@@ -12,7 +13,6 @@ import com.msg.backend.global.error.BusinessException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -109,8 +109,8 @@ public class SearchService {
 				noticeHits);
 	}
 
-	// 대소문자·띄어쓰기를 무시한 비교용 값
+	// 대소문자·띄어쓰기를 무시한 비교용 값 (자료 근거 대조와 같은 규칙, 없으면 빈 글)
 	static String squash(String text) {
-		return text == null ? "" : text.toLowerCase(Locale.ROOT).replaceAll("\\s+", "");
+		return text == null ? "" : SourceText.compact(text);
 	}
 }

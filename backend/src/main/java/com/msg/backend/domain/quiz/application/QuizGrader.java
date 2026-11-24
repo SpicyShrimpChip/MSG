@@ -24,10 +24,6 @@ public final class QuizGrader {
 	private QuizGrader() {
 	}
 
-	// correct는 객관식만 의미가 있다 (주관식·서술형은 false)
-	public record Graded(QuizQuestion question, int choiceIndex, boolean correct) {
-	}
-
 	// 문제 하나에 낸 답. 객관식이 아니면 choiceIndex는 -1, 답을 안 쓴 문제는 text가 null
 	public record Submitted(QuizQuestion question, int choiceIndex, String text) {
 
@@ -40,13 +36,6 @@ public final class QuizGrader {
 			return question.getType() == QuestionType.MULTIPLE_CHOICE
 					&& Objects.equals(question.getCorrectChoiceIndex(), choiceIndex);
 		}
-	}
-
-	// 문제 순서대로 돌려준다 (객관식 채점 포함)
-	public static List<Graded> grade(List<QuizQuestion> questions, List<QuizAnswerRequest> answers) {
-		return collect(questions, answers).stream()
-				.map(s -> new Graded(s.question(), s.choiceIndex(), s.multipleChoiceCorrect()))
-				.toList();
 	}
 
 	// 답을 검사해 문제 순서대로 모은다

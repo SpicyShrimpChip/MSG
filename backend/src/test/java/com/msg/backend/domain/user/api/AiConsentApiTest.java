@@ -152,14 +152,15 @@ class AiConsentApiTest {
 	@Test
 	void 동의하지_않은_사용자의_대화는_분석_대상에서_빠진다() throws Exception {
 		String token = signupAndLogin("me@example.com", true);
-		sendConversation(token, createCourse(token), "c-1").andExpect(status().isCreated());
+		long courseId = createCourse(token);
+		sendConversation(token, courseId, "c-1").andExpect(status().isCreated());
 		Long userId = jdbcTemplate.queryForObject("select id from users where email = 'me@example.com'", Long.class);
-		assertThat(conversationRepository.findAnalyzable(userId)).hasSize(1);
+		assertThat(conversationRepository.findAnalyzableInCourse(userId, courseId)).hasSize(1);
 
 		// 철회 API를 거치지 않고 동의만 꺼진 상태 (지우기와 분석이 엇갈린 경우를 흉내 낸다)
 		jdbcTemplate.update("update users set ai_analysis_consent = false where id = ?", userId);
 
-		assertThat(conversationRepository.findAnalyzable(userId)).isEmpty();
+		assertThat(conversationRepository.findAnalyzableInCourse(userId, courseId)).isEmpty();
 	}
 
 	// ---------- 도우미 ----------

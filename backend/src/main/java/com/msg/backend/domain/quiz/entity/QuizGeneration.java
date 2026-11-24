@@ -1,5 +1,6 @@
 package com.msg.backend.domain.quiz.entity;
 
+import com.msg.backend.domain.quiz.application.QuizModelFallback;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -129,7 +130,7 @@ public class QuizGeneration {
 	public void timeOut(LocalDateTime now) {
 		if (status == QuizGenerationStatus.RUNNING) {
 			this.status = QuizGenerationStatus.TIMED_OUT;
-			this.errorCode = "TIMED_OUT";
+			this.errorCode = QuizModelFallback.TIMED_OUT;
 			this.finishedAt = now;
 		}
 	}

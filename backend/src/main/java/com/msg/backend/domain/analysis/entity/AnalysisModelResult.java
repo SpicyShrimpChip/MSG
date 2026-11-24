@@ -1,5 +1,6 @@
 package com.msg.backend.domain.analysis.entity;
 
+import com.msg.backend.global.common.Texts;
 import com.msg.backend.global.llm.LlmProvider;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -65,7 +66,35 @@ public class AnalysisModelResult {
 	@Column(nullable = false)
 	private LocalDateTime createdAt;
 
-	public static AnalysisModelResult of(Long runId, LlmProvider provider, String model, ModelResultStatus status,
+	// 키나 모델 이름이 없어 부르지 않은 모델
+	public static AnalysisModelResult notConfigured(Long runId, LlmProvider provider, LocalDateTime now) {
+		return create(runId, provider, null, ModelResultStatus.NOT_CONFIGURED, null, null, null, null, 0, null, 0,
+				now);
+	}
+
+	// 응답을 받지 못한 모델 (errorCode는 LlmException.Code 이름)
+	public static AnalysisModelResult failed(Long runId, LlmProvider provider, String model, String errorCode,
+			int attemptCount, Long latencyMs, LocalDateTime now) {
+		return create(runId, provider, model, ModelResultStatus.FAILED, errorCode, null, null, null, attemptCount,
+				latencyMs, 0, now);
+	}
+
+	// 응답은 받았지만 약속한 형식이 아닌 모델 (원본은 남긴다)
+	public static AnalysisModelResult invalidOutput(Long runId, LlmProvider provider, String model, String rawOutput,
+			Integer inputTokens, Integer outputTokens, int attemptCount, Long latencyMs, LocalDateTime now) {
+		return create(runId, provider, model, ModelResultStatus.INVALID_OUTPUT, ModelResultStatus.INVALID_OUTPUT.name(),
+				rawOutput, inputTokens, outputTokens, attemptCount, latencyMs, 0, now);
+	}
+
+	// 검증을 통과한 모델
+	public static AnalysisModelResult succeeded(Long runId, LlmProvider provider, String model, String rawOutput,
+			Integer inputTokens, Integer outputTokens, int attemptCount, Long latencyMs, int droppedEvidenceCount,
+			LocalDateTime now) {
+		return create(runId, provider, model, ModelResultStatus.SUCCEEDED, null, rawOutput, inputTokens, outputTokens,
+				attemptCount, latencyMs, droppedEvidenceCount, now);
+	}
+
+	private static AnalysisModelResult create(Long runId, LlmProvider provider, String model, ModelResultStatus status,
 			String errorCode, String rawOutput, Integer inputTokens, Integer outputTokens, int attemptCount,
 			Long latencyMs, int droppedEvidenceCount, LocalDateTime now) {
 		AnalysisModelResult result = new AnalysisModelResult();
@@ -74,8 +103,7 @@ public class AnalysisModelResult {
 		result.model = model;
 		result.status = status;
 		result.errorCode = errorCode;
-		result.rawOutput = rawOutput == null || rawOutput.length() <= RAW_OUTPUT_MAX_LENGTH
-				? rawOutput : rawOutput.substring(0, RAW_OUTPUT_MAX_LENGTH);
+		result.rawOutput = Texts.cut(rawOutput, RAW_OUTPUT_MAX_LENGTH);
 		result.inputTokens = inputTokens;
 		result.outputTokens = outputTokens;
 		result.attemptCount = attemptCount;

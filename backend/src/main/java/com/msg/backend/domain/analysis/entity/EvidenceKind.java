@@ -1,5 +1,6 @@
 package com.msg.backend.domain.analysis.entity;
 
+import com.msg.backend.global.common.ApiEnumValues;
 import java.util.Optional;
 
 /**
@@ -28,10 +29,10 @@ public enum EvidenceKind {
 	}
 
 	public String apiValue() {
-		return ApiValues.of(this);
+		return ApiEnumValues.of(this);
 	}
 
 	public static Optional<EvidenceKind> fromApiValue(String value) {
-		return ApiValues.parse(EvidenceKind.class, value);
+		return ApiEnumValues.parse(EvidenceKind.class, value);
 	}
 }

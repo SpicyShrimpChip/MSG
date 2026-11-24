@@ -22,9 +22,6 @@ record QuizSpec(Course course, Long materialId, String materialTitle, QuizMode m
 		List<String> missingConcepts) {
 
 	String jobLabel() {
-		if (jobField == null) {
-			return null;
-		}
-		return jobField == JobField.OTHER ? jobFieldOther : jobField.label();
+		return JobField.labelOf(jobField, jobFieldOther);
 	}
 }

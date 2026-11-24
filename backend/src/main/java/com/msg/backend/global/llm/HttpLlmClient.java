@@ -2,13 +2,12 @@ package com.msg.backend.global.llm;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.msg.backend.global.common.RestClients;
 import java.net.SocketTimeoutException;
-import java.net.http.HttpClient;
 import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.util.Map;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
@@ -29,11 +28,8 @@ abstract class HttpLlmClient implements LlmClient {
 		this.provider = provider;
 		this.config = config;
 		this.objectMapper = objectMapper;
-		HttpClient httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
-		JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
-		requestFactory.setReadTimeout(timeout);
 		String baseUrl = config.baseUrl() == null || config.baseUrl().isBlank() ? defaultBaseUrl : config.baseUrl();
-		this.restClient = RestClient.builder().baseUrl(baseUrl).requestFactory(requestFactory).build();
+		this.restClient = RestClients.withTimeouts(Duration.ofSeconds(10), timeout).baseUrl(baseUrl).build();
 	}
 
 	@Override
@@ -94,6 +90,14 @@ abstract class HttpLlmClient implements LlmClient {
 			throw new LlmException(LlmException.Code.BAD_RESPONSE, provider + " 응답에 " + what + "이 없다");
 		}
 		return node.asText();
+	}
+
+	// 블록을 이어 붙인 답변 글. 비었으면 BAD_RESPONSE (Claude·Gemini)
+	protected String requireAnswer(StringBuilder text) {
+		if (text.isEmpty()) {
+			throw new LlmException(LlmException.Code.BAD_RESPONSE, provider + " 응답에 답변 글이 없다");
+		}
+		return text.toString();
 	}
 
 	protected static Integer intOrNull(JsonNode node) {

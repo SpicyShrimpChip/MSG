@@ -4,12 +4,9 @@ import com.msg.backend.domain.conversation.application.ConversationService;
 import com.msg.backend.domain.user.dao.UserRepository;
 import com.msg.backend.domain.user.dto.LearningProfileRequest;
 import com.msg.backend.domain.user.dto.UserResponse;
-import com.msg.backend.global.error.BusinessException;
-import com.msg.backend.global.security.ApiErrorResponder;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,10 +21,7 @@ public class UserService {
 	private final Clock clock;
 
 	public UserResponse getMe(Long userId) {
-		return userRepository.findById(userId)
-				.map(UserResponse::from)
-				// 토큰은 유효하지만 계정이 사라진 경우 (탈퇴 직후 등)
-				.orElseThrow(() -> new BusinessException(HttpStatus.UNAUTHORIZED, ApiErrorResponder.UNAUTHORIZED_MESSAGE));
+		return UserResponse.from(userRepository.getLoginUser(userId));
 	}
 
 	/**
@@ -64,8 +58,7 @@ public class UserService {
 	public UserResponse changeLearningProfile(Long userId, LearningProfileRequest request) {
 		LearningProfileValidator.Profile profile = profileValidator.validate(request.learningPurpose(),
 				request.jobField(), request.jobFieldOther());
-		var user = userRepository.findById(userId)
-				.orElseThrow(() -> new BusinessException(HttpStatus.UNAUTHORIZED, ApiErrorResponder.UNAUTHORIZED_MESSAGE));
+		var user = userRepository.getLoginUser(userId);
 		user.changeLearningProfile(profile.purpose(), profile.jobField(), profile.jobFieldOther(),
 				LocalDateTime.now(clock));
 		return UserResponse.from(user);

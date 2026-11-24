@@ -46,9 +46,7 @@ public class AnthropicClient extends HttpLlmClient {
 				text.append(block.path("text").asText());
 			}
 		}
-		if (text.isEmpty()) {
-			throw new LlmException(LlmException.Code.BAD_RESPONSE, "CLAUDE 응답에 답변 글이 없다");
-		}
+		String answer = requireAnswer(text);
 		JsonNode usage = response.path("usage");
 		Integer cacheWrite = intOrNull(usage.get("cache_creation_input_tokens"));
 		Integer cacheRead = intOrNull(usage.get("cache_read_input_tokens"));
@@ -56,7 +54,7 @@ public class AnthropicClient extends HttpLlmClient {
 			// 토큰 수만 남긴다 (프롬프트·대화 본문은 로그에 넣지 않는다)
 			log.debug("CLAUDE 프롬프트 캐시 쓰기 {} 읽기 {}", cacheWrite, cacheRead);
 		}
-		return new LlmResponse(text.toString(), totalInputTokens(usage), intOrNull(usage.get("output_tokens")));
+		return new LlmResponse(answer, totalInputTokens(usage), intOrNull(usage.get("output_tokens")));
 	}
 
 	// Claude의 input_tokens는 캐시 밖 부분만 센다. GPT·Gemini처럼 입력 전체로 맞추려고 캐시 쓰기·읽기를 더한다

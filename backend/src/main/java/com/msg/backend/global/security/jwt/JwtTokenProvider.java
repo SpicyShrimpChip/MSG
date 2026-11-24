@@ -5,6 +5,7 @@ import com.msg.backend.domain.auth.entity.SocialProvider;
 import com.msg.backend.global.security.AuthUser;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -39,11 +40,25 @@ public class JwtTokenProvider {
 	private final JwtProperties properties;
 	private final Clock clock;
 	private final SecretKey key;
+	// 검증기는 바뀌지 않고 여러 요청이 함께 써도 된다. 시각은 검증할 때마다 clock에서 읽는다
+	private final JwtParser accessTokenParser;
+	private final JwtParser signupTicketParser;
 
 	public JwtTokenProvider(JwtProperties properties, Clock clock) {
 		this.properties = properties;
 		this.clock = clock;
 		this.key = createKey(properties);
+		this.accessTokenParser = Jwts.parser()
+				.verifyWith(key)
+				.requireIssuer(properties.issuer())
+				.clock(() -> Date.from(clock.instant()))
+				.build();
+		this.signupTicketParser = Jwts.parser()
+				.verifyWith(key)
+				.requireIssuer(properties.issuer())
+				.requireAudience(SIGNUP_AUDIENCE)
+				.clock(() -> Date.from(clock.instant()))
+				.build();
 	}
 
 	public String createAccessToken(Long userId, String sessionId) {
@@ -61,13 +76,7 @@ public class JwtTokenProvider {
 	// 서명·발급자·만료가 모두 맞으면 주체를 돌려준다. 하나라도 틀리면 빈 값 (이유는 응답에 노출하지 않는다)
 	public Optional<AuthUser> parse(String token) {
 		try {
-			Claims claims = Jwts.parser()
-					.verifyWith(key)
-					.requireIssuer(properties.issuer())
-					.clock(() -> Date.from(clock.instant()))
-					.build()
-					.parseSignedClaims(token)
-					.getPayload();
+			Claims claims = accessTokenParser.parseSignedClaims(token).getPayload();
 			String sessionId = claims.get(SESSION_CLAIM, String.class);
 			if (sessionId == null) {
 				return Optional.empty();
@@ -107,14 +116,7 @@ public class JwtTokenProvider {
 			return Optional.empty();
 		}
 		try {
-			Claims claims = Jwts.parser()
-					.verifyWith(key)
-					.requireIssuer(properties.issuer())
-					.requireAudience(SIGNUP_AUDIENCE)
-					.clock(() -> Date.from(clock.instant()))
-					.build()
-					.parseSignedClaims(token)
-					.getPayload();
+			Claims claims = signupTicketParser.parseSignedClaims(token).getPayload();
 			String providerUserId = claims.get(PROVIDER_USER_CLAIM, String.class);
 			String email = claims.get(EMAIL_CLAIM, String.class);
 			if (!StringUtils.hasText(providerUserId) || !StringUtils.hasText(email)) {
