@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, ScrollRestoration } from 'react-router-dom';
 import DemoBanner from './DemoBanner';
 import Header from './Header';
 import Footer from './Footer';
@@ -22,6 +22,9 @@ function Layout() {
         </PageTransition>
       </main>
       <Footer />
+      {/* 새 화면은 맨 위에서 열고, 뒤로·앞으로 가기는 그 화면에서 보던 위치로 돌려놓는다.
+          없으면 긴 화면 아래에서 링크를 누를 때 다음 화면이 중간부터 열린다(#230) */}
+      <ScrollRestoration />
     </div>
   );
 }

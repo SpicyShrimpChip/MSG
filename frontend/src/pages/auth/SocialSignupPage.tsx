@@ -83,9 +83,11 @@ function SocialSignupForm({ pending, returnTo }: SocialSignupFormProps) {
       navigate(returnTo, { replace: true });
     },
   });
-  // 이미 가입했거나(다른 탭에서 마침) 같은 이메일 계정이 있으면 로그인으로 안내한다
-  const conflict =
-    mutation.error instanceof ApiError && mutation.error.status === 409;
+  // 이미 가입했거나(다른 탭에서 마침) 같은 이메일 계정이 있거나(409), 가입 정보가 10분이 지나 만료됐으면(401)
+  // 이 화면에서는 더 할 수 있는 게 없으니 로그인 화면(카카오 로그인 다시 하기)으로 안내한다
+  const restartNeeded =
+    mutation.error instanceof ApiError &&
+    (mutation.error.status === 409 || mutation.error.status === 401);
 
   const handleSubmit = (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -163,7 +165,7 @@ function SocialSignupForm({ pending, returnTo }: SocialSignupFormProps) {
       />
 
       <ErrorText error={mutation.error} />
-      {conflict && (
+      {restartNeeded && (
         <Link
           to="/login"
           replace
