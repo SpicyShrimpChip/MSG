@@ -116,6 +116,8 @@ class KakaoCallbackApiTest {
 		assertThat(userRepository.count()).isEqualTo(users);
 		assertThat(socialAccountRepository.count()).isZero();
 		assertThat(refreshTokenRepository.count()).isEqualTo(tokens);
+		// 가입 마무리로 보내는 경우는 연결을 끊지 않는다
+		assertThat(kakao.calls(FakeKakaoServer.UNLINK)).isZero();
 	}
 
 	@Test
@@ -187,6 +189,8 @@ class KakaoCallbackApiTest {
 		assertThat(KakaoLoginFlow.login(mockMvc, null).getHeader(HttpHeaders.LOCATION))
 				.isEqualTo(FRONTEND + "/login?socialError=email_required");
 		assertThat(userRepository.count()).isZero();
+		// 카카오 동의에서 연결은 이미 생겼으므로, 가입을 거절하면 카카오 연결도 끊는다
+		assertUnlinked(4242L);
 	}
 
 	@Test
@@ -198,6 +202,7 @@ class KakaoCallbackApiTest {
 				.isEqualTo(FRONTEND + "/login?socialError=email_unverified");
 		// 확인 안 된 이메일로 남의 계정에 연결되지 않는다
 		assertThat(socialAccountRepository.count()).isZero();
+		assertUnlinked(4242L);
 	}
 
 	@Test
@@ -209,6 +214,8 @@ class KakaoCallbackApiTest {
 		assertThat(response.getHeader(HttpHeaders.LOCATION)).isEqualTo(FRONTEND + "/login?socialError=failed");
 		assertThat(KakaoLoginFlow.setCookie(response, SIGNUP_COOKIE)).isEmpty();
 		assertThat(userRepository.count()).isZero();
+		// 회원번호를 모르므로 연결 끊기를 부르지 않는다
+		assertThat(kakao.calls(FakeKakaoServer.UNLINK)).isZero();
 	}
 
 	@Test
@@ -220,6 +227,24 @@ class KakaoCallbackApiTest {
 		assertThat(KakaoLoginFlow.login(mockMvc, null).getHeader(HttpHeaders.LOCATION))
 				.isEqualTo(FRONTEND + "/login?socialError=link_conflict");
 		assertThat(socialAccountRepository.count()).isEqualTo(1);
+		// 끊는 것은 거절한 카카오(2222)이고, 기존 회원에 연결된 카카오(1111)는 그대로다
+		assertUnlinked(2222L);
+	}
+
+	@Test
+	void 연결_끊기가_실패해도_같은_안내로_돌아간다() throws Exception {
+		kakao.user(4242L, null, false, false, "닉");
+		kakao.reply(FakeKakaoServer.UNLINK, 500, "{}");
+
+		assertThat(KakaoLoginFlow.login(mockMvc, null).getHeader(HttpHeaders.LOCATION))
+				.isEqualTo(FRONTEND + "/login?socialError=email_required");
+		assertThat(kakao.calls(FakeKakaoServer.UNLINK)).isEqualTo(1);
+	}
+
+	private void assertUnlinked(long kakaoUserId) {
+		assertThat(kakao.calls(FakeKakaoServer.UNLINK)).isEqualTo(1);
+		assertThat(kakao.lastForm(FakeKakaoServer.UNLINK)).containsEntry("target_id_type", "user_id")
+				.containsEntry("target_id", String.valueOf(kakaoUserId));
 	}
 
 	@Test

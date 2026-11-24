@@ -742,7 +742,7 @@ layout = {
 - `/auth/social/done?returnTo=…` — 이미 가입한 사용자. Refresh 쿠키가 심어져 있으니 화면이 `/api/auth/refresh`를 한 번 불러 Access Token을 받고 `returnTo`로 간다.
 - `/auth/social/link?returnTo=…` — 카카오가 확인한 이메일과 같은 이메일의 **비밀번호 계정**이 이미 있다. 자동으로 연결하지 않는다(비밀번호 가입은 이메일 주인을 확인하지 않아 남이 미리 만든 계정일 수 있다). `pending`으로 이메일을 보여 주고 그 계정의 비밀번호를 받아 `link`를 부른다. 비밀번호를 모르면 그냥 이메일·비밀번호 로그인으로 가면 된다.
 - `/signup/social?returnTo=…` — 처음 온 사용자. 가입 마무리 쿠키(HttpOnly, 화면 스크립트는 못 읽음)가 있으니 `pending`으로 이메일·닉네임을 보여 주고 약관 동의를 받아 `signup`을 부른다. **이때까지 서버 DB에는 아무것도 저장하지 않는다.**
-- `/login?socialError=코드` — 실패. 코드: `state`(시간이 지났거나 다른 창에서 돌아옴), `cancelled`(동의 화면에서 취소, 문구 없이 조용히), `email_required`(이메일 제공 동의 안 함), `email_unverified`(카카오에서 인증 안 된 이메일), `rejoin_restricted`(탈퇴 30일 안), `link_conflict`(그 이메일 계정에 다른 카카오가 이미 연결됨), `failed`(카카오 장애 등), `unavailable`(서버에 카카오 키 없음).
+- `/login?socialError=코드` — 실패. 코드: `state`(시간이 지났거나 다른 창에서 돌아옴), `cancelled`(동의 화면에서 취소, 문구 없이 조용히), `email_required`(이메일 제공 동의 안 함), `email_unverified`(카카오에서 인증 안 된 이메일), `rejoin_restricted`(탈퇴 30일 안), `link_conflict`(그 이메일 계정에 다른 카카오가 이미 연결됨), `failed`(카카오 장애 등), `unavailable`(서버에 카카오 키 없음). `email_required`·`email_unverified`·`rejoin_restricted`·`link_conflict`로 거절할 때는 카카오 동의로 이미 생긴 카카오 쪽 연결도 서버가 끊는다(실패해도 같은 코드로 보낸다).
 
 - 같은 이메일로 비밀번호 가입한 회원이 카카오로 들어오면, 카카오가 **확인한 이메일**이어도 바로 연결하지 않고 위 계정 연결 화면에서 비밀번호를 확인한 뒤 연결한다. 한 번 연결하면 다음부터는 카카오로 바로 로그인된다.
 - `returnTo`는 `useSearchParams().get('returnTo')` 값을 그대로 `safeReturnTo`에 넣고 다시 디코드하지 않는다. 이동은 `navigate()`로만 한다(두 번 디코드하면 `/%2F%2Fevil.com`이 `//evil.com`이 된다).

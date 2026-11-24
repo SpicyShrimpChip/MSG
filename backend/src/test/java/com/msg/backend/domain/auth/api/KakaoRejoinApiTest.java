@@ -68,6 +68,8 @@ class KakaoRejoinApiTest {
 
 		assertThat(KakaoLoginFlow.login(mockMvc, null).getHeader(HttpHeaders.LOCATION))
 				.isEqualTo(TestKakao.FRONTEND + "/login?socialError=rejoin_restricted");
+		// 가입을 거절했으니 카카오 동의로 생긴 연결도 끊는다
+		assertThat(kakao.calls(FakeKakaoServer.UNLINK)).isEqualTo(1);
 
 		clock.advance(Duration.ofDays(30).plusMinutes(1));
 		assertThat(KakaoLoginFlow.login(mockMvc, null).getHeader(HttpHeaders.LOCATION))

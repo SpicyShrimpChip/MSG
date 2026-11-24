@@ -125,7 +125,7 @@ public class SocialAuthController {
 		}
 		try {
 			// 카카오 호출은 DB 트랜잭션 밖에서 먼저 한다
-			SocialLoginOutcome outcome = socialLoginService.handle(kakaoClient.fetchProfile(code));
+			SocialLoginOutcome outcome = handleOrUnlink(kakaoClient.fetchProfile(code));
 			String encodedReturnTo = URLEncoder.encode(returnTo.get(), StandardCharsets.UTF_8);
 			if (outcome instanceof LoggedIn loggedIn) {
 				refreshTokenCookies.write(response, loggedIn.refreshToken());
@@ -203,6 +203,26 @@ public class SocialAuthController {
 		signupTicketCookies.clear(response);
 		refreshTokenCookies.write(response, result.refreshToken());
 		return ApiResponse.success(new LoginResponse(result.accessToken(), result.user()));
+	}
+
+	/**
+	 * 카카오 동의 화면에서 동의하는 순간 카카오 쪽 연결이 생긴다. 그 뒤 여기서 가입을 거절하면(이메일 없음·확인 안 된 이메일·
+	 * 같은 이메일 계정 충돌·재가입 제한) MSG 계정 없이 카카오 "연결된 서비스"에만 남으므로 연결을 끊는다.
+	 * handle이 거절하는 경우는 모두 이 회원번호가 어떤 계정에도 연결되지 않았을 때다(연결돼 있으면 먼저 로그인한다).
+	 * 끊기가 실패해도 안내는 그대로 두고 로그만 남긴다(KakaoClient가 남김). 가입 마무리 화면에서 그냥 나간 경우는
+	 * 서버에 남는 것이 없어 끊지 않는다(다음 카카오 로그인에서 가입 마무리를 이어서 할 수 있다)
+	 */
+	private SocialLoginOutcome handleOrUnlink(SocialProfile profile) {
+		try {
+			return socialLoginService.handle(profile);
+		} catch (SocialLoginException rejected) {
+			try {
+				kakaoClient.unlink(profile.providerUserId());
+			} catch (SocialLoginException ignored) {
+				// 거절 안내가 우선이다. 남은 연결은 사용자가 카카오 계정 설정에서 끊을 수 있다
+			}
+			throw rejected;
+		}
 	}
 
 	private SocialProfile readTicket(HttpServletRequest request) {
