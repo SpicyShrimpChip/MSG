@@ -26,6 +26,7 @@ import {
   StudyStatusBadge,
   SubPage,
 } from '@/components';
+import { SUGGESTION_LABEL } from '@/constants';
 import { useMockData } from '@/store';
 import { useCourses, useCurriculum, useQuizAiStatusQuery } from '@/hooks';
 import type {
@@ -56,12 +57,6 @@ const STAGE_LABEL: Record<CurriculumStage, string> = {
   not_assessed: '아직 근거 없음',
   ready: '다음 단계 준비',
 };
-
-const SUGGESTION_LABEL = {
-  next: '다음 단계',
-  prerequisite: '선수 지식',
-  related: '연관 분야',
-} as const;
 
 const STEP_ICON: Record<FlowStepKey, ReactNode> = {
   pre_test: <ClipboardCheck size={18} aria-hidden="true" />,

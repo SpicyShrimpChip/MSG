@@ -35,7 +35,6 @@ import {
 import {
   useCourses,
   useMaterials,
-  useProviders,
   useQuizAiStatus,
   useSuspenseMe,
   useSingleFlightMutation,
@@ -130,7 +129,7 @@ function QuizCreateForm({ me }: { me: User | null }) {
   const { data: courses } = useCourses();
   const [pendingKey, setPendingKey] = useState(loadPendingKey);
   const [recoveredMessage, setRecoveredMessage] = useState<string | null>(null);
-  const { data: providers } = useProviders();
+  // 만들기 가능 여부·안내 문구·쓰는 모델은 평가·자료 개념·요약 화면과 같은 AI 상태 하나로 판단한다
   const { data: ai } = useQuizAiStatus();
   const { data: materials } = useMaterials();
 
@@ -186,7 +185,6 @@ function QuizCreateForm({ me }: { me: User | null }) {
 
   const course = courses.find((item) => item.id === courseId) ?? null;
   const types = QUESTION_TYPE_SETS[typeSet].types;
-  const configured = providers.filter((item) => item.configured);
   const tooFew = count < types.length;
   const maxCount =
     mode === 'exam_prep' && mockExam
@@ -248,7 +246,7 @@ function QuizCreateForm({ me }: { me: User | null }) {
     bloomLevels.length === 0 ||
     (sendContent && !contentConsent) ||
     pendingKey !== null ||
-    (!mockData && (configured.length === 0 || !me?.aiQuizConsent));
+    (!mockData && (!ai.available || !me?.aiQuizConsent));
 
   const handleSubmit = (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -683,9 +681,9 @@ function QuizCreateForm({ me }: { me: User | null }) {
           : '퀴즈를 만들 때 외부 AI로는 과목 이름·개념·적은 시험 범위·직무 분야만 보내요. 가져온 대화와 학습자료 본문은 보내지 않아요. 이 퀴즈는 자료를 읽지 않고 과목과 개념으로 만들어요.'}
       </Notice>
 
-      {!mockData && configured.length === 0 && (
+      {!mockData && !ai.available && (
         <p role="alert" className="text-body text-danger">
-          연결된 AI 모델이 없어 지금은 퀴즈를 만들 수 없어요.
+          {ai.message}
         </p>
       )}
       {!mockData && !me?.aiQuizConsent && (
@@ -731,12 +729,18 @@ function QuizCreateForm({ me }: { me: User | null }) {
           <Sparkles size={18} aria-hidden="true" />
           {mutation.isPending ? '만드는 중…' : '퀴즈 만들기'}
         </Button>
-        {configured.length > 0 && (
+        {ai.available && ai.generation && (
           <span className="flex flex-wrap items-center gap-1.5 text-caption text-ink-muted">
-            연결된 모델
-            {configured.map((item) => (
-              <Chip key={item.provider}>{item.provider.toUpperCase()}</Chip>
-            ))}
+            문제를 만드는 모델
+            <Chip>{ai.generation.provider.toUpperCase()}</Chip>
+            {ai.grading.length > 0 && (
+              <>
+                <span className="ml-2">AI 채점 모델</span>
+                {ai.grading.map((item) => (
+                  <Chip key={item.provider}>{item.provider.toUpperCase()}</Chip>
+                ))}
+              </>
+            )}
           </span>
         )}
       </div>
