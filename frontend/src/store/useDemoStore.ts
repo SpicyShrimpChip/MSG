@@ -13,6 +13,8 @@ export const NO_BACKEND = import.meta.env.VITE_USE_MOCK === 'true';
 
 // 실제 서버 빌드에서도 체험을 켤 수 있다. 체험 중에는 isMockData()가 true라 API 함수가 서버를 부르지 않는다
 // (store/useDemoStore.test.ts). 로그인한 상태에서는 버튼을 숨기고, 체험 중 로그인하면 체험을 끝낸다(api/auth.api.ts)
+// 지금은 true로 고정이라 `if (!DEMO_AVAILABLE)` 분기가 실행되지 않는다. 그래도 시연·운영 중 체험을 급히 꺼야 할 때
+// false로 바꾸는 스위치로 남긴다(11/25)
 export const DEMO_AVAILABLE = true;
 
 // 개발 중에만 쓰는 예외: .env.development.local에 VITE_MOCK_OPEN_ACCESS=true를 넣으면
