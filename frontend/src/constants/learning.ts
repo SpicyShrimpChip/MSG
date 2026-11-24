@@ -6,6 +6,7 @@ import type {
   QuizDifficulty,
   QuizMode,
   QuizSummary,
+  SuggestionKind,
 } from '@/types';
 
 // 학습 목적 (가입·마이페이지). 값은 백엔드 LearningPurpose와 같다
@@ -90,6 +91,13 @@ export const QUESTION_TYPE_SETS: { label: string; types: QuestionType[] }[] = [
   { label: '주관식 + 서술형', types: ['short_answer', 'essay'] },
   { label: '전체 혼합', types: ['multiple_choice', 'short_answer', 'essay'] },
 ];
+
+// AI 다음 개념 제안의 종류 (퀴즈 결과·커리큘럼 공용)
+export const SUGGESTION_LABEL: Record<SuggestionKind, string> = {
+  next: '다음 단계',
+  prerequisite: '보완할 선수 지식',
+  related: '연관 분야',
+};
 
 export const DIFFICULTIES: { value: QuizDifficulty; label: string }[] = [
   { value: 'easy', label: '쉬움' },

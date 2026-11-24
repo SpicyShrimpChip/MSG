@@ -22,7 +22,11 @@ import {
   StudyStatusBadge,
   SubPage,
 } from '@/components';
-import { QUESTION_TYPE_LABELS, quizModeLabel } from '@/constants';
+import {
+  QUESTION_TYPE_LABELS,
+  SUGGESTION_LABEL,
+  quizModeLabel,
+} from '@/constants';
 import type {
   AssessmentStatus,
   Quiz,
@@ -64,12 +68,6 @@ const STATUS_TITLE: Record<
     not_ready: '보완이 필요한 개념이 있어요',
     needs_check: '판단하기에 근거가 부족해요',
   },
-};
-
-const SUGGESTION_LABEL: Record<SuggestionKind, string> = {
-  next: '다음 단계',
-  prerequisite: '보완할 선수 지식',
-  related: '연관 분야',
 };
 
 // 출제 설계(인지 수준)와 자료 근거 요약. 자료를 실제로 읽지 않은 퀴즈는 "자료 기반"으로 표시하지 않는다
