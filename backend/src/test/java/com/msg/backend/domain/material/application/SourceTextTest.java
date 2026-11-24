@@ -63,11 +63,15 @@ class SourceTextTest {
 		SourceText.QuoteCheck partial = SourceText.check(sent, "공개키와 개인키 한 쌍을 반드시 함께 쓴다");
 		assertThat(partial.status()).isEqualTo(VerificationStatus.PARTIAL);
 		assertThat(partial.location()).isEqualTo("p. 2");
+		// 일부 일치는 AI가 쓴 문장이라 원문 인용으로 돌려주지 않는다 (화면에 "자료 원문"으로 나가지 않게)
+		assertThat(partial.quote()).isNull();
 
 		assertThat(SourceText.check(sent, "양자 컴퓨터로 공개키를 깬다는 내용이 있다").status())
 				.isEqualTo(VerificationStatus.FAILED);
 		assertThat(SourceText.check(sent, null).status()).isEqualTo(VerificationStatus.INSUFFICIENT);
 		assertThat(SourceText.check(sent, "키").status()).isEqualTo(VerificationStatus.INSUFFICIENT);
+		// 개념 이름만 옮긴 짧은 인용은 근거로 보지 않는다 (지시문은 10~200자를 요구한다)
+		assertThat(SourceText.check(sent, "공개키 암호는").status()).isEqualTo(VerificationStatus.INSUFFICIENT);
 		// 보내지 않은 부분의 문장은 원문에 있어도 확인되지 않는다 (지정한 자료 부분을 실제로 썼는지)
 		String onlyP2 = SourceText.parse(PDF).select(List.of("공개키"), 12_000).text();
 		assertThat(SourceText.check(onlyP2, "VLAN은 브로드캐스트 도메인을 나눈다").status())

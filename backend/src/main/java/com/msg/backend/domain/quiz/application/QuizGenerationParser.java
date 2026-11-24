@@ -34,7 +34,8 @@ import org.springframework.stereotype.Component;
  * <li>업무 활용: 모든 문제에 상황과 역할 필수.</li>
  * <li>개념은 요청한 개념만, 문제마다 1개 이상.</li>
  * <li>"반드시 출제"처럼 출제를 보장하는 표현이 있으면 거절한다.</li>
- * <li>인지 수준(평가할 수준이 정해진 경우): 문제마다 bloomLevel·objective 필수, 정한 수준 안, 창조는 서술형만,
+ * <li>인지 수준(평가할 수준이 정해진 경우): 문제마다 bloomLevel 필수(한글 이름도 받음), 정한 수준 안, 창조는 서술형만,
+ * objective는 표시용이라 빠지면 그 문제만 목표 없이 둔다,
  * 서로 다른 수준을 minDistinct개 이상. 실제 사고 수준이 맞는지는 코드로 판정하지 않는다(형식 검증).</li>
  * <li>자료 근거(자료 발췌를 보낸 경우): 문제마다 source.quote를 보낸 발췌에서 글자 단위로 확인한다(SourceText.check).
  * 위치는 서버가 찾고, AI가 적은 위치가 다르면 일부 일치로 낮추고 메모를 남긴다. 근거를 확인한(일치·일부 일치) 문제가
@@ -195,9 +196,6 @@ class QuizGenerationParser {
 		if (!expectation.bloomTargets().isEmpty()) {
 			if (bloomLevel == null || !expectation.bloomTargets().contains(bloomLevel)) {
 				throw new InvalidOutputException("인지 수준이 없거나 정한 수준 밖이다");
-			}
-			if (objective == null) {
-				throw new InvalidOutputException("출제 목표가 없다");
 			}
 		}
 		if (bloomLevel == BloomLevel.CREATE && type != QuestionType.ESSAY) {

@@ -129,9 +129,19 @@ class QuizGenerationParserTest {
 		String outside = QuizFixtures.threeTypes(false).replaceFirst("\"understand\"", "\"evaluate\"");
 		assertThatThrownBy(() -> parser.parse(outside, QuizMode.EXAM_PREP, plan(1, 1, 1), CONCEPTS, EXAM_BLOOM))
 				.isInstanceOf(QuizGenerationParser.InvalidOutputException.class);
+	}
+
+	@Test
+	void 출제_목표가_빠지거나_수준을_한글로_적어도_퀴즈_전체를_버리지_않는다() throws Exception {
+		// 출제 목표는 화면 표시용이라 빠져도 그 문제만 목표 없이 저장한다 (수준 검사는 그대로)
 		String noObjective = QuizFixtures.threeTypes(false).replaceFirst("\"objective\":\"[^\"]*\",", "");
-		assertThatThrownBy(() -> parser.parse(noObjective, QuizMode.EXAM_PREP, plan(1, 1, 1), CONCEPTS, EXAM_BLOOM))
-				.isInstanceOf(QuizGenerationParser.InvalidOutputException.class);
+		var parsed = parser.parse(noObjective, QuizMode.EXAM_PREP, plan(1, 1, 1), CONCEPTS, EXAM_BLOOM);
+		assertThat(parsed.questions().get(0).objective()).isNull();
+		assertThat(parsed.questions().get(0).bloomLevel()).isEqualTo(BloomLevel.UNDERSTAND);
+
+		String korean = QuizFixtures.threeTypes(false).replaceFirst("\"understand\"", "\"이해\"");
+		assertThat(parser.parse(korean, QuizMode.EXAM_PREP, plan(1, 1, 1), CONCEPTS, EXAM_BLOOM).questions().get(0)
+				.bloomLevel()).isEqualTo(BloomLevel.UNDERSTAND);
 	}
 
 	@Test

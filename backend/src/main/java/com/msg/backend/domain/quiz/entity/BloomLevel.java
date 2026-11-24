@@ -37,7 +37,18 @@ public enum BloomLevel {
 		return ApiEnumValues.of(this);
 	}
 
+	/** API 값("understand")을 읽는다. 모델이 한글 이름("이해")으로 적어도 같은 수준으로 본다 */
 	public static Optional<BloomLevel> fromApiValue(String value) {
-		return ApiEnumValues.parse(BloomLevel.class, value);
+		Optional<BloomLevel> parsed = ApiEnumValues.parse(BloomLevel.class, value);
+		if (parsed.isPresent() || value == null) {
+			return parsed;
+		}
+		String trimmed = value.strip();
+		for (BloomLevel level : values()) {
+			if (level.label.equals(trimmed)) {
+				return Optional.of(level);
+			}
+		}
+		return Optional.empty();
 	}
 }
