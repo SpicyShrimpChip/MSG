@@ -198,6 +198,11 @@ function buildFlow(courseId: number, keywords: string[]): CurriculumFlow {
             : `개념 ${concepts.length}개를 자료로 공부해요.`) +
           (progress.reviewNeededConcepts > 0
             ? ` 복습이 필요한 개념 ${progress.reviewNeededConcepts}개.`
+            : '') +
+          (progress.studiableConcepts === 0
+            ? sample
+              ? ' 개념마다 퀴즈로 확인해요. 퀴즈를 하나 풀면 다음 단계로 넘어가요.'
+              : ' 사전 테스트를 본 뒤 개념마다 퀴즈로 확인해요.'
             : ''),
       },
       {

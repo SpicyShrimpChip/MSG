@@ -324,7 +324,8 @@ class CurriculumFlowBuilder {
 				? "먼저 공부할 개념 " + priority.size() + "개: " + String.join(", ", priority) + "."
 				: "개념 " + concepts.size() + "개를 자료로 공부해요.";
 		if (progress.studiableConcepts() == 0) {
-			return head + " 자료에서 핵심 개념을 뽑으면 개념마다 학습 완료를 기록할 수 있어요.";
+			return preDone ? head + " 개념마다 퀴즈로 확인해요. 퀴즈를 하나 풀면 다음 단계로 넘어가요."
+					: head + " 사전 테스트를 본 뒤 개념마다 퀴즈로 확인해요.";
 		}
 		String result = "총 " + progress.studiableConcepts() + "개 개념 중 " + progress.studiedConcepts() + "개 학습 완료 ("
 				+ progress.percent() + "%). " + head;

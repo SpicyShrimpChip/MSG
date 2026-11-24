@@ -96,7 +96,9 @@ class CurriculumFlowApiTest {
 				.andExpect(jsonPath("$.data.flow.concepts[1].conceptId").value("nat"))
 				.andExpect(jsonPath("$.data.flow.concepts[1].preStatus").value("weak"))
 				.andExpect(jsonPath("$.data.flow.concepts[1].priority").value(true))
-				.andExpect(jsonPath("$.data.flow.concepts[1].practiceStatus").value("not_started"));
+				.andExpect(jsonPath("$.data.flow.concepts[1].practiceStatus").value("not_started"))
+				.andExpect(jsonPath("$.data.flow.stages[1].summary")
+						.value(org.hamcrest.Matchers.containsString("퀴즈를 하나 풀면 다음 단계로 넘어가요.")));
 
 		// 3. NAT 확인 퀴즈를 맞히면 먼저 공부할 개념을 다 확인했으므로 사후 평가 단계
 		long practice = createQuiz("NAT");
@@ -158,6 +160,19 @@ class CurriculumFlowApiTest {
 				.andExpect(jsonPath("$.data.flow.assessmentMaterial").value(nullValue()))
 				.andExpect(jsonPath("$.data.flow.stages[0].summary")
 						.value(org.hamcrest.Matchers.containsString("자료를 올리면")));
+	}
+
+	@Test
+	void 자료_개념이_없으면_STEP2_요약이_퀴즈로_확인하라고_안내한다() throws Exception {
+		upload("노트.txt");
+		curriculum()
+				.andExpect(jsonPath("$.data.flow.conceptSource").value("course"))
+				.andExpect(jsonPath("$.data.flow.stages[1].summary")
+						.value(org.hamcrest.Matchers.containsString("사전 테스트를 본 뒤 개념마다 퀴즈로 확인해요.")))
+				.andExpect(jsonPath("$.data.flow.stages[1].summary")
+						.value(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("다음 단계로 넘어가요"))))
+				.andExpect(jsonPath("$.data.flow.stages[1].summary")
+						.value(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("핵심 개념을 뽑으면"))));
 	}
 
 	private ResultActions curriculum() throws Exception {

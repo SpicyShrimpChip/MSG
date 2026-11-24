@@ -18,14 +18,15 @@ import QuizCard from '@/pages/quizzes/components/QuizCard';
 import MaterialConceptPanel from './components/MaterialConceptPanel';
 import StudySummaryPanel from './components/StudySummaryPanel';
 
-// 요약·개념·퀴즈를 아직 만들지 않았거나(분석 전·분석 중) 만들지 못한 자료는 탭마다 같은 안내를 보여 준다
+// 퀴즈 탭에서 자료가 아직 준비되지 않았을 때(파일만 올림·글 읽기 실패·읽는 중) 보여 주는 안내
 function NotReady({ status }: { status: MaterialDetail['status'] }) {
   if (status === 'uploaded') {
     return (
       <EmptyState
         icon={<FileCheck size={24} aria-hidden="true" />}
-        title="파일을 올렸어요. 아직 AI 분석 전이에요"
-        description="요약은 요약 탭에서, 핵심 개념은 핵심 개념 탭에서, 퀴즈는 퀴즈 만들기에서 만들 수 있어요. 올린 파일은 지우기 전까지 보관해요."
+        title="파일을 올렸어요"
+        description="이 자료로 만든 퀴즈가 아직 없어요. 퀴즈 만들기에서 이 자료의 과목 개념으로 퀴즈를 만들 수 있어요. 올린 파일은 지우기 전까지 보관해요."
+        action={{ label: '퀴즈 만들기', to: '/quizzes/new' }}
       />
     );
   }

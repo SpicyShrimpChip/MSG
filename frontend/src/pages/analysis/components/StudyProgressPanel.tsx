@@ -1,6 +1,6 @@
 import { useCurriculum } from '@/hooks';
 import { Button, ScoreBar } from '@/components';
-import { formatDate } from '@/utils';
+import { formatDate, keywordQuizProgress } from '@/utils';
 import Panel from './Panel';
 
 // 개념별 학습 진도 (맞춤 커리큘럼 응답의 flow.progress를 그대로 쓴다). 학습 완료 기록·확인 퀴즈 결과로 서버가 센 값이고,
@@ -8,6 +8,7 @@ import Panel from './Panel';
 function StudyProgressPanel({ courseId }: { courseId: number }) {
   const { data } = useCurriculum(courseId);
   const { progress } = data.flow;
+  const keyword = keywordQuizProgress(data.flow.concepts);
   const stats = [
     { label: '학습 완료', value: progress.studiedConcepts },
     { label: '확인 퀴즈 응시', value: progress.checkedConcepts },
@@ -20,7 +21,26 @@ function StudyProgressPanel({ courseId }: { courseId: number }) {
       title="개념별 학습 진도"
       description="학습 완료 기록과 개념 확인 퀴즈 결과로 센 값이에요. 대화 분석 결과와는 따로 봐요."
     >
-      {progress.studiableConcepts === 0 || progress.percent === null ? (
+      {progress.studiableConcepts === 0 &&
+      keyword.total > 0 &&
+      (data.flow.preTest.status !== 'submitted' || keyword.percent === null) ? (
+        <p className="text-body text-ink-soft">
+          사전 테스트를 본 뒤부터 개념마다 퀴즈로 확인한 수를 세요.
+        </p>
+      ) : progress.studiableConcepts === 0 && keyword.total > 0 ? (
+        <div className="flex flex-col gap-1.5">
+          <ScoreBar value={keyword.percent ?? 0} />
+          <p className="text-body text-ink">
+            과목 키워드 {keyword.total}개 중{' '}
+            <strong className="text-primary">
+              {keyword.checked}개를 퀴즈로 확인했어요
+            </strong>
+          </p>
+          <p className="text-caption text-ink-soft">
+            자료에서 개념을 뽑지 않아 학습 완료 기록 없이 퀴즈 결과로만 세요.
+          </p>
+        </div>
+      ) : progress.studiableConcepts === 0 || progress.percent === null ? (
         <p className="text-body text-ink-soft">
           자료에서 핵심 개념을 뽑으면 개념마다 학습 완료와 확인 퀴즈 결과를
           기록해요.
