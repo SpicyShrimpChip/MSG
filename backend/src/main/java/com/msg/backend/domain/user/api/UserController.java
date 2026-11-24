@@ -15,6 +15,7 @@ import com.msg.backend.global.security.AuthUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -51,16 +52,18 @@ public class UserController {
 
 	@Operation(summary = "회원 탈퇴", description = "로그인한 본인만. 지금 비밀번호를 다시 확인한 뒤 계정과 내 모든 학습 데이터"
 			+ "(과목·자료와 원본 파일·가져온 대화·분석 결과·피드백·퀴즈와 채점 기록·AI 호출 기록)를 지운다. 되돌릴 수 없다. "
-			+ "로그인 유지 쿠키도 지운다. 비밀번호가 틀리면 400(로그인과 같은 시도 제한 429), 마지막 관리자 409. "
+			+ "로그인 유지 쿠키도 지운다. 비밀번호가 틀리면 400(로그인과 같은 시도 제한 429), 비어 있으면 400(시도로 세지 않음), 마지막 관리자 409. "
 			+ "카카오로만 가입해 비밀번호가 없는 계정(hasPassword=false)은 password 대신 confirmText에 \"탈퇴\"를 보낸다(틀리면 400). "
 			+ "카카오가 연결돼 있으면 탈퇴 뒤 카카오 연결도 끊는다.")
 	@DeleteMapping("/me")
 	public ApiResponse<Void> withdraw(@AuthenticationPrincipal AuthUser authUser,
 			@Valid @RequestBody WithdrawRequest request, HttpServletRequest httpRequest,
 			HttpServletResponse httpResponse) {
-		withdrawalService.withdraw(authUser.userId(), request.password(), request.confirmText(),
+		List<String> kakaoIds = withdrawalService.withdraw(authUser.userId(), request.password(), request.confirmText(),
 				httpRequest.getRemoteAddr());
 		refreshTokenCookies.clear(httpResponse);
+		// 탈퇴 트랜잭션이 끝난 뒤(DB 연결을 반납한 뒤) 카카오 연결을 끊는다
+		withdrawalService.unlinkKakao(kakaoIds);
 		return ApiResponse.success("탈퇴했어요. 그동안 이용해 주셔서 고마워요.", null);
 	}
 

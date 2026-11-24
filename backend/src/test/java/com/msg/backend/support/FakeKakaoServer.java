@@ -30,6 +30,7 @@ public class FakeKakaoServer implements AutoCloseable {
 	private final Map<String, AtomicInteger> calls = new ConcurrentHashMap<>();
 	private final Map<String, Map<String, String>> lastForms = new ConcurrentHashMap<>();
 	private final Map<String, String> lastAuthorizations = new ConcurrentHashMap<>();
+	private final Map<String, Runnable> onRequest = new ConcurrentHashMap<>();
 
 	private FakeKakaoServer(HttpServer server) {
 		this.server = server;
@@ -64,6 +65,7 @@ public class FakeKakaoServer implements AutoCloseable {
 		calls.clear();
 		lastForms.clear();
 		lastAuthorizations.clear();
+		onRequest.clear();
 		replies.put(TOKEN, new Reply(200, "{\"access_token\":\"fake-kakao-access\",\"token_type\":\"bearer\"}",
 				Duration.ZERO));
 		user(4242L, "kakao@example.com", true, true, "카카오닉");
@@ -114,6 +116,11 @@ public class FakeKakaoServer implements AutoCloseable {
 		return lastAuthorizations.get(path);
 	}
 
+	// 요청을 받는 순간(응답하기 전) 할 일. 예: 그때 앱이 빌려 간 DB 연결 수 재기. reset()이 지운다
+	public void onRequest(String path, Runnable action) {
+		onRequest.put(path, action);
+	}
+
 	@Override
 	public void close() {
 		server.stop(0);
@@ -126,6 +133,10 @@ public class FakeKakaoServer implements AutoCloseable {
 		String authorization = exchange.getRequestHeaders().getFirst("Authorization");
 		if (authorization != null) {
 			lastAuthorizations.put(path, authorization);
+		}
+		Runnable action = onRequest.get(path);
+		if (action != null) {
+			action.run();
 		}
 		Reply reply = replies.get(path);
 		if (!reply.delay().isZero()) {

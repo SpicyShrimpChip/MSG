@@ -9,6 +9,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
+import com.zaxxer.hikari.HikariDataSource;
+import com.zaxxer.hikari.HikariPoolMXBean;
 import com.msg.backend.domain.auth.dao.RefreshTokenRepository;
 import com.msg.backend.domain.auth.dao.UserSocialAccountRepository;
 import com.msg.backend.domain.user.dao.UserRepository;
@@ -19,6 +21,8 @@ import com.msg.backend.support.MutableClock;
 import com.msg.backend.support.TestApi;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +49,8 @@ class SocialWithdrawalApiTest {
 	private RefreshTokenRepository refreshTokenRepository;
 	@Autowired
 	private MutableClock clock;
+	@Autowired
+	private DataSource dataSource;
 
 	@BeforeEach
 	void setUp() {
@@ -66,6 +72,21 @@ class SocialWithdrawalApiTest {
 		assertThat(kakao.calls(FakeKakaoServer.UNLINK)).isEqualTo(1);
 		assertThat(kakao.lastAuthorization(FakeKakaoServer.UNLINK)).isEqualTo("KakaoAK test-admin");
 		assertThat(kakao.lastForm(FakeKakaoServer.UNLINK)).containsEntry("target_id", "4242");
+	}
+
+	@Test
+	void 카카오_연결_끊기는_탈퇴의_DB_연결을_돌려준_뒤에_부른다() throws Exception {
+		String token = kakaoSignup();
+		HikariPoolMXBean pool = dataSource.unwrap(HikariDataSource.class).getHikariPoolMXBean();
+		AtomicInteger activeAtUnlink = new AtomicInteger(-1);
+		kakao.onRequest(FakeKakaoServer.UNLINK, () -> activeAtUnlink.set(pool.getActiveConnections()));
+
+		withdraw(token, Map.of("confirmText", "탈퇴")).andExpect(status().isOk());
+
+		// 트랜잭션 콜백(afterCommit)에서 부르면 커밋 뒤에도 연결을 반납하기 전이라 1이 된다.
+		// 카카오 응답을 기다리는 동안 연결 풀의 연결 하나가 묶이지 않아야 한다
+		assertThat(kakao.calls(FakeKakaoServer.UNLINK)).isEqualTo(1);
+		assertThat(activeAtUnlink.get()).isZero();
 	}
 
 	@Test

@@ -148,7 +148,7 @@ class KakaoCallbackApiTest {
 	void state_쿠키는_한_번만_쓸_수_있다() throws Exception {
 		Started started = KakaoLoginFlow.start(mockMvc, null);
 		MockHttpServletResponse first = KakaoLoginFlow.callback(mockMvc, started);
-		assertThat(KakaoLoginFlow.setCookie(first, KakaoLoginFlow.STATE_COOKIE).orElseThrow()).contains("Max-Age=0");
+		assertThat(KakaoLoginFlow.stateSetCookie(first).orElseThrow()).contains("Max-Age=0");
 
 		// 브라우저는 지워진 쿠키를 다시 보내지 않지만, 같은 값을 다시 보내도 다음 start의 state와는 다르다
 		Started next = KakaoLoginFlow.start(mockMvc, null);
@@ -157,6 +157,34 @@ class KakaoCallbackApiTest {
 				.andReturn().getResponse();
 
 		assertThat(replay.getHeader(HttpHeaders.LOCATION)).isEqualTo(FRONTEND + "/login?socialError=state");
+	}
+
+	@Test
+	void 두_탭에서_차례로_시작해도_먼저_시작한_탭의_콜백이_된다() throws Exception {
+		Started firstTab = KakaoLoginFlow.start(mockMvc, "/analysis");
+		Started secondTab = KakaoLoginFlow.start(mockMvc, "/quizzes");
+
+		// 브라우저는 두 번 받은 쿠키를 모두 보낸다(이름이 같으면 나중 것만 남는다)
+		MockHttpServletResponse response = mockMvc.perform(get("/api/auth/kakao/callback")
+						.param("code", "c").param("state", firstTab.state())
+						.cookie(KakaoLoginFlow.browserJar(firstTab, secondTab)))
+				.andReturn().getResponse();
+
+		assertThat(response.getHeader(HttpHeaders.LOCATION)).isEqualTo(FRONTEND + "/signup/social?returnTo=%2Fanalysis");
+		// 자기 쿠키만 지우고 다른 탭의 쿠키는 남긴다
+		assertThat(KakaoLoginFlow.stateSetCookie(response).orElseThrow())
+				.startsWith(firstTab.stateCookie().getName() + "=").contains("Max-Age=0");
+	}
+
+	@Test
+	void state가_쿠키_이름에_못_쓰는_글자면_쿠키를_건드리지_않는다() throws Exception {
+		MockHttpServletResponse response = mockMvc.perform(get("/api/auth/kakao/callback")
+						.param("code", "c").param("state", "a;b=c\r\nSet-Cookie: x"))
+				.andReturn().getResponse();
+
+		assertThat(response.getHeader(HttpHeaders.LOCATION)).isEqualTo(FRONTEND + "/login?socialError=state");
+		assertThat(KakaoLoginFlow.stateSetCookie(response)).isEmpty();
+		assertThat(kakao.totalCalls()).isZero();
 	}
 
 	@Test

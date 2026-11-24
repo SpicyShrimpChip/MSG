@@ -20,8 +20,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * 회원 탈퇴. 본인(토큰의 사용자)만, 지금 비밀번호를 다시 확인한 뒤 계정과 내 모든 학습 데이터를 지운다(hard delete).
@@ -36,7 +34,8 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * 키가 없으면 남기지 않음). 이 한 줄은 사용자와 연결되지 않고 기간이 지나면 지운다.
  *
  * <p>카카오: 카카오로만 가입해 비밀번호가 없는 계정은 비밀번호 대신 확인 문구 "탈퇴"를 받는다. 카카오 연결(user_social_account)이 있으면
- * 탈퇴가 커밋된 뒤 카카오 연결 끊기(unlink)를 부른다. 실패해도 탈퇴는 되돌리지 않는다.
+ * withdraw가 끊을 회원번호를 돌려주고, 호출한 쪽(컨트롤러)이 탈퇴가 커밋된 뒤 unlinkKakao로 끊는다. 트랜잭션 콜백(afterCommit)에서
+ * 부르면 커밋 뒤에도 DB 연결을 반납하기 전이라 카카오 응답을 기다리는 동안 연결 하나를 묶는다. 실패해도 탈퇴는 되돌리지 않는다.
  *
  * <p>비밀번호 확인은 로그인 시도 제한(LoginAttemptLimiter)과 같은 한도를 쓴다. 마지막 관리자는 탈퇴할 수 없다(관리자 없는 서비스 방지).
  */
@@ -46,6 +45,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 public class WithdrawalService {
 
 	static final String WRONG_PASSWORD_MESSAGE = "비밀번호가 맞지 않아요. 다시 확인해 주세요.";
+	static final String EMPTY_PASSWORD_MESSAGE = "비밀번호를 입력해 주세요.";
 	static final String CONFIRM_TEXT = "탈퇴";
 	static final String WRONG_CONFIRM_MESSAGE = "확인 문구로 \"탈퇴\"를 입력해 주세요.";
 	static final String LAST_ADMIN_MESSAGE = "마지막 관리자는 탈퇴할 수 없어요. 다른 관리자를 먼저 지정해 주세요.";
@@ -59,8 +59,9 @@ public class WithdrawalService {
 	private final UserSocialAccountRepository socialAccountRepository;
 	private final KakaoClient kakaoClient;
 
+	// 끊어야 할 카카오 회원번호를 돌려준다(없으면 빈 목록). 커밋된 뒤 unlinkKakao에 넘긴다
 	@Transactional
-	public void withdraw(Long userId, String password, String confirmText, String clientIp) {
+	public List<String> withdraw(Long userId, String password, String confirmText, String clientIp) {
 		// 사용자 행을 잠가 같은 사용자의 퀴즈 만들기·채점·동의 변경과 겹치지 않게 한다
 		User user = userRepository.lockLoginUser(userId);
 		if (user.hasPassword()) {
@@ -77,14 +78,31 @@ public class WithdrawalService {
 		// 같은 이메일의 재가입 제한 기록 (이메일 원문이 아니라 키 해시, app.rejoin)
 		rejoinRestriction.recordWithdrawal(user.getEmail());
 		// 카카오 연결은 행이 지워지기 전에 읽어 두고, 탈퇴가 커밋된 뒤에 끊는다(카카오 정책)
-		unlinkAfterCommit(socialAccountRepository.findAllByUserId(userId));
+		List<String> kakaoIds = kakaoIds(socialAccountRepository.findAllByUserId(userId));
 		userRepository.delete(user);
 		userRepository.flush();
+		return kakaoIds;
+	}
+
+	// 트랜잭션 밖에서 부른다. 실패해도 탈퇴는 이미 끝났으므로 기록만 남긴다(회원번호는 남기지 않는다).
+	// 사용자는 카카오 계정 화면에서 직접 끊을 수 있다
+	public void unlinkKakao(List<String> kakaoIds) {
+		for (String kakaoId : kakaoIds) {
+			try {
+				kakaoClient.unlink(kakaoId);
+			} catch (RuntimeException e) {
+				log.warn("탈퇴한 사용자의 카카오 연결 끊기 실패 ({})", e.getClass().getSimpleName());
+			}
+		}
 	}
 
 	private void checkPassword(User user, String password, String clientIp) {
+		// 입력 누락은 비밀번호 추측이 아니므로 시도 제한에 세지 않는다
+		if (password == null || password.isEmpty()) {
+			throw new BusinessException(HttpStatus.BAD_REQUEST, EMPTY_PASSWORD_MESSAGE);
+		}
 		attemptLimiter.checkAllowed(user.getEmail(), clientIp);
-		if (password == null || password.isEmpty() || PasswordPolicy.exceedsMaxBytes(password)
+		if (PasswordPolicy.exceedsMaxBytes(password)
 				|| !passwordEncoder.matches(password, user.getPasswordHash())) {
 			attemptLimiter.recordFailure(user.getEmail(), clientIp);
 			throw new BusinessException(HttpStatus.BAD_REQUEST, WRONG_PASSWORD_MESSAGE);
@@ -92,26 +110,10 @@ public class WithdrawalService {
 		attemptLimiter.recordSuccess(user.getEmail(), clientIp);
 	}
 
-	// 실패해도 탈퇴는 이미 끝났으므로 기록만 남긴다(회원번호는 남기지 않는다). 사용자는 카카오 계정 화면에서 직접 끊을 수 있다
-	private void unlinkAfterCommit(List<UserSocialAccount> accounts) {
-		List<String> kakaoIds = accounts.stream()
+	private static List<String> kakaoIds(List<UserSocialAccount> accounts) {
+		return accounts.stream()
 				.filter(account -> account.getProvider() == SocialProvider.KAKAO)
 				.map(UserSocialAccount::getProviderUserId)
 				.toList();
-		if (kakaoIds.isEmpty()) {
-			return;
-		}
-		TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-			@Override
-			public void afterCommit() {
-				for (String kakaoId : kakaoIds) {
-					try {
-						kakaoClient.unlink(kakaoId);
-					} catch (RuntimeException e) {
-						log.warn("탈퇴한 사용자의 카카오 연결 끊기 실패 ({})", e.getClass().getSimpleName());
-					}
-				}
-			}
-		});
 	}
 }

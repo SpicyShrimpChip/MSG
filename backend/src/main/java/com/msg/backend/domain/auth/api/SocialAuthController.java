@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -140,6 +141,10 @@ public class SocialAuthController {
 			}
 		} catch (SocialLoginException e) {
 			redirect(response, loginWithError(e.error().code()));
+		} catch (DataAccessException e) {
+			// DB 오류 메시지에는 넣으려던 값이 들어갈 수 있어 종류만 남긴다(GlobalExceptionHandler와 같음)
+			log.error("카카오 로그인 콜백 처리 실패 ({})", e.getClass().getSimpleName());
+			redirect(response, loginWithError(SocialError.FAILED.code()));
 		} catch (RuntimeException e) {
 			log.error("카카오 로그인 콜백 처리 실패", e);
 			redirect(response, loginWithError(SocialError.FAILED.code()));
