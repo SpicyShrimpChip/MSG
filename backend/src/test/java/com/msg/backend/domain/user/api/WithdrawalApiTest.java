@@ -78,6 +78,18 @@ class WithdrawalApiTest {
 	}
 
 	@Test
+	void 비밀번호를_비워_보내면_시도_횟수에_세지_않는다() throws Exception {
+		// 입력 누락은 비밀번호 추측이 아니다. 로그인 시도 한도(5번)를 넘게 보내도 잠기지 않는다
+		for (int i = 0; i < 6; i++) {
+			withdraw(token, "").andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.message").value("비밀번호를 입력해 주세요."));
+		}
+
+		withdraw(token, PASSWORD).andExpect(status().isOk());
+		assertThat(userRepository.count()).isEqualTo(1);
+	}
+
+	@Test
 	void 탈퇴하면_내_과목_자료_파일_퀴즈_기록이_모두_지워지고_다른_회원은_그대로다() throws Exception {
 		long course = createCourse(token, List.of("NAT", "VLAN"));
 		long otherCourse = createCourse(otherToken, List.of("NAT"));

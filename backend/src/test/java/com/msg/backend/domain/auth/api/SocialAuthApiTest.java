@@ -50,10 +50,12 @@ class SocialAuthApiTest {
 		assertThat(state).isNotBlank().hasSizeGreaterThanOrEqualTo(43);
 
 		List<String> cookies = response.getHeaders(HttpHeaders.SET_COOKIE);
-		String stateCookie = cookies.stream().filter(c -> c.startsWith("msg_oauth_state=")).findFirst().orElseThrow();
+		// 탭마다 따로 두도록 이름에 state를 붙인다
+		String stateCookie = cookies.stream().filter(c -> c.startsWith("msg_oauth_state_" + state + "=")).findFirst()
+				.orElseThrow();
 		assertThat(stateCookie).contains("HttpOnly").contains("SameSite=Lax").contains("Path=/api/auth/kakao")
 				.contains("Max-Age=600");
-		String value = stateCookie.substring("msg_oauth_state=".length(), stateCookie.indexOf(';'));
+		String value = stateCookie.substring(("msg_oauth_state_" + state + "=").length(), stateCookie.indexOf(';'));
 		assertThat(value).startsWith(state + ".");
 		// 카카오를 아직 부르지 않는다 (브라우저가 인가 화면으로 간다)
 		assertThat(kakao.totalCalls()).isZero();
