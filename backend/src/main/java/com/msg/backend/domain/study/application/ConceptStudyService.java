@@ -12,6 +12,8 @@ import com.msg.backend.domain.quiz.dao.QuizQuestionRepository;
 import com.msg.backend.domain.quiz.dao.QuizRepository;
 import com.msg.backend.domain.quiz.dao.QuizSubmissionRepository;
 import com.msg.backend.domain.quiz.entity.Quiz;
+import com.msg.backend.domain.quiz.entity.QuizAnswer;
+import com.msg.backend.domain.quiz.entity.QuizQuestion;
 import com.msg.backend.domain.quiz.entity.QuizSubmission;
 import com.msg.backend.domain.study.dao.ConceptStudyProgressRepository;
 import com.msg.backend.domain.study.dto.ConceptStudyResponse;
@@ -22,10 +24,13 @@ import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -46,7 +51,6 @@ public class ConceptStudyService {
 
 	static final int HISTORY_LIMIT = 5;
 	static final String NO_COURSE_MESSAGE = "과목에 연결된 자료만 학습 기록을 남길 수 있어요.";
-	static final String CONCEPT_NOT_FOUND_MESSAGE = "이 자료에서 그 개념을 찾을 수 없어요. 핵심 개념을 먼저 뽑아 주세요.";
 
 	private final UserRepository userRepository;
 	private final MaterialRepository materialRepository;
@@ -105,9 +109,7 @@ public class ConceptStudyService {
 			throw new BusinessException(HttpStatus.BAD_REQUEST, NO_COURSE_MESSAGE);
 		}
 		String conceptKey = conceptId.strip();
-		MaterialConcept concept = conceptRepository.findAllByMaterialIdAndUserIdOrderBySortOrderAsc(materialId, userId)
-				.stream().filter(c -> c.getConceptKey().equals(conceptKey)).findFirst()
-				.orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, CONCEPT_NOT_FOUND_MESSAGE));
+		MaterialConcept concept = conceptRepository.getOwned(materialId, userId, conceptKey);
 		Checks checks = checks(userId,
 				quizRepository.findAllByUserIdAndMaterialIdAndCheckConceptKeyIsNotNullOrderByIdDesc(userId, materialId))
 				.get(key(materialId, conceptKey));
@@ -141,15 +143,20 @@ public class ConceptStudyService {
 		}
 	}
 
-	// 확인 퀴즈마다 가장 최근 제출을 그 개념의 문제만으로 센다. 채점이 끝나지 않은 답은 대기로 세고 틀린 답으로 세지 않는다
+	// 확인 퀴즈마다 가장 최근 제출을 그 개념의 문제만으로 센다. 채점이 끝나지 않은 답은 대기로 세고 틀린 답으로 세지 않는다.
+	// 제출·문제·답은 퀴즈마다 따로 읽지 않고 한 번에 읽는다 (QuizStatsService.answered와 같은 방식)
 	private Map<String, Checks> checks(Long userId, List<Quiz> quizzes) {
 		double minRate = properties.assessment().conceptMinRate();
 		Map<String, List<Attempt>> attempts = new HashMap<>();
 		Map<String, Long> open = new HashMap<>();
+		Map<Long, QuizSubmission> latest = latestSubmissions(userId, quizzes);
+		Map<Long, List<QuizQuestion>> questionsByQuiz = questionsByQuiz(latest.keySet());
+		Map<Long, List<QuizAnswer>> answersBySubmission = latest.isEmpty() ? Map.of()
+				: answerRepository.findAllBySubmissionIdIn(latest.values().stream().map(QuizSubmission::getId).toList())
+						.stream().collect(Collectors.groupingBy(QuizAnswer::getSubmissionId));
 		for (Quiz quiz : quizzes) {
 			String key = key(quiz.getMaterialId(), quiz.getCheckConceptKey());
-			QuizSubmission submission = submissionRepository.findFirstByQuizIdAndUserIdOrderByIdDesc(quiz.getId(), userId)
-					.orElse(null);
+			QuizSubmission submission = latest.get(quiz.getId());
 			if (submission == null) {
 				// 최신 순이라 처음 만나는 안 푼 퀴즈가, 그보다 나중에 낸 결과가 없을 때만 "이어 풀기" 대상이다
 				if (!attempts.containsKey(key)) {
@@ -158,8 +165,8 @@ public class ConceptStudyService {
 				continue;
 			}
 			List<QuizAssessor.Graded> graded = QuizAssessor.graded(
-					questionRepository.findAllByQuizIdOrderBySortOrderAsc(quiz.getId()),
-					QuizAssessor.answersByQuestion(answerRepository.findAllBySubmissionId(submission.getId())));
+					questionsByQuiz.getOrDefault(quiz.getId(), List.of()),
+					QuizAssessor.answersByQuestion(answersBySubmission.getOrDefault(submission.getId(), List.of())));
 			QuizAssessor.ConceptStat stat = QuizAssessor.byConcept(graded, minRate).stream()
 					.filter(s -> s.conceptKey().equals(quiz.getCheckConceptKey())).findFirst().orElse(null);
 			ConceptStudyRules.CheckResult result = stat == null
@@ -179,6 +186,28 @@ public class ConceptStudyService {
 		});
 		open.forEach((key, quizId) -> checks.putIfAbsent(key, new Checks(List.of(), quizId)));
 		return checks;
+	}
+
+	// 퀴즈마다 가장 최근 제출(가장 큰 id). 퀴즈 id → 제출, 안 푼 퀴즈는 없음
+	private Map<Long, QuizSubmission> latestSubmissions(Long userId, List<Quiz> quizzes) {
+		if (quizzes.isEmpty()) {
+			return Map.of();
+		}
+		return submissionRepository.findLatestByQuizIds(userId, quizzes.stream().map(Quiz::getId).toList()).stream()
+				.collect(Collectors.toMap(QuizSubmission::getQuizId, Function.identity(),
+						BinaryOperator.maxBy(Comparator.comparing(QuizSubmission::getId))));
+	}
+
+	// 퀴즈마다 문제 목록 (문제 순서대로, findAllByQuizIdOrderBySortOrderAsc와 같은 순서)
+	private Map<Long, List<QuizQuestion>> questionsByQuiz(Collection<Long> quizIds) {
+		if (quizIds.isEmpty()) {
+			return Map.of();
+		}
+		Map<Long, QuizQuestion> byId = new LinkedHashMap<>();
+		questionRepository.findAllByQuizIdIn(quizIds).forEach(question -> byId.putIfAbsent(question.getId(), question));
+		return byId.values().stream()
+				.sorted(Comparator.comparingInt(QuizQuestion::getSortOrder))
+				.collect(Collectors.groupingBy(QuizQuestion::getQuizId));
 	}
 
 	private static int minGraded() {

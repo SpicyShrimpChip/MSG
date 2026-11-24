@@ -43,16 +43,21 @@ public class QuizStatsService {
 
 	// 과목 키워드 순서 → 퀴즈에만 있는 개념 순서. 소유 확인은 부르는 쪽이 한다
 	public List<ConceptQuizStatsResponse> byCourse(Long userId, Course course) {
+		return byCourse(userId, course, feedbackRepository.findAllByUserIdAndCourseIdOrderByIdAsc(userId, course.getId()));
+	}
+
+	/**
+	 * 과목 피드백 목록을 이미 읽은 쪽(분석 결과 화면)이 다시 읽지 않게 받는다.
+	 * feedback은 findAllByUserIdAndCourseIdOrderByIdAsc(userId, course.getId())의 결과여야 한다.
+	 */
+	public List<ConceptQuizStatsResponse> byCourse(Long userId, Course course, List<ConceptFeedback> courseFeedback) {
 		List<QuizSubmission> submissions = submissionRepository.findLatestInCourse(userId, course.getId());
 		List<Answered> answered = answered(submissions);
-		Map<String, ConceptFeedback> feedback = feedbackRepository
-				.findAllByUserIdAndCourseIdOrderByIdAsc(userId, course.getId()).stream()
+		Map<String, ConceptFeedback> feedback = courseFeedback.stream()
 				.collect(Collectors.toMap(ConceptFeedback::getConceptKey, Function.identity(), (a, b) -> b));
 		double minRate = properties.assessment().conceptMinRate();
 		Map<String, QuizAssessor.ConceptStat> stats = QuizAssessor
-				.byConcept(answered.stream().map(Answered::graded).toList(), minRate).stream()
-				.collect(Collectors.toMap(QuizAssessor.ConceptStat::conceptKey, Function.identity(), (a, b) -> a,
-						LinkedHashMap::new));
+				.byConceptMap(answered.stream().map(Answered::graded).toList(), minRate);
 		Map<String, String> names = new LinkedHashMap<>();
 		course.getKeywords().forEach(keyword -> names.putIfAbsent(Course.nameKey(keyword), keyword));
 		stats.values().forEach(stat -> names.putIfAbsent(stat.conceptKey(), stat.name()));
@@ -86,12 +91,8 @@ public class QuizStatsService {
 		List<QuizSubmission> submissions = submissionRepository.findLatestPracticeInCourse(userId, courseId).stream()
 				.filter(s -> since == null || !s.getSubmittedAt().isBefore(since))
 				.toList();
-		return QuizAssessor
-				.byConcept(answered(submissions).stream().map(Answered::graded).toList(),
-						properties.assessment().conceptMinRate())
-				.stream()
-				.collect(Collectors.toMap(QuizAssessor.ConceptStat::conceptKey, Function.identity(), (a, b) -> a,
-						LinkedHashMap::new));
+		return QuizAssessor.byConceptMap(answered(submissions).stream().map(Answered::graded).toList(),
+				properties.assessment().conceptMinRate());
 	}
 
 	private record Answered(QuizAssessor.Graded graded, LocalDateTime submittedAt) {

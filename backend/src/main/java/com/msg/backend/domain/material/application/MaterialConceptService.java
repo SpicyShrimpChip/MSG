@@ -87,7 +87,6 @@ public class MaterialConceptService {
 			JSON 객체 하나만 출력한다: {"explanation":"","materialContext":"","contextQuote":"","importance":"","example":""}
 			""";
 	static final int MIN_EXPLANATION_LENGTH = 20;
-	static final String CONCEPT_NOT_FOUND_MESSAGE = "이 자료에서 그 개념을 찾을 수 없어요. 핵심 개념을 먼저 뽑아 주세요.";
 	static final String CONCEPT_CHANGED_MESSAGE = "그 사이 핵심 개념을 다시 뽑아 설명을 저장하지 않았어요. 새 개념에서 다시 시도해 주세요.";
 	static final String NOTE_INVALID_MESSAGE = "AI가 쓴 개념 설명의 형식이 맞지 않아 저장하지 않았어요. 다시 시도해 주세요.";
 	static final String NOTE_FAILED_MESSAGE = "AI 모델의 응답을 받지 못해 개념 설명을 만들지 못했어요. 잠시 뒤 다시 시도해 주세요.";
@@ -182,10 +181,19 @@ public class MaterialConceptService {
 	 */
 	public MaterialConceptResponse explain(Long userId, Long materialId, String conceptId, boolean confirmed) {
 		NotePrepared note = transaction.execute(status -> {
-			materialRepository.getOwned(materialId, userId);
-			MaterialConcept concept = findConcept(userId, materialId, conceptId);
-			List<String> others = conceptRepository.findAllByMaterialIdAndUserIdOrderBySortOrderAsc(materialId, userId)
-					.stream().map(MaterialConcept::getName).filter(name -> !name.equals(concept.getName())).toList();
+			// 개념 목록을 한 번 읽어 대상 개념과 다른 개념 이름을 함께 얻는다
+			List<MaterialConcept> concepts = conceptRepository.findAllByMaterialIdAndUserIdOrderBySortOrderAsc(materialId,
+					userId);
+			MaterialConcept concept = concepts.stream().filter(c -> c.getConceptKey().equals(conceptId)).findFirst()
+					.orElse(null);
+			if (concept == null) {
+				// 자료가 없거나 남의 것이면 자료 404가 개념 404보다 먼저다. 개념이 있으면 내 자료다
+				// (material_concept.user_id는 자료 주인, 자료를 지우면 개념도 함께 지워진다)
+				materialRepository.getOwned(materialId, userId);
+				throw new BusinessException(HttpStatus.NOT_FOUND, MaterialConceptRepository.NOT_FOUND_MESSAGE);
+			}
+			List<String> others = concepts.stream().map(MaterialConcept::getName)
+					.filter(name -> !name.equals(concept.getName())).toList();
 			return new NotePrepared(prepare(userId, materialId, confirmed, QuizAiCall.CONCEPT_NOTE, properties.conceptNoteDailyLimit(),
 					"개념 설명을 만들"), concept, others);
 		});
@@ -263,19 +271,12 @@ public class MaterialConceptService {
 		userRepository.lockLoginUser(userId);
 		materialRepository.getOwned(materialId, userId);
 		// 기다리는 동안 개념을 다시 뽑았으면 그 개념이 없을 수 있다
-		MaterialConcept concept = conceptRepository.findAllByMaterialIdAndUserIdOrderBySortOrderAsc(materialId, userId)
-				.stream().filter(c -> c.getConceptKey().equals(conceptId)).findFirst()
+		MaterialConcept concept = conceptRepository.findByMaterialIdAndUserIdAndConceptKey(materialId, userId, conceptId)
 				.orElseThrow(() -> new BusinessException(HttpStatus.CONFLICT, CONCEPT_CHANGED_MESSAGE));
 		concept.applyStudyNote(note.explanation(), note.materialContext(), note.contextQuote(), note.contextLocation(),
 				note.importance(), note.example(), client.provider().apiValue(), client.model(),
 				LocalDateTime.now(clock));
 		return MaterialConceptResponse.from(concept);
-	}
-
-	private MaterialConcept findConcept(Long userId, Long materialId, String conceptId) {
-		return conceptRepository.findAllByMaterialIdAndUserIdOrderBySortOrderAsc(materialId, userId).stream()
-				.filter(concept -> concept.getConceptKey().equals(conceptId)).findFirst()
-				.orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, CONCEPT_NOT_FOUND_MESSAGE));
 	}
 
 	private Prepared prepare(Long userId, Long materialId, boolean confirmed, String purpose, int dailyLimit,

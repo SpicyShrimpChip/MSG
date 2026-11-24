@@ -87,19 +87,9 @@ class CurriculumFlowBuilder {
 			reasons.add("사전평가 뒤 푼 퀴즈의 득점률이 기준보다 낮아요.");
 		}
 		if (agreed != null) {
-			String label;
-			if (agreed.getOutcome() == ConsensusOutcome.DISAGREEMENT) {
-				label = "모델 " + agreed.getJudgedCount() + "개의 의견이 서로 달라 확인이 필요해요";
-			} else if (agreed.getStatus() == null) {
-				label = null;
-			} else {
-				label = "모델 " + agreed.getJudgedCount() + "개 중 " + agreed.getAgreeCount() + "개가 '" + switch (agreed.getStatus()) {
-					case UNDERSTOOD -> "이해";
-					case PARTIAL -> "부분 이해";
-					case NOT_UNDERSTOOD -> "이해 부족";
-					case INSUFFICIENT_EVIDENCE -> "판단 근거 부족";
-				} + "'으로 봤어요";
-			}
+			String label = agreed.getOutcome() == ConsensusOutcome.DISAGREEMENT
+					? "모델 " + agreed.getJudgedCount() + "개의 의견이 서로 달라 확인이 필요해요"
+					: ConsensusText.majority(agreed);
 			if (label != null) {
 				reasons.add("대화 분석(AI 추정, 퀴즈 결과와 따로): " + label + ".");
 			}
@@ -140,8 +130,10 @@ class CurriculumFlowBuilder {
 
 		// 개념 키 → 공부할 자료 개념 (사전평가 자료의 개념을 먼저, 그다음 과목의 다른 자료)
 		Long preferred = assessmentMaterial == null ? null : assessmentMaterial.id();
-		List<MaterialConcept> courseConcepts = conceptRepository.findAllByUserIdOrderByMaterialIdAscSortOrderAsc(userId)
-				.stream().filter(c -> materialById.containsKey(c.getMaterialId())).toList();
+		// 과목 자료의 개념만 DB에서 고른다 (자료 id 순 → 뽑은 순서)
+		List<MaterialConcept> courseConcepts = materialById.isEmpty() ? List.of()
+				: conceptRepository.findAllByUserIdAndMaterialIdInOrderByMaterialIdAscSortOrderAsc(userId,
+						materialById.keySet());
 		Map<String, MaterialConcept> studyByKey = new LinkedHashMap<>();
 		courseConcepts.stream().filter(c -> c.getMaterialId().equals(preferred))
 				.forEach(c -> studyByKey.putIfAbsent(c.getConceptKey(), c));
@@ -280,7 +272,7 @@ class CurriculumFlowBuilder {
 	}
 
 	private static Integer percent(Integer score, Integer max) {
-		return score == null || max == null || max == 0 ? null : Math.round(score * 100f / max);
+		return score == null || max == null ? null : QuizAssessor.rate(score, max);
 	}
 
 	private static CurriculumResponse.AssessmentState state(AssessmentComparisonResponse.Snapshot snapshot,

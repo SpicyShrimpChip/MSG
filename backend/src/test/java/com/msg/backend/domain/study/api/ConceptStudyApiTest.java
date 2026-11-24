@@ -254,6 +254,23 @@ class ConceptStudyApiTest {
 	}
 
 	@Test
+	void 커리큘럼은_다른_과목_자료에서_뽑은_개념을_쓰지_않는다() throws Exception {
+		long otherCourse = TestApi.createCourse(mockMvc, objectMapper, token, "운영체제", List.of("스케줄링"));
+		long otherMaterial = upload(token, otherCourse);
+		mockMvc.perform(post("/api/materials/" + otherMaterial + "/concepts").header(HttpHeaders.AUTHORIZATION,
+						bearer(token)).contentType(MediaType.APPLICATION_JSON).content("{\"materialContentConsent\":true}"))
+				.andExpect(status().isOk());
+		// 이 과목 자료의 개념이 없으면, 다른 과목 자료에 같은 개념이 있어도 과목 키워드로 돌아간다
+		jdbcTemplate.update("delete from material_concept where material_id = ?", materialId);
+
+		curriculum().andExpect(jsonPath("$.data.flow.conceptSource").value("course"))
+				.andExpect(jsonPath("$.data.flow.concepts", hasSize(1)))
+				.andExpect(jsonPath("$.data.flow.concepts[0].conceptId").value("vlan"))
+				.andExpect(jsonPath("$.data.flow.concepts[0].materialId").value(materialId))
+				.andExpect(jsonPath("$.data.flow.concepts[0].study").value(nullValue()));
+	}
+
+	@Test
 	void 자료나_과목을_지우면_학습_기록도_지워진다() throws Exception {
 		complete(token, "vlan");
 		long otherMaterial = upload(token, courseId);
