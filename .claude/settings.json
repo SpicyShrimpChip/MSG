@@ -34,5 +34,18 @@
       "Bash(vercel deploy *)",
       "Bash(vercel env pull *)"
     ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"[개발 교훈 위키 목차] 작업과 관련된 제목이 있으면 시작 전에 docs/wiki/의 그 파일에서 해당 항목을 읽는다.\"; awk '/^## 목차/{p=1} p' \"$CLAUDE_PROJECT_DIR/docs/wiki/README.md\" 2>/dev/null || true",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
   }
 }
