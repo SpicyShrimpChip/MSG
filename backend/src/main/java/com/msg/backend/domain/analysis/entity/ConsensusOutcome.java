@@ -1,5 +1,7 @@
 package com.msg.backend.domain.analysis.entity;
 
+import com.msg.backend.global.common.ApiEnumValues;
+
 /**
  * 개념 하나에 대한 모델 의견 비교. 정확도·숙련도가 아니므로 화면에 "정확도 67%"처럼 보여 주지 않는다.
  * 몇 개 모델이 판단했고(judgedCount) 몇 개가 같았는지(agreeCount)를 함께 보여 준다.
@@ -18,6 +20,6 @@ public enum ConsensusOutcome {
 	NO_RESULT;
 
 	public String apiValue() {
-		return ApiValues.of(this);
+		return ApiEnumValues.of(this);
 	}
 }

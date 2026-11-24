@@ -75,6 +75,11 @@ public class Course {
 		this.updatedAt = now;
 	}
 
+	// 앞뒤 공백을 지우고 안쪽 공백은 한 칸으로 줄인다 (frontend/src/utils/keywords.ts normalizeKeyword)
+	public static String normalizeKeyword(String raw) {
+		return raw.strip().replaceAll("\\s+", " ");
+	}
+
 	// 대소문자만 다른 이름을 같은 이름으로 본다 (프론트 CourseForm의 중복 검사와 같은 기준)
 	public static String nameKey(String name) {
 		return name.toLowerCase(Locale.ROOT);

@@ -1,5 +1,6 @@
 package com.msg.backend.domain.quiz.entity;
 
+import com.msg.backend.domain.quiz.application.GradingNotes;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -91,18 +92,6 @@ public class QuizAnswer {
 	@OrderColumn(name = "sort_order")
 	private List<RubricScore> rubricScores = new ArrayList<>();
 
-	// 객관식 (V6와 같은 형태)
-	public static QuizAnswer of(Long submissionId, Long questionId, int choiceIndex, boolean correct) {
-		QuizAnswer answer = new QuizAnswer();
-		answer.submissionId = submissionId;
-		answer.questionId = questionId;
-		answer.choiceIndex = choiceIndex;
-		answer.correct = correct;
-		answer.score = correct ? 1 : 0;
-		answer.maxScore = 1;
-		return answer;
-	}
-
 	// 채점 결과 하나를 그대로 담는다 (QuizService가 GradedAnswer에서 만든다)
 	public static QuizAnswer from(Long submissionId, Long questionId, int choiceIndex, String textAnswer,
 			GradeOutcome outcome) {
@@ -131,6 +120,16 @@ public class QuizAnswer {
 		this.aiPractical = outcome.practical();
 		this.rubricScores.clear();
 		this.rubricScores.addAll(outcome.rubricScores());
+	}
+
+	// AI 채점 실행이 맡아 채점하고 있는 답인지 (대기 + GRADING)
+	public boolean isBeingGraded() {
+		return gradingStatus == GradingStatus.PENDING && GradingNotes.GRADING.equals(gradingNote);
+	}
+
+	// 채점 결과를 받지 못해 다시 채점할 수 있는 대기(MODEL_FAILED)로 둔다
+	public void markGradingFailed() {
+		apply(GradeOutcome.pending(GradingNotes.MODEL_FAILED, maxScore, 0));
 	}
 
 	/**

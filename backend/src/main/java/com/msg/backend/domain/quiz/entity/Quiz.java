@@ -1,6 +1,7 @@
 package com.msg.backend.domain.quiz.entity;
 
 import com.msg.backend.domain.user.entity.JobField;
+import com.msg.backend.global.common.Texts;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -200,8 +201,6 @@ public class Quiz {
 		if (values == null || values.isEmpty()) {
 			return null;
 		}
-		String joined = String.join(", ", values);
-		return joined.length() <= MATERIAL_SCOPE_MAX_LENGTH ? joined
-				: joined.substring(0, MATERIAL_SCOPE_MAX_LENGTH - 1) + "…";
+		return Texts.clip(String.join(", ", values), MATERIAL_SCOPE_MAX_LENGTH);
 	}
 }

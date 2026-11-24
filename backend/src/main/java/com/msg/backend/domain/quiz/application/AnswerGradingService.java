@@ -11,6 +11,7 @@ import com.msg.backend.domain.quiz.entity.QuizQuestion;
 import com.msg.backend.domain.quiz.entity.QuizRubricItem;
 import com.msg.backend.domain.quiz.entity.RubricLevel;
 import com.msg.backend.domain.quiz.entity.RubricScore;
+import com.msg.backend.global.common.Texts;
 import com.msg.backend.global.llm.LlmClient;
 import com.msg.backend.global.llm.LlmJson;
 import com.msg.backend.global.llm.LlmProvider;
@@ -125,7 +126,7 @@ public class AnswerGradingService {
 			}
 			Optional<ModelJudgments> parsed = parse(outcome.response().text(), byKey);
 			usage.record(userId, QuizAiCall.GRADING, null, runId, client, outcome,
-					parsed.isPresent() ? null : "INVALID_OUTPUT");
+					parsed.isPresent() ? null : QuizModelFallback.INVALID_OUTPUT);
 			parsed.ifPresentOrElse(judged::add, () -> log.warn("{} 채점 답변이 약속한 형식이 아니다", provider));
 		});
 		Map<Long, GradeOutcome> results = new HashMap<>();
@@ -188,7 +189,7 @@ public class AnswerGradingService {
 			if (item.question().getType() == QuestionType.SHORT_ANSWER) {
 				String verdict = LlmJson.text(node.get("verdict"));
 				if (verdict != null && List.of("correct", "incorrect", "unsure").contains(verdict.toLowerCase(java.util.Locale.ROOT))) {
-					shorts.put(key, new ShortJudgment(verdict.toLowerCase(java.util.Locale.ROOT), cut(LlmJson.text(node.get("reason")),
+					shorts.put(key, new ShortJudgment(verdict.toLowerCase(java.util.Locale.ROOT), Texts.cut(LlmJson.text(node.get("reason")),
 							REASON_MAX_LENGTH)));
 				}
 			} else {
@@ -217,7 +218,7 @@ public class AnswerGradingService {
 				return Optional.empty();
 			}
 			levels[index.asInt()] = level.get();
-			reasons[index.asInt()] = cut(LlmJson.text(item.get("reason")), REASON_MAX_LENGTH);
+			reasons[index.asInt()] = Texts.cut(LlmJson.text(item.get("reason")), REASON_MAX_LENGTH);
 		}
 		for (RubricLevel level : levels) {
 			if (level == null) {
@@ -225,10 +226,10 @@ public class AnswerGradingService {
 			}
 		}
 		return Optional.of(new EssayJudgment(List.of(levels), java.util.Arrays.asList(reasons),
-				cut(LlmJson.text(node.get("strengths")), QuizAnswer.FEEDBACK_MAX_LENGTH),
-				cut(LlmJson.text(node.get("missing")), QuizAnswer.FEEDBACK_MAX_LENGTH),
-				cut(LlmJson.text(node.get("improvements")), QuizAnswer.FEEDBACK_MAX_LENGTH),
-				cut(LlmJson.text(node.get("practical")), QuizAnswer.FEEDBACK_MAX_LENGTH)));
+				Texts.cut(LlmJson.text(node.get("strengths")), QuizAnswer.FEEDBACK_MAX_LENGTH),
+				Texts.cut(LlmJson.text(node.get("missing")), QuizAnswer.FEEDBACK_MAX_LENGTH),
+				Texts.cut(LlmJson.text(node.get("improvements")), QuizAnswer.FEEDBACK_MAX_LENGTH),
+				Texts.cut(LlmJson.text(node.get("practical")), QuizAnswer.FEEDBACK_MAX_LENGTH)));
 	}
 
 	private static GradeOutcome shortAnswer(String key, List<ModelJudgments> models, int calledCount) {
@@ -316,9 +317,5 @@ public class AnswerGradingService {
 				.map(Map.Entry::getKey)
 				.findFirst()
 				.orElse(null);
-	}
-
-	private static String cut(String text, int maxLength) {
-		return text == null || text.length() <= maxLength ? text : text.substring(0, maxLength);
 	}
 }

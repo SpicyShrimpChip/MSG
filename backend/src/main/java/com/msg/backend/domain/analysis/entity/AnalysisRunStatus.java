@@ -1,5 +1,7 @@
 package com.msg.backend.domain.analysis.entity;
 
+import com.msg.backend.global.common.ApiEnumValues;
+
 public enum AnalysisRunStatus {
 
 	/** 모델에 보내는 중 */
@@ -12,6 +14,6 @@ public enum AnalysisRunStatus {
 	FAILED;
 
 	public String apiValue() {
-		return ApiValues.of(this);
+		return ApiEnumValues.of(this);
 	}
 }

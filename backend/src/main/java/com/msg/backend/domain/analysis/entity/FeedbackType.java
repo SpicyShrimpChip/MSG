@@ -1,5 +1,6 @@
 package com.msg.backend.domain.analysis.entity;
 
+import com.msg.backend.global.common.ApiEnumValues;
 import java.util.Optional;
 
 /**
@@ -13,10 +14,10 @@ public enum FeedbackType {
 	WANT_TO_STUDY;
 
 	public String apiValue() {
-		return ApiValues.of(this);
+		return ApiEnumValues.of(this);
 	}
 
 	public static Optional<FeedbackType> fromApiValue(String value) {
-		return ApiValues.parse(FeedbackType.class, value);
+		return ApiEnumValues.parse(FeedbackType.class, value);
 	}
 }

@@ -31,7 +31,7 @@ class ModelInvokerDeadlineTest {
 		});
 		ModelInvoker limited = new ModelInvoker(properties, Clock.systemUTC(), quotaAllowing(0));
 		try {
-			ModelInvoker.Outcome outcome = limited.invoke(client, new LlmRequest("s", "u", 10));
+			ModelInvoker.Outcome outcome = limited.invoke(null, client, new LlmRequest("s", "u", 10), null);
 
 			assertThat(outcome.errorCode()).isEqualTo(LlmException.Code.DAILY_LIMIT);
 			assertThat(outcome.attempts()).isZero();
@@ -50,7 +50,7 @@ class ModelInvokerDeadlineTest {
 		});
 		ModelInvoker limited = new ModelInvoker(properties, Clock.systemUTC(), quotaAllowing(2));
 		try {
-			ModelInvoker.Outcome outcome = limited.invoke(failing, new LlmRequest("s", "u", 10));
+			ModelInvoker.Outcome outcome = limited.invoke(null, failing, new LlmRequest("s", "u", 10), null);
 
 			assertThat(calls).hasValue(2);
 			assertThat(outcome.attempts()).isEqualTo(2);

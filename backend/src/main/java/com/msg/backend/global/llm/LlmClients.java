@@ -25,6 +25,11 @@ public class LlmClients {
 		return clients;
 	}
 
+	// 키와 모델 이름이 설정된 모델만 (GPT, Claude, Gemini 순서)
+	public List<LlmClient> configured() {
+		return all().stream().filter(LlmClient::isConfigured).toList();
+	}
+
 	/**
 	 * 키와 모델 이름이 설정된 모델만 주어진 순서대로 돌려준다. 순서가 없으면(null) GPT, Claude, Gemini 순서다. 같은 제공사는 한 번만
 	 * 넣는다.

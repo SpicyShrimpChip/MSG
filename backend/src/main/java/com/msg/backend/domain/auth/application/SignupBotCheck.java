@@ -1,13 +1,12 @@
 package com.msg.backend.domain.auth.application;
 
+import com.msg.backend.global.common.RestClients;
 import com.msg.backend.global.error.BusinessException;
 import com.fasterxml.jackson.databind.JsonNode;
-import java.net.http.HttpClient;
 import java.time.Duration;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -32,10 +31,7 @@ public class SignupBotCheck {
 
 	public SignupBotCheck(TurnstileProperties properties) {
 		this.properties = properties;
-		HttpClient httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
-		JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
-		requestFactory.setReadTimeout(properties.timeout());
-		this.restClient = RestClient.builder().requestFactory(requestFactory).build();
+		this.restClient = RestClients.withTimeouts(Duration.ofSeconds(5), properties.timeout()).build();
 	}
 
 	public void verify(String token) {

@@ -1,6 +1,7 @@
 package com.msg.backend.domain.material.entity;
 
 import com.msg.backend.domain.quiz.entity.QuizMode;
+import com.msg.backend.global.common.Texts;
 import com.msg.backend.global.common.VerificationStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -120,8 +121,7 @@ public class MaterialSummary {
 		this.model = model;
 		this.summaryJson = summaryJson;
 		this.verificationStatus = verificationStatus;
-		this.sourceScope = sourceScope == null || sourceScope.length() <= SCOPE_MAX_LENGTH ? sourceScope
-				: sourceScope.substring(0, SCOPE_MAX_LENGTH - 1) + "…";
+		this.sourceScope = Texts.clip(sourceScope, SCOPE_MAX_LENGTH);
 		this.sourceTruncated = sourceTruncated;
 		this.createdAt = now;
 		this.updatedAt = now;

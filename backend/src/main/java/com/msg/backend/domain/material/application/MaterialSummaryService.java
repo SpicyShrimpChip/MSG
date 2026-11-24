@@ -308,8 +308,7 @@ public class MaterialSummaryService {
 		} catch (DataIntegrityViolationException e) {
 			throw new BusinessException(HttpStatus.CONFLICT, RUNNING_MESSAGE);
 		}
-		String jobLabel = user.getJobField() == null ? null
-				: user.getJobField() == JobField.OTHER ? user.getJobFieldOther() : user.getJobField().label();
+		String jobLabel = JobField.labelOf(user.getJobField(), user.getJobFieldOther());
 		return new Prepared(summary.getId(), purpose, selection.text(), selection.locations(),
 				selection.truncated() || extracted.truncated(), hash,
 				course == null ? material.getTitle() : course.getName(), jobLabel, clients, deadline, null);

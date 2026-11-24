@@ -20,6 +20,7 @@ import com.msg.backend.domain.quiz.entity.QuizGenerationStatus;
 import com.msg.backend.domain.quiz.entity.QuizQuestion;
 import com.msg.backend.domain.user.dao.UserRepository;
 import com.msg.backend.domain.user.entity.User;
+import com.msg.backend.global.common.Texts;
 import com.msg.backend.global.error.BusinessException;
 import com.msg.backend.global.llm.AiCallQuota;
 import com.msg.backend.global.llm.UserAiUsage;
@@ -143,7 +144,7 @@ public class QuizGenerationService {
 		LlmRequest llmRequest = new LlmRequest(QuizPrompt.SYSTEM, QuizPrompt.user(objectMapper, started.input()),
 				properties.generationMaxOutputTokens());
 		// 실패 기록용 호출 상태. 예상하지 못한 예외로 끝나면 UNEXPECTED로 남는다
-		QuizModelFallback.Tracker attempt = new QuizModelFallback.Tracker("UNEXPECTED");
+		QuizModelFallback.Tracker attempt = new QuizModelFallback.Tracker(QuizModelFallback.UNEXPECTED);
 		try {
 			var success = modelFallback.run(clients,
 					new QuizModelFallback.Call(userId, QuizAiCall.GENERATION, generationId, llmRequest, deadline, true),
@@ -176,7 +177,7 @@ public class QuizGenerationService {
 
 	// 인지 수준과 보낸 자료 발췌를 함께 검증한다 (QuizGenerationParser)
 	private static QuizGenerationParser.Expectation expectation(QuizSpec spec) {
-		int count = spec.plan().values().stream().mapToInt(Integer::intValue).sum();
+		int count = QuizTypePlan.total(spec.plan());
 		return new QuizGenerationParser.Expectation(spec.bloomTargets(),
 				BloomPlan.requiredDistinct(spec.bloomTargets(), count), spec.materialExcerpt());
 	}
@@ -203,7 +204,7 @@ public class QuizGenerationService {
 	}
 
 	private static HttpStatus failureStatus(String errorCode) {
-		return "TIMED_OUT".equals(errorCode) ? HttpStatus.GATEWAY_TIMEOUT : HttpStatus.BAD_GATEWAY;
+		return QuizModelFallback.TIMED_OUT.equals(errorCode) ? HttpStatus.GATEWAY_TIMEOUT : HttpStatus.BAD_GATEWAY;
 	}
 
 	static String failureMessage(String errorCode) {
@@ -211,9 +212,9 @@ public class QuizGenerationService {
 			return null;
 		}
 		return switch (errorCode) {
-			case "INVALID_OUTPUT" -> INVALID_OUTPUT_MESSAGE;
-			case "TIMED_OUT" -> TIMED_OUT_MESSAGE;
-			case "MODEL_FAILED" -> MODEL_FAILED_MESSAGE;
+			case QuizModelFallback.INVALID_OUTPUT -> INVALID_OUTPUT_MESSAGE;
+			case QuizModelFallback.TIMED_OUT -> TIMED_OUT_MESSAGE;
+			case QuizModelFallback.MODEL_FAILED -> MODEL_FAILED_MESSAGE;
 			default -> UNEXPECTED_MESSAGE;
 		};
 	}
@@ -256,7 +257,7 @@ public class QuizGenerationService {
 		QuizGeneration generation;
 		try {
 			generation = generationRepository.saveAndFlush(QuizGeneration.start(userId, spec.course().getId(),
-					requestKey, spec.mode(), spec.types(), spec.plan().values().stream().mapToInt(Integer::intValue).sum(),
+					requestKey, spec.mode(), spec.types(), QuizTypePlan.total(spec.plan()),
 					spec.difficulty(), now, LocalDateTime.ofInstant(deadline, clock.getZone())));
 		} catch (DataIntegrityViolationException e) {
 			throw new BusinessException(HttpStatus.CONFLICT, RUNNING_MESSAGE);
@@ -268,7 +269,7 @@ public class QuizGenerationService {
 				hints(userId, spec, user.isAiAnalysisConsent()), spec.mockExam(), spec.assessmentKind(),
 				spec.avoidQuestions(), spec.materialExcerpt(), spec.bloomTargets(),
 				BloomPlan.requiredDistinct(spec.bloomTargets(),
-						spec.plan().values().stream().mapToInt(Integer::intValue).sum()));
+						QuizTypePlan.total(spec.plan())));
 		return new Started(generation.getId(), null, input, spec, deadline);
 	}
 
@@ -290,7 +291,7 @@ public class QuizGenerationService {
 			QuizGenerationStatus current = generation.getStatus() == QuizGenerationStatus.RUNNING
 					&& !generation.isActiveAt(now, properties.runningTimeout()) ? QuizGenerationStatus.TIMED_OUT
 							: generation.getStatus();
-			String code = current == QuizGenerationStatus.TIMED_OUT ? "TIMED_OUT" : generation.getErrorCode();
+			String code = current == QuizGenerationStatus.TIMED_OUT ? QuizModelFallback.TIMED_OUT : generation.getErrorCode();
 			return new GenerationStatusResponse(current.apiValue(),
 					current == QuizGenerationStatus.SUCCEEDED ? generation.getQuizId() : null,
 					current == QuizGenerationStatus.FAILED || current == QuizGenerationStatus.TIMED_OUT
@@ -374,11 +375,11 @@ public class QuizGenerationService {
 	private static String title(QuizSpec spec) {
 		if (spec.checkConceptName() != null) {
 			String title = spec.checkConceptName() + " 확인 퀴즈";
-			return title.length() <= Quiz.TITLE_MAX_LENGTH ? title : title.substring(0, Quiz.TITLE_MAX_LENGTH);
+			return Texts.cut(title, Quiz.TITLE_MAX_LENGTH);
 		}
 		if (spec.assessmentKind() != null) {
 			String title = spec.materialTitle() + " · " + (spec.assessmentKind() == AssessmentKind.PRE ? "사전평가" : "사후평가");
-			return title.length() <= Quiz.TITLE_MAX_LENGTH ? title : title.substring(0, Quiz.TITLE_MAX_LENGTH);
+			return Texts.cut(title, Quiz.TITLE_MAX_LENGTH);
 		}
 		String label = switch (spec.mode()) {
 			case EXAM_PREP -> spec.mockExam() ? "모의시험" : "시험 대비 예상 문제";
@@ -386,6 +387,6 @@ public class QuizGenerationService {
 			case WORK -> "업무 활용 상황 문제";
 		};
 		String title = spec.course().getName() + " · " + label;
-		return title.length() <= Quiz.TITLE_MAX_LENGTH ? title : title.substring(0, Quiz.TITLE_MAX_LENGTH);
+		return Texts.cut(title, Quiz.TITLE_MAX_LENGTH);
 	}
 }

@@ -1,6 +1,6 @@
 package com.msg.backend.global.llm;
 
-import java.util.Locale;
+import com.msg.backend.global.common.ApiEnumValues;
 
 /**
  * 학습 분석에 쓰는 AI 제공사. 같은 대화를 제공사마다 독립적으로 분석하게 하고 결과를 코드로 비교한다
@@ -13,6 +13,6 @@ public enum LlmProvider {
 	GEMINI;
 
 	public String apiValue() {
-		return name().toLowerCase(Locale.ROOT);
+		return ApiEnumValues.of(this);
 	}
 }

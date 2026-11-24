@@ -54,10 +54,6 @@ public class QuizSubmission {
 	private LocalDateTime submittedAt;
 
 	// 객관식만 있는 퀴즈 (V6와 같은 결과)
-	public static QuizSubmission of(Long quizId, Long userId, int correctCount, int totalCount, LocalDateTime now) {
-		return of(quizId, userId, correctCount, totalCount, correctCount, totalCount, 0, 0, now);
-	}
-
 	public static QuizSubmission of(Long quizId, Long userId, int correctCount, int totalCount, int score,
 			int maxScore, int pendingCount, int reviewCount, LocalDateTime now) {
 		QuizSubmission submission = new QuizSubmission();

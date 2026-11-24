@@ -23,6 +23,8 @@ public class QuizModelFallback {
 	public static final String TIMED_OUT = "TIMED_OUT";
 	public static final String MODEL_FAILED = "MODEL_FAILED";
 	public static final String INVALID_OUTPUT = "INVALID_OUTPUT";
+	// 예상하지 못한 예외로 끝난 퀴즈 만들기 (QuizGenerationService)
+	public static final String UNEXPECTED = "UNEXPECTED";
 
 	private final ModelInvoker modelInvoker;
 	private final QuizAiUsage usage;
@@ -108,7 +110,7 @@ public class QuizModelFallback {
 					modelInvoker.invokeAsync(call.userId(), client, call.request(), ModelInvoker.Lane.QUIZ,
 							call.deadline()),
 					call.deadline());
-			tracker.attempts += Math.max(outcome.attempts(), outcome.timedOut() ? 1 : 0);
+			tracker.attempts += outcome.billedAttempts();
 			if (outcome.timedOut()) {
 				record(call, client, outcome, null);
 				tracker.errorCode = TIMED_OUT;

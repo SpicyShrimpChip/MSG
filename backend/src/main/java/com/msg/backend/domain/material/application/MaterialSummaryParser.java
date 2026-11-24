@@ -1,6 +1,7 @@
 package com.msg.backend.domain.material.application;
 
 import com.msg.backend.domain.material.dto.StudySummaryResponse;
+import com.msg.backend.global.common.Texts;
 import com.msg.backend.global.common.VerificationStatus;
 import com.msg.backend.global.llm.LlmJson;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -114,11 +115,11 @@ public class MaterialSummaryParser {
 		if (node == null || !node.isObject()) {
 			return null;
 		}
-		String text = clip(LlmJson.text(node.get(named ? "definition" : "text")), TEXT_MAX);
+		String text = Texts.clip(LlmJson.text(node.get(named ? "definition" : "text")), TEXT_MAX);
 		if (text == null && named) {
-			text = clip(LlmJson.text(node.get("text")), TEXT_MAX);
+			text = Texts.clip(LlmJson.text(node.get("text")), TEXT_MAX);
 		}
-		String name = named ? clip(LlmJson.text(node.get("name")), NAME_MAX) : null;
+		String name = named ? Texts.clip(LlmJson.text(node.get("name")), NAME_MAX) : null;
 		if (text == null || (named && name == null)) {
 			return null;
 		}
@@ -150,19 +151,11 @@ public class MaterialSummaryParser {
 			if (items.size() >= MAX_SELF_CHECK) {
 				break;
 			}
-			String question = clip(LlmJson.text(element.get("question")), TEXT_MAX);
+			String question = Texts.clip(LlmJson.text(element.get("question")), TEXT_MAX);
 			if (question != null) {
-				items.add(new StudySummaryResponse.SelfCheck(question, clip(LlmJson.text(element.get("hint")), TEXT_MAX)));
+				items.add(new StudySummaryResponse.SelfCheck(question, Texts.clip(LlmJson.text(element.get("hint")), TEXT_MAX)));
 			}
 		}
 		return items;
-	}
-
-	private static String clip(String text, int max) {
-		if (text == null || text.isBlank()) {
-			return null;
-		}
-		String trimmed = text.strip();
-		return trimmed.length() <= max ? trimmed : trimmed.substring(0, max - 1) + "…";
 	}
 }

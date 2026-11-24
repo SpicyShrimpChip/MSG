@@ -34,11 +34,9 @@ public class GeminiClient extends HttpLlmClient {
 		for (JsonNode part : response.path("candidates").path(0).path("content").path("parts")) {
 			text.append(part.path("text").asText());
 		}
-		if (text.isEmpty()) {
-			throw new LlmException(LlmException.Code.BAD_RESPONSE, "GEMINI 응답에 답변 글이 없다");
-		}
+		String answer = requireAnswer(text);
 		JsonNode usage = response.path("usageMetadata");
-		return new LlmResponse(text.toString(), intOrNull(usage.get("promptTokenCount")),
+		return new LlmResponse(answer, intOrNull(usage.get("promptTokenCount")),
 				intOrNull(usage.get("candidatesTokenCount")));
 	}
 }

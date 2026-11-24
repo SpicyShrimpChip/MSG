@@ -16,11 +16,14 @@ class QuizGenerationParserTest {
 
 	private final QuizGenerationParser parser = new QuizGenerationParser(new ObjectMapper());
 	private static final List<String> CONCEPTS = List.of("NAT", "VLAN");
+	// 인지 수준·자료 근거를 따로 요구하지 않을 때 (형식 검사만 본다)
+	private static final QuizGenerationParser.Expectation NO_BLOOM = new QuizGenerationParser.Expectation(List.of(), 0,
+			null);
 
 	@Test
 	void 세_유형을_검증해_읽는다() throws Exception {
 		var parsed = parser.parse("```json\n" + QuizFixtures.threeTypes(false) + "\n```", QuizMode.EXAM_PREP,
-				plan(1, 1, 1), CONCEPTS);
+				plan(1, 1, 1), CONCEPTS, NO_BLOOM);
 
 		assertThat(parsed.questions()).extracting(QuizGenerationParser.ParsedQuestion::type)
 				.containsExactly(QuestionType.MULTIPLE_CHOICE, QuestionType.SHORT_ANSWER, QuestionType.ESSAY);
@@ -34,7 +37,7 @@ class QuizGenerationParserTest {
 	@Test
 	void 유형별_문제_수가_다르면_거절() {
 		assertThatThrownBy(() -> parser.parse(QuizFixtures.threeTypes(false), QuizMode.EXAM_PREP, plan(2, 0, 1),
-				CONCEPTS)).isInstanceOf(QuizGenerationParser.InvalidOutputException.class);
+				CONCEPTS, NO_BLOOM)).isInstanceOf(QuizGenerationParser.InvalidOutputException.class);
 	}
 
 	@Test
@@ -42,9 +45,9 @@ class QuizGenerationParserTest {
 		String outOfRange = QuizFixtures.threeTypes(false).replace("\"answerIndex\":1", "\"answerIndex\":7");
 		String multiple = QuizFixtures.threeTypes(false).replace("\"answerIndex\":1", "\"answerIndex\":[0,1]");
 
-		assertThatThrownBy(() -> parser.parse(outOfRange, QuizMode.EXAM_PREP, plan(1, 1, 1), CONCEPTS))
+		assertThatThrownBy(() -> parser.parse(outOfRange, QuizMode.EXAM_PREP, plan(1, 1, 1), CONCEPTS, NO_BLOOM))
 				.isInstanceOf(QuizGenerationParser.InvalidOutputException.class);
-		assertThatThrownBy(() -> parser.parse(multiple, QuizMode.EXAM_PREP, plan(1, 1, 1), CONCEPTS))
+		assertThatThrownBy(() -> parser.parse(multiple, QuizMode.EXAM_PREP, plan(1, 1, 1), CONCEPTS, NO_BLOOM))
 				.isInstanceOf(QuizGenerationParser.InvalidOutputException.class);
 	}
 
@@ -54,9 +57,9 @@ class QuizGenerationParserTest {
 		String oneRubric = QuizFixtures.threeTypes(false)
 				.replace(",{\"criterion\":\"활용 사례\",\"points\":2}", "");
 
-		assertThatThrownBy(() -> parser.parse(sameChoice, QuizMode.EXAM_PREP, plan(1, 1, 1), CONCEPTS))
+		assertThatThrownBy(() -> parser.parse(sameChoice, QuizMode.EXAM_PREP, plan(1, 1, 1), CONCEPTS, NO_BLOOM))
 				.isInstanceOf(QuizGenerationParser.InvalidOutputException.class);
-		assertThatThrownBy(() -> parser.parse(oneRubric, QuizMode.EXAM_PREP, plan(1, 1, 1), CONCEPTS))
+		assertThatThrownBy(() -> parser.parse(oneRubric, QuizMode.EXAM_PREP, plan(1, 1, 1), CONCEPTS, NO_BLOOM))
 				.isInstanceOf(QuizGenerationParser.InvalidOutputException.class);
 	}
 
@@ -65,18 +68,18 @@ class QuizGenerationParserTest {
 		String unknown = QuizFixtures.threeTypes(false).replaceFirst("\"NAT\"", "\"OSPF\"");
 		String guarantee = QuizFixtures.threeTypes(false).replace("NAT의 주요 기능", "시험에 반드시 출제되는 NAT의 주요 기능");
 
-		assertThatThrownBy(() -> parser.parse(unknown, QuizMode.EXAM_PREP, plan(1, 1, 1), CONCEPTS))
+		assertThatThrownBy(() -> parser.parse(unknown, QuizMode.EXAM_PREP, plan(1, 1, 1), CONCEPTS, NO_BLOOM))
 				.isInstanceOf(QuizGenerationParser.InvalidOutputException.class);
-		assertThatThrownBy(() -> parser.parse(guarantee, QuizMode.EXAM_PREP, plan(1, 1, 1), CONCEPTS))
+		assertThatThrownBy(() -> parser.parse(guarantee, QuizMode.EXAM_PREP, plan(1, 1, 1), CONCEPTS, NO_BLOOM))
 				.isInstanceOf(QuizGenerationParser.InvalidOutputException.class);
 	}
 
 	@Test
 	void 업무_활용은_상황과_역할이_필수() throws Exception {
-		assertThatThrownBy(() -> parser.parse(QuizFixtures.threeTypes(false), QuizMode.WORK, plan(1, 1, 1), CONCEPTS))
+		assertThatThrownBy(() -> parser.parse(QuizFixtures.threeTypes(false), QuizMode.WORK, plan(1, 1, 1), CONCEPTS, NO_BLOOM))
 				.isInstanceOf(QuizGenerationParser.InvalidOutputException.class);
 
-		var parsed = parser.parse(QuizFixtures.threeTypes(true), QuizMode.WORK, plan(1, 1, 1), CONCEPTS);
+		var parsed = parser.parse(QuizFixtures.threeTypes(true), QuizMode.WORK, plan(1, 1, 1), CONCEPTS, NO_BLOOM);
 		assertThat(parsed.questions()).allMatch(q -> q.scenario() != null && q.role() != null);
 	}
 
@@ -86,7 +89,7 @@ class QuizGenerationParserTest {
 				",\"suggestions\":[{\"kind\":\"next\",\"concept\":\"인터 VLAN 라우팅\",\"reason\":\"다음 단계\"},"
 						+ "{\"kind\":\"wrong\",\"concept\":\"x\"},{\"kind\":\"prerequisite\",\"concept\":\"서브넷\"}]}");
 
-		var parsed = parser.parse(withSuggestions, QuizMode.SELF_DEVELOPMENT, plan(1, 1, 1), CONCEPTS);
+		var parsed = parser.parse(withSuggestions, QuizMode.SELF_DEVELOPMENT, plan(1, 1, 1), CONCEPTS, NO_BLOOM);
 
 		assertThat(parsed.suggestions()).extracting(s -> s.getKind())
 				.containsExactly(SuggestionKind.NEXT, SuggestionKind.PREREQUISITE);
@@ -94,7 +97,7 @@ class QuizGenerationParserTest {
 
 	@Test
 	void JSON이_아니면_거절() {
-		assertThatThrownBy(() -> parser.parse("문제를 만들 수 없습니다", QuizMode.EXAM_PREP, plan(1, 1, 1), CONCEPTS))
+		assertThatThrownBy(() -> parser.parse("문제를 만들 수 없습니다", QuizMode.EXAM_PREP, plan(1, 1, 1), CONCEPTS, NO_BLOOM))
 				.isInstanceOf(QuizGenerationParser.InvalidOutputException.class);
 	}
 
@@ -151,14 +154,14 @@ class QuizGenerationParserTest {
 		assertThatThrownBy(() -> parser.parse(same, QuizMode.EXAM_PREP, plan(1, 1, 1), CONCEPTS, EXAM_BLOOM))
 				.isInstanceOf(QuizGenerationParser.InvalidOutputException.class);
 		String createChoice = QuizFixtures.threeTypes(true).replaceFirst("\"apply\"", "\"create\"");
-		assertThatThrownBy(() -> parser.parse(createChoice, QuizMode.WORK, plan(1, 1, 1), CONCEPTS))
+		assertThatThrownBy(() -> parser.parse(createChoice, QuizMode.WORK, plan(1, 1, 1), CONCEPTS, NO_BLOOM))
 				.isInstanceOf(QuizGenerationParser.InvalidOutputException.class);
 	}
 
 	@Test
 	void 인지_수준을_정하지_않은_예전_방식은_수준_없이도_읽는다() throws Exception {
 		String legacy = QuizFixtures.threeTypes(false).replaceAll("\"bloomLevel\":\"[a-z]+\",", "");
-		var parsed = parser.parse(legacy, QuizMode.EXAM_PREP, plan(1, 1, 1), CONCEPTS);
+		var parsed = parser.parse(legacy, QuizMode.EXAM_PREP, plan(1, 1, 1), CONCEPTS, NO_BLOOM);
 		assertThat(parsed.questions().get(0).bloomLevel()).isNull();
 		assertThat(parsed.questions().get(0).source().check()).isNull();
 	}

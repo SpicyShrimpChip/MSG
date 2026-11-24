@@ -2,12 +2,11 @@ package com.msg.backend.domain.auth.application;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.msg.backend.domain.auth.entity.SocialProvider;
-import java.net.http.HttpClient;
+import com.msg.backend.global.common.RestClients;
 import java.time.Duration;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -27,10 +26,7 @@ public class KakaoClient {
 
 	public KakaoClient(KakaoProperties properties) {
 		this.properties = properties;
-		HttpClient httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
-		JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
-		requestFactory.setReadTimeout(properties.timeout());
-		this.restClient = RestClient.builder().requestFactory(requestFactory).build();
+		this.restClient = RestClients.withTimeouts(Duration.ofSeconds(5), properties.timeout()).build();
 	}
 
 	public SocialProfile fetchProfile(String code) {

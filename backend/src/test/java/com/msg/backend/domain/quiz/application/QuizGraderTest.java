@@ -3,7 +3,7 @@ package com.msg.backend.domain.quiz.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.msg.backend.domain.quiz.application.QuizGrader.Graded;
+import com.msg.backend.domain.quiz.application.QuizGrader.Submitted;
 import com.msg.backend.domain.quiz.dto.QuizAnswerRequest;
 import com.msg.backend.domain.quiz.entity.QuizQuestion;
 import com.msg.backend.global.error.BusinessException;
@@ -18,31 +18,31 @@ class QuizGraderTest {
 
 	@Test
 	void 정답_번호와_같으면_맞고_문제_순서대로_돌려준다() {
-		List<Graded> graded = QuizGrader.grade(questions,
+		List<Submitted> submitted = QuizGrader.collect(questions,
 				List.of(answer(30L, 1), answer(10L, 2), answer(20L, 2)));
 
-		assertThat(graded).extracting(g -> g.question().getId()).containsExactly(10L, 20L, 30L);
-		assertThat(graded).extracting(Graded::choiceIndex).containsExactly(2, 2, 1);
-		assertThat(graded).extracting(Graded::correct).containsExactly(true, false, true);
+		assertThat(submitted).extracting(s -> s.question().getId()).containsExactly(10L, 20L, 30L);
+		assertThat(submitted).extracting(Submitted::choiceIndex).containsExactly(2, 2, 1);
+		assertThat(submitted).extracting(Submitted::multipleChoiceCorrect).containsExactly(true, false, true);
 	}
 
 	@Test
 	void 빠진_문제와_고르지_않은_문제는_틀림이다() {
-		List<Graded> graded = QuizGrader.grade(questions, List.of(answer(10L, QuizGrader.NO_ANSWER)));
+		List<Submitted> submitted = QuizGrader.collect(questions, List.of(answer(10L, QuizGrader.NO_ANSWER)));
 
-		assertThat(graded).extracting(Graded::choiceIndex).containsExactly(-1, -1, -1);
-		assertThat(graded).extracting(Graded::correct).containsExactly(false, false, false);
+		assertThat(submitted).extracting(Submitted::choiceIndex).containsExactly(-1, -1, -1);
+		assertThat(submitted).extracting(Submitted::multipleChoiceCorrect).containsExactly(false, false, false);
 	}
 
 	@Test
 	void 없는_문제_같은_문제_두_번_범위_밖_번호는_거절한다() {
-		assertThatThrownBy(() -> QuizGrader.grade(questions, List.of(answer(99L, 0))))
+		assertThatThrownBy(() -> QuizGrader.collect(questions, List.of(answer(99L, 0))))
 				.isInstanceOf(BusinessException.class);
-		assertThatThrownBy(() -> QuizGrader.grade(questions, List.of(answer(10L, 2), answer(10L, 2))))
+		assertThatThrownBy(() -> QuizGrader.collect(questions, List.of(answer(10L, 2), answer(10L, 2))))
 				.isInstanceOf(BusinessException.class);
-		assertThatThrownBy(() -> QuizGrader.grade(questions, List.of(answer(10L, 3))))
+		assertThatThrownBy(() -> QuizGrader.collect(questions, List.of(answer(10L, 3))))
 				.isInstanceOf(BusinessException.class);
-		assertThatThrownBy(() -> QuizGrader.grade(questions, List.of(answer(10L, -2))))
+		assertThatThrownBy(() -> QuizGrader.collect(questions, List.of(answer(10L, -2))))
 				.isInstanceOf(BusinessException.class);
 	}
 

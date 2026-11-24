@@ -126,7 +126,7 @@ final class QuizPrompt {
 		root.put("difficulty", input.difficulty().apiValue());
 		ObjectNode counts = root.putObject("typeCounts");
 		input.plan().forEach((type, count) -> counts.put(type.apiValue(), count));
-		root.put("questionCount", input.plan().values().stream().mapToInt(Integer::intValue).sum());
+		root.put("questionCount", QuizTypePlan.total(input.plan()));
 		ArrayNode concepts = root.putArray("concepts");
 		input.concepts().forEach(concepts::add);
 		ArrayNode bloom = root.putArray("bloomTargets");

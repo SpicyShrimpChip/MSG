@@ -46,14 +46,6 @@ public record QuizCreateRequest(
 				+ "없으면 학습 모드 기본값. 난이도와 별개. 사후평가는 사전평가의 수준을 쓴다")
 		@Size(max = 6, message = "인지 수준을 다시 골라 주세요.") List<String> bloomLevels) {
 
-	// 일반 퀴즈 만들기 (사전·사후평가·자료 본문 없이)
-	public QuizCreateRequest(String requestKey, Long courseId, String mode, List<String> questionTypes,
-			Integer questionCount, String difficulty, List<String> concepts, String examScope, String jobField,
-			String jobFieldOther, Long materialId, Boolean mockExam) {
-		this(requestKey, courseId, mode, questionTypes, questionCount, difficulty, concepts, examScope, jobField,
-				jobFieldOther, materialId, mockExam, null, null, null, null, null);
-	}
-
 	// 평가·자료 본문·개념 확인까지 (인지 수준은 모드 기본값)
 	public QuizCreateRequest(String requestKey, Long courseId, String mode, List<String> questionTypes,
 			Integer questionCount, String difficulty, List<String> concepts, String examScope, String jobField,

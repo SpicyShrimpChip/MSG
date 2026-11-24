@@ -236,8 +236,8 @@ public final class SourceText {
 		return needle.length() >= 2 && compact(text).contains(needle);
 	}
 
-	/** 공백·대소문자 차이를 무시하고 비교하기 위해 공백을 모두 지운다 */
-	static String compact(String text) {
+	/** 공백·대소문자 차이를 무시하고 비교하기 위해 공백을 모두 지운다 (검색 SearchService도 쓴다) */
+	public static String compact(String text) {
 		return text.toLowerCase(Locale.ROOT).replaceAll("\\s+", "");
 	}
 

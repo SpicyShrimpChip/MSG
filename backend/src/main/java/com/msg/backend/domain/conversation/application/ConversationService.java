@@ -49,7 +49,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <li>요청 하나는 모두 저장하거나 하나도 저장하지 않는다. 개인정보가 남은 대화가 하나라도 있으면 422와 그 목록을 돌려준다.</li>
  * <li>요청마다 가져오기 작업 id와 번호가 붙어 있고, 작업의 요청을 모두 받으면 작업이 완료된다.
  * 앞서 성공한 요청의 대화는 지우지 않지만, 작업이 완료되기 전에는 분석에 쓰지 않는다
- * ({@link ConversationRepository#findAnalyzable}).</li>
+ * ({@link ConversationRepository#findAnalyzableInCourse}).</li>
  * <li>이미 받은 요청을 다시 받으면 저장하지 않고 같은 결과를 돌려준다. 이미 저장한 대화·조각도 다시 저장하지 않는다.</li>
  * <li>같은 대화를 다른 과목으로 다시 보내도 처음 과목을 유지한다.</li>
  * </ul>

@@ -1,5 +1,6 @@
 package com.msg.backend.domain.analysis.entity;
 
+import com.msg.backend.global.common.ApiEnumValues;
 import java.util.Optional;
 
 /**
@@ -57,10 +58,10 @@ public enum LearningBehavior {
 	}
 
 	public String apiValue() {
-		return ApiValues.of(this);
+		return ApiEnumValues.of(this);
 	}
 
 	public static Optional<LearningBehavior> fromApiValue(String value) {
-		return ApiValues.parse(LearningBehavior.class, value);
+		return ApiEnumValues.parse(LearningBehavior.class, value);
 	}
 }

@@ -88,7 +88,7 @@ public class CourseService {
 	}
 
 	private static String name(String raw) {
-		String name = normalize(raw);
+		String name = Course.normalizeKeyword(raw);
 		if (name.isEmpty()) {
 			throw new BusinessException(HttpStatus.BAD_REQUEST, "과목 이름을 입력해 주세요.");
 		}
@@ -102,7 +102,7 @@ public class CourseService {
 		List<String> keywords = new ArrayList<>();
 		Set<String> seen = new HashSet<>();
 		for (String item : raw) {
-			String keyword = item == null ? "" : normalize(item);
+			String keyword = item == null ? "" : Course.normalizeKeyword(item);
 			if (keyword.isEmpty()) {
 				continue;
 			}
@@ -114,10 +114,5 @@ public class CourseService {
 			}
 		}
 		return keywords;
-	}
-
-	// 앞뒤 공백을 지우고 안쪽 공백은 한 칸으로 줄인다 (frontend/src/utils/keywords.ts normalizeKeyword)
-	private static String normalize(String raw) {
-		return raw.strip().replaceAll("\\s+", " ");
 	}
 }

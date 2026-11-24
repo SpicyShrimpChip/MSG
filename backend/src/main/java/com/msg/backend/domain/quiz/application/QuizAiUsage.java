@@ -41,10 +41,10 @@ public class QuizAiUsage {
 	public void record(Long userId, String purpose, Long generationId, Long gradingRunId, LlmClient client,
 			ModelInvoker.Outcome outcome, String resultOverride) {
 		String result = resultOverride != null ? resultOverride
-				: outcome.timedOut() ? "TIMED_OUT" : outcome.response() != null ? "SUCCEEDED" : "FAILED";
+				: outcome.timedOut() ? QuizModelFallback.TIMED_OUT : outcome.response() != null ? "SUCCEEDED" : "FAILED";
 		newTransaction.executeWithoutResult(status -> callRepository.save(QuizAiCall.of(userId, purpose,
 				generationId, gradingRunId, client.provider().apiValue(), client.model(),
-				Math.max(outcome.attempts(), outcome.timedOut() ? 1 : 0), result,
+				outcome.billedAttempts(), result,
 				outcome.errorCode() == null ? null : outcome.errorCode().name(),
 				outcome.response() == null ? null : outcome.response().inputTokens(),
 				outcome.response() == null ? null : outcome.response().outputTokens(), outcome.latencyMs(),

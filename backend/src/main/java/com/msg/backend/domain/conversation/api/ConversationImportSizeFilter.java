@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.util.unit.DataSize;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
@@ -21,7 +22,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @RequiredArgsConstructor
 public class ConversationImportSizeFilter extends OncePerRequestFilter {
 
-	static final String TOO_LARGE_MESSAGE = "한 번에 보낼 수 있는 크기(2MB)를 넘었어요. 대화를 나눠서 보내 주세요.";
 	static final String LENGTH_REQUIRED_MESSAGE = "요청 크기를 알 수 없어요. 다시 시도해 주세요.";
 
 	private final ConversationImportProperties properties;
@@ -41,9 +41,25 @@ public class ConversationImportSizeFilter extends OncePerRequestFilter {
 			return;
 		}
 		if (length > properties.maxRequestSize().toBytes()) {
-			errorResponder.write(response, HttpStatus.PAYLOAD_TOO_LARGE, TOO_LARGE_MESSAGE);
+			errorResponder.write(response, HttpStatus.PAYLOAD_TOO_LARGE, tooLargeMessage(properties.maxRequestSize()));
 			return;
 		}
 		chain.doFilter(request, response);
+	}
+
+	// 설정값(app.conversation-import.max-request-size)으로 문구를 만든다 (예: 2MB)
+	static String tooLargeMessage(DataSize limit) {
+		return "한 번에 보낼 수 있는 크기(" + label(limit) + ")를 넘었어요. 대화를 나눠서 보내 주세요.";
+	}
+
+	private static String label(DataSize size) {
+		long bytes = size.toBytes();
+		if (bytes > 0 && bytes % DataSize.ofMegabytes(1).toBytes() == 0) {
+			return size.toMegabytes() + "MB";
+		}
+		if (bytes > 0 && bytes % DataSize.ofKilobytes(1).toBytes() == 0) {
+			return size.toKilobytes() + "KB";
+		}
+		return bytes + "바이트";
 	}
 }

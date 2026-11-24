@@ -1,5 +1,6 @@
 package com.msg.backend.domain.analysis.entity;
 
+import com.msg.backend.global.common.ApiEnumValues;
 import java.util.Optional;
 
 /**
@@ -18,10 +19,10 @@ public enum UnderstandingStatus {
 	INSUFFICIENT_EVIDENCE;
 
 	public String apiValue() {
-		return ApiValues.of(this);
+		return ApiEnumValues.of(this);
 	}
 
 	public static Optional<UnderstandingStatus> fromApiValue(String value) {
-		return ApiValues.parse(UnderstandingStatus.class, value);
+		return ApiEnumValues.parse(UnderstandingStatus.class, value);
 	}
 }

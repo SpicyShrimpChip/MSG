@@ -1,5 +1,7 @@
 package com.msg.backend.domain.analysis.entity;
 
+import com.msg.backend.global.common.ApiEnumValues;
+
 public enum ModelResultStatus {
 
 	/** 응답을 받았고 형식 검증을 통과함 */
@@ -12,6 +14,6 @@ public enum ModelResultStatus {
 	NOT_CONFIGURED;
 
 	public String apiValue() {
-		return ApiValues.of(this);
+		return ApiEnumValues.of(this);
 	}
 }

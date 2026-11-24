@@ -46,7 +46,7 @@ public class FeedbackService {
 	@Transactional
 	public FeedbackResponse save(Long userId, Long courseId, FeedbackRequest request) {
 		Course course = courseRepository.getOwned(courseId, userId);
-		String concept = request.concept().strip().replaceAll("\\s+", " ");
+		String concept = Course.normalizeKeyword(request.concept());
 		String key = Course.nameKey(concept);
 		String name = course.getKeywords().stream()
 				.filter(keyword -> Course.nameKey(keyword).equals(key))

@@ -44,6 +44,11 @@ public class ModelInvoker {
 		public Outcome(LlmResponse response, LlmException.Code errorCode, int attempts, long latencyMs) {
 			this(response, errorCode, attempts, latencyMs, false);
 		}
+
+		/** 비용 기록에 남길 시도 수. 마감까지 기다리다 끝난 호출도 이미 보낸 요청이 있을 수 있어 최소 1로 본다 */
+		public int billedAttempts() {
+			return Math.max(attempts, timedOut ? 1 : 0);
+		}
 	}
 
 	private final LlmProperties properties;
@@ -96,10 +101,6 @@ public class ModelInvoker {
 		} catch (ExecutionException e) {
 			return new Outcome(null, LlmException.Code.BAD_RESPONSE, 1, elapsedMs(started));
 		}
-	}
-
-	public Outcome invoke(LlmClient client, LlmRequest request) {
-		return invoke(null, client, request, null);
 	}
 
 	public Outcome invoke(Long userId, LlmClient client, LlmRequest request, Instant deadline) {
