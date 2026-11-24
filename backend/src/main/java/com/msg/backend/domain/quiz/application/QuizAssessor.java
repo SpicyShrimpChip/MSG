@@ -170,4 +170,15 @@ public final class QuizAssessor {
 				s[3] > 0 && (double) s[2] / s[3] < conceptMinRate)));
 		return result;
 	}
+
+	// byConcept를 개념 키로 찾을 수 있게 모은다 (순서는 byConcept 그대로)
+	public static Map<String, ConceptStat> byConceptMap(List<Graded> answers, double conceptMinRate) {
+		return byConcept(answers, conceptMinRate).stream()
+				.collect(Collectors.toMap(ConceptStat::conceptKey, Function.identity(), (a, b) -> a, LinkedHashMap::new));
+	}
+
+	// 득점률(%, 반올림). 채점이 끝난 답이 없어 만점이 0이면 null
+	public static Integer rate(int score, int maxScore) {
+		return maxScore <= 0 ? null : Math.round(score * 100f / maxScore);
+	}
 }

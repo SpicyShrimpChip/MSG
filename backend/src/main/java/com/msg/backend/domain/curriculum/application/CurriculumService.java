@@ -196,17 +196,8 @@ public class CurriculumService {
 		if (agreed.getOutcome() == ConsensusOutcome.DISAGREEMENT) {
 			return "대화 분석에서 모델 " + agreed.getJudgedCount() + "개의 의견이 서로 달랐어요.";
 		}
-		if (agreed.getStatus() == null) {
-			return "대화 분석 결과가 없어요.";
-		}
-		String label = switch (agreed.getStatus()) {
-			case UNDERSTOOD -> "이해";
-			case PARTIAL -> "부분 이해";
-			case NOT_UNDERSTOOD -> "이해 부족";
-			case INSUFFICIENT_EVIDENCE -> "판단 근거 부족";
-		};
-		return "대화 분석에서 모델 " + agreed.getJudgedCount() + "개 중 " + agreed.getAgreeCount() + "개가 '" + label
-				+ "'으로 봤어요.";
+		String majority = ConsensusText.majority(agreed);
+		return majority == null ? "대화 분석 결과가 없어요." : "대화 분석에서 " + majority + ".";
 	}
 
 	// 최근 퀴즈부터 AI 제안을 모은다 (같은 개념은 한 번만)

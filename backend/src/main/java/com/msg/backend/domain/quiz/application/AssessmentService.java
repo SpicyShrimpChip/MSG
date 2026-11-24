@@ -23,10 +23,12 @@ import com.msg.backend.global.error.BusinessException;
 import com.msg.backend.global.llm.LlmClient;
 import com.msg.backend.global.llm.LlmClients;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -91,7 +93,8 @@ public class AssessmentService {
 		} else {
 			throw new BusinessException(HttpStatus.BAD_REQUEST, NEED_TARGET_MESSAGE);
 		}
-		Quiz pre = pickSubmittedFirst(userId, pres).orElse(null);
+		Map<Long, QuizSubmission> preLatest = latestSubmissions(userId, pres);
+		Quiz pre = pickSubmittedFirst(pres, preLatest).orElse(null);
 		if (pre == null) {
 			return new AssessmentComparisonResponse(BASIS, material == null ? null
 					: new AssessmentComparisonResponse.Material(material.getId(), material.getTitle()), null, null,
@@ -100,10 +103,11 @@ public class AssessmentService {
 		if (material == null && pre.getMaterialId() != null) {
 			material = materialRepository.findByIdAndUserId(pre.getMaterialId(), userId).orElse(null);
 		}
-		Quiz post = pickSubmittedFirst(userId, quizRepository.findAllByUserIdAndPreAssessmentIdOrderByIdDesc(userId,
-				pre.getId())).orElse(null);
-		Measured preMeasured = measure(userId, pre);
-		Measured postMeasured = post == null ? null : measure(userId, post);
+		List<Quiz> posts = quizRepository.findAllByUserIdAndPreAssessmentIdOrderByIdDesc(userId, pre.getId());
+		Map<Long, QuizSubmission> postLatest = latestSubmissions(userId, posts);
+		Quiz post = pickSubmittedFirst(posts, postLatest).orElse(null);
+		Measured preMeasured = measure(pre, preLatest.get(pre.getId()));
+		Measured postMeasured = post == null ? null : measure(post, postLatest.get(post.getId()));
 		double minRate = properties.assessment().conceptMinRate();
 		boolean preDone = preMeasured.submission() != null;
 		boolean postDone = postMeasured != null && postMeasured.submission() != null;
@@ -124,20 +128,20 @@ public class AssessmentService {
 					after == null ? null : after.score(), after == null ? null : after.maxScore(), delta,
 					status(beforeRate, afterRate, delta, postDone, minRate)));
 		});
-		Integer preRate = preDone && preMeasured.snapshot().maxScore() > 0
-				? Math.round(preMeasured.snapshot().score() * 100f / preMeasured.snapshot().maxScore()) : null;
-		Integer postRate = postDone && postMeasured.snapshot().maxScore() > 0
-				? Math.round(postMeasured.snapshot().score() * 100f / postMeasured.snapshot().maxScore()) : null;
+		Integer preRate = preDone ? QuizAssessor.rate(preMeasured.snapshot().score(), preMeasured.snapshot().maxScore())
+				: null;
+		Integer postRate = postDone
+				? QuizAssessor.rate(postMeasured.snapshot().score(), postMeasured.snapshot().maxScore()) : null;
 		return new AssessmentComparisonResponse(BASIS, material == null ? null
 				: new AssessmentComparisonResponse.Material(material.getId(), material.getTitle()),
 				preMeasured.snapshot(), postMeasured == null ? null : postMeasured.snapshot(), concepts,
 				preRate == null || postRate == null ? null : postRate - preRate,
-				comparability(userId, pre, post, preMeasured, postMeasured));
+				comparability(pre, post, preMeasured, postMeasured));
 	}
 
 	// 채점이 끝난 답이 없으면 null
 	private static Integer rate(QuizAssessor.ConceptStat stat) {
-		return stat == null || stat.maxScore() == 0 ? null : Math.round(stat.score() * 100f / stat.maxScore());
+		return stat == null ? null : QuizAssessor.rate(stat.score(), stat.maxScore());
 	}
 
 	static String status(Integer before, Integer after, Integer delta, boolean postDone, double minRate) {
@@ -158,15 +162,16 @@ public class AssessmentService {
 	}
 
 	// 사후평가가 사전평가와 같은 조건인지 코드로 확인하고, 다르거나 채점이 덜 끝났으면 한계를 적는다
-	private AssessmentComparisonResponse.Comparability comparability(Long userId, Quiz pre, Quiz post,
+	private static AssessmentComparisonResponse.Comparability comparability(Quiz pre, Quiz post,
 			Measured preMeasured, Measured postMeasured) {
 		List<String> notes = new ArrayList<>();
 		if (post == null) {
 			return new AssessmentComparisonResponse.Comparability(true, true, true, true,
 					List.of("아직 사후평가가 없어 사전평가 결과만 보여 줘요."));
 		}
-		List<QuizQuestion> preQuestions = questionRepository.findAllByQuizIdOrderBySortOrderAsc(pre.getId());
-		List<QuizQuestion> postQuestions = questionRepository.findAllByQuizIdOrderBySortOrderAsc(post.getId());
+		// measure가 읽은 문제를 그대로 쓴다 (post가 있으면 postMeasured도 있다)
+		List<QuizQuestion> preQuestions = preMeasured.questions();
+		List<QuizQuestion> postQuestions = postMeasured.questions();
 		java.util.Set<String> preKeys = conceptKeys(preQuestions);
 		java.util.Set<String> postKeys = conceptKeys(postQuestions);
 		boolean sameConcepts = preKeys.equals(postKeys);
@@ -183,7 +188,7 @@ public class AssessmentService {
 			notes.add("난이도가 달라요.");
 		}
 		int unsettled = preMeasured.snapshot().pendingCount() + preMeasured.snapshot().reviewCount()
-				+ (postMeasured == null ? 0 : postMeasured.snapshot().pendingCount() + postMeasured.snapshot().reviewCount());
+				+ postMeasured.snapshot().pendingCount() + postMeasured.snapshot().reviewCount();
 		if (unsettled > 0) {
 			notes.add("채점 대기·확인 필요 답 " + unsettled + "개는 점수에서 빠져 있어 비교가 정확하지 않을 수 있어요.");
 		}
@@ -226,37 +231,44 @@ public class AssessmentService {
 				contentProperties.enabled());
 	}
 
-	private Optional<Quiz> pickSubmittedFirst(Long userId, List<Quiz> quizzes) {
+	// 퀴즈마다 가장 최근 제출(가장 큰 id)을 한 번에 읽는다. 퀴즈 id → 제출, 안 푼 퀴즈는 없음
+	private Map<Long, QuizSubmission> latestSubmissions(Long userId, List<Quiz> quizzes) {
+		if (quizzes.isEmpty()) {
+			return Map.of();
+		}
+		return submissionRepository.findLatestByQuizIds(userId, quizzes.stream().map(Quiz::getId).toList()).stream()
+				.collect(Collectors.toMap(QuizSubmission::getQuizId, Function.identity(),
+						BinaryOperator.maxBy(Comparator.comparing(QuizSubmission::getId))));
+	}
+
+	// 최신 순 목록에서 제출이 있는 첫 퀴즈, 하나도 없으면 맨 앞(가장 최근) 퀴즈
+	private static Optional<Quiz> pickSubmittedFirst(List<Quiz> quizzes, Map<Long, QuizSubmission> latest) {
 		return quizzes.stream()
-				.filter(quiz -> submissionRepository.findFirstByQuizIdAndUserIdOrderByIdDesc(quiz.getId(), userId)
-						.isPresent())
+				.filter(quiz -> latest.containsKey(quiz.getId()))
 				.findFirst()
 				.or(() -> quizzes.stream().findFirst());
 	}
 
 	private record Measured(AssessmentComparisonResponse.Snapshot snapshot, QuizSubmission submission,
-			Map<String, QuizAssessor.ConceptStat> byConcept) {
+			Map<String, QuizAssessor.ConceptStat> byConcept, List<QuizQuestion> questions) {
 	}
 
-	private Measured measure(Long userId, Quiz quiz) {
+	// submission: 이 퀴즈의 가장 최근 제출 (latestSubmissions), 안 풀었으면 null
+	private Measured measure(Quiz quiz, QuizSubmission submission) {
 		List<QuizQuestion> questions = questionRepository.findAllByQuizIdOrderBySortOrderAsc(quiz.getId());
-		QuizSubmission submission = submissionRepository.findFirstByQuizIdAndUserIdOrderByIdDesc(quiz.getId(), userId)
-				.orElse(null);
 		if (submission == null) {
 			return new Measured(new AssessmentComparisonResponse.Snapshot(quiz.getId(), quiz.getTitle(), null, null,
-					questions.size(), 0, 0, 0, 0, 0), null, Map.of());
+					questions.size(), 0, 0, 0, 0, 0), null, Map.of(), questions);
 		}
 		Map<Long, QuizAnswer> answers = QuizAssessor
 				.answersByQuestion(answerRepository.findAllBySubmissionId(submission.getId()));
 		List<QuizAssessor.Graded> graded = QuizAssessor.graded(questions, answers);
 		int gradedCount = (int) graded.stream().filter(g -> g.status() == GradingStatus.GRADED).count();
-		Map<String, QuizAssessor.ConceptStat> byConcept = QuizAssessor
-				.byConcept(graded, properties.assessment().conceptMinRate()).stream()
-				.collect(Collectors.toMap(QuizAssessor.ConceptStat::conceptKey, Function.identity(), (a, b) -> a,
-						LinkedHashMap::new));
+		Map<String, QuizAssessor.ConceptStat> byConcept = QuizAssessor.byConceptMap(graded,
+				properties.assessment().conceptMinRate());
 		return new Measured(new AssessmentComparisonResponse.Snapshot(quiz.getId(), quiz.getTitle(),
 				submission.getId(), submission.getSubmittedAt(), questions.size(), gradedCount, submission.getScore(),
 				submission.getMaxScore(), submission.getPendingCount(), submission.getReviewCount()), submission,
-				byConcept);
+				byConcept, questions);
 	}
 }

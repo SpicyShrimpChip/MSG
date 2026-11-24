@@ -26,6 +26,7 @@ import com.msg.backend.domain.conversation.entity.Conversation;
 import com.msg.backend.domain.conversation.entity.ConversationMessage;
 import com.msg.backend.domain.conversation.entity.MessageRole;
 import com.msg.backend.domain.course.dao.CourseRepository;
+import com.msg.backend.domain.course.entity.Course;
 import com.msg.backend.domain.quiz.application.QuizProperties;
 import com.msg.backend.domain.quiz.application.QuizStatsService;
 import com.msg.backend.domain.quiz.dto.ConceptQuizStatsResponse;
@@ -76,14 +77,16 @@ public class AnalysisQueryService {
 	private final Clock clock;
 
 	public AnalysisRunResponse getRun(Long userId, Long runId) {
-		return toResponse(runRepository.findByIdAndUserId(runId, userId)
-				.orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, RUN_NOT_FOUND_MESSAGE)));
+		AnalysisRun run = runRepository.findByIdAndUserId(runId, userId)
+				.orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, RUN_NOT_FOUND_MESSAGE));
+		return toResponse(run, courseRepository.findById(run.getCourseId()).orElse(null));
 	}
 
 	// 과목의 최근 분석: 모델이 하나 이상 판단한 가장 최근 분석과, 그 뒤에 시작한 분석이 진행 중·결과 없음이면 그 시도.
 	// 둘 다 없으면(한 번도 분석하지 않음) 404
 	public LatestAnalysisResponse getLatest(Long userId, Long courseId) {
-		courseRepository.checkOwned(courseId, userId);
+		// 소유 확인과 퀴즈 결과 집계에 같은 과목 행을 쓴다 (한 번만 읽는다)
+		Course course = courseRepository.getOwned(courseId, userId);
 		AnalysisRun judged = runRepository.findFirstByUserIdAndCourseIdAndStatusInOrderByIdDesc(userId, courseId, JUDGED)
 				.orElse(null);
 		LatestAnalysisResponse.LastAttempt attempt = runRepository
@@ -94,7 +97,7 @@ public class AnalysisQueryService {
 		if (judged == null && attempt == null) {
 			throw new BusinessException(HttpStatus.NOT_FOUND, NO_RUN_MESSAGE);
 		}
-		return new LatestAnalysisResponse(judged == null ? null : toResponse(judged), attempt);
+		return new LatestAnalysisResponse(judged == null ? null : toResponse(judged, course), attempt);
 	}
 
 	// 판단한 모델이 없는 시도. 시작한 지 runningTimeout이 지나도 RUNNING이면(서버가 중간에 멈춤) 끝나지 못한 것으로 본다
@@ -122,7 +125,8 @@ public class AnalysisQueryService {
 		return reasons.size() == 1 ? summary + " " + reasons.get(0) : summary;
 	}
 
-	private AnalysisRunResponse toResponse(AnalysisRun run) {
+	// course: 분석한 과목 (run.getCourseId()). 없으면 null이고 퀴즈 결과를 붙이지 않는다
+	private AnalysisRunResponse toResponse(AnalysisRun run, Course course) {
 		// GPT → Claude → Gemini (LlmProvider 순서. DB는 글자 순으로 정렬하므로 여기서 다시 정렬한다)
 		List<AnalysisModelResult> results = modelResultRepository.findAllByRunId(run.getId()).stream()
 				.sorted(Comparator.comparing(AnalysisModelResult::getProvider))
@@ -141,8 +145,9 @@ public class AnalysisQueryService {
 		Map<Long, Conversation> conversations = conversationRepository.findAllById(messages.values().stream()
 						.map(ConversationMessage::getConversationId).collect(Collectors.toSet()))
 				.stream().collect(Collectors.toMap(Conversation::getId, Function.identity()));
-		Map<String, ConceptFeedback> feedback = feedbackRepository
-				.findAllByUserIdAndCourseIdOrderByIdAsc(run.getUserId(), run.getCourseId()).stream()
+		List<ConceptFeedback> courseFeedback = feedbackRepository
+				.findAllByUserIdAndCourseIdOrderByIdAsc(run.getUserId(), run.getCourseId());
+		Map<String, ConceptFeedback> feedback = courseFeedback.stream()
 				.collect(Collectors.toMap(ConceptFeedback::getConceptKey, Function.identity()));
 
 		List<AnalysisRunResponse.ModelResult> models = results.stream()
@@ -153,9 +158,9 @@ public class AnalysisQueryService {
 				.toList();
 
 		// 퀴즈 결과는 대화 분석과 따로 센 값이라 판단·추천 순서를 바꾸지 않고 나란히 보여 준다
-		Map<String, ConceptQuizStatsResponse> quizStats = courseRepository.findById(run.getCourseId())
-				.map(course -> quizStatsService.byCourse(run.getUserId(), course))
-				.orElse(List.of()).stream()
+		// 피드백 목록은 위에서 읽은 것을 넘긴다 (같은 사용자·과목)
+		Map<String, ConceptQuizStatsResponse> quizStats = (course == null ? List.<ConceptQuizStatsResponse>of()
+				: quizStatsService.byCourse(run.getUserId(), course, courseFeedback)).stream()
 				.filter(stat -> stat.questionCount() > 0)
 				.collect(Collectors.toMap(ConceptQuizStatsResponse::conceptId, Function.identity(), (a, b) -> a));
 		List<ConceptConsensus> consensus = consensusRepository.findAllByRunIdOrderByIdAsc(run.getId());
@@ -167,8 +172,10 @@ public class AnalysisQueryService {
 		for (int i = 0; i < ordered.size(); i++) {
 			ConceptConsensus item = ordered.get(i);
 			ConceptFeedback mine = feedback.get(item.getConceptKey());
-			List<AnalysisRunResponse.Judgment> modelJudgments = judgments.stream()
+			List<ConceptJudgment> conceptJudgments = judgments.stream()
 					.filter(judgment -> judgment.getConceptKey().equals(item.getConceptKey()))
+					.toList();
+			List<AnalysisRunResponse.Judgment> modelJudgments = conceptJudgments.stream()
 					.sorted(Comparator.comparing(judgment -> resultById.get(judgment.getModelResultId()).getProvider()))
 					.map(judgment -> toJudgment(judgment, resultById.get(judgment.getModelResultId()),
 							evidenceByJudgment.getOrDefault(judgment.getId(), List.of()), messages, conversations))
@@ -181,7 +188,8 @@ public class AnalysisQueryService {
 					modelJudgments, mine == null ? null : FeedbackResponse.from(mine), i + 1,
 					mine != null && mine.getFeedback() == FeedbackType.ALREADY_KNOW,
 					quizStats.get(item.getConceptKey()),
-					mastery(item, modelJudgments, quizStats.get(item.getConceptKey())),
+					mastery(item, userConversationCount(conceptJudgments, evidenceByJudgment, messages),
+							quizStats.get(item.getConceptKey())),
 					new AnalysisRunResponse.Misconception(misconceptions, item.getJudgedCount()),
 					verification(item, misconceptions, quizStats.get(item.getConceptKey()))));
 		}
@@ -195,13 +203,8 @@ public class AnalysisQueryService {
 	// 숙련도: 퀴즈(채점이 끝난 문제)와 대화(사용자가 쓴 근거 메시지가 있는 대화 수 + 모델 비교가 일치한 상태)를 규칙으로 계산한다.
 	// 대화 수는 모델이 여럿이어도 같은 대화는 한 번만 센다(모델이 같은 판단을 해도 근거가 늘지 않는다).
 	// TODO(미결): 대화 신호를 메시지 단위로 세는 방법은 주미와 정하기 (지금은 개념 단위 판단을 대화 수만큼 센다)
-	private AnalysisRunResponse.Mastery mastery(ConceptConsensus item,
-			List<AnalysisRunResponse.Judgment> modelJudgments, ConceptQuizStatsResponse quiz) {
-		int conversationCount = (int) modelJudgments.stream()
-				.flatMap(judgment -> judgment.evidence().stream())
-				.filter(evidence -> evidence.kind() != null && evidence.kind().startsWith("user_"))
-				.map(AnalysisRunResponse.Evidence::conversationId)
-				.distinct().count();
+	private AnalysisRunResponse.Mastery mastery(ConceptConsensus item, int conversationCount,
+			ConceptQuizStatsResponse quiz) {
 		MasteryCalculator.Result result = masteryCalculator.calculate(quiz == null ? 0 : quiz.gradedCount(),
 				quiz == null ? 0 : quiz.score(), quiz == null ? 0 : quiz.maxScore(), conversationCount,
 				item.getStatus());
@@ -209,6 +212,19 @@ public class AnalysisQueryService {
 				result.quizGradedCount(), result.quizRate(), result.conversationCount(),
 				result.conversationStatus() == null ? null : result.conversationStatus().apiValue(),
 				result.formulaVersion(), result.quizNeeded(), List.of());
+	}
+
+	// 숙련도의 대화 수: 개념 판단의 근거 중 사용자가 쓴 근거(EvidenceKind.writtenByUser)가 있는 대화 수.
+	// 응답 근거(toJudgment)와 같이 아직 남아 있는 메시지만 센다
+	private static int userConversationCount(List<ConceptJudgment> conceptJudgments,
+			Map<Long, List<JudgmentEvidence>> evidenceByJudgment, Map<Long, ConversationMessage> messages) {
+		return (int) conceptJudgments.stream()
+				.flatMap(judgment -> evidenceByJudgment.getOrDefault(judgment.getId(), List.of()).stream())
+				.filter(evidence -> evidence.getKind().writtenByUser())
+				.map(evidence -> messages.get(evidence.getMessageId()))
+				.filter(java.util.Objects::nonNull)
+				.map(ConversationMessage::getConversationId)
+				.distinct().count();
 	}
 
 	// 검증 상태: 모델 의견 비교 + 실제 퀴즈 결과 (ConceptVerification, 코드 규칙)
