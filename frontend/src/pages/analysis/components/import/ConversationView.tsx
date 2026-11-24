@@ -2,13 +2,20 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { cn, type ConversationMessage, type ConversationSource } from '@/utils';
+import {
+  cn,
+  containsKeyword,
+  keywordTargets,
+  type ConversationMessage,
+  type ConversationSource,
+} from '@/utils';
 import {
   MARK_CLASS,
   findMaskLabelRange,
   markPattern,
   remarkMarks,
   splitMarks,
+  type MarkPattern,
 } from './marks';
 import { MARKDOWN_COMPONENTS } from './markdownComponents';
 
@@ -35,7 +42,7 @@ const scrollBehavior = (): ScrollBehavior =>
 const PAGE_SIZE = 30;
 
 // 내가 쓴 글은 마크다운으로 해석하지 않고 줄바꿈을 그대로 둔다 (가린 표시·키워드만 칠한다)
-function PlainText({ text, pattern }: { text: string; pattern: RegExp }) {
+function PlainText({ text, pattern }: { text: string; pattern: MarkPattern }) {
   const parts: ReactNode[] = splitMarks(text, pattern).map((part, i) =>
     part.kind ? (
       // 글 조각 순서는 바뀌지 않는다
@@ -63,8 +70,10 @@ interface ConversationViewProps {
   // 이 메시지로 이동해 표시한다. 같은 메시지로 다시 가려면 nonce를 바꾼다.
   // markIndex가 있으면 그 메시지 안의 가린 표시 중 그 번째 하나를 진하게 칠하고 그 자리로 스크롤한다
   focus?: FocusTarget | null;
-  // 형광펜으로 칠할 단어(찾은 키워드·검색어). 있으면 "키워드 나온 메시지" 이전·다음 이동을 보여 준다
+  // 형광펜으로 칠할 단어. 있으면 "키워드 나온 메시지" 이전·다음 이동을 보여 준다.
+  // keywords는 찾은 학습 키워드(대화를 고른 규칙과 같이 영문은 낱말 경계에서만), query는 검색어(부분 문자열)
   keywords?: string[];
+  query?: string;
 }
 
 function ConversationView({
@@ -72,6 +81,7 @@ function ConversationView({
   messages,
   focus: focusProp,
   keywords = [],
+  query = '',
 }: ConversationViewProps) {
   const [pageCount, setPageCount] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -80,26 +90,26 @@ function ConversationView({
   // 배열이 새로 만들어져도 내용이 같으면 다시 계산하지 않도록 글자로 묶어 비교한다
   const keywordKey = keywords.join('\n');
   const words = useMemo(
-    () => [
-      ...new Set(
-        keywordKey
-          .split('\n')
-          .map((word) => word.trim())
-          .filter(Boolean),
-      ),
-    ],
+    () => [...new Set(keywordKey.split('\n').filter(Boolean))],
     [keywordKey],
   );
-  const pattern = useMemo(() => markPattern(words), [words]);
-  // 키워드가 들어 있는 메시지 순서
+  const needle = query.trim().toLowerCase();
+  const pattern = useMemo(
+    () => markPattern(words, needle ? [needle] : []),
+    [words, needle],
+  );
+  // 키워드나 검색어가 들어 있는 메시지 순서 (칠하는 규칙과 같다)
   const hits = useMemo(() => {
-    if (words.length === 0) return [];
-    const lowered = words.map((word) => word.toLowerCase());
+    const targets = keywordTargets(words);
+    if (targets.length === 0 && !needle) return [];
     return messages.flatMap((message, index) => {
       const text = message.text.toLowerCase();
-      return lowered.some((word) => text.includes(word)) ? [index] : [];
+      const found =
+        targets.some((target) => containsKeyword(text, target)) ||
+        (needle !== '' && text.includes(needle));
+      return found ? [index] : [];
     });
-  }, [messages, words]);
+  }, [messages, words, needle]);
   // 이전·다음으로 고른 순서(-1이면 아직 안 고름)와 누른 횟수(같은 곳으로 다시 이동할 때 쓴다)
   const [nav, setNav] = useState({ cursor: -1, count: 0 });
   // 키워드가 바뀌어 목록이 줄면 처음 상태로 본다

@@ -459,7 +459,8 @@ function CourseGroup({
                   <ConversationView
                     source={conversation.source}
                     messages={conversation.messages}
-                    keywords={[...match.matchedKeywords, query]}
+                    keywords={match.matchedKeywords}
+                    query={query}
                   />
                 </div>
               )}
