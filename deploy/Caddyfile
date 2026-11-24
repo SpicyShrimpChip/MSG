@@ -2,9 +2,7 @@
 # 요청은 브라우저 → Vercel(/api rewrite) → 여기 → 백엔드 순서로 온다.
 {
 	servers {
-		# Vercel이 붙여 보낸 X-Forwarded-For의 첫 값(브라우저의 IP)을 접속 IP로 본다.
-		# Vercel은 고정 IP가 없어 특정 주소만 믿을 수 없으므로 모두 믿는다. 그래서 이 서버 주소로 직접 요청하면
-		# IP를 속일 수 있다(로그인 시도 제한은 이메일 기준으로도 걸린다). docs/deploy.md "실제 접속 IP"
+		# Vercel이 붙여 보낸 X-Forwarded-For의 첫 값(브라우저의 IP)을 접속 IP로 본다. docs/deploy.md "실제 접속 IP"
 		trusted_proxies static 0.0.0.0/0 ::/0
 		client_ip_headers X-Forwarded-For
 	}

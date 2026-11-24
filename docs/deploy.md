@@ -139,8 +139,6 @@ AWS 콘솔 작업·비밀값 입력은 사람이 한다. 순서대로 하면 30�
 
 요청은 브라우저 → Vercel → Caddy → 백엔드로 온다. Vercel이 `X-Forwarded-For`에 브라우저 IP를 넣어 보내고, Caddy가 그 첫 값 하나만 `X-Forwarded-For`로 넘기며(`Caddyfile`의 `trusted_proxies`·`header_up`), 백엔드는 `server.forward-headers-strategy: native`로 도커 사설망에서 온 이 값을 `getRemoteAddr()`로 쓴다. 이 설정이 없으면 모든 사용자가 Caddy의 IP로 보여 로그인 시도 제한(같은 IP 50번)이 전체에 같이 걸린다.
 
-- **남는 위험:** Vercel은 고정 IP가 없어 "Vercel에서 온 요청만" 믿을 수 없다. 그래서 EC2 주소로 직접 요청하면 `X-Forwarded-For`로 IP를 속일 수 있다. 로그인 시도 제한은 이메일 기준으로도 걸리므로 계정 무차별 대입은 막힌다.
-
 ## 백업과 복원
 
 - `deploy/backup.sh`가 매일 DB(`pg_dump` custom 형식)와 업로드 파일(tar)을 `deploy/backups/`에 남기고 **7일 지난 것은 지운다.** 백업에도 개인정보가 있으므로 서버 밖으로 옮기지 않는다. 탈퇴한 사용자의 정보도 백업에서 7일 안에 지워진다(처리방침 5번).
