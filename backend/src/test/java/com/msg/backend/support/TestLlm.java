@@ -27,9 +27,12 @@ public class TestLlm implements ApplicationContextInitializer<ConfigurableApplic
 				// 개발자 PC에 Turnstile 비밀 키가 있어도 통합 테스트의 가입은 확인하지 않는다 (확인은 SignupBotCheckTest)
 				"app.turnstile.secret-key", "",
 				// 테스트 전체가 같은 날짜 줄을 같이 쓰므로 상한에 닿지 않게 크게 둔다 (상한 테스트는 줄을 직접 채운다)
-				"app.ai-daily-limit.calls", "1000000")));
+				"app.ai-daily-limit.calls", "1000000",
+				"app.ai-daily-limit.user-calls", "1000000")));
 		MutablePropertySources sources = context.getEnvironment().getPropertySources();
-		MapPropertySource secrets = new MapPropertySource("testSecrets", Map.of("app.rejoin.hash-secret", ""));
+		// 모든 가입이 같은 IP(127.0.0.1)라 가입 시도 제한은 끈다. 제한 테스트는 @TestPropertySource로 켜고, 그 값이 이긴다
+		MapPropertySource secrets = new MapPropertySource("testSecrets", Map.of("app.rejoin.hash-secret", "",
+				"app.auth.signup-attempt.max-per-ip", "0"));
 		if (sources.contains(INLINED)) {
 			sources.addAfter(INLINED, secrets);
 		} else {

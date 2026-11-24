@@ -26,6 +26,7 @@ import com.msg.backend.domain.quiz.entity.QuizSubmission;
 import com.msg.backend.domain.user.dao.UserRepository;
 import com.msg.backend.domain.user.entity.JobField;
 import com.msg.backend.global.error.BusinessException;
+import com.msg.backend.global.llm.AiCallQuota;
 import com.msg.backend.global.llm.LlmClient;
 import com.msg.backend.global.llm.UserAiUsage;
 import com.msg.backend.global.llm.LlmClients;
@@ -75,6 +76,7 @@ public class QuizService {
 	private final QuizGradingRunRepository gradingRunRepository;
 	private final QuizAiUsage usage;
 	private final UserAiUsage userAiUsage;
+	private final AiCallQuota aiCallQuota;
 	private final LlmClients llmClients;
 	private final PersonalInfoDetector personalInfoDetector;
 	private final QuizProperties properties;
@@ -85,7 +87,7 @@ public class QuizService {
 			QuizSubmissionRepository submissionRepository, QuizAnswerRepository answerRepository,
 			CourseRepository courseRepository, UserRepository userRepository, AnswerGradingService gradingService,
 			QuizStatsService statsService, QuizGradingRunRepository gradingRunRepository, QuizAiUsage usage,
-			UserAiUsage userAiUsage,
+			UserAiUsage userAiUsage, AiCallQuota aiCallQuota,
 			LlmClients llmClients, PersonalInfoDetector personalInfoDetector,
 			QuizProperties properties, PlatformTransactionManager transactionManager, Clock clock) {
 		this.quizRepository = quizRepository;
@@ -99,6 +101,7 @@ public class QuizService {
 		this.gradingRunRepository = gradingRunRepository;
 		this.usage = usage;
 		this.userAiUsage = userAiUsage;
+		this.aiCallQuota = aiCallQuota;
 		this.llmClients = llmClients;
 		this.personalInfoDetector = personalInfoDetector;
 		this.properties = properties;
@@ -301,12 +304,18 @@ public class QuizService {
 		});
 	}
 
-	// 사용자 행을 잠근 트랜잭션 안에서: 24시간 실행 수 → 실제 모델 요청 수 순서로 본다. 넘었으면 이유 코드
+	// 사용자 행을 잠근 트랜잭션 안에서: 24시간 실행 수 → 실제 모델 요청 수 → 하루 AI 호출 몫(설정된 모델 수만큼)·서비스 전체 상한
+	// 순서로 본다. 넘었으면 이유 코드
 	private String limitReason(Long userId) {
 		if (userAiUsage.countLast24Hours(userId, UserAiUsage.Kind.QUIZ_GRADING) >= properties.dailyGradingLimit()) {
 			return GradingNotes.LIMIT_EXCEEDED;
 		}
-		return usage.modelCallBudgetExhausted(userId) ? GradingNotes.BUDGET_EXCEEDED : null;
+		int modelCount = (int) llmClients.all().stream().filter(LlmClient::isConfigured).count();
+		if (usage.modelCallBudgetExhausted(userId) || !aiCallQuota.hasUserRemaining(userId, modelCount)
+				|| !aiCallQuota.hasRemaining()) {
+			return GradingNotes.BUDGET_EXCEEDED;
+		}
+		return null;
 	}
 
 	private QuizGradingRun reserveRun(Long userId, Long submissionId, QuizGradingRun.Kind kind, int answerCount) {

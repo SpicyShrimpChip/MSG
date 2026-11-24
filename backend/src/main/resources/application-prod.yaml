@@ -48,3 +48,7 @@ app:
   auth:
     refresh-cookie:
       secure: true
+
+  # 회원가입 자동 가입 방지는 운영에서 꼭 켠다. TURNSTILE_SECRET_KEY가 비어 있으면 서버가 뜨지 않는다
+  turnstile:
+    required: true

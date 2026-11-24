@@ -123,8 +123,8 @@ AWS 콘솔 작업·비밀값 입력은 사람이 한다. 순서대로 하면 30�
 | ---- | --------------------------- |
 | `.env` | `BACKEND_HOST`, `POSTGRES_PASSWORD`(관리자, 백업·복원용), `APP_DB_PASSWORD`(앱 계정), `MIGRATION_DB_PASSWORD`(테이블 변경 계정). 두 계정 비밀번호는 처음 띄울 때 DB에 그대로 만들어진다 |
 | 보안 | `JWT_SECRET`, `CORS_ALLOWED_ORIGINS`(Vercel 주소) |
-| AI | `OPENAI_API_KEY`·`OPENAI_MODEL`, `ANTHROPIC_API_KEY`·`ANTHROPIC_MODEL`, `GEMINI_API_KEY`·`GEMINI_MODEL` (키나 모델 이름이 없으면 그 모델은 "미설정"), `AI_DAILY_CALL_LIMIT` (서비스 전체 하루 모델 호출 상한, 기본 500, 0이면 상한 없음. 제공사 콘솔 지출 한도와 함께 정한다) |
-| 가입 | `TURNSTILE_SECRET_KEY` (Cloudflare Turnstile 비밀 키, 비우면 자동 가입 방지 확인 안 함. 프론트 `VITE_TURNSTILE_SITE_KEY`와 같이 켠다) |
+| AI | `OPENAI_API_KEY`·`OPENAI_MODEL`, `ANTHROPIC_API_KEY`·`ANTHROPIC_MODEL`, `GEMINI_API_KEY`·`GEMINI_MODEL` (키나 모델 이름이 없으면 그 모델은 "미설정"), `AI_DAILY_CALL_LIMIT` (서비스 전체 하루 모델 호출 상한, 기본 500, 0이면 상한 없음. 제공사 콘솔 지출 한도와 함께 정한다), `AI_USER_DAILY_CALL_LIMIT` (사용자 한 명의 하루 모델 호출 몫, 분석·퀴즈·채점·개념 설명 합계, 기본 40, 0이면 없음. 계정 몇 개로 전체 상한을 다 쓰지 못하게 전체보다 훨씬 작게 둔다) |
+| 가입 | `TURNSTILE_SECRET_KEY` (Cloudflare Turnstile 비밀 키. **운영 프로필은 필수**라 비어 있으면 백엔드가 뜨지 않는다. 프론트 `VITE_TURNSTILE_SITE_KEY`와 같이 켠다). 같은 IP의 가입 시도는 1시간 10번까지다(`app.auth.signup-attempt`, 이메일·카카오 가입 합계. 접속 IP가 정확해야 하므로 아래 점검표의 접속 IP 확인을 같이 본다) |
 | 카카오 로그인 | `KAKAO_REST_API_KEY`·`KAKAO_CLIENT_SECRET` (카카오 개발자 콘솔의 REST API 키와 카카오 로그인용 Client Secret. 둘 중 하나나 `KAKAO_REDIRECT_URI`가 비면 카카오 버튼이 숨는다), `KAKAO_ADMIN_KEY` (탈퇴할 때와 가입을 거절할 때 카카오 연결 끊기에 쓴다. **카카오를 켜면 꼭 넣는다**: 비면 연결 끊기를 건너뛰어, 처리방침·약관의 "탈퇴하면 카카오 연결도 끊어요"와 어긋난다), `KAKAO_REDIRECT_URI` (`https://lms-seven-tawny.vercel.app/api/auth/kakao/callback`, 카카오 콘솔에 등록한 주소와 글자까지 같게), `FRONTEND_BASE_URL` (카카오 로그인이 끝나면 돌아갈 화면 주소, Vercel 주소) |
 | 재가입 제한 | `REJOIN_HASH_SECRET` (탈퇴한 이메일의 HMAC 키, 32자 이상 무작위 값. 비우면 탈퇴 뒤 30일 재가입 제한이 꺼진다. 운영 중에는 바꾸지 않는다) |
 | 선택 | `MATERIAL_CONTENT_ENABLED` (기본 꺼짐. 처리방침에 확정한 뒤에만 켠다) |

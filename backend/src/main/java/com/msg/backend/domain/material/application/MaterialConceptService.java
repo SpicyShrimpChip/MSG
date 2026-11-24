@@ -301,7 +301,7 @@ public class MaterialConceptService {
 			throw new BusinessException(HttpStatus.TOO_MANY_REQUESTS,
 					"오늘 AI 호출 한도를 다 써서 지금은 " + action + " 수 없어요. 내일 다시 시도해 주세요.");
 		}
-		aiCallQuota.ensureRemaining();
+		aiCallQuota.ensureRemaining(userId, 1);
 		MaterialTextExtractor.Extracted extracted = extractor.extract(material);
 		if (extracted.status() != MaterialTextExtractor.Status.OK) {
 			throw new BusinessException(HttpStatus.UNPROCESSABLE_ENTITY, unreadableMessage(extracted.status()),

@@ -138,13 +138,13 @@ public class AnalysisService {
 		}
 		// 전체 시간 예산은 시작할 때부터 센다 (모델마다 다시 부르기까지 하면 프론트가 먼저 포기하고, 다시 누르면 409가 났다)
 		Instant deadline = clock.instant().plus(properties.deadline());
-		Prepared prepared = transaction.execute(status -> prepare(userId, courseId));
+		Prepared prepared = transaction.execute(status -> prepare(userId, courseId, configured.size()));
 
 		LlmRequest request = new LlmRequest(AnalysisPrompt.SYSTEM, prepared.input().userPrompt(),
 				properties.maxOutputTokens());
 		Map<LlmProvider, CompletableFuture<ModelInvoker.Outcome>> calls = new EnumMap<>(LlmProvider.class);
 		configured.forEach(client -> calls.put(client.provider(),
-				modelInvoker.invokeAsync(client, request, ModelInvoker.Lane.ANALYSIS, deadline)));
+				modelInvoker.invokeAsync(userId, client, request, ModelInvoker.Lane.ANALYSIS, deadline)));
 		Map<LlmProvider, ModelInvoker.Outcome> outcomes = new EnumMap<>(LlmProvider.class);
 		// 마감까지 오지 않은 모델은 시간 초과(실패)로 두고, 그 뒤에 온 답은 쓰지 않는다
 		calls.forEach((provider, call) -> outcomes.put(provider, modelInvoker.await(call, deadline)));
@@ -162,7 +162,8 @@ public class AnalysisService {
 		return queryService.getRun(userId, prepared.runId());
 	}
 
-	private Prepared prepare(Long userId, Long courseId) {
+	// modelCount: 이번 분석이 부를 모델 수. 사용자 몫이 그만큼 남아 있어야 시작한다(모자라면 일부 모델만 판단한 분석이 된다)
+	private Prepared prepare(Long userId, Long courseId, int modelCount) {
 		// 사용자 행을 잠가 같은 사용자의 동의 철회·다른 분석 시작과 차례로 처리한다
 		User user = userRepository.lockLoginUser(userId);
 		if (!user.isAiAnalysisConsent()) {
@@ -181,7 +182,7 @@ public class AnalysisService {
 			throw new BusinessException(HttpStatus.TOO_MANY_REQUESTS,
 					"24시간 동안 분석할 수 있는 횟수(" + properties.dailyRunLimit() + "번)를 다 썼어요. 나중에 다시 시도해 주세요.");
 		}
-		aiCallQuota.ensureRemaining();
+		aiCallQuota.ensureRemaining(userId, modelCount);
 		List<Conversation> conversations = conversationRepository.findAnalyzableInCourse(userId, courseId);
 		if (conversations.isEmpty()) {
 			throw new BusinessException(HttpStatus.BAD_REQUEST, NO_CONVERSATIONS_MESSAGE);

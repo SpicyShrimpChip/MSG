@@ -105,7 +105,8 @@ public class QuizModelFallback {
 			}
 			tracker.last = client;
 			ModelInvoker.Outcome outcome = modelInvoker.await(
-					modelInvoker.invokeAsync(client, call.request(), ModelInvoker.Lane.QUIZ, call.deadline()),
+					modelInvoker.invokeAsync(call.userId(), client, call.request(), ModelInvoker.Lane.QUIZ,
+							call.deadline()),
 					call.deadline());
 			tracker.attempts += Math.max(outcome.attempts(), outcome.timedOut() ? 1 : 0);
 			if (outcome.timedOut()) {

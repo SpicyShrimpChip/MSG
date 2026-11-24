@@ -92,7 +92,7 @@ class SignupBotCheckTest {
 	@Test
 	void 확인_서버에_닿지_못하면_503이고_통과시키지_않는다() {
 		SignupBotCheck check = new SignupBotCheck(
-				new TurnstileProperties("secret", "http://127.0.0.1:1/siteverify", Duration.ofSeconds(1)));
+				new TurnstileProperties("secret", "http://127.0.0.1:1/siteverify", Duration.ofSeconds(1), false));
 
 		assertThatThrownBy(() -> check.verify("token"))
 				.isInstanceOf(BusinessException.class)
@@ -102,7 +102,7 @@ class SignupBotCheckTest {
 
 	private SignupBotCheck check(String secret) {
 		String url = "http://127.0.0.1:" + server.getAddress().getPort() + "/siteverify";
-		return new SignupBotCheck(new TurnstileProperties(secret, url, Duration.ofSeconds(2)));
+		return new SignupBotCheck(new TurnstileProperties(secret, url, Duration.ofSeconds(2), false));
 	}
 
 	private static Map<String, String> parseForm(String body) {
