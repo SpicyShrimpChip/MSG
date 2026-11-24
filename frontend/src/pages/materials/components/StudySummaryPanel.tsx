@@ -33,7 +33,8 @@ import {
   sourceCheckTone,
 } from '@/utils';
 
-// 항목 하나: AI가 쓴 글 + 원문 근거 상태. 자료에 없는 AI 보충 설명은 보라색 AI 표시로 따로 보여 준다
+// 항목 하나: AI가 쓴 글 + 원문 근거 상태. 글은 모두 AI가 썼으므로 AI 표시를 붙이고(서버가 확인한 것은 인용뿐),
+// 자료에 없는 AI 보충 설명은 보라색 상자로 따로 보여 준다
 function SummaryItemView({ item }: { item: StudySummaryItem }) {
   const supplement = item.basis === 'supplement';
   return (
@@ -51,12 +52,18 @@ function SummaryItemView({ item }: { item: StudySummaryItem }) {
             자료에 없는 AI 보충 설명
           </span>
         ) : (
-          item.check && (
-            <VerificationBadge
-              status={sourceCheckTone(item.check)}
-              label={SOURCE_CHECK_LABEL[item.check]}
-            />
-          )
+          <>
+            <span className="inline-flex items-center gap-1 text-caption font-bold text-ai">
+              <AiBadge />
+              AI 요약
+            </span>
+            {item.check && (
+              <VerificationBadge
+                status={sourceCheckTone(item.check)}
+                label={SOURCE_CHECK_LABEL[item.check]}
+              />
+            )}
+          </>
         )}
       </div>
       <p className="text-body leading-relaxed text-ink">{item.text}</p>
@@ -67,7 +74,9 @@ function SummaryItemView({ item }: { item: StudySummaryItem }) {
         <p className="text-caption text-ink-soft">
           {item.check === 'failed'
             ? 'AI가 든 근거 문장을 자료에서 찾지 못했어요. 자료를 직접 확인해 주세요.'
-            : 'AI가 근거 문장을 들지 않아 확인하지 못했어요.'}
+            : item.check === 'partial'
+              ? `AI가 든 근거 문장이 자료와 일부만 일치해요. 자료의 ${item.location ?? '해당 부분'}을 직접 확인해 주세요.`
+              : 'AI가 근거 문장을 들지 않아 확인하지 못했어요.'}
         </p>
       )}
     </li>

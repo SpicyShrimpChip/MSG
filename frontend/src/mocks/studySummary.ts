@@ -69,7 +69,8 @@ const SAMPLE: StudySummary = {
         name: null,
         text: '암호화와 서명은 같은 키 쌍을 반대 방향으로 쓴다.',
         basis: 'material',
-        quote: '전자서명은 반대로',
+        // 일부 일치는 AI가 쓴 문장이라 서버가 인용을 돌려주지 않는다(위치만)
+        quote: null,
         location: '문단 2',
         check: 'partial',
       },

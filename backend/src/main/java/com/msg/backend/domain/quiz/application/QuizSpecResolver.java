@@ -201,7 +201,7 @@ class QuizSpecResolver {
 		try {
 			return BloomPlan.targets(mode, requested, types);
 		} catch (IllegalArgumentException e) {
-			throw badRequest(BloomPlan.CREATE_NEEDS_ESSAY_MESSAGE);
+			throw badRequest(e.getMessage());
 		}
 	}
 

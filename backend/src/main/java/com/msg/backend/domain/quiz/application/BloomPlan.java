@@ -24,6 +24,8 @@ public final class BloomPlan {
 
 	static final String CREATE_NEEDS_ESSAY_MESSAGE = "창조 수준은 서술형 문제로만 평가할 수 있어요. 서술형을 함께 고르거나 다른 수준을 골라 주세요.";
 
+	static final String CREATE_ONLY_WITH_OTHER_TYPES_MESSAGE = "창조 수준은 서술형으로만 낼 수 있어요. 객관식·주관식에 쓸 수준을 하나 더 골라 주세요.";
+
 	private BloomPlan() {
 	}
 
@@ -39,6 +41,8 @@ public final class BloomPlan {
 	/**
 	 * 평가할 수준 (낮은 수준부터). requested가 비었으면 모드 기본값. 서술형이 없으면 창조를 뺀다.
 	 * 남는 수준이 없으면(창조만 골랐는데 서술형이 없음) IllegalArgumentException(CREATE_NEEDS_ESSAY_MESSAGE).
+	 * 서술형이 아닌 유형이 있는데 창조밖에 없으면 그 문제에 쓸 수준이 없어 어떤 답도 검증을 통과하지 못하므로
+	 * 모델을 부르기 전에 IllegalArgumentException(CREATE_ONLY_WITH_OTHER_TYPES_MESSAGE).
 	 */
 	public static List<BloomLevel> targets(QuizMode mode, Collection<BloomLevel> requested, Collection<QuestionType> types) {
 		Set<BloomLevel> chosen = requested == null || requested.isEmpty() ? EnumSet.copyOf(defaults(mode))
@@ -48,6 +52,10 @@ public final class BloomPlan {
 		}
 		if (chosen.isEmpty()) {
 			throw new IllegalArgumentException(CREATE_NEEDS_ESSAY_MESSAGE);
+		}
+		boolean hasNonEssay = types.stream().anyMatch(type -> type != QuestionType.ESSAY);
+		if (hasNonEssay && chosen.equals(EnumSet.of(BloomLevel.CREATE))) {
+			throw new IllegalArgumentException(CREATE_ONLY_WITH_OTHER_TYPES_MESSAGE);
 		}
 		return List.copyOf(chosen);
 	}

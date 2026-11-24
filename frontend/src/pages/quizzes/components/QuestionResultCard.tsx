@@ -291,24 +291,17 @@ function QuestionResultCard({
       )}
       {item.aiExplanation && <AiNote title="해설">{item.aiExplanation}</AiNote>}
 
-      {(item.bloomLevel || item.aiObjective) && (
-        <div className="flex flex-col gap-1 text-caption text-ink-soft">
-          {item.bloomLevel && (
-            <p>
-              <span className="font-bold text-heading">평가 수준 </span>
-              {BLOOM_LABEL[item.bloomLevel]}{' '}
-              <span className="text-ink-muted">
-                (AI가 지정한 수준, 서버는 형식만 확인)
-              </span>
-            </p>
-          )}
-          {item.aiObjective && (
-            <p>
-              <span className="font-bold text-heading">출제 목표(AI) </span>
-              {item.aiObjective}
-            </p>
-          )}
-        </div>
+      {item.bloomLevel && (
+        <p className="text-caption text-ink-soft">
+          <span className="font-bold text-heading">평가 수준 </span>
+          {BLOOM_LABEL[item.bloomLevel]}{' '}
+          <span className="text-ink-muted">
+            (AI가 지정한 수준, 서버는 형식만 확인)
+          </span>
+        </p>
+      )}
+      {item.aiObjective && (
+        <AiNote title="출제 목표">{item.aiObjective}</AiNote>
       )}
 
       {item.source && (

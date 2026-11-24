@@ -35,6 +35,19 @@ class BloomPlanTest {
 	}
 
 	@Test
+	void 창조만_고르고_서술형이_아닌_유형을_섞으면_그_문제에_쓸_수준이_없어_거절한다() {
+		// 객관식은 창조로 낼 수 없으므로 어떤 답이 와도 검증을 통과하지 못한다 (모델 호출만 쓰고 502)
+		assertThatThrownBy(() -> BloomPlan.targets(QuizMode.WORK, List.of(BloomLevel.CREATE),
+				List.of(QuestionType.MULTIPLE_CHOICE, QuestionType.ESSAY))).isInstanceOf(IllegalArgumentException.class)
+				.hasMessage(BloomPlan.CREATE_ONLY_WITH_OTHER_TYPES_MESSAGE);
+		assertThat(BloomPlan.targets(QuizMode.WORK, List.of(BloomLevel.CREATE, BloomLevel.APPLY),
+				List.of(QuestionType.MULTIPLE_CHOICE, QuestionType.ESSAY))).containsExactly(BloomLevel.APPLY,
+						BloomLevel.CREATE);
+		assertThat(BloomPlan.targets(QuizMode.WORK, List.of(BloomLevel.CREATE), List.of(QuestionType.ESSAY)))
+				.containsExactly(BloomLevel.CREATE);
+	}
+
+	@Test
 	void 다뤄야_하는_서로_다른_수준_수와_저장_형식() {
 		List<BloomLevel> four = BloomPlan.defaults(QuizMode.EXAM_PREP);
 		assertThat(BloomPlan.requiredDistinct(four, 2)).isEqualTo(2);

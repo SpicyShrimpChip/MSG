@@ -20,14 +20,15 @@ import java.util.regex.Pattern;
  * <li>고르기(select): 개념 이름이 많이 나오는 부분부터 글자 수 예산 안에서 고른다. 개념이 나오지 않는 부분은 예산이 남아도 보내지 않는다.
  * 어느 부분에도 개념이 나오지 않으면 앞에서부터 채운다(filtered=false, 화면에 "관련 부분을 찾지 못해 앞부분으로 만들었어요"를 보여 줄 수 있게). 고른 부분은 원래 순서로, 위치 표시를 붙여 돌려준다.</li>
  * <li>인용 확인(check): 실제로 보낸 글 안에서 찾는다. 공백·대소문자 차이는 무시한다(PDF 줄바꿈 때문). 그대로 있으면 VERIFIED,
- * 한 부분 안에 인용 낱말이 60% 이상 있으면 PARTIAL, 아니면 FAILED, 인용이 없거나 너무 짧으면 INSUFFICIENT.
+ * 한 부분 안에 인용 낱말이 60% 이상 있으면 PARTIAL, 아니면 FAILED, 인용이 없거나 너무 짧으면(10자 미만, 지시문은 10~200자) INSUFFICIENT.
+ * PARTIAL의 인용은 원문이 아니라 AI가 쓴 문장이므로 돌려주지 않는다(위치만 준다). 화면이 원문 인용으로 보여 주지 않게.
  * 위치는 AI가 적은 값이 아니라 인용을 찾은 자리 앞의 마지막 위치 표시다.</li>
  * </ul>
  * 인용이 원문에 있다는 것만 확인한다. 그 인용을 바탕으로 쓴 설명·정답이 사실인지는 확정하지 않는다.
  */
 public final class SourceText {
 
-	public static final int MIN_QUOTE_LENGTH = 4;
+	public static final int MIN_QUOTE_LENGTH = 10;
 	public static final int MAX_QUOTE_LENGTH = 300;
 	static final double PARTIAL_TOKEN_RATE = 0.6;
 	static final int PARTIAL_MIN_TOKENS = 3;
@@ -52,7 +53,7 @@ public final class SourceText {
 	public record Selection(String text, List<String> locations, boolean filtered, boolean truncated) {
 	}
 
-	/** 인용 확인 결과. quote는 확인을 거친 인용(FAILED·INSUFFICIENT면 null), location은 서버가 찾은 위치 */
+	/** 인용 확인 결과. quote는 원문에 그대로 있는 인용(VERIFIED일 때만, 나머지는 null), location은 서버가 찾은 위치 */
 	public record QuoteCheck(VerificationStatus status, String quote, String location, String sectionText) {
 	}
 
@@ -220,7 +221,7 @@ public final class SourceText {
 				}
 			}
 			if (best != null && bestRate >= PARTIAL_TOKEN_RATE) {
-				return new QuoteCheck(VerificationStatus.PARTIAL, trimmed, best.location(), best.text());
+				return new QuoteCheck(VerificationStatus.PARTIAL, null, best.location(), best.text());
 			}
 		}
 		return new QuoteCheck(VerificationStatus.FAILED, null, null, null);

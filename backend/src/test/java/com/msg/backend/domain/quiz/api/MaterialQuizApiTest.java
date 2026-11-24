@@ -150,6 +150,14 @@ class MaterialQuizApiTest {
 				Integer.class)).isZero();
 	}
 
+	@Test
+	void 창조만_고르고_객관식을_섞으면_모델을_부르지_않고_400과_안내를_준다() throws Exception {
+		create(body(List.of("RSA"), false, List.of("multiple_choice", "essay"), 2, List.of("create")))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value(containsString("객관식·주관식에 쓸 수준")));
+		assertThat(fakeLlm.get(LlmProvider.GPT).requests()).isEmpty();
+	}
+
 	// 객관식 한 문제 (근거 문장·위치를 바꿔 넣는다)
 	private static String question(String quote, String location) {
 		return "{\"questions\":[{\"type\":\"multiple_choice\",\"concepts\":[\"RSA\"],\"bloomLevel\":\"remember\","
