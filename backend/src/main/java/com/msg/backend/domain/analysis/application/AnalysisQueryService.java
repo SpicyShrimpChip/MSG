@@ -235,7 +235,7 @@ public class AnalysisQueryService {
 				misconceptions, quiz == null ? null
 						: new ConceptVerification.Quiz(quiz.gradedCount(), quiz.score(), quiz.maxScore(),
 								quiz.pendingCount() + quiz.reviewCount())),
-				QuizStatsService.CONFIRM_MIN_GRADED, quizProperties.assessment().conceptMinRate());
+				quizProperties.assessment().confirmMinGraded(), quizProperties.assessment().conceptMinRate());
 		return new AnalysisRunResponse.Verification(result.status().apiValue(), result.reasons(), result.holdReason(),
 				result.quizComparison(), result.recommendCheckQuiz());
 	}

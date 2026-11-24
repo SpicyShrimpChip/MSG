@@ -6,7 +6,6 @@ import com.msg.backend.domain.material.entity.Material;
 import com.msg.backend.domain.material.entity.MaterialConcept;
 import com.msg.backend.domain.quiz.application.QuizAssessor;
 import com.msg.backend.domain.quiz.application.QuizProperties;
-import com.msg.backend.domain.quiz.application.QuizStatsService;
 import com.msg.backend.domain.quiz.dao.QuizAnswerRepository;
 import com.msg.backend.domain.quiz.dao.QuizQuestionRepository;
 import com.msg.backend.domain.quiz.dao.QuizRepository;
@@ -210,8 +209,8 @@ public class ConceptStudyService {
 				.collect(Collectors.groupingBy(QuizQuestion::getQuizId));
 	}
 
-	private static int minGraded() {
-		return QuizStatsService.CONFIRM_MIN_GRADED;
+	private int minGraded() {
+		return properties.assessment().confirmMinGraded();
 	}
 
 	private ConceptStudyRules.Status status(ConceptStudyProgress progress, Checks checks) {

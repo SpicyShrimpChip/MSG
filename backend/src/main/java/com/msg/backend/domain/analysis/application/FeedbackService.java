@@ -13,7 +13,6 @@ import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -67,12 +66,9 @@ public class FeedbackService {
 		} else {
 			feedback.change(type, comment, request.analysisRunId(), now);
 		}
-		try {
-			return FeedbackResponse.from(feedbackRepository.saveAndFlush(feedback));
-		} catch (DataIntegrityViolationException e) {
-			// 같은 개념 피드백을 거의 동시에 두 번 만든 경우
-			throw new BusinessException(HttpStatus.CONFLICT, "다른 요청과 겹쳐 저장하지 못했어요. 다시 시도해 주세요.");
-		}
+		// 같은 개념 피드백을 거의 동시에 두 번 만들면 UNIQUE 위반이 여기서 바로 나고, 전역 처리가 409로 알린다
+		// (UNIQUE가 아닌 제약 위반은 400. GlobalExceptionHandler.handleDataIntegrity)
+		return FeedbackResponse.from(feedbackRepository.saveAndFlush(feedback));
 	}
 
 	// 피드백 취소
