@@ -1,5 +1,4 @@
 import init, {
-  crc32 as wasmCrc32,
   inflate_entry,
   mask_texts,
 } from '@/wasm/conversation-core/conversation_core';
@@ -59,9 +58,4 @@ export function coreInflateEntry(
 ): Uint8Array {
   ensureReady();
   return inflate_entry(compressed, method, uncompressedSize, crc);
-}
-
-export function coreCrc32(data: Uint8Array): number {
-  ensureReady();
-  return wasmCrc32(data);
 }

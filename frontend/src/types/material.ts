@@ -1,3 +1,5 @@
+import type { SourceCheck } from './quiz';
+
 // 자료 올리기 응답 (POST /api/materials). courseId: 과목 없이 올린 자료는 null
 export interface Material {
   id: number;
@@ -82,7 +84,7 @@ export interface StudySummaryItem {
   basis: 'material' | 'supplement';
   quote: string | null;
   location: string | null;
-  check: 'verified' | 'partial' | 'failed' | 'insufficient' | null;
+  check: SourceCheck | null;
 }
 
 // 자료 요약본 (GET·POST /api/materials/{id}/summary, 백엔드 StudySummaryResponse)

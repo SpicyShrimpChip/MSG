@@ -10,6 +10,8 @@ export type BloomLevel =
   'remember' | 'understand' | 'apply' | 'analyze' | 'evaluate' | 'create';
 // 원문 근거 검증 상태 (서버가 원문과 문자열로 대조한 결과). 인용이 원문에 있다는 것만 확인한 값이다
 export type SourceCheck = 'verified' | 'partial' | 'failed' | 'insufficient';
+// 개념에 남긴 내 피드백 (이미 알아요 / 더 공부할래요). 학습 분석·커리큘럼·퀴즈 결과가 함께 쓴다
+export type ConceptFeedbackType = 'already_know' | 'want_to_study';
 
 // 퀴즈 목록 한 줄 (GET /api/quizzes)
 export interface QuizSummary {
@@ -270,7 +272,7 @@ export interface QuizGenerationStatus {
 
 // 과목의 개념별 퀴즈 결과 (GET /api/quizzes/concept-stats?courseId=)
 export interface ConceptQuizStats extends QuizConceptStat {
-  feedback: 'already_know' | 'want_to_study' | null;
+  feedback: ConceptFeedbackType | null;
   // 이미 알아요를 남긴 뒤 푼 문제로 확인한 결과
   confirmation:
     'confirmed' | 'not_confirmed' | 'needs_check' | 'not_taken' | null;

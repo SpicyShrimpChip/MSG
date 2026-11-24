@@ -1,6 +1,6 @@
 // 맞춤 학습 순서 (GET /api/curriculum/courses/{courseId}). 백엔드 CurriculumResponse와 같은 모양.
 // 순서·단계·이유(reasons)는 서버 코드 규칙(파랑)이고, aiSuggestions만 AI가 퀴즈를 만들 때 제안한 개념(보라)이다
-import type { QuizMode } from './quiz';
+import type { ConceptFeedbackType, QuizMode, SuggestionKind } from './quiz';
 import type { ConceptStudy } from './study';
 
 export type CurriculumStage =
@@ -28,7 +28,7 @@ export interface CurriculumStep {
     reviewCount: number;
     analysisStatus: string | null;
     analysisOutcome: string | null;
-    feedback: 'already_know' | 'want_to_study' | null;
+    feedback: ConceptFeedbackType | null;
     confirmation: string | null;
   };
   actions: {
@@ -53,7 +53,7 @@ export interface Curriculum {
   materials: { id: number; title: string }[];
   // AI가 퀴즈를 만들 때 제안한 개념 (실제 학습 결과가 아님)
   aiSuggestions: {
-    kind: 'next' | 'prerequisite' | 'related';
+    kind: SuggestionKind;
     concept: string;
     aiReason: string | null;
   }[];

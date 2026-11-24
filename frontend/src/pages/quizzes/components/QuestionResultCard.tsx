@@ -16,7 +16,7 @@ import {
 } from '@/components';
 import { QUESTION_TYPE_LABELS } from '@/constants';
 import type { QuizQuestion, QuizResultItem, RubricLevel } from '@/types';
-import { BLOOM_LABEL, SOURCE_CHECK_LABEL, cn, sourceCheckTone } from '@/utils';
+import { BLOOM_LABEL, SOURCE_CHECK_LABEL, cn } from '@/utils';
 
 const LEVEL_LABEL: Record<RubricLevel, string> = {
   met: '충족',
@@ -309,7 +309,7 @@ function QuestionResultCard({
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-caption font-bold text-heading">자료 근거</p>
             <VerificationBadge
-              status={sourceCheckTone(item.source.check)}
+              status={item.source.check}
               label={SOURCE_CHECK_LABEL[item.source.check]}
             />
             {item.source.answerInSource !== null && (

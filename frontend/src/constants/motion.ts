@@ -24,10 +24,7 @@ export const PILL_TRAIL_SPRING = {
 
 // 상단바 숨기기·다시 보이기 (Header). 숨을 때는 빠르게 위로 빠지고,
 // 나올 때는 스프링으로 살짝 지나쳤다가 탄력 있게 제자리를 잡는다
-export const HEADER_HIDE_TRANSITION = {
-  duration: MOTION_DURATION.base,
-  ease: MOTION_EASE,
-} as const;
+export const HEADER_HIDE_TRANSITION = MOTION_TRANSITION;
 export const HEADER_SHOW_SPRING = {
   type: 'spring',
   stiffness: 500,

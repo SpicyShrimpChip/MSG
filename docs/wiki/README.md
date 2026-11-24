@@ -48,6 +48,7 @@
 - border-beam 빛이 밝은 화면에서 거의 안 보이고 화면 모드를 안 따라간다
 - 좌우로 나눈 표·상세에서 표 옆이 크게 빈다
 - `disabled={isPending}`만으로는 저장 버튼 더블클릭을 못 막는다
+- `src` 안 테스트에서 `node:` 모듈을 가져오면 build가 깨진다
 
 ### [tooling.md](tooling.md): CI·Git·배포
 

@@ -1,10 +1,22 @@
 import { deflateSync, strToU8 } from 'fflate';
 import { describe, expect, it } from 'vitest';
-import { crc32 } from './zipReader';
 import { readExportZip } from './archive';
 
 // 테스트 안에서 가짜 zip을 직접 만든다 (실제 내보내기 파일은 레포에 넣지 않는다)
 // fflate의 zipSync는 ZIP64 확장 필드·잘린 파일을 못 만들어서 바이트를 직접 조립한다
+
+// 가짜 zip 헤더에 넣을 CRC-32 (zip 표준 다항식). 러스트 WASM과 따로 세서 풀 때의 CRC 확인을 검사한다.
+// node:zlib의 crc32는 앱 tsconfig에 Node 타입이 없어 build(tsc -b)가 깨지므로 직접 센다
+function crc32(data: Uint8Array): number {
+  let crc = 0xffffffff;
+  for (const byte of data) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit++) {
+      crc = crc & 1 ? (crc >>> 1) ^ 0xedb88320 : crc >>> 1;
+    }
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
 
 interface FakeEntry {
   name: string;

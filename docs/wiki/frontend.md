@@ -120,3 +120,10 @@
 - 원인: `isPending`은 `mutate` 뒤 화면을 다시 그려야 버튼에 반영된다. 그 전에 들어온 두 번째 클릭은 아직 눌리는 버튼이라 또 보낸다. 핸들러 안의 `if (mutation.isPending) return`도 같은 렌더의 옛 값을 본다.
 - 해결: 서버 데이터를 바꾸는 `useMutation`을 모두 `useSingleFlightMutation`(`hooks/`)으로 바꿨다. `mutate` 직전에 동기 잠금(`utils/submitLock.ts`)을 걸고 `onSettled`에서 푼다. 자료 올리기는 서버도 요청 키(`requestKey`)로 같은 올리기를 한 번만 저장한다.
 - 다음에는: 저장 버튼에 새 mutation을 만들 때 `useMutation` 대신 `useSingleFlightMutation`을 쓴다. 파일·비용이 큰 요청은 서버 요청 키도 함께 둔다.
+
+## `src` 안 테스트에서 `node:` 모듈을 가져오면 build가 깨진다 (2026-11-25, #240)
+
+- 상황: `zipReader.test.ts`의 CRC 계산을 `node:zlib`의 `crc32`로 바꿨다. `npm test`는 통과했다.
+- 원인: `tsconfig.app.json`이 `src` 전체(테스트 포함)를 검사하는데 `types`가 `vite/client`뿐이라 `tsc -b`가 `node:zlib`를 못 찾는다(TS2591). Node 타입을 쓰는 테스트 초기화(`src/test`)는 그래서 검사에서 빼 두었다.
+- 해결: Node 타입을 앱 전체에 열지 않고, 테스트 안에 CRC-32를 직접 적었다.
+- 다음에는: 테스트에서 Node 전용 모듈이 필요하면 `npm test`만 보지 말고 `npm run build`까지 돌려 본다.

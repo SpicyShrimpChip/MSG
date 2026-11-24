@@ -2,18 +2,18 @@ import { Outlet } from 'react-router-dom';
 import { ShieldAlert } from 'lucide-react';
 import { EmptyState, LoadingFallback, SubPage } from '@/components';
 import { useMe } from '@/hooks';
-import { MOCK_OPEN_ACCESS, NO_BACKEND, useDemoStore } from '@/store';
+import { MOCK_OPEN_ACCESS, useMockData } from '@/store';
 
 // 관리자 화면을 감싸는 가드. 반드시 RequireAuth 안에 둔다 (로그인 확인은 거기서 한다).
 // 이 가드는 안내용일 뿐이고, 진짜 권한은 서버가 요청마다 확인한다 (/api/admin/**).
 // 목업 모드에는 관리자 계정이 없어서 체험 모드에서도 열지 않는다 (개발 중 VITE_MOCK_OPEN_ACCESS=true만 예외)
 function RequireAdmin() {
   const { data: me, isPending } = useMe();
-  const demoActive = useDemoStore((state) => state.active);
-  // 체험이거나 백엔드가 없으면 관리자 계정이 없다
-  const noAdmin = NO_BACKEND || demoActive;
+  // 체험이거나 백엔드가 없으면(= 목업 데이터를 읽으면) 관리자 계정이 없다
+  const noAdmin = useMockData();
 
-  if (NO_BACKEND && MOCK_OPEN_ACCESS) return <Outlet />;
+  // MOCK_OPEN_ACCESS는 백엔드가 없는 빌드에서만 켜진다 (store/useDemoStore.ts)
+  if (MOCK_OPEN_ACCESS) return <Outlet />;
   if (!noAdmin && isPending) return <LoadingFallback />;
   if (noAdmin || me?.role !== 'ADMIN') {
     return (
