@@ -4,14 +4,14 @@ import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { ClipboardCheck, FileText, Lock } from 'lucide-react';
 import {
   ASSESSMENTS_QUERY_KEY,
-  MATERIALS_QUERY_KEY,
   QUIZZES_QUERY_KEY,
   createAssessment,
-  getAssessmentComparison,
-  getMaterials,
+  materialAssessmentComparisonQuery,
+  quizQuery,
 } from '@/api';
 import { useMockData } from '@/store';
 import {
+  useMaterials,
   useQuizAiStatus,
   useSuspenseMe,
   useSingleFlightMutation,
@@ -110,10 +110,9 @@ function MaterialAssessment({
   const mockData = useMockData();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { data: comparison } = useSuspenseQuery({
-    queryKey: [...ASSESSMENTS_QUERY_KEY, 'comparison', 'material', material.id],
-    queryFn: () => getAssessmentComparison({ materialId: material.id }),
-  });
+  const { data: comparison } = useSuspenseQuery(
+    materialAssessmentComparisonQuery(material.id),
+  );
   const { data: ai } = useQuizAiStatus();
   const [typeSet, setTypeSet] = useState(3); // 객관식 + 주관식
   const [count, setCount] = useState(6);
@@ -145,7 +144,7 @@ function MaterialAssessment({
     },
     onSuccess: (quiz) => {
       setRequestKey(createRequestKey());
-      queryClient.setQueryData([...QUIZZES_QUERY_KEY, quiz.id], quiz);
+      queryClient.setQueryData(quizQuery(quiz.id).queryKey, quiz);
       void queryClient.invalidateQueries({ queryKey: ASSESSMENTS_QUERY_KEY });
       void queryClient.invalidateQueries({
         queryKey: QUIZZES_QUERY_KEY,
@@ -362,10 +361,7 @@ function MaterialAssessment({
 
 function MaterialPicker({ me }: { me: User | null }) {
   const [params] = useSearchParams();
-  const { data: materials } = useSuspenseQuery({
-    queryKey: MATERIALS_QUERY_KEY,
-    queryFn: getMaterials,
-  });
+  const { data: materials } = useMaterials();
   const linked = materials.filter((item) => item.courseId !== null);
   const initial = Number(params.get('materialId'));
   const [materialId, setMaterialId] = useState<number | null>(

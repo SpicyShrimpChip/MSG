@@ -1,3 +1,4 @@
+import { queryOptions } from '@tanstack/react-query';
 import type {
   Quiz,
   QuizAnswer,
@@ -19,9 +20,23 @@ import {
 import { isMockData } from '@/store/useDemoStore';
 import { AI_REQUEST_TIMEOUT_MS, request } from './request';
 
-// React Query에서 퀴즈를 담는 키. 한 퀴즈는 [...QUIZZES_QUERY_KEY, id], 최근 결과는 [...QUIZZES_QUERY_KEY, id, 'result'],
-// 과목의 개념별 결과는 [...QUIZZES_QUERY_KEY, 'concept-stats', courseId]
+// React Query에서 퀴즈를 담는 키. 목록은 이 키 그대로(무효화할 때 exact), 한 퀴즈는 quizQuery,
+// 최근 결과는 quizResultQuery, 만들기 요청 상태는 [...QUIZZES_QUERY_KEY, 'generation', requestKey]
 export const QUIZZES_QUERY_KEY = ['quizzes'] as const;
+
+// 퀴즈 하나. 만들기 직후 이 키에 넣어 두면 풀기 화면이 다시 부르지 않는다
+export const quizQuery = (id: number) =>
+  queryOptions({
+    queryKey: [...QUIZZES_QUERY_KEY, id],
+    queryFn: () => getQuiz(id),
+  });
+
+// 퀴즈의 최근 결과 (안 풀었으면 null). 제출·다시 채점 결과를 이 키에 넣는다
+export const quizResultQuery = (id: number) =>
+  queryOptions({
+    queryKey: [...QUIZZES_QUERY_KEY, id, 'result'],
+    queryFn: () => getLatestQuizResult(id),
+  });
 
 // 백엔드 구현됨 (11/2 풀기·채점, 11/3 만들기·주관식·서술형, Swagger `퀴즈`, docs/frontend-requests.md "퀴즈")
 export function getQuizzes(): Promise<QuizSummary[]> {

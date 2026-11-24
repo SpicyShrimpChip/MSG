@@ -3,8 +3,8 @@ import { useSingleFlightMutation } from '@/hooks';
 import { BookCheck, CircleAlert, ListChecks, RotateCcw } from 'lucide-react';
 import {
   CURRICULUM_QUERY_KEY,
-  STUDY_QUERY_KEY,
   completeConceptStudy,
+  conceptStudiesQuery,
 } from '@/api';
 import { useMockData } from '@/store';
 import { Button, ErrorText, StudyStatusBadge, Spinner } from '@/components';
@@ -30,8 +30,8 @@ function ConceptStudyActions({
   const mutation = useSingleFlightMutation({
     mutationFn: () => completeConceptStudy(materialId, study.conceptId),
     onSuccess: (next) => {
-      queryClient.setQueryData<ConceptStudy[]>(
-        [...STUDY_QUERY_KEY, materialId],
+      queryClient.setQueryData(
+        conceptStudiesQuery(materialId).queryKey,
         (prev) =>
           prev?.map((item) =>
             item.conceptId === next.conceptId ? next : item,

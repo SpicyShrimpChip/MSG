@@ -1,7 +1,7 @@
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { FileCheck, ListChecks, TriangleAlert, Video } from 'lucide-react';
-import { MATERIALS_QUERY_KEY, getMaterial } from '@/api';
+import { materialQuery } from '@/api';
 import {
   AiLegend,
   AiOrb,
@@ -130,10 +130,7 @@ function MaterialDetailContent({ materialId }: { materialId: number }) {
   const [params] = useSearchParams();
   const focusConceptId = params.get('concept');
   const initialTab = params.get('tab') ?? (focusConceptId ? 'concepts' : null);
-  const { data: material } = useSuspenseQuery({
-    queryKey: [...MATERIALS_QUERY_KEY, materialId],
-    queryFn: () => getMaterial(materialId),
-  });
+  const { data: material } = useSuspenseQuery(materialQuery(materialId));
   const { data: courses } = useCourses();
   const course = courses.find((item) => item.id === material.courseId);
   const date = formatDate(material.createdAt);

@@ -1,17 +1,11 @@
 import { useParams } from 'react-router-dom';
-import {
-  useQueryClient,
-  useSuspenseQueries,
-  useSuspenseQuery,
-} from '@tanstack/react-query';
-import { useSingleFlightMutation } from '@/hooks';
+import { useQueryClient, useSuspenseQueries } from '@tanstack/react-query';
+import { useConceptStudies, useSingleFlightMutation } from '@/hooks';
 import { BookText, ListChecks, RefreshCw } from 'lucide-react';
 import {
   QUIZZES_QUERY_KEY,
-  STUDY_QUERY_KEY,
-  getConceptStudies,
-  getLatestQuizResult,
-  getQuiz,
+  quizQuery,
+  quizResultQuery,
   regradeQuiz,
 } from '@/api';
 import {
@@ -272,10 +266,7 @@ function Breakdown({ result }: { result: QuizResult }) {
 // 개념 확인 퀴즈 결과: 그 개념의 학습 상태(서버 코드 규칙)와 개념·커리큘럼으로 돌아가는 길
 function CheckTopicResult({ quiz }: { quiz: Quiz }) {
   const topic = quiz.checkTopic!;
-  const { data: studies } = useSuspenseQuery({
-    queryKey: [...STUDY_QUERY_KEY, topic.materialId],
-    queryFn: () => getConceptStudies(topic.materialId),
-  });
+  const { data: studies } = useConceptStudies(topic.materialId);
   const study = studies.find((item) => item.conceptId === topic.topicId);
   return (
     <Card
@@ -320,21 +311,12 @@ function CheckTopicResult({ quiz }: { quiz: Quiz }) {
 function QuizResultContent({ quizId }: { quizId: number }) {
   const queryClient = useQueryClient();
   const [{ data: quiz }, { data: result }] = useSuspenseQueries({
-    queries: [
-      {
-        queryKey: [...QUIZZES_QUERY_KEY, quizId],
-        queryFn: () => getQuiz(quizId),
-      },
-      {
-        queryKey: [...QUIZZES_QUERY_KEY, quizId, 'result'],
-        queryFn: () => getLatestQuizResult(quizId),
-      },
-    ],
+    queries: [quizQuery(quizId), quizResultQuery(quizId)],
   });
   const regrade = useSingleFlightMutation({
     mutationFn: (submissionId: number) => regradeQuiz(quizId, submissionId),
     onSuccess: (next) => {
-      queryClient.setQueryData([...QUIZZES_QUERY_KEY, quizId, 'result'], next);
+      queryClient.setQueryData(quizResultQuery(quizId).queryKey, next);
       void queryClient.invalidateQueries({
         queryKey: QUIZZES_QUERY_KEY,
         exact: true,

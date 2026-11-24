@@ -3,12 +3,11 @@ import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { BookOpen, ChevronDown, Lock, Quote } from 'lucide-react';
 import {
   CURRICULUM_QUERY_KEY,
-  MATERIALS_QUERY_KEY,
-  STUDY_QUERY_KEY,
+  conceptStudiesQuery,
   createConceptStudyNote,
   extractMaterialConcepts,
-  getConceptStudies,
-  getMaterialConcepts,
+  materialConceptsQuery,
+  materialQuery,
 } from '@/api';
 import { useMockData } from '@/store';
 import {
@@ -21,7 +20,12 @@ import {
   Notice,
   StudyStatusBadge,
 } from '@/components';
-import { useMe, useQuizAiStatus, useSingleFlightMutation } from '@/hooks';
+import {
+  useConceptStudies,
+  useMe,
+  useQuizAiStatus,
+  useSingleFlightMutation,
+} from '@/hooks';
 import type { ConceptStudy, MaterialConcept, QuizAiStatus } from '@/types';
 import { CONTENT_DISABLED_MESSAGE } from '@/constants';
 import { cn, isReadable } from '@/utils';
@@ -127,15 +131,15 @@ function ConceptCard({
         materialContentConsent: true,
       }),
     onSuccess: (next) => {
-      queryClient.setQueryData<MaterialConcept[]>(
-        [...MATERIALS_QUERY_KEY, materialId, 'concepts'],
+      queryClient.setQueryData(
+        materialConceptsQuery(materialId).queryKey,
         (prev) =>
           prev?.map((item) =>
             item.conceptId === next.conceptId ? next : item,
           ),
       );
       void queryClient.invalidateQueries({
-        queryKey: [...MATERIALS_QUERY_KEY, materialId],
+        queryKey: materialQuery(materialId).queryKey,
         exact: true,
       });
       void queryClient.invalidateQueries({ queryKey: CURRICULUM_QUERY_KEY });
@@ -293,16 +297,12 @@ function MaterialConceptPanel({
   const mockData = useMockData();
   const queryClient = useQueryClient();
   const { data: me } = useMe();
-  const { data: concepts } = useSuspenseQuery({
-    queryKey: [...MATERIALS_QUERY_KEY, materialId, 'concepts'],
-    queryFn: () => getMaterialConcepts(materialId),
-  });
+  const { data: concepts } = useSuspenseQuery(
+    materialConceptsQuery(materialId),
+  );
   const { data: ai } = useQuizAiStatus();
   // 개념별 학습 기록·확인 퀴즈 결과 (실제 모드는 서버 DB, 체험 모드는 이 브라우저)
-  const { data: studies } = useSuspenseQuery({
-    queryKey: [...STUDY_QUERY_KEY, materialId],
-    queryFn: () => getConceptStudies(materialId),
-  });
+  const { data: studies } = useConceptStudies(materialId);
   const [confirmed, setConfirmed] = useState(false);
 
   const mutation = useSingleFlightMutation({
@@ -310,17 +310,17 @@ function MaterialConceptPanel({
       extractMaterialConcepts(materialId, { materialContentConsent: true }),
     onSuccess: (next) => {
       queryClient.setQueryData(
-        [...MATERIALS_QUERY_KEY, materialId, 'concepts'],
+        materialConceptsQuery(materialId).queryKey,
         next,
       );
       void queryClient.invalidateQueries({
-        queryKey: [...MATERIALS_QUERY_KEY, materialId],
+        queryKey: materialQuery(materialId).queryKey,
         exact: true,
       });
       void queryClient.invalidateQueries({ queryKey: CURRICULUM_QUERY_KEY });
       // 다시 뽑으면 개념 목록이 바뀌므로 학습 상태도 다시 읽는다 (기록은 개념 키로 이어진다)
       void queryClient.invalidateQueries({
-        queryKey: [...STUDY_QUERY_KEY, materialId],
+        queryKey: conceptStudiesQuery(materialId).queryKey,
       });
       setConfirmed(false);
     },

@@ -11,12 +11,7 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react';
-import {
-  ASSESSMENTS_QUERY_KEY,
-  CURRICULUM_QUERY_KEY,
-  getAssessmentComparison,
-  getCurriculum,
-} from '@/api';
+import { assessmentComparisonQuery, curriculumQuery } from '@/api';
 import { ScoreBar } from '@/components';
 import type { AnalysisRun, MasteryStage } from '@/types';
 import {
@@ -97,10 +92,9 @@ const MORE_LINK = 'text-caption font-bold text-primary hover:underline';
 
 // 사전→사후평가 (과목 단위, 아래 자세한 비교 영역과 같은 조회라 다시 부르지 않는다)
 function AssessmentTile({ courseId }: { courseId: number }) {
-  const { data, isPending, isError } = useQuery({
-    queryKey: [...ASSESSMENTS_QUERY_KEY, 'comparison', courseId],
-    queryFn: () => getAssessmentComparison({ courseId }),
-  });
+  const { data, isPending, isError } = useQuery(
+    assessmentComparisonQuery(courseId),
+  );
   const more = (
     <a href={`#${ASSESSMENT_ANCHOR}`} className={MORE_LINK}>
       자세히
@@ -158,10 +152,7 @@ function AssessmentTile({ courseId }: { courseId: number }) {
 
 // 학습 진도 (커리큘럼 응답의 flow.progress, 아래 자세한 진도 영역과 같은 조회)
 function ProgressTile({ courseId }: { courseId: number }) {
-  const { data, isPending, isError } = useQuery({
-    queryKey: [...CURRICULUM_QUERY_KEY, courseId],
-    queryFn: () => getCurriculum(courseId),
-  });
+  const { data, isPending, isError } = useQuery(curriculumQuery(courseId));
   const progress = data?.flow.progress;
   const keyword = data ? keywordQuizProgress(data.flow.concepts) : null;
   // 자료 개념이 없고 과목 키워드만 있으면 퀴즈로 확인한 키워드 수를 센다
