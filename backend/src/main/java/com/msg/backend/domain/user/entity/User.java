@@ -26,8 +26,8 @@ public class User {
 	@Column(nullable = false, unique = true, length = 254)
 	private String email;
 
-	// BCrypt 해시. 응답 DTO로 내보내지 않는다
-	@Column(nullable = false, length = 100)
+	// BCrypt 해시. 응답 DTO로 내보내지 않는다. 카카오로만 가입한 사용자는 null (V3, 비밀번호 로그인이 늘 실패한다)
+	@Column(length = 100)
 	private String passwordHash;
 
 	@Column(nullable = false, length = 30)
@@ -90,6 +90,16 @@ public class User {
 		user.createdAt = now;
 		user.updatedAt = now;
 		return user;
+	}
+
+	// 소셜 로그인(카카오)으로 가입한다. 비밀번호는 없고, 필수 동의는 가입 마무리 화면에서 확인한 상태로 만든다
+	public static User signUpWithSocial(String email, String name, boolean aiAnalysisConsent, LocalDateTime now) {
+		return signUp(email, null, name, aiAnalysisConsent, now);
+	}
+
+	// 비밀번호로 로그인할 수 있는지 (카카오로만 가입했으면 false)
+	public boolean hasPassword() {
+		return passwordHash != null;
 	}
 
 	/**

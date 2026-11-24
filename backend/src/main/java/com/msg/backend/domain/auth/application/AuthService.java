@@ -104,6 +104,11 @@ public class AuthService {
 			throw loginFailed(email, clientIp);
 		}
 		User user = found.get();
+		if (!user.hasPassword()) {
+			// 카카오로만 가입한 계정: 없는 계정과 같은 시간·같은 문구로 실패한다(가입 방식을 드러내지 않는다)
+			passwordMatches(request.password(), dummyPasswordHash);
+			throw loginFailed(email, clientIp);
+		}
 		if (!passwordMatches(request.password(), user.getPasswordHash())) {
 			throw loginFailed(email, clientIp);
 		}

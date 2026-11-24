@@ -19,13 +19,13 @@ import org.springframework.test.context.ContextConfiguration;
  * 모든 통합 테스트가 같은 설정을 써서 스프링 컨텍스트 하나를 같이 쓴다.
  * TestDatabaseGuard가 서비스 DB(msg)에서는 실행되지 않게 막고,
  * TestStorage가 파일 저장소를 매번 새 임시 폴더로 바꾼다(개발용 업로드 폴더를 건드리지 않는다).
- * TestLlm·FakeLlmClients로 실제 AI 제공사는 부르지 않는다.
+ * TestLlm·FakeLlmClients로 실제 AI 제공사는, TestKakao·FakeKakaoServer로 실제 카카오는 부르지 않는다.
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @SpringBootTest
 @AutoConfigureMockMvc
-@ContextConfiguration(initializers = {TestDatabaseGuard.class, TestStorage.class, TestLlm.class})
+@ContextConfiguration(initializers = {TestDatabaseGuard.class, TestStorage.class, TestLlm.class, TestKakao.class})
 @Import(IntegrationTest.ClockConfig.class)
 public @interface IntegrationTest {
 
