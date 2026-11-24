@@ -181,7 +181,7 @@ class AssessmentApiTest {
 		useGenerator(LlmProvider.GPT);
 		long text = upload(token, courseId, "노트.md", "# NAT\nPAT는 포트로 단말을 나눈다".getBytes(), "text/markdown");
 		long slides = upload(token, courseId, "슬라이드.pptx",
-				TestFiles.pptxWithSlides("VLAN은 브로드캐스트 도메인을 나눈다", "트렁크 &amp; 태그"), null);
+				TestFiles.pptxWithSlides("VLAN은 브로드캐스트 도메인을 나눈다", "VLAN 트렁크 &amp; 태그", "오늘의 공지사항"), null);
 		long pdf = upload(token, courseId, "노트.pdf", TestFiles.pdf(), "application/pdf");
 		long personal = upload(token, courseId, "연락처.txt", "문의 me@example.com".getBytes(), "text/plain");
 
@@ -197,7 +197,9 @@ class AssessmentApiTest {
 
 		create(token, withContent(slides)).andExpect(status().isCreated())
 				.andExpect(jsonPath("$.data.materialContentUsed").value(true));
-		assertThat(lastPrompt()).contains("[슬라이드 1]", "VLAN은 브로드캐스트 도메인을 나눈다", "트렁크 & 태그");
+		// 개념(NAT·VLAN)이 나오는 슬라이드만 보낸다 (관련 없는 슬라이드는 보내지 않는다)
+		assertThat(lastPrompt()).contains("[슬라이드 1]", "VLAN은 브로드캐스트 도메인을 나눈다", "VLAN 트렁크 & 태그")
+				.doesNotContain("오늘의 공지사항");
 
 		// 글 없는 PDF(테스트 파일): 본문을 쓰지 않고 이유를 준다
 		create(token, withContent(pdf)).andExpect(status().isCreated())

@@ -336,6 +336,21 @@ function ConceptStudyStep({ flow }: { flow: CurriculumFlow }) {
                     {concept.materialTitle}
                   </p>
                 )}
+                {concept.priorityReasons &&
+                  concept.priorityReasons.length > 0 && (
+                    <details className="text-caption text-ink-soft">
+                      <summary className="cursor-pointer font-bold text-heading">
+                        {concept.priority || review
+                          ? '왜 먼저 공부하나요?'
+                          : '이 개념의 근거'}
+                      </summary>
+                      <ul className="mt-1 flex list-disc flex-col gap-0.5 pl-5">
+                        {concept.priorityReasons.map((reason) => (
+                          <li key={reason}>{reason}</li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
                 {link ? (
                   <Button
                     variant={

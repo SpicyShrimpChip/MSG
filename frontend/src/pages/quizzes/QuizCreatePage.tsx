@@ -1,8 +1,18 @@
 import { useEffect, useMemo, useState, type SubmitEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { FileText, Lock, Sparkles, Target } from 'lucide-react';
-import { QUIZZES_QUERY_KEY, createQuiz, getGenerationStatus } from '@/api';
+import {
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from '@tanstack/react-query';
+import { BookText, FileText, Lock, Sparkles, Target } from 'lucide-react';
+import {
+  MATERIALS_QUERY_KEY,
+  QUIZZES_QUERY_KEY,
+  createQuiz,
+  getGenerationStatus,
+  getMaterials,
+} from '@/api';
 import { useMockData } from '@/store';
 import {
   AiWaiting,
@@ -19,6 +29,7 @@ import {
   TextInput,
 } from '@/components';
 import {
+  CONTENT_DISABLED_MESSAGE,
   DIFFICULTIES,
   JOB_FIELDS,
   JOB_FIELD_OTHER_MAX,
@@ -29,12 +40,23 @@ import {
 import {
   useCourses,
   useProviders,
+  useQuizAiStatus,
   useSuspenseMe,
   useSingleFlightMutation,
 } from '@/hooks';
-import type { JobField, QuizDifficulty, QuizMode, User } from '@/types';
+import type {
+  BloomLevel,
+  JobField,
+  QuizDifficulty,
+  QuizMode,
+  User,
+} from '@/types';
 import {
+  BLOOM_LEVELS,
+  MODE_DEFAULT_BLOOM,
   cn,
+  effectiveBloomLevels,
+  isReadable,
   conceptStudyLink,
   createRequestKey,
   formatSemester,
@@ -113,6 +135,11 @@ function QuizCreateForm({ me }: { me: User | null }) {
   const [pendingKey, setPendingKey] = useState(loadPendingKey);
   const [recoveredMessage, setRecoveredMessage] = useState<string | null>(null);
   const { data: providers } = useProviders();
+  const { data: ai } = useQuizAiStatus();
+  const { data: materials } = useSuspenseQuery({
+    queryKey: MATERIALS_QUERY_KEY,
+    queryFn: getMaterials,
+  });
 
   // 확인 퀴즈 링크(대시보드 "이미 알아요")는 과목·모드·개념을 주소로 넘긴다
   const paramMode = params.get('mode');
@@ -151,6 +178,16 @@ function QuizCreateForm({ me }: { me: User | null }) {
   );
   const [jobFieldOther, setJobFieldOther] = useState(me?.jobFieldOther ?? '');
   const [mockExam, setMockExam] = useState(false);
+  // 평가할 인지 수준 (개정 블룸). 모드를 바꾸면 그 모드의 기본값으로
+  const [bloom, setBloom] = useState<BloomLevel[]>(
+    MODE_DEFAULT_BLOOM[defaultMode],
+  );
+  // 자료 기반 만들기: 고른 자료의 본문(서버가 고른 관련 부분)을 외부 AI로 보낸다. 확인 퀴즈는 그 자료로 정해져 있다
+  const [materialId, setMaterialId] = useState<number | null>(
+    check?.materialId ?? null,
+  );
+  const [useContent, setUseContent] = useState(false);
+  const [contentConsent, setContentConsent] = useState(false);
   // 같은 요청을 두 번 보내도 퀴즈가 하나만 생기도록 화면을 열 때·실패한 뒤마다 새 키를 만든다
   const [requestKey, setRequestKey] = useState(createRequestKey);
 
@@ -163,6 +200,20 @@ function QuizCreateForm({ me }: { me: User | null }) {
       ? MOCK_EXAM_MAX_QUESTIONS
       : QUIZ_MAX_QUESTIONS;
   const keywords = useMemo(() => course?.keywords ?? [], [course]);
+  const courseMaterials = materials.filter(
+    (item) => item.courseId === courseId,
+  );
+  const material = materials.find((item) => item.id === materialId) ?? null;
+  const bloomLevels = effectiveBloomLevels(bloom, types.includes('essay'));
+  const contentBlockedReason = !material
+    ? null
+    : !ai.materialContentEnabled
+      ? CONTENT_DISABLED_MESSAGE
+      : !isReadable(material.fileName)
+        ? '이 형식은 본문을 읽지 못해요. TXT·MD·PPTX·글이 들어 있는 PDF만 읽어요.'
+        : null;
+  const sendContent =
+    material !== null && useContent && contentBlockedReason === null;
 
   const mutation = useSingleFlightMutation({
     mutationFn: createQuiz,
@@ -201,6 +252,8 @@ function QuizCreateForm({ me }: { me: User | null }) {
     (!check && keywords.length === 0) ||
     tooFew ||
     count > maxCount ||
+    bloomLevels.length === 0 ||
+    (sendContent && !contentConsent) ||
     pendingKey !== null ||
     (!mockData && (configured.length === 0 || !me?.aiQuizConsent));
 
@@ -218,8 +271,11 @@ function QuizCreateForm({ me }: { me: User | null }) {
       concepts: check
         ? undefined
         : concepts.filter((concept) => keywords.includes(concept)),
-      materialId: check?.materialId,
+      materialId: check?.materialId ?? material?.id,
       checkConceptId: check?.conceptId,
+      bloomLevels,
+      useMaterialContent: sendContent ? true : undefined,
+      materialContentConsent: sendContent ? contentConsent : undefined,
       examScope:
         mode === 'exam_prep' && examScope.trim() ? examScope.trim() : undefined,
       jobField: mode === 'work' && jobField ? jobField : undefined,
@@ -269,6 +325,7 @@ function QuizCreateForm({ me }: { me: User | null }) {
                     checked={checked}
                     onChange={() => {
                       setMode(item.value);
+                      setBloom(MODE_DEFAULT_BLOOM[item.value]);
                       // 업무 활용은 상황 중심 서술형이 기본
                       if (item.value === 'work') setTypeSet(2);
                     }}
@@ -293,6 +350,8 @@ function QuizCreateForm({ me }: { me: User | null }) {
             onChange={(e) => {
               setCourseId(Number(e.target.value));
               setConcepts([]);
+              setMaterialId(null);
+              setUseContent(false);
             }}
           >
             {courses.map((item) => (
@@ -413,6 +472,141 @@ function QuizCreateForm({ me }: { me: User | null }) {
           </p>
         )}
 
+        <fieldset className="flex flex-col gap-2">
+          <legend className="mb-1 text-body font-bold text-heading">
+            평가할 인지 수준{' '}
+            <span className="font-medium text-ink-muted">
+              (개정 블룸 분류, 난이도와 별개)
+            </span>
+          </legend>
+          <div className="flex flex-wrap gap-2">
+            {BLOOM_LEVELS.map((level) => {
+              const on = bloom.includes(level.value);
+              const disabledCreate =
+                level.value === 'create' && !types.includes('essay');
+              return (
+                <button
+                  key={level.value}
+                  type="button"
+                  aria-pressed={on}
+                  title={level.description}
+                  disabled={disabledCreate}
+                  onClick={() =>
+                    setBloom((prev) =>
+                      on
+                        ? prev.filter((item) => item !== level.value)
+                        : [...prev, level.value],
+                    )
+                  }
+                  className={cn(
+                    'rounded-full border px-3 py-1.5 text-caption font-medium disabled:cursor-not-allowed disabled:opacity-50',
+                    on && !disabledCreate
+                      ? 'border-primary bg-primary-soft text-primary'
+                      : 'border-line-strong text-ink-soft hover:bg-surface-muted',
+                  )}
+                >
+                  {level.label}
+                  <span className="ml-1 text-ink-muted">
+                    {level.description}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-caption text-ink-muted">
+            학습 모드마다 평가하려는 능력이 달라 기본 수준이 달라요(시험 대비:
+            기억~분석, 자기개발: 이해~평가, 업무 활용: 적용~창조). 문제마다 AI가
+            수준을 지정하고, 서버는 고른 수준 안인지·창조는 서술형인지 같은
+            형식만 확인해요. 실제로 그 수준의 사고를 요구하는지는 코드로
+            판정하지 않아요.
+          </p>
+          {bloomLevels.length === 0 && (
+            <p role="alert" className="text-caption text-danger">
+              인지 수준을 하나 이상 골라 주세요. 창조 수준은 서술형이 있을 때만
+              평가할 수 있어요.
+            </p>
+          )}
+        </fieldset>
+
+        <fieldset className="flex flex-col gap-3 rounded-xl border border-line p-4">
+          <legend className="px-1 text-body font-bold text-heading">
+            <BookText
+              size={16}
+              className="mr-1 inline text-primary"
+              aria-hidden="true"
+            />
+            학습자료로 만들기 (선택)
+          </legend>
+          {check ? (
+            <p className="text-caption text-ink-soft">
+              확인 퀴즈는 개념을 뽑은 자료(
+              {material?.title ?? `자료 ${check.materialId}`})로 만들어요.
+            </p>
+          ) : (
+            <FormRow label="자료" htmlFor="quiz-material">
+              <SelectInput
+                id="quiz-material"
+                value={materialId ?? ''}
+                onChange={(e) => {
+                  setMaterialId(e.target.value ? Number(e.target.value) : null);
+                  setUseContent(false);
+                  setContentConsent(false);
+                }}
+              >
+                <option value="">자료 없이 과목 키워드로 만들기</option>
+                {courseMaterials.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.title} ({item.fileName})
+                  </option>
+                ))}
+              </SelectInput>
+            </FormRow>
+          )}
+          {material &&
+            (contentBlockedReason ? (
+              <p className="text-caption text-ink-soft">
+                {contentBlockedReason} 자료 본문 없이 과목 개념으로 만들어요.
+              </p>
+            ) : (
+              <>
+                <label className="flex items-start gap-3 text-body text-heading">
+                  <input
+                    type="checkbox"
+                    checked={useContent}
+                    onChange={(e) => {
+                      setUseContent(e.target.checked);
+                      if (!e.target.checked) setContentConsent(false);
+                    }}
+                    className="mt-1 size-4 accent-primary"
+                  />
+                  <span>
+                    <span className="font-bold">자료 본문을 근거로 만들기</span>
+                    <span className="block text-caption text-ink-soft">
+                      서버가 고른 개념이 나오는 쪽·슬라이드·문단만(최대
+                      12,000자) 보내고, 문제마다 근거 문장을 원문과 대조해 결과
+                      화면에 보여 줘요. 근거를 확인한 문제가 절반이 안 되면
+                      저장하지 않아요.
+                    </span>
+                  </span>
+                </label>
+                {useContent && (
+                  <label className="flex items-start gap-3 text-caption text-heading">
+                    <input
+                      type="checkbox"
+                      checked={contentConsent}
+                      onChange={(e) => setContentConsent(e.target.checked)}
+                      className="mt-0.5 size-4 accent-primary"
+                    />
+                    <span>
+                      이 자료의 본문 일부를 외부 생성형 AI로 보내는 것을
+                      확인했어요. 본인이 이용 권한이 있는 자료예요.
+                    </span>
+                  </label>
+                )}
+              </>
+            ))}
+        </fieldset>
+
         {mode === 'exam_prep' && !check && (
           <label className="flex items-start gap-3 text-body text-heading">
             <input
@@ -491,9 +685,9 @@ function QuizCreateForm({ me }: { me: User | null }) {
       </Card>
 
       <Notice icon={Lock} size="caption" iconClassName="text-primary">
-        퀴즈를 만들 때 외부 AI로는 과목 이름·개념·적은 시험 범위·직무 분야만
-        보내요. 가져온 대화와 학습자료 본문은 보내지 않아요. 자료 본문을 읽고
-        만드는 기능은 아직 없어서, 과목과 개념으로만 문제를 만들어요.
+        {sendContent
+          ? '외부 AI로는 과목 이름·개념·적은 시험 범위·직무 분야와, 확인하신 자료 본문 중 서버가 고른 관련 부분만 보내요. 가져온 대화는 보내지 않아요.'
+          : '퀴즈를 만들 때 외부 AI로는 과목 이름·개념·적은 시험 범위·직무 분야만 보내요. 가져온 대화와 학습자료 본문은 보내지 않아요. 이 퀴즈는 자료를 읽지 않고 과목과 개념으로 만들어요.'}
       </Notice>
 
       {!mockData && configured.length === 0 && (

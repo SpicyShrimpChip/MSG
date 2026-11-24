@@ -40,7 +40,7 @@ class MaterialTextExtractorTest {
 		}
 	};
 	private final MaterialTextExtractor extractor = new MaterialTextExtractor(storage,
-			new MaterialContentProperties(true, 12_000, 2));
+			new MaterialContentProperties(true, 12_000, 2, 60_000, 10));
 
 	@Test
 	void 텍스트_PDF는_쪽마다_표시를_붙여_읽는다() {
@@ -77,7 +77,7 @@ class MaterialTextExtractorTest {
 				TestFiles.pptxWithSlides("VLAN 나누기", "트렁크 &amp; 태그")));
 		assertThat(slides.text()).contains("[슬라이드 1]", "VLAN 나누기", "[슬라이드 2]", "트렁크 & 태그");
 
-		var text = new MaterialTextExtractor(storage, new MaterialContentProperties(true, 5, 10))
+		var text = new MaterialTextExtractor(storage, new MaterialContentProperties(true, 5, 10, 25, 10))
 				.extract(material(MaterialFileFormat.TXT, "가나다라마바사".getBytes(StandardCharsets.UTF_8)));
 		assertThat(text.text()).isEqualTo("가나다라마");
 		assertThat(text.truncated()).isTrue();

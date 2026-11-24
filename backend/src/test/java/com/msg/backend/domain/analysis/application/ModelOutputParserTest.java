@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.msg.backend.domain.analysis.entity.EvidenceKind;
+import com.msg.backend.domain.analysis.entity.LearningBehavior;
 import com.msg.backend.domain.analysis.entity.UnderstandingStatus;
 import com.msg.backend.domain.conversation.entity.MessageRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -54,7 +55,10 @@ class ModelOutputParserTest {
 		assertThat(output.droppedEvidenceCount()).isEqualTo(4);
 		assertThat(output.judgments().get(0).evidence()).extracting(ModelOutputParser.ParsedEvidence::kind)
 				.containsExactly(EvidenceKind.USER_QUESTION);
-		assertThat(output.judgments().get(0).status()).isEqualTo(UnderstandingStatus.NOT_UNDERSTOOD);
+		// 남은 근거가 질문 하나뿐: 질문만으로는 이해 부족을 확정하지 않는다 (v2 규칙)
+		assertThat(output.judgments().get(0).reportedStatus()).isEqualTo(UnderstandingStatus.NOT_UNDERSTOOD);
+		assertThat(output.judgments().get(0).status()).isEqualTo(UnderstandingStatus.INSUFFICIENT_EVIDENCE);
+		assertThat(output.judgments().get(0).adjustedReason()).isEqualTo(ModelOutputParser.QUESTION_ONLY_REASON);
 	}
 
 	@Test
@@ -110,5 +114,91 @@ class ModelOutputParserTest {
 				+ "\"reason\":\"" + longReason + "\"}]}", input);
 
 		assertThat(output.judgments().get(0).reason()).hasSize(1000);
+	}
+
+	// ---------- 학습 행동 (concept-analysis-v2) ----------
+
+	private ModelOutputParser.ParsedJudgment judge(String status, String evidence) throws Exception {
+		return judge(status, evidence, "");
+	}
+
+	private ModelOutputParser.ParsedJudgment judge(String status, String evidence, String extra) throws Exception {
+		return parser.parse("{\"concepts\":[{\"concept\":\"교착 상태\",\"status\":\"" + status + "\",\"evidence\":["
+				+ evidence + "]" + extra + "}]}", input).judgments().get(0);
+	}
+
+	@Test
+	void 직접적인_이해_부족_표현은_이해_부족의_근거다() throws Exception {
+		var judgment = judge("not_understood",
+				"{\"messageId\":10,\"kind\":\"user_question\",\"behavior\":\"confusion_expressed\"}");
+		assertThat(judgment.status()).isEqualTo(UnderstandingStatus.NOT_UNDERSTOOD);
+		assertThat(judgment.evidence().get(0).behavior()).isEqualTo(LearningBehavior.CONFUSION_EXPRESSED);
+	}
+
+	@Test
+	void 재설명_요청만으로는_이해_부족을_확정하지_않는다() throws Exception {
+		var judgment = judge("not_understood",
+				"{\"messageId\":10,\"kind\":\"user_question\",\"behavior\":\"re_explanation_request\"},"
+						+ "{\"messageId\":12,\"kind\":\"user_question\",\"behavior\":\"re_explanation_request\"}");
+		assertThat(judgment.status()).isEqualTo(UnderstandingStatus.INSUFFICIENT_EVIDENCE);
+		assertThat(judgment.adjustedReason()).isEqualTo(ModelOutputParser.QUESTION_ONLY_REASON);
+	}
+
+	@Test
+	void 심화_질문은_약점으로_보지_않는다() throws Exception {
+		var judgment = judge("partial",
+				"{\"messageId\":10,\"kind\":\"user_question\",\"behavior\":\"deepening_question\"}");
+		assertThat(judgment.status()).isEqualTo(UnderstandingStatus.INSUFFICIENT_EVIDENCE);
+		assertThat(judgment.adjustedReason()).isEqualTo(ModelOutputParser.DEEPENING_ONLY_REASON);
+	}
+
+	@Test
+	void 잘못된_자기_설명은_오개념_후보로_남기고_근거가_없으면_버린다() throws Exception {
+		var judgment = judge("not_understood",
+				"{\"messageId\":10,\"kind\":\"user_explanation\",\"behavior\":\"incorrect_explanation\"}",
+				",\"misconception\":\"NAT의 주소 변환과 방화벽의 접근 통제를 혼동\"");
+		assertThat(judgment.status()).isEqualTo(UnderstandingStatus.NOT_UNDERSTOOD);
+		assertThat(judgment.misconception()).contains("방화벽");
+
+		var withoutIncorrect = judge("partial",
+				"{\"messageId\":10,\"kind\":\"user_explanation\",\"behavior\":\"correct_explanation\"}",
+				",\"misconception\":\"근거 없는 오개념\"");
+		assertThat(withoutIncorrect.misconception()).isNull();
+	}
+
+	@Test
+	void 정확한_자기_설명과_새_상황_적용은_이해의_근거다() throws Exception {
+		assertThat(judge("understood",
+				"{\"messageId\":10,\"kind\":\"user_explanation\",\"behavior\":\"correct_explanation\"}").status())
+				.isEqualTo(UnderstandingStatus.UNDERSTOOD);
+		assertThat(judge("understood",
+				"{\"messageId\":12,\"kind\":\"user_solution\",\"behavior\":\"application\"}").status())
+				.isEqualTo(UnderstandingStatus.UNDERSTOOD);
+	}
+
+	@Test
+	void 알겠어만으로는_이해를_확정하지_않는다() throws Exception {
+		var judgment = judge("understood",
+				"{\"messageId\":10,\"kind\":\"user_explanation\",\"behavior\":\"no_signal\"},"
+						+ "{\"messageId\":11,\"kind\":\"ai_explanation\"}");
+		assertThat(judgment.status()).isEqualTo(UnderstandingStatus.INSUFFICIENT_EVIDENCE);
+		assertThat(judgment.adjustedReason()).isEqualTo(ModelOutputParser.NO_SELF_EXPLANATION_REASON);
+	}
+
+	@Test
+	void 근거_종류와_맞지_않는_행동과_AI_메시지의_행동은_버린다() throws Exception {
+		// 질문에 정확한 설명, AI 설명에 적용: 행동만 버리고 근거는 남긴다 → 이해를 받쳐 줄 근거가 없다
+		var judgment = judge("understood",
+				"{\"messageId\":10,\"kind\":\"user_question\",\"behavior\":\"correct_explanation\"},"
+						+ "{\"messageId\":11,\"kind\":\"ai_explanation\",\"behavior\":\"application\"}");
+		assertThat(judgment.evidence()).hasSize(2);
+		assertThat(judgment.evidence()).extracting(ModelOutputParser.ParsedEvidence::behavior).containsOnlyNulls();
+		assertThat(judgment.status()).isEqualTo(UnderstandingStatus.INSUFFICIENT_EVIDENCE);
+	}
+
+	@Test
+	void 행동이_없는_예전_답변은_사용자_설명이면_그대로_받는다() throws Exception {
+		assertThat(judge("not_understood", "{\"messageId\":10,\"kind\":\"user_explanation\"}").status())
+				.isEqualTo(UnderstandingStatus.NOT_UNDERSTOOD);
 	}
 }

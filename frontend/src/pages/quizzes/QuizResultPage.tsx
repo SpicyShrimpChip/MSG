@@ -5,7 +5,7 @@ import {
   useSuspenseQuery,
 } from '@tanstack/react-query';
 import { useSingleFlightMutation } from '@/hooks';
-import { ListChecks, RefreshCw } from 'lucide-react';
+import { BookText, ListChecks, RefreshCw } from 'lucide-react';
 import {
   QUIZZES_QUERY_KEY,
   STUDY_QUERY_KEY,
@@ -21,6 +21,7 @@ import {
   AsyncBoundary,
   Button,
   Card,
+  Chip,
   EmptyState,
   ErrorText,
   ScoreBar,
@@ -34,7 +35,13 @@ import type {
   QuizResult,
   SuggestionKind,
 } from '@/types';
-import { conceptQuizLink, conceptStudyLink, formatDate } from '@/utils';
+import {
+  BLOOM_LABEL,
+  conceptQuizLink,
+  conceptStudyLink,
+  describeGrounding,
+  formatDate,
+} from '@/utils';
 import { percentOf } from '@/utils/assessment';
 import QuestionResultCard from './components/QuestionResultCard';
 
@@ -70,6 +77,60 @@ const SUGGESTION_LABEL: Record<SuggestionKind, string> = {
   prerequisite: '보완할 선수 지식',
   related: '연관 분야',
 };
+
+// 출제 설계(인지 수준)와 자료 근거 요약. 자료를 실제로 읽지 않은 퀴즈는 "자료 기반"으로 표시하지 않는다
+function LearningDesign({ quiz, result }: { quiz: Quiz; result: QuizResult }) {
+  const design = result.learningDesign;
+  if (!design) return null;
+  const grounding = describeGrounding(design);
+  return (
+    <Card
+      as="section"
+      aria-label="출제 설계와 자료 근거"
+      className="flex flex-col gap-3 p-5"
+    >
+      <h2 className="flex items-center gap-2 text-body font-bold text-heading">
+        <BookText size={18} className="text-primary" aria-hidden="true" />
+        출제 설계와 자료 근거
+      </h2>
+      {design.bloomTargets.length > 0 && (
+        <p className="flex flex-wrap items-center gap-1.5 text-caption text-ink-soft">
+          평가하려고 고른 인지 수준
+          {design.bloomTargets.map((level) => (
+            <Chip key={level} tone="primary">
+              {BLOOM_LABEL[level]}
+            </Chip>
+          ))}
+        </p>
+      )}
+      {design.materialContentUsed ? (
+        <div className="flex flex-col gap-1 text-caption text-ink-soft">
+          <p>
+            <span className="font-bold text-heading">자료 기반 생성</span> ·
+            AI에 보낸 자료 위치: {design.materialScope ?? '위치 표시 없음'}
+          </p>
+          {grounding && <p>{grounding}</p>}
+          {design.missingConcepts.length > 0 && (
+            <p>
+              자료에서 찾지 못한 개념: {design.missingConcepts.join(', ')} (이
+              개념 문제는 자료 밖 내용일 수 있어요)
+            </p>
+          )}
+          <p className="text-ink-muted">
+            근거 문장이 원문에 있는지만 확인했어요. 정답·해설 전체가 사실이라는
+            뜻은 아니에요.
+          </p>
+        </div>
+      ) : (
+        <p className="text-caption text-ink-soft">
+          {quiz.materialId
+            ? '자료 본문을 읽지 않고 과목 개념으로 만든 퀴즈예요.'
+            : '자료 없이 과목 개념으로 만든 퀴즈예요.'}
+        </p>
+      )}
+    </Card>
+  );
+}
 
 function Assessment({ quiz, result }: { quiz: Quiz; result: QuizResult }) {
   const { assessment } = result;
@@ -358,6 +419,7 @@ function QuizResultContent({ quizId }: { quizId: number }) {
           <CheckTopicResult quiz={quiz} />
         </AsyncBoundary>
       )}
+      <LearningDesign quiz={quiz} result={result} />
       <Assessment quiz={quiz} result={result} />
       <Breakdown result={result} />
 

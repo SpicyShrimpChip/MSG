@@ -1,5 +1,7 @@
 package com.msg.backend.domain.quiz.dto;
 
+import com.msg.backend.domain.quiz.application.BloomPlan;
+import com.msg.backend.domain.quiz.entity.BloomLevel;
 import com.msg.backend.domain.quiz.entity.QuestionType;
 import com.msg.backend.domain.quiz.entity.Quiz;
 import com.msg.backend.domain.quiz.entity.QuizMode;
@@ -37,6 +39,9 @@ public record QuizResponse(
 		// 같은 이유로 "topic"이라는 이름을 쓴다. 개념 확인 퀴즈면 그 개념(퀴즈 전체가 이 개념 하나만 다룬다), 아니면 null
 		@Schema(description = "개념 확인 퀴즈가 다루는 자료 개념 (materialId, topicId = 개념 키, name). 그 밖의 퀴즈는 null")
 		CheckTopic checkTopic,
+		@Schema(description = "평가하려고 고른 인지 수준(개정 블룸, 낮은 수준부터). 이 기능 전 퀴즈는 빈 배열") List<String> bloomTargets,
+		@Schema(description = "자료 본문으로 만든 퀴즈: 서버가 골라 AI에 보낸 자료 위치 (예: \"p. 3, p. 4\"). 아니면 null")
+		String materialScope,
 		List<Question> questions) {
 
 	public record GeneratedBy(String provider, String model) {
@@ -54,7 +59,9 @@ public record QuizResponse(
 			@Schema(description = "사용자 역할 (업무 활용)") String role,
 			@Schema(description = "답변 작성 안내") String guide,
 			@Schema(description = "평가 기준 이름 (업무 활용 서술형만, 배점·모범 답안은 없음)") List<String> criteria,
-			int maxScore) {
+			int maxScore,
+			@Schema(description = "평가하려는 인지 수준: remember / understand / apply / analyze / evaluate / create. AI가 지정한 값(서버는 형식만 확인). 없으면 null")
+			String bloomLevel) {
 	}
 
 	public static QuizResponse of(Quiz quiz, List<QuizQuestion> questions) {
@@ -68,18 +75,20 @@ public record QuizResponse(
 				quiz.getConceptSource() == null ? null : quiz.getConceptSource().toLowerCase(java.util.Locale.ROOT),
 				quiz.getCheckConceptKey() == null ? null
 						: new CheckTopic(quiz.getMaterialId(), quiz.getCheckConceptKey(), quiz.getCheckConceptName()),
+				BloomPlan.split(quiz.getBloomTargets()).stream().map(BloomLevel::apiValue).toList(),
+				quiz.getMaterialScope(),
 				questions.stream().map(q -> new Question(q.getId(), q.getType().apiValue(), q.getContent(),
 						List.copyOf(q.getChoices()), q.getScenario(), q.getWorkRole(), q.getAnswerGuide(),
 						quiz.getMode() == QuizMode.WORK && q.getType() == QuestionType.ESSAY
 								? q.getRubric().stream().map(QuizRubricItem::getCriterion).toList()
 								: List.of(),
-						q.maxScore()))
+						q.maxScore(), ApiEnumValues.of(q.getBloomLevel())))
 						.toList());
 	}
 
 	public QuizResponse withMaterialContentNote(String note) {
 		return new QuizResponse(id, title, courseId, materialId, mode, difficulty, jobField, jobFieldOther, examScope,
 				generatedBy, materialContentUsed, mockExam, assessmentKind, preAssessmentId, note, topicSource,
-				checkTopic, questions);
+				checkTopic, bloomTargets, materialScope, questions);
 	}
 }

@@ -6,10 +6,17 @@ import {
   Clock,
   type LucideIcon,
 } from 'lucide-react';
-import { AiNote, Card, Chip, Notice } from '@/components';
+import {
+  AiNote,
+  Card,
+  Chip,
+  Notice,
+  SourceQuote,
+  VerificationBadge,
+} from '@/components';
 import { QUESTION_TYPE_LABELS } from '@/constants';
 import type { QuizQuestion, QuizResultItem, RubricLevel } from '@/types';
-import { cn } from '@/utils';
+import { BLOOM_LABEL, SOURCE_CHECK_LABEL, cn, sourceCheckTone } from '@/utils';
 
 const LEVEL_LABEL: Record<RubricLevel, string> = {
   met: '충족',
@@ -283,6 +290,58 @@ function QuestionResultCard({
         </p>
       )}
       {item.aiExplanation && <AiNote title="해설">{item.aiExplanation}</AiNote>}
+
+      {(item.bloomLevel || item.aiObjective) && (
+        <div className="flex flex-col gap-1 text-caption text-ink-soft">
+          {item.bloomLevel && (
+            <p>
+              <span className="font-bold text-heading">평가 수준 </span>
+              {BLOOM_LABEL[item.bloomLevel]}{' '}
+              <span className="text-ink-muted">
+                (AI가 지정한 수준, 서버는 형식만 확인)
+              </span>
+            </p>
+          )}
+          {item.aiObjective && (
+            <p>
+              <span className="font-bold text-heading">출제 목표(AI) </span>
+              {item.aiObjective}
+            </p>
+          )}
+        </div>
+      )}
+
+      {item.source && (
+        <div className="flex flex-col gap-2 rounded-xl border border-line p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-caption font-bold text-heading">자료 근거</p>
+            <VerificationBadge
+              status={sourceCheckTone(item.source.check)}
+              label={SOURCE_CHECK_LABEL[item.source.check]}
+            />
+            {item.source.answerInSource !== null && (
+              <Chip>
+                {item.source.answerInSource
+                  ? '정답 표현이 근거 부분에 있음'
+                  : '정답 표현이 근거 부분에 없음'}
+              </Chip>
+            )}
+          </div>
+          {item.source.quote && (
+            <SourceQuote
+              quote={item.source.quote}
+              location={item.source.location}
+            />
+          )}
+          {item.source.note && (
+            <p className="text-caption text-ink-soft">{item.source.note}</p>
+          )}
+          <p className="text-caption text-ink-muted">
+            근거 문장이 자료 원문에 있는지만 서버가 확인했어요. 정답·해설이
+            자료와 맞는지는 원문과 함께 직접 확인해 주세요.
+          </p>
+        </div>
+      )}
     </Card>
   );
 }

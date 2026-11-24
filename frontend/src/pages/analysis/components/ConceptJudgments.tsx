@@ -6,8 +6,11 @@ import type {
   ModelRun,
 } from '@/types';
 import {
+  BEHAVIOR_LABEL,
   PROVIDER_LABEL,
   UNDERSTANDING_LABEL,
+  behaviorSignal,
+  cn,
   describeComparison,
 } from '@/utils';
 import { UnderstandingBadge } from './UnderstandingBadge';
@@ -48,6 +51,11 @@ function JudgmentCard({ judgment }: { judgment: ConceptJudgment }) {
       {judgment.aiNeedsCheck && (
         <AiNote title="확인해 볼 점">{judgment.aiNeedsCheck}</AiNote>
       )}
+      {judgment.aiMisconception && (
+        <AiNote title="오개념 후보 (확정 아님, 확인 퀴즈로 확인)">
+          {judgment.aiMisconception}
+        </AiNote>
+      )}
 
       {judgment.evidence.length > 0 ? (
         <div className="flex flex-col gap-2">
@@ -60,8 +68,25 @@ function JudgmentCard({ judgment }: { judgment: ConceptJudgment }) {
                 key={item.messageId}
                 className="flex flex-col gap-1 rounded-lg bg-surface-muted px-3 py-2.5"
               >
-                <span className="text-caption font-bold text-ink-soft">
+                <span className="flex flex-wrap items-center gap-1.5 text-caption font-bold text-ink-soft">
                   {EVIDENCE_KIND_LABEL[item.kind]} · {item.conversationTitle}
+                  {item.behavior && (
+                    <span
+                      className={cn(
+                        'rounded-full px-2 py-0.5 font-medium',
+                        behaviorSignal(item.behavior) === 'positive' &&
+                          'bg-strength-soft text-strength',
+                        behaviorSignal(item.behavior) === 'negative' &&
+                          'bg-weakness-soft text-weakness',
+                        behaviorSignal(item.behavior) === 'neutral' &&
+                          'border border-dashed border-line-strong',
+                      )}
+                    >
+                      학습 행동: {BEHAVIOR_LABEL[item.behavior]}
+                      {behaviorSignal(item.behavior) === 'neutral' &&
+                        ' (판단에 쓰지 않음)'}
+                    </span>
+                  )}
                 </span>
                 <span className="text-body leading-relaxed break-words text-ink">
                   "{item.excerpt}"

@@ -253,10 +253,11 @@ public class AnalysisService {
 			for (ModelOutputParser.ParsedJudgment item : parsed.judgments()) {
 				ConceptJudgment judgment = judgmentRepository.save(ConceptJudgment.of(result.getId(),
 						item.concept().key(), item.concept().name(), item.reportedStatus(), item.status(),
-						item.adjustedReason(), item.reason(), item.needsCheck(), item.recommendedActivity()));
+						item.adjustedReason(), item.reason(), item.needsCheck(), item.recommendedActivity())
+						.withMisconception(item.misconception()));
 				evidenceRepository.saveAll(item.evidence().stream()
 						.map(evidence -> JudgmentEvidence.of(judgment.getId(), evidence.messageId(), evidence.kind(),
-								evidence.note()))
+								evidence.note()).withBehavior(evidence.behavior()))
 						.toList());
 				byConcept.get(item.concept().key()).add(item.status());
 			}

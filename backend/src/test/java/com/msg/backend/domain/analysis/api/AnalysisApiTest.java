@@ -118,11 +118,11 @@ class AnalysisApiTest {
 	void 세_모델이_같은_입력을_따로_분석하고_개념별로_의견을_비교한다() throws Exception {
 		models.get(LlmProvider.GPT).answer(answer(
 				concept("교착 상태", "understood", evidence(m.get(0), "user_explanation")),
-				concept("페이징", "not_understood", evidence(m.get(2), "user_question")),
+				concept("페이징", "not_understood", evidence(m.get(2), "user_question", "confusion_expressed")),
 				concept("스케줄링", "insufficient_evidence")));
 		models.get(LlmProvider.CLAUDE).answer(answer(
 				concept("교착 상태", "understood", evidence(m.get(0), "user_explanation")),
-				concept("페이징", "partial", evidence(m.get(2), "user_question")),
+				concept("페이징", "partial", evidence(m.get(2), "user_explanation", "incorrect_explanation")),
 				concept("스케줄링", "insufficient_evidence")));
 		// AI 설명만 근거로 이해했다고 함(→ 근거 부족) + 보내지 않은 메시지 근거(→ 버림)
 		String geminiAnswer = answer(
@@ -134,7 +134,7 @@ class AnalysisApiTest {
 		String body = run(token, courseId)
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.data.status").value("completed"))
-				.andExpect(jsonPath("$.data.promptVersion").value("concept-analysis-v1"))
+				.andExpect(jsonPath("$.data.promptVersion").value("concept-analysis-v2"))
 				.andExpect(jsonPath("$.data.models[*].status").value(contains(
 						"succeeded", "succeeded", "succeeded")))
 				.andExpect(jsonPath("$.data.models[2].droppedEvidenceCount").value(1))
@@ -157,7 +157,17 @@ class AnalysisApiTest {
 				.andExpect(jsonPath("$.data.concepts[2].comparison.agreeCount").value(2))
 				.andExpect(jsonPath("$.data.concepts[2].comparison.calledCount").value(3))
 				.andExpect(jsonPath("$.data.concepts[2].studyOrder").value(3))
+				// 검증 상태: 의견 불일치 → 추가 확인 필요, 근거 부족 → 판단 보류, 다수 의견이어도 퀴즈 전에는 일부 검증
+				.andExpect(jsonPath("$.data.concepts[0].verification.status").value("needs_check"))
+				.andExpect(jsonPath("$.data.concepts[0].verification.recommendCheckQuiz").value(true))
+				.andExpect(jsonPath("$.data.concepts[1].verification.status").value("insufficient"))
+				.andExpect(jsonPath("$.data.concepts[2].verification.status").value("partial"))
+				.andExpect(jsonPath("$.data.concepts[2].verification.quizComparison").value("no_quiz"))
+				.andExpect(jsonPath("$.data.concepts[0].misconception.flaggedCount").value(0))
 				.andReturn().getResponse().getContentAsString();
+		// 학습 행동은 근거마다 저장해 돌려준다
+		List<String> behaviors = JsonPath.read(body, "$.data.concepts[0].judgments[*].evidence[*].behavior");
+		assertThat(behaviors).contains("confusion_expressed", "incorrect_explanation");
 
 		// Gemini의 페이징 판단: 모델이 보고한 상태는 남기고 비교에는 근거 부족으로 쓴다
 		List<Map<String, Object>> geminiJudgments = JsonPath.read(body,
@@ -616,6 +626,11 @@ class AnalysisApiTest {
 
 	private static Map<String, Object> evidence(long messageId, String kind) {
 		return Map.of("messageId", messageId, "kind", kind, "note", "근거 설명");
+	}
+
+	// 학습 행동을 붙인 근거 (concept-analysis-v2)
+	private static Map<String, Object> evidence(long messageId, String kind, String behavior) {
+		return Map.of("messageId", messageId, "kind", kind, "note", "근거 설명", "behavior", behavior);
 	}
 
 	private void answerAllInsufficient() {

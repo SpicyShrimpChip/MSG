@@ -6,6 +6,9 @@ import type {
   MaterialDetail,
   MaterialSummary,
   MaterialUploadInput,
+  StudySummary,
+  StudySummaryInput,
+  StudySummaryPurpose,
 } from '@/types';
 import {
   mockCreateConceptStudyNote,
@@ -13,7 +16,9 @@ import {
   mockExtractMaterialConcepts,
   mockGetMaterial,
   mockGetMaterialConcepts,
+  mockGenerateStudySummary,
   mockGetMaterials,
+  mockGetStudySummary,
   mockUploadMaterial,
 } from '@/mocks';
 // 스토어 배럴(화면 모드 등 window 사용)까지 불러오지 않도록 파일을 직접 가져온다
@@ -92,6 +97,34 @@ export function createConceptStudyNote(
   return request<MaterialConcept>({
     method: 'POST',
     url: `/materials/${id}/concepts/study-notes`,
+    data: input,
+    timeout: AI_REQUEST_TIMEOUT_MS,
+  });
+}
+
+// 학습 목적별 저장한 요약본 (없으면 status none). 모델을 부르지 않는다
+export function getStudySummary(
+  id: number,
+  purpose: StudySummaryPurpose,
+): Promise<StudySummary> {
+  if (isMockData()) return mockGetStudySummary(id, purpose);
+  return request<StudySummary>({
+    method: 'GET',
+    url: `/materials/${id}/summary`,
+    params: { purpose },
+  });
+}
+
+// 요약본 만들기: 자료 본문(서버가 고른 부분)을 외부 AI로 보낸다(운영 설정이 꺼져 있으면 403).
+// 같은 파일·같은 목적의 요약이 있으면 모델을 부르지 않고 저장한 요약을 돌려준다(reused)
+export function generateStudySummary(
+  id: number,
+  input: StudySummaryInput,
+): Promise<StudySummary> {
+  if (isMockData()) return mockGenerateStudySummary(id, input);
+  return request<StudySummary>({
+    method: 'POST',
+    url: `/materials/${id}/summary`,
     data: input,
     timeout: AI_REQUEST_TIMEOUT_MS,
   });

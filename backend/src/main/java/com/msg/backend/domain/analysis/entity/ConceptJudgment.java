@@ -60,6 +60,10 @@ public class ConceptJudgment {
 	@Column(length = ACTIVITY_MAX_LENGTH)
 	private String recommendedActivity;
 
+	// 오개념 후보 (V5, AI). 잘못된 자기 설명 근거가 있을 때만 서버가 남긴다. 확정이 아니라 확인 퀴즈로 확인할 후보다
+	@Column(length = 300)
+	private String misconception;
+
 	public static ConceptJudgment of(Long modelResultId, String conceptKey, String conceptName,
 			UnderstandingStatus reportedStatus, UnderstandingStatus status, String adjustedReason, String reason,
 			String needsCheck, String recommendedActivity) {
@@ -74,5 +78,10 @@ public class ConceptJudgment {
 		judgment.needsCheck = needsCheck;
 		judgment.recommendedActivity = recommendedActivity;
 		return judgment;
+	}
+
+	public ConceptJudgment withMisconception(String misconception) {
+		this.misconception = misconception;
+		return this;
 	}
 }

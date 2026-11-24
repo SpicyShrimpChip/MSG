@@ -3,6 +3,7 @@ package com.msg.backend.domain.quiz.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.msg.backend.domain.quiz.entity.BloomLevel;
 import com.msg.backend.domain.quiz.entity.QuestionType;
 import com.msg.backend.domain.quiz.entity.QuizMode;
 import com.msg.backend.domain.quiz.entity.SuggestionKind;
@@ -109,5 +110,46 @@ class QuizGenerationParserTest {
 			plan.put(QuestionType.ESSAY, essay);
 		}
 		return plan;
+	}
+
+	// ---------- 인지 수준 (개정 블룸) ----------
+
+	private static final QuizGenerationParser.Expectation EXAM_BLOOM = new QuizGenerationParser.Expectation(
+			BloomPlan.defaults(QuizMode.EXAM_PREP), 3, null);
+
+	@Test
+	void 인지_수준과_출제_목표를_읽고_정한_수준_안인지_확인한다() throws Exception {
+		var parsed = parser.parse(QuizFixtures.threeTypes(false), QuizMode.EXAM_PREP, plan(1, 1, 1), CONCEPTS,
+				EXAM_BLOOM);
+		assertThat(parsed.questions()).extracting(QuizGenerationParser.ParsedQuestion::bloomLevel)
+				.containsExactly(BloomLevel.UNDERSTAND, BloomLevel.APPLY, BloomLevel.ANALYZE);
+		assertThat(parsed.questions().get(0).objective()).isNotBlank();
+		assertThat(parsed.questions().get(0).toEntity(1L, 0).getBloomLevel()).isEqualTo(BloomLevel.UNDERSTAND);
+
+		String outside = QuizFixtures.threeTypes(false).replaceFirst("\"understand\"", "\"evaluate\"");
+		assertThatThrownBy(() -> parser.parse(outside, QuizMode.EXAM_PREP, plan(1, 1, 1), CONCEPTS, EXAM_BLOOM))
+				.isInstanceOf(QuizGenerationParser.InvalidOutputException.class);
+		String noObjective = QuizFixtures.threeTypes(false).replaceFirst("\"objective\":\"[^\"]*\",", "");
+		assertThatThrownBy(() -> parser.parse(noObjective, QuizMode.EXAM_PREP, plan(1, 1, 1), CONCEPTS, EXAM_BLOOM))
+				.isInstanceOf(QuizGenerationParser.InvalidOutputException.class);
+	}
+
+	@Test
+	void 서로_다른_수준이_모자라거나_창조를_객관식으로_내면_거절() {
+		String same = QuizFixtures.threeTypes(false).replace("\"apply\"", "\"understand\"")
+				.replace("\"analyze\"", "\"understand\"");
+		assertThatThrownBy(() -> parser.parse(same, QuizMode.EXAM_PREP, plan(1, 1, 1), CONCEPTS, EXAM_BLOOM))
+				.isInstanceOf(QuizGenerationParser.InvalidOutputException.class);
+		String createChoice = QuizFixtures.threeTypes(true).replaceFirst("\"apply\"", "\"create\"");
+		assertThatThrownBy(() -> parser.parse(createChoice, QuizMode.WORK, plan(1, 1, 1), CONCEPTS))
+				.isInstanceOf(QuizGenerationParser.InvalidOutputException.class);
+	}
+
+	@Test
+	void 인지_수준을_정하지_않은_예전_방식은_수준_없이도_읽는다() throws Exception {
+		String legacy = QuizFixtures.threeTypes(false).replaceAll("\"bloomLevel\":\"[a-z]+\",", "");
+		var parsed = parser.parse(legacy, QuizMode.EXAM_PREP, plan(1, 1, 1), CONCEPTS);
+		assertThat(parsed.questions().get(0).bloomLevel()).isNull();
+		assertThat(parsed.questions().get(0).source().check()).isNull();
 	}
 }

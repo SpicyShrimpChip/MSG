@@ -1,5 +1,7 @@
 package com.msg.backend.domain.curriculum.application;
 
+import com.msg.backend.domain.analysis.entity.ConceptConsensus;
+import com.msg.backend.domain.analysis.entity.ConsensusOutcome;
 import com.msg.backend.domain.course.entity.Course;
 import com.msg.backend.domain.curriculum.dto.CurriculumResponse;
 import com.msg.backend.domain.material.dao.MaterialConceptRepository;
@@ -64,12 +66,64 @@ class CurriculumFlowBuilder {
 	private final QuizProperties properties;
 	private final ConceptStudyService studyService;
 
+	/**
+	 * 먼저 공부할 이유 (저장된 결과로 만든 사실 문장). 실제 평가(사전평가·확인 퀴즈)를 앞에, AI 추정(대화 분석)은 따로 표시해 뒤에 둔다.
+	 */
+	static List<String> priorityReasons(boolean preDone, Integer preRate, String preStatus, int minPercent,
+			String practiceStatus, ConceptStudyResponse study, ConceptConsensus agreed) {
+		List<String> reasons = new ArrayList<>();
+		if (!preDone) {
+			reasons.add("아직 사전평가를 보지 않아 이 개념의 현재 수준을 모르는 상태예요.");
+		} else if ("weak".equals(preStatus)) {
+			reasons.add("사전평가 정답률 " + preRate + "%로 기준(" + minPercent + "%)보다 낮아요.");
+		} else if ("not_taken".equals(preStatus)) {
+			reasons.add("사전평가에서 이 개념을 채점한 결과가 없어 먼저 확인이 필요해요.");
+		} else {
+			reasons.add("사전평가 정답률 " + preRate + "%로 기준(" + minPercent + "%) 이상이에요.");
+		}
+		if (study != null && "review_needed".equals(study.status())) {
+			reasons.add("최근 확인 퀴즈가 기준보다 낮아 복습이 필요해요.");
+		} else if ("weak".equals(practiceStatus)) {
+			reasons.add("사전평가 뒤 푼 퀴즈의 득점률이 기준보다 낮아요.");
+		}
+		if (agreed != null) {
+			String label;
+			if (agreed.getOutcome() == ConsensusOutcome.DISAGREEMENT) {
+				label = "모델 " + agreed.getJudgedCount() + "개의 의견이 서로 달라 확인이 필요해요";
+			} else if (agreed.getStatus() == null) {
+				label = null;
+			} else {
+				label = "모델 " + agreed.getJudgedCount() + "개 중 " + agreed.getAgreeCount() + "개가 '" + switch (agreed.getStatus()) {
+					case UNDERSTOOD -> "이해";
+					case PARTIAL -> "부분 이해";
+					case NOT_UNDERSTOOD -> "이해 부족";
+					case INSUFFICIENT_EVIDENCE -> "판단 근거 부족";
+				} + "'으로 봤어요";
+			}
+			if (label != null) {
+				reasons.add("대화 분석(AI 추정, 퀴즈 결과와 따로): " + label + ".");
+			}
+		}
+		return reasons;
+	}
+
+	private static String analysisStatus(ConceptConsensus agreed) {
+		if (agreed == null) {
+			return null;
+		}
+		if (agreed.getOutcome() == ConsensusOutcome.DISAGREEMENT) {
+			return "disagreement";
+		}
+		return agreed.getStatus() == null ? null : agreed.getStatus().apiValue();
+	}
+
 	// 대상 개념이 지금 해야 할 일
 	private enum Need {
 		STUDY, QUIZ, OK
 	}
 
-	CurriculumResponse.Flow build(Long userId, Course course, List<Material> materials) {
+	CurriculumResponse.Flow build(Long userId, Course course, List<Material> materials,
+			Map<String, ConceptConsensus> analysis) {
 		AssessmentComparisonResponse comparison = assessmentService.compare(userId, course.getId(), null);
 		int minPercent = (int) Math.round(properties.assessment().conceptMinRate() * 100);
 		AssessmentComparisonResponse.Snapshot pre = comparison.pre();
@@ -135,13 +189,16 @@ class CurriculumFlowBuilder {
 			Material material = materialId == null ? null : materialById.get(materialId);
 			ConceptStudyResponse study = studyConcept == null ? null
 					: studies.get(ConceptStudyService.key(studyConcept.getMaterialId(), key));
+			boolean priority = preDone && !"ok".equals(preStatus);
+			ConceptConsensus agreed = analysis.get(key);
 			concepts.add(new CurriculumResponse.FlowConcept(key, name, materialId,
 					material == null ? null : material.getTitle(), studyConcept != null && studyConcept.hasStudyNote(),
 					preRate, preStatus, graded, score, max, practiceStatus,
 					postDone && delta != null ? percent(delta.postScore(), delta.postMaxScore()) : null,
 					postDone && delta != null ? delta.delta() : null,
 					postDone && delta != null ? delta.status() : null,
-					preDone && !"ok".equals(preStatus), study));
+					priority, study, priorityReasons(preDone, preRate, preStatus, minPercent, practiceStatus, study, agreed),
+					analysisStatus(agreed)));
 		});
 
 		// 대상: 사전 테스트에서 먼저 공부할 개념, 없으면 전체

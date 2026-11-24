@@ -2,6 +2,7 @@ package com.msg.backend.domain.quiz.application;
 
 import com.msg.backend.domain.material.application.MaterialContentProperties;
 import com.msg.backend.domain.material.application.MaterialTextExtractor;
+import com.msg.backend.domain.material.application.SourceText;
 
 import com.msg.backend.domain.conversation.application.PersonalInfoDetector;
 import com.msg.backend.domain.course.dao.CourseRepository;
@@ -14,6 +15,7 @@ import com.msg.backend.domain.quiz.dao.QuizQuestionRepository;
 import com.msg.backend.domain.quiz.dao.QuizRepository;
 import com.msg.backend.domain.quiz.dto.QuizCreateRequest;
 import com.msg.backend.domain.quiz.entity.AssessmentKind;
+import com.msg.backend.domain.quiz.entity.BloomLevel;
 import com.msg.backend.domain.quiz.entity.QuestionType;
 import com.msg.backend.domain.quiz.entity.Quiz;
 import com.msg.backend.domain.quiz.entity.QuizDifficulty;
@@ -24,6 +26,8 @@ import com.msg.backend.domain.user.dao.UserRepository;
 import com.msg.backend.domain.user.entity.JobField;
 import com.msg.backend.domain.user.entity.User;
 import com.msg.backend.global.error.BusinessException;
+import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -37,7 +41,11 @@ import org.springframework.util.StringUtils;
  * 퀴즈 만들기 요청을 검사해 QuizSpec으로 만든다. 사용자 행을 잠근 QuizGenerationService의 트랜잭션 안에서 부른다.
  *
  * <p>검사 순서(첫 오류를 돌려준다): 과목 → 자료 → 평가 종류 → 개념 확인 퀴즈 → 사후평가의 사전평가 → 모드 → 유형 → 문제 수·모의시험
- * → 난이도 → 개념 → 시험 범위 → 직무 분야 → 자료 본문. 사후평가는 사전평가의 개념·유형·문항 수·난이도·모드를 쓰고 요청 값은 쓰지 않는다.
+ * → 난이도 → 인지 수준 → 개념 → 시험 범위 → 직무 분야 → 자료 본문. 사후평가는 사전평가의 개념·유형·문항 수·난이도·모드·인지 수준을 쓰고
+ * 요청 값은 쓰지 않는다.
+ *
+ * <p>자료 본문: 원문을 위치(쪽·슬라이드·문단)가 붙은 부분으로 나눠 개념이 나오는 부분만 골라 보낸다(SourceText). 고른 위치와
+ * 자료에서 찾지 못한 개념을 함께 남겨 화면이 "자료 어디로 만들었는지"를 보여 준다.
  */
 @Component
 class QuizSpecResolver {
@@ -59,6 +67,7 @@ class QuizSpecResolver {
 	static final String NO_PRE_ASSESSMENT_MESSAGE = "이 자료로 먼저 사전평가를 만들어 주세요. 사후평가는 사전평가와 같은 개념으로 만들어요.";
 	static final String CONTENT_NEEDS_MATERIAL_MESSAGE = "자료 본문을 쓰려면 학습자료를 골라 주세요.";
 	static final String CONTENT_CONSENT_MESSAGE = "자료 본문을 외부 AI로 보내려면 확인에 체크해 주세요.";
+	static final String BLOOM_MESSAGE = "인지 수준을 다시 골라 주세요.";
 	static final int MAX_CONCEPTS = 10;
 	static final int MAX_AVOID_QUESTIONS = 20;
 
@@ -102,7 +111,11 @@ class QuizSpecResolver {
 		}
 	}
 
-	private record Content(String excerpt, String note) {
+	private record Content(String excerpt, String note, List<String> scope, List<String> missing) {
+
+		static Content none(String note) {
+			return new Content(null, note, List.of(), List.of());
+		}
 	}
 
 	QuizSpec resolve(Long userId, QuizCreateRequest request) {
@@ -118,6 +131,7 @@ class QuizSpecResolver {
 		boolean mockExam = Boolean.TRUE.equals(request.mockExam()) && kind == null;
 		checkCount(request, mode, mockExam, count, types);
 		QuizDifficulty difficulty = difficulty(request, pre);
+		List<BloomLevel> bloomTargets = bloomTargets(request, pre, mode, types);
 		String conceptSource = null;
 		List<String> concepts;
 		// 개념 체계: 사후평가는 사전평가 문제의 개념 그대로, 평가는 자료에서 뽑은 개념이 있으면 그것, 아니면 과목 키워드
@@ -151,7 +165,7 @@ class QuizSpecResolver {
 				jobFieldOther = user.getJobFieldOther();
 			}
 		}
-		Content content = materialContent(request, material, pre.quiz());
+		Content content = materialContent(request, material, pre.quiz(), concepts);
 		return new QuizSpec(course, material == null ? null : material.getId(),
 				material == null ? null : material.getTitle(), mode, List.copyOf(types),
 				QuizTypePlan.plan(mode, types, count), difficulty, concepts, examScope, jobField, jobFieldOther, mockExam,
@@ -159,7 +173,36 @@ class QuizSpecResolver {
 				pre.questions().stream().map(QuizQuestion::getContent).limit(MAX_AVOID_QUESTIONS).toList(),
 				content.excerpt(), content.note(), conceptSource,
 				checkConcept == null ? null : checkConcept.getConceptKey(),
-				checkConcept == null ? null : checkConcept.getName());
+				checkConcept == null ? null : checkConcept.getName(), bloomTargets, content.scope(), content.missing());
+	}
+
+	// 인지 수준: 사후평가는 사전평가에서 고른 수준(없으면 사전평가 문제의 수준), 아니면 요청 값, 없으면 모드 기본값
+	private static List<BloomLevel> bloomTargets(QuizCreateRequest request, Pre pre, QuizMode mode,
+			Set<QuestionType> types) {
+		List<BloomLevel> requested = new ArrayList<>();
+		if (pre.quiz() != null) {
+			requested.addAll(BloomPlan.split(pre.quiz().getBloomTargets()));
+			if (requested.isEmpty()) {
+				pre.questions().stream().map(QuizQuestion::getBloomLevel).filter(level -> level != null).distinct()
+						.forEach(requested::add);
+			}
+		} else if (request.bloomLevels() != null) {
+			Set<BloomLevel> seen = EnumSet.noneOf(BloomLevel.class);
+			for (String value : request.bloomLevels()) {
+				if (!StringUtils.hasText(value)) {
+					continue;
+				}
+				BloomLevel level = BloomLevel.fromApiValue(value).orElseThrow(() -> badRequest(BLOOM_MESSAGE));
+				if (seen.add(level)) {
+					requested.add(level);
+				}
+			}
+		}
+		try {
+			return BloomPlan.targets(mode, requested, types);
+		} catch (IllegalArgumentException e) {
+			throw badRequest(BloomPlan.CREATE_NEEDS_ESSAY_MESSAGE);
+		}
 	}
 
 	// 고른 자료는 내 것이고 이 과목에 연결돼 있어야 한다
@@ -269,7 +312,7 @@ class QuizSpecResolver {
 	}
 
 	// 학습자료 본문: 사용자가 이 요청에서 보내기를 고르고 확인한 경우에만 읽는다. 사후평가는 사전평가가 본문을 썼으면 같게
-	private Content materialContent(QuizCreateRequest request, Material material, Quiz pre) {
+	private Content materialContent(QuizCreateRequest request, Material material, Quiz pre, List<String> concepts) {
 		boolean requested = Boolean.TRUE.equals(request.useMaterialContent());
 		if (requested && !contentProperties.enabled()) {
 			// 운영 설정·처리방침 확정 전에는 자료 본문을 외부로 보내지 않는다
@@ -278,7 +321,7 @@ class QuizSpecResolver {
 		boolean wantContent = contentProperties.enabled() && (requested || (pre != null && pre.isMaterialContentUsed()));
 		String note = pre != null && pre.isMaterialContentUsed() && !contentProperties.enabled() ? "DISABLED" : null;
 		if (!wantContent) {
-			return new Content(null, note);
+			return Content.none(note);
 		}
 		if (material == null) {
 			throw badRequest(CONTENT_NEEDS_MATERIAL_MESSAGE);
@@ -286,15 +329,21 @@ class QuizSpecResolver {
 		if (!Boolean.TRUE.equals(request.materialContentConsent())) {
 			throw badRequest(CONTENT_CONSENT_MESSAGE);
 		}
-		MaterialTextExtractor.Extracted extracted = textExtractor.extract(material);
+		MaterialTextExtractor.Extracted extracted = textExtractor.extract(material, contentProperties.sourceMaxChars());
 		if (extracted.status() != MaterialTextExtractor.Status.OK) {
-			return new Content(null, extracted.status().name());
+			return Content.none(extracted.status().name());
 		}
-		if (personalInfoDetector.containsPersonalInfoExceptIp(extracted.text())) {
-			// 자료 본문에 개인정보 패턴이 있으면 보내지 않고 과목·개념으로만 만든다
-			return new Content(null, "PERSONAL_INFO");
+		// 원문을 위치가 붙은 부분으로 나눠 개념이 나오는 부분만 고른다 (관련 없는 본문은 보내지 않는다)
+		SourceText source = SourceText.parse(extracted.text());
+		SourceText.Selection selection = source.select(concepts, contentProperties.maxChars());
+		if (selection.text().isBlank()) {
+			return Content.none(MaterialTextExtractor.Status.EMPTY.name());
 		}
-		return new Content(extracted.text(), note);
+		if (personalInfoDetector.containsPersonalInfoExceptIp(selection.text())) {
+			// 보낼 부분에 개인정보 패턴이 있으면 보내지 않고 과목·개념으로만 만든다
+			return Content.none("PERSONAL_INFO");
+		}
+		return new Content(selection.text(), note, selection.locations(), source.missingTerms(concepts));
 	}
 
 	// 사전평가 문제들이 다룬 개념 (과목 키워드 이름으로, 처음 나온 순서)

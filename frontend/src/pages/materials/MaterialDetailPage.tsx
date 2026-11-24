@@ -1,16 +1,9 @@
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useSuspenseQuery } from '@tanstack/react-query';
-import {
-  FileCheck,
-  ListChecks,
-  Sparkles,
-  TriangleAlert,
-  Video,
-} from 'lucide-react';
+import { FileCheck, ListChecks, TriangleAlert, Video } from 'lucide-react';
 import { MATERIALS_QUERY_KEY, getMaterial } from '@/api';
 import {
   AiLegend,
-  AiNote,
   AiOrb,
   AsyncBoundary,
   Button,
@@ -23,6 +16,7 @@ import type { MaterialDetail } from '@/types';
 import { formatDate } from '@/utils';
 import QuizCard from '@/pages/quizzes/components/QuizCard';
 import MaterialConceptPanel from './components/MaterialConceptPanel';
+import StudySummaryPanel from './components/StudySummaryPanel';
 
 // 요약·개념·퀴즈를 아직 만들지 않았거나(분석 전·분석 중) 만들지 못한 자료는 탭마다 같은 안내를 보여 준다
 function NotReady({ status }: { status: MaterialDetail['status'] }) {
@@ -31,7 +25,7 @@ function NotReady({ status }: { status: MaterialDetail['status'] }) {
       <EmptyState
         icon={<FileCheck size={24} aria-hidden="true" />}
         title="파일을 올렸어요. 아직 AI 분석 전이에요"
-        description="자료 요약은 준비 중이에요. 핵심 개념은 핵심 개념 탭에서, 퀴즈는 퀴즈 만들기에서 확인해 보세요. 올린 파일은 지우기 전까지 보관해요."
+        description="요약은 요약 탭에서, 핵심 개념은 핵심 개념 탭에서, 퀴즈는 퀴즈 만들기에서 만들 수 있어요. 올린 파일은 지우기 전까지 보관해요."
       />
     );
   }
@@ -54,21 +48,16 @@ function NotReady({ status }: { status: MaterialDetail['status'] }) {
   );
 }
 
+// 요약본은 자료 분석 상태와 관계없이 "요약 만들기"로 따로 만든다 (학습 목적별, 항목마다 원문 근거를 서버가 확인).
+// 예전 자료 상세의 aiSummary(서버는 늘 null)는 쓰지 않는다
 function SummaryTab({ material }: { material: MaterialDetail }) {
-  if (material.status !== 'ready') return <NotReady status={material.status} />;
-  if (!material.aiSummary) {
-    return (
-      <EmptyState
-        icon={<Sparkles size={24} aria-hidden="true" />}
-        title="요약이 아직 없어요"
-        description="자료 내용이 짧으면 요약을 만들지 않을 수 있어요. 핵심 개념 탭을 확인해 보세요."
-      />
-    );
-  }
   return (
-    <AiNote title="자료 요약">
-      <p className="whitespace-pre-line">{material.aiSummary}</p>
-    </AiNote>
+    <AsyncBoundary>
+      <StudySummaryPanel
+        materialId={material.id}
+        fileName={material.fileName}
+      />
+    </AsyncBoundary>
   );
 }
 

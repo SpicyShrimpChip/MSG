@@ -167,11 +167,18 @@ public class QuizGenerationService {
 	// 모델이 만든 퀴즈를 검사한다. 형식이 맞지 않으면 빈 값 (다음 모델로 넘어간다)
 	private Optional<QuizGenerationParser.ParsedQuiz> parse(String raw, QuizSpec spec, QuizModelFallback.Tracker attempt) {
 		try {
-			return Optional.of(parser.parse(raw, spec.mode(), spec.plan(), spec.concepts()));
+			return Optional.of(parser.parse(raw, spec.mode(), spec.plan(), spec.concepts(), expectation(spec)));
 		} catch (QuizGenerationParser.InvalidOutputException e) {
 			log.warn("{} 모델이 만든 퀴즈가 형식에 맞지 않다: {}", attempt.last().provider(), e.getMessage());
 			return Optional.empty();
 		}
+	}
+
+	// 인지 수준과 보낸 자료 발췌를 함께 검증한다 (QuizGenerationParser)
+	private static QuizGenerationParser.Expectation expectation(QuizSpec spec) {
+		int count = spec.plan().values().stream().mapToInt(Integer::intValue).sum();
+		return new QuizGenerationParser.Expectation(spec.bloomTargets(),
+				BloomPlan.requiredDistinct(spec.bloomTargets(), count), spec.materialExcerpt());
 	}
 
 	private void finishIfRunning(Long generationId, QuizModelFallback.Tracker attempt) {
@@ -259,7 +266,9 @@ public class QuizGenerationService {
 				spec.plan(), spec.concepts(), spec.examScope(), spec.jobLabel(),
 				// 대화 분석에서 나온 개념 상태는 대화 분석에도 동의한 경우에만 참고로 보낸다
 				hints(userId, spec, user.isAiAnalysisConsent()), spec.mockExam(), spec.assessmentKind(),
-				spec.avoidQuestions(), spec.materialExcerpt());
+				spec.avoidQuestions(), spec.materialExcerpt(), spec.bloomTargets(),
+				BloomPlan.requiredDistinct(spec.bloomTargets(),
+						spec.plan().values().stream().mapToInt(Integer::intValue).sum()));
 		return new Started(generation.getId(), null, input, spec, deadline);
 	}
 
@@ -347,7 +356,10 @@ public class QuizGenerationService {
 				.asAssessment(spec.assessmentKind(), spec.preAssessmentId())
 				.withMaterialContentUsed(spec.materialExcerpt() != null)
 				.withConceptSource(spec.conceptSource())
-				.asConceptCheck(spec.checkConceptKey(), spec.checkConceptName()));
+				.asConceptCheck(spec.checkConceptKey(), spec.checkConceptName())
+				.withLearningDesign(BloomPlan.join(spec.bloomTargets()), QuizPrompt.VERSION)
+				.withMaterialScope(spec.materialExcerpt() == null ? List.of() : spec.materialScope(),
+						spec.materialExcerpt() == null ? List.of() : spec.missingConcepts()));
 		List<QuizQuestion> questions = new ArrayList<>();
 		for (int i = 0; i < parsed.questions().size(); i++) {
 			questions.add(parsed.questions().get(i).toEntity(quiz.getId(), i));

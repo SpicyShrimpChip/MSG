@@ -139,4 +139,14 @@ export interface FlowConcept {
   priority: boolean;
   // 자료에서 뽑은 개념의 학습 상태. 과목 키워드뿐인 개념은 null
   study: ConceptStudy | null;
+  // 이 개념을 먼저(또는 나중에) 공부하는 이유. 저장된 사전평가·확인 퀴즈·대화 분석 결과로 서버 코드가 만든 문장
+  priorityReasons?: string[];
+  // 최근 대화 분석의 모델 비교 결과 (AI 추정, 퀴즈 결과와 따로). 분석이 없으면 null
+  analysisStatus?:
+    | 'understood'
+    | 'partial'
+    | 'not_understood'
+    | 'insufficient_evidence'
+    | 'disagreement'
+    | null;
 }
