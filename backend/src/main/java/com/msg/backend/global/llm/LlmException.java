@@ -24,7 +24,9 @@ public class LlmException extends RuntimeException {
 		/** 연결 실패 */
 		NETWORK(true),
 		/** 서비스 전체 하루 호출 상한에 닿아 부르지 않음 (app.ai-daily-limit, 제공사 오류가 아니다) */
-		DAILY_LIMIT(false);
+		DAILY_LIMIT(false),
+		/** 사용자 한 명의 하루 호출 몫을 다 써서 부르지 않음 (app.ai-daily-limit.user-calls, 제공사 오류가 아니다) */
+		USER_DAILY_LIMIT(false);
 
 		private final boolean retryable;
 

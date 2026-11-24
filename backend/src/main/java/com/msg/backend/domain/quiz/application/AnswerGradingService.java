@@ -112,7 +112,7 @@ public class AnswerGradingService {
 		clients.forEach(client -> {
 			byProvider.put(client.provider(), client);
 			calls.put(client.provider(),
-					modelInvoker.invokeAsync(client, request, ModelInvoker.Lane.QUIZ, deadline));
+					modelInvoker.invokeAsync(userId, client, request, ModelInvoker.Lane.QUIZ, deadline));
 		});
 		List<ModelJudgments> judged = new ArrayList<>();
 		calls.forEach((provider, call) -> {

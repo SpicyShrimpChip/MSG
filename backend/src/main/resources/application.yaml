@@ -60,6 +60,8 @@ app:
     secret-key: ${TURNSTILE_SECRET_KEY:}
     verify-url: https://challenges.cloudflare.com/turnstile/v0/siteverify
     timeout: 5s
+    # true면 비밀 키가 비었을 때 서버가 뜨지 않는다. 운영(application-prod.yaml)은 true
+    required: false
 
   # 사용자가 보는 화면 주소. 소셜 로그인 콜백이 끝나면 이 주소의 화면(/auth/social/done 등)으로 돌려보낸다
   frontend:
@@ -85,11 +87,14 @@ app:
     hash-secret: ${REJOIN_HASH_SECRET:}
     cleanup-interval: 6h
 
-  # 서비스 전체 하루 AI 모델 호출 상한 (사용자별 한도와 따로, 계정을 여러 개 만들어도 넘을 수 없는 비용 상한).
-  # 다시 부르기도 한 번으로 센다. 0 이하면 상한 없음. 날짜는 zone 기준으로 나눈다
-  # TODO(미결): 500은 근거 없는 임시값 (분석 1번 = 최대 6번, 퀴즈 만들기 1번 = 최대 6번 호출). 제공사 콘솔 지출 한도와 함께 정한다
+  # 하루 AI 모델 호출 상한. 다시 부르기도 한 번으로 센다. 0 이하면 상한 없음. 날짜는 zone 기준으로 나눈다
+  # calls: 서비스 전체 (계정을 여러 개 만들어도 넘을 수 없는 비용 상한)
+  # user-calls: 사용자 한 명의 몫. 분석·퀴즈 만들기·AI 채점·자료 개념 뽑기·개념 설명의 호출을 모두 합쳐 센다(기능별 한도와 따로).
+  #   계정 몇 개로 서비스 전체 상한을 다 써 버리지 못하게 calls보다 훨씬 작게 둔다. 분석 1번 = 모델 3번(다시 부르면 최대 6번)
+  # TODO(미결): 500·40은 근거 없는 임시값. 실사용자 테스트의 실제 사용량과 제공사 콘솔 지출 한도를 보고 정한다
   ai-daily-limit:
     calls: ${AI_DAILY_CALL_LIMIT:500}
+    user-calls: ${AI_USER_DAILY_CALL_LIMIT:40}
     zone: Asia/Seoul
 
   # 학습 분석에 쓰는 AI 모델. 키와 모델 이름은 환경변수(또는 backend/.env)로만 넣는다. 둘 중 하나라도 비면 그 모델은 "미설정"으로
@@ -213,3 +218,8 @@ app:
       lock-duration: 15m
       # 한 IP에서 여러 이메일로 시도하는 경우
       max-failures-per-ip: 50
+    # 한 IP의 가입 시도 수 (이메일 가입·카카오 가입 마무리 합계). 계정을 대량으로 만들거나 가입 응답으로 이메일을 대량 확인하는 것을
+    # 느리게 한다. 강의실처럼 여러 사람이 같은 IP로 가입할 수 있어 넉넉히 둔다. 0이면 제한하지 않는다
+    signup-attempt:
+      max-per-ip: 10
+      window: 1h

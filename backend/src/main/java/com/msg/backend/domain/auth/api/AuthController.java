@@ -3,6 +3,7 @@ package com.msg.backend.domain.auth.api;
 import com.msg.backend.domain.auth.application.AuthService;
 import com.msg.backend.domain.auth.application.AuthService.LoginResult;
 import com.msg.backend.domain.auth.application.AuthService.RefreshResult;
+import com.msg.backend.domain.auth.application.SignupAttemptLimiter;
 import com.msg.backend.domain.auth.application.SignupBotCheck;
 import com.msg.backend.domain.auth.dto.AccessTokenResponse;
 import com.msg.backend.domain.auth.dto.LoginRequest;
@@ -39,12 +40,15 @@ public class AuthController {
 
 	private final AuthService authService;
 	private final SignupBotCheck signupBotCheck;
+	private final SignupAttemptLimiter signupAttemptLimiter;
 	private final RefreshTokenCookies refreshTokenCookies;
 
-	@Operation(summary = "회원가입", description = "이메일 중복이면 409. 비밀번호 규칙: 8자 이상, 영문·숫자·특수문자 포함.")
+	@Operation(summary = "회원가입", description = "이메일 중복이면 409. 비밀번호 규칙: 8자 이상, 영문·숫자·특수문자 포함. "
+			+ "같은 IP에서 가입 시도가 너무 많으면 429.")
 	@PostMapping("/signup")
 	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<UserResponse> signup(@Valid @RequestBody SignupRequest request) {
+	public ApiResponse<UserResponse> signup(@Valid @RequestBody SignupRequest request, HttpServletRequest httpRequest) {
+		signupAttemptLimiter.acquire(httpRequest.getRemoteAddr());
 		// 외부 확인은 DB 트랜잭션 밖에서 먼저 한다
 		signupBotCheck.verify(request.turnstileToken());
 		return ApiResponse.success(authService.signup(request));

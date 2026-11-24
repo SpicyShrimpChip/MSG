@@ -22,8 +22,9 @@ import org.springframework.stereotype.Component;
  * 마감 시각(deadline)을 주면 남은 시간이 없을 때 다시 시도하지 않고, {@link #await}는 마감까지만 기다린다.
  * 마감 뒤 늦게 끝난 호출의 결과는 버려진다(부르는 쪽이 받지 않는다).
  *
- * <p>부를 때마다 서비스 전체 하루 상한({@link AiCallQuota})에서 한 번을 받아 가고, 다 찼으면 부르지 않고
- * {@link LlmException.Code#DAILY_LIMIT}을 돌려준다.
+ * <p>부를 때마다 하루 상한({@link AiCallQuota})에서 사용자 몫 → 서비스 전체 순서로 한 번을 받아 가고, 다 찼으면 부르지 않고
+ * {@link LlmException.Code#USER_DAILY_LIMIT}·{@link LlmException.Code#DAILY_LIMIT}을 돌려준다.
+ * 사용자 몫은 userId를 넘긴 호출만 센다(모든 기능의 호출 지점이 넘긴다).
  */
 @Slf4j
 @Component
@@ -68,8 +69,9 @@ public class ModelInvoker {
 		});
 	}
 
-	public CompletableFuture<Outcome> invokeAsync(LlmClient client, LlmRequest request, Lane lane, Instant deadline) {
-		return CompletableFuture.supplyAsync(() -> invoke(client, request, deadline),
+	public CompletableFuture<Outcome> invokeAsync(Long userId, LlmClient client, LlmRequest request, Lane lane,
+			Instant deadline) {
+		return CompletableFuture.supplyAsync(() -> invoke(userId, client, request, deadline),
 				lane == Lane.QUIZ ? quizExecutor : analysisExecutor);
 	}
 
@@ -97,10 +99,10 @@ public class ModelInvoker {
 	}
 
 	public Outcome invoke(LlmClient client, LlmRequest request) {
-		return invoke(client, request, null);
+		return invoke(null, client, request, null);
 	}
 
-	public Outcome invoke(LlmClient client, LlmRequest request, Instant deadline) {
+	public Outcome invoke(Long userId, LlmClient client, LlmRequest request, Instant deadline) {
 		long started = System.nanoTime();
 		if (deadline != null && !clock.instant().isBefore(deadline)) {
 			return new Outcome(null, LlmException.Code.TIMEOUT, 0, 0, true);
@@ -108,7 +110,11 @@ public class ModelInvoker {
 		int maxAttempts = 1 + Math.max(0, properties.maxRetries());
 		LlmException.Code lastCode = null;
 		for (int attempt = 1; attempt <= maxAttempts; attempt++) {
-			// 부를 때마다(다시 부를 때도) 서비스 전체 하루 상한에서 한 번을 받아 간다. 다 찼으면 부르지 않는다
+			// 부를 때마다(다시 부를 때도) 사용자 몫 → 서비스 전체 하루 상한에서 한 번을 받아 간다. 다 찼으면 부르지 않는다.
+			// 사용자 몫을 먼저 본다: 몫을 다 쓴 사용자가 서비스 전체 상한을 줄이지 않게
+			if (!quota.tryAcquireForUser(userId)) {
+				return new Outcome(null, LlmException.Code.USER_DAILY_LIMIT, attempt - 1, elapsedMs(started));
+			}
 			if (!quota.tryAcquire()) {
 				return new Outcome(null, LlmException.Code.DAILY_LIMIT, attempt - 1, elapsedMs(started));
 			}

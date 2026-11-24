@@ -4,6 +4,7 @@ import com.msg.backend.domain.auth.application.AuthService.LoginResult;
 import com.msg.backend.domain.auth.application.FrontendProperties;
 import com.msg.backend.domain.auth.application.KakaoClient;
 import com.msg.backend.domain.auth.application.KakaoProperties;
+import com.msg.backend.domain.auth.application.SignupAttemptLimiter;
 import com.msg.backend.domain.auth.application.SocialError;
 import com.msg.backend.domain.auth.application.SocialLoginException;
 import com.msg.backend.domain.auth.application.SocialLoginService;
@@ -61,6 +62,7 @@ public class SocialAuthController {
 	private final FrontendProperties frontendProperties;
 	private final OAuthStateCookies stateCookies;
 	private final SocialSignupTicketCookies signupTicketCookies;
+	private final SignupAttemptLimiter signupAttemptLimiter;
 	private final RefreshTokenCookies refreshTokenCookies;
 	private final KakaoClient kakaoClient;
 	private final SocialLoginService socialLoginService;
@@ -160,7 +162,8 @@ public class SocialAuthController {
 	}
 
 	@Operation(summary = "카카오 가입 마무리", description = "약관 동의를 받아 계정을 만들고 바로 로그인한다(응답은 로그인과 같음, Refresh는 쿠키). "
-			+ "가입 마무리 쿠키가 없거나 만료면 401, 같은 이메일이 이미 있거나 이미 가입을 마쳤으면 409, 탈퇴 뒤 30일 안이면 409.")
+			+ "가입 마무리 쿠키가 없거나 만료면 401, 같은 이메일이 이미 있거나 이미 가입을 마쳤으면 409, 탈퇴 뒤 30일 안이면 409, "
+			+ "같은 IP에서 가입 시도가 너무 많으면 429(이메일 가입과 함께 센다).")
 	@PostMapping("/social/signup")
 	public ApiResponse<LoginResponse> socialSignup(
 			@Parameter(description = "XMLHttpRequest", required = true) @RequestHeader(value = AuthController.REQUESTED_WITH, required = false) String requestedWith,
@@ -169,6 +172,7 @@ public class SocialAuthController {
 			HttpServletResponse response) {
 		AuthController.requireXmlHttpRequest(requestedWith);
 		SocialProfile profile = readTicket(request);
+		signupAttemptLimiter.acquire(request.getRemoteAddr());
 		LoginResult result;
 		try {
 			result = socialLoginService.completeSignup(profile, body);

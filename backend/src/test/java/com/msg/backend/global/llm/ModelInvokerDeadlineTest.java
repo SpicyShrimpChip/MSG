@@ -60,6 +60,46 @@ class ModelInvokerDeadlineTest {
 		}
 	}
 
+	@Test
+	void 사용자_몫을_다_쓰면_부르지_않고_서비스_전체_상한도_줄이지_않는다() {
+		AtomicInteger calls = new AtomicInteger();
+		AtomicInteger serviceAcquired = new AtomicInteger();
+		FakeLlmClient failing = new FakeLlmClient(LlmProvider.GPT).respond(request -> {
+			calls.incrementAndGet();
+			throw new LlmException(LlmException.Code.SERVER_ERROR, "실패");
+		});
+		AtomicInteger userLeft = new AtomicInteger(1);
+		AiCallQuota quota = new AiCallQuota() {
+			@Override
+			public boolean tryAcquire() {
+				serviceAcquired.incrementAndGet();
+				return true;
+			}
+
+			@Override
+			public boolean hasRemaining() {
+				return true;
+			}
+
+			@Override
+			public boolean tryAcquireForUser(Long userId) {
+				return userId == 7L && userLeft.getAndDecrement() > 0;
+			}
+		};
+		ModelInvoker limited = new ModelInvoker(properties, Clock.systemUTC(), quota);
+		try {
+			// 첫 호출은 몫 안이라 부르고, 다시 부를 때 몫이 없어 멈춘다
+			ModelInvoker.Outcome outcome = limited.invoke(7L, failing, new LlmRequest("s", "u", 10), null);
+
+			assertThat(outcome.errorCode()).isEqualTo(LlmException.Code.USER_DAILY_LIMIT);
+			assertThat(outcome.attempts()).isEqualTo(1);
+			assertThat(calls).hasValue(1);
+			assertThat(serviceAcquired).hasValue(1);
+		} finally {
+			limited.shutdown();
+		}
+	}
+
 	// n번까지만 받아 가게 해 주는 상한
 	private static AiCallQuota quotaAllowing(int n) {
 		AtomicInteger left = new AtomicInteger(n);
@@ -98,7 +138,7 @@ class ModelInvokerDeadlineTest {
 
 		long started = System.nanoTime();
 		ModelInvoker.Outcome outcome = invoker.await(
-				invoker.invokeAsync(slow, new LlmRequest("s", "u", 10), ModelInvoker.Lane.QUIZ, deadline), deadline);
+				invoker.invokeAsync(null, slow, new LlmRequest("s", "u", 10), ModelInvoker.Lane.QUIZ, deadline), deadline);
 
 		assertThat(outcome.timedOut()).isTrue();
 		assertThat(outcome.response()).isNull();
@@ -114,12 +154,12 @@ class ModelInvokerDeadlineTest {
 			throw new LlmException(LlmException.Code.SERVER_ERROR, "실패");
 		});
 
-		ModelInvoker.Outcome near = invoker.invoke(failing, new LlmRequest("s", "u", 10),
+		ModelInvoker.Outcome near = invoker.invoke(null, failing, new LlmRequest("s", "u", 10),
 				Instant.now().plusSeconds(5));
 		assertThat(near.attempts()).isEqualTo(1);
 		assertThat(calls).hasValue(1);
 
-		ModelInvoker.Outcome far = invoker.invoke(failing, new LlmRequest("s", "u", 10), Instant.now().plusSeconds(120));
+		ModelInvoker.Outcome far = invoker.invoke(null, failing, new LlmRequest("s", "u", 10), Instant.now().plusSeconds(120));
 		assertThat(far.attempts()).isEqualTo(4);
 	}
 
@@ -131,7 +171,7 @@ class ModelInvokerDeadlineTest {
 			return new LlmResponse("{}", 1, 1);
 		});
 
-		ModelInvoker.Outcome outcome = invoker.invoke(client, new LlmRequest("s", "u", 10), Instant.now().minusSeconds(1));
+		ModelInvoker.Outcome outcome = invoker.invoke(null, client, new LlmRequest("s", "u", 10), Instant.now().minusSeconds(1));
 
 		assertThat(outcome.timedOut()).isTrue();
 		assertThat(calls).hasValue(0);
