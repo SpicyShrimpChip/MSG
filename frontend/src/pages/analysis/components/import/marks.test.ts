@@ -26,6 +26,26 @@ describe('대화 보기 칠하기', () => {
     ]);
   });
 
+  it('영문 키워드는 대화를 고른 규칙과 같이 낱말 경계에서만 칠한다', () => {
+    const marked = (text: string, keywords: string[], phrases?: string[]) =>
+      splitMarks(text, markPattern(keywords, phrases))
+        .filter((part) => part.kind)
+        .map((part) => part.text);
+    expect(marked('shipping IP를 바꿨어요 tcp/ip', ['IP'])).toEqual([
+      'IP',
+      'ip',
+    ]);
+    expect(marked('vlans와 VLAN', ['VLAN'])).toEqual(['VLAN']);
+    // 붙어 나온 단어도 앞 글자를 보고 하나씩 칠한다
+    expect(marked(`${MASK_LABELS.ip}IP`, ['IP'])).toEqual([
+      MASK_LABELS.ip,
+      'IP',
+    ]);
+    // 한글 키워드와 검색어는 부분 문자열로 칠한다
+    expect(marked('운영체제론', ['운영체제'])).toEqual(['운영체제']);
+    expect(marked('shipping', [], ['ip'])).toEqual(['ip']);
+  });
+
   it('마크다운 글 조각만 바꾸고 코드 블록은 그대로 둔다', () => {
     const tree = {
       type: 'root',

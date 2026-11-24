@@ -4,6 +4,7 @@ import com.msg.backend.domain.conversation.entity.Conversation;
 import com.msg.backend.domain.conversation.entity.ConversationMessage;
 import com.msg.backend.domain.conversation.entity.MessageRole;
 import com.msg.backend.domain.course.entity.Course;
+import com.msg.backend.global.common.TermMatch;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -17,7 +18,8 @@ import org.springframework.stereotype.Component;
 /**
  * 모델에 보낼 글을 만든다. 외부로 나가는 양을 줄이려고 다음만 보낸다.
  * <ul>
- * <li>과목 키워드가 들어간 메시지와 그 앞뒤 contextWindow개 (키워드가 제목에만 있으면 대화 전체)</li>
+ * <li>과목 키워드가 들어간 메시지와 그 앞뒤 contextWindow개 (키워드가 제목에만 있으면 대화 전체).
+ * 영문 키워드는 낱말 경계에서만 찾는다(TermMatch, 프론트에서 대화를 고른 규칙과 같다)</li>
  * <li>메시지 하나는 maxMessageChars까지 (넘으면 뒤를 자르고 표시)</li>
  * <li>전체는 maxInputChars까지. 최근 대화부터 담고, 뒤에 담을 대화가 남아 있으면 대화 하나는 남은 자리의 절반까지만 쓴다.
  * 대화가 자리보다 길면 통째로 빼지 않고 최근 메시지부터 메시지 단위로 담고 빠진 앞쪽 메시지 수를 표시한다</li>
@@ -35,7 +37,8 @@ class AnalysisInputBuilder {
 
 	AnalysisInput build(Course course, List<Conversation> conversations, List<ConversationMessage> messages) {
 		List<AnalysisInput.Concept> concepts = concepts(course);
-		List<String> keys = concepts.stream().map(AnalysisInput.Concept::key).toList();
+		// 키워드마다 찾을 규칙(영문은 낱말 경계 정규식)을 한 번만 만들고 모든 메시지에 같이 쓴다
+		List<TermMatch.Keyword> keywords = course.getKeywords().stream().map(TermMatch::keyword).toList();
 		Map<Long, List<ConversationMessage>> byConversation = new LinkedHashMap<>();
 		messages.forEach(message -> byConversation.computeIfAbsent(message.getConversationId(), id -> new ArrayList<>())
 				.add(message));
@@ -43,7 +46,7 @@ class AnalysisInputBuilder {
 		List<Selection> selections = new ArrayList<>();
 		for (Conversation conversation : newestFirst(conversations)) {
 			List<ConversationMessage> selected = select(conversation,
-					byConversation.getOrDefault(conversation.getId(), List.of()), keys);
+					byConversation.getOrDefault(conversation.getId(), List.of()), keywords);
 			if (!selected.isEmpty()) {
 				selections.add(new Selection(conversation, selected));
 			}
@@ -134,10 +137,10 @@ class AnalysisInputBuilder {
 
 	// 키워드가 들어간 메시지와 앞뒤 메시지만. 키워드가 제목에만 있으면 전체
 	private List<ConversationMessage> select(Conversation conversation, List<ConversationMessage> messages,
-			List<String> keys) {
+			List<TermMatch.Keyword> keywords) {
 		TreeSet<Integer> picked = new TreeSet<>();
 		for (int i = 0; i < messages.size(); i++) {
-			if (containsAny(messages.get(i).getContent(), keys)) {
+			if (containsAny(messages.get(i).getContent(), keywords)) {
 				for (int j = Math.max(0, i - properties.contextWindow());
 						j <= Math.min(messages.size() - 1, i + properties.contextWindow()); j++) {
 					picked.add(j);
@@ -145,14 +148,15 @@ class AnalysisInputBuilder {
 			}
 		}
 		if (picked.isEmpty()) {
-			return containsAny(conversation.getTitle(), keys) ? messages : List.of();
+			return containsAny(conversation.getTitle(), keywords) ? messages : List.of();
 		}
 		return picked.stream().map(messages::get).toList();
 	}
 
-	private static boolean containsAny(String text, List<String> keys) {
+	// 영문 키워드는 낱말 경계에서만, 한글이 든 키워드는 부분 문자열로 찾는다 (프론트 filter.ts와 같은 규칙, TermMatch)
+	private static boolean containsAny(String text, List<TermMatch.Keyword> keywords) {
 		String lower = text.toLowerCase(Locale.ROOT);
-		return keys.stream().anyMatch(lower::contains);
+		return keywords.stream().anyMatch(keyword -> keyword.foundIn(lower));
 	}
 
 	// 외부 서비스에서 시작한 시각이 최근인 대화부터 (시각이 없으면 뒤로), 같으면 나중에 가져온 것부터

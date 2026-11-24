@@ -92,6 +92,23 @@ class AnalysisInputBuilderTest {
 		assertThat(input.sentMessages()).isEmpty();
 	}
 
+	@Test
+	void 영문_키워드는_다른_낱말_안에_든_것으로는_고르지_않는다() {
+		Course network = Course.create(1L, "네트워크", "2026-2", List.of("IP"), NOW);
+		Conversation conversation = conversation(1L, NOW.minusDays(1));
+		ConversationMessage ship = message(conversation, MessageRole.USER, "shipping 일정 알려 줘");
+		ConversationMessage filler = message(conversation, MessageRole.ASSISTANT, "다음 주예요");
+		ConversationMessage other = message(conversation, MessageRole.USER, "고마워");
+		ConversationMessage spacer = message(conversation, MessageRole.ASSISTANT, "천만에요");
+		ConversationMessage ip = message(conversation, MessageRole.USER, "IP를 다시 설명해 줘");
+
+		AnalysisInput input = builder.build(network, List.of(conversation),
+				List.of(ship, filler, other, spacer, ip));
+
+		// "IP를"과 그 앞뒤 1개만 간다. "shipping"의 "ip"로는 고르지 않는다
+		assertThat(input.sentMessages().keySet()).containsExactly(spacer.getId(), ip.getId());
+	}
+
 	private Conversation conversation(Long id, LocalDateTime sourceCreatedAt) {
 		Conversation conversation = Conversation.start(1L, 1L, 1L, ConversationSource.CHATGPT, "c" + id,
 				"공부 " + id, sourceCreatedAt, 1, NOW);

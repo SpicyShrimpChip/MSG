@@ -1,5 +1,6 @@
 package com.msg.backend.domain.material.application;
 
+import com.msg.backend.global.common.TermMatch;
 import com.msg.backend.global.common.VerificationStatus;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -35,7 +36,6 @@ public final class SourceText {
 	private static final Pattern MARKER_LINE = Pattern.compile("(?m)^\\[(p\\. \\d+|슬라이드 \\d+|문단 \\d+)]\\s*$");
 	// 공백을 지운 글에서 찾는 위치 표시
 	private static final Pattern COMPACT_MARKER = Pattern.compile("\\[(p\\.(\\d+)|슬라이드(\\d+)|문단(\\d+))]");
-	private static final Pattern LATIN_TERM = Pattern.compile("[A-Za-z0-9][A-Za-z0-9 ./+#&-]*");
 	private static final Pattern TOKEN_SPLIT = Pattern.compile("[\\s\\p{Punct}·“”‘’「」『』()（）]+");
 
 	/** 위치가 붙은 본문 한 부분. location이 null이면 첫 위치 표시 앞의 글 */
@@ -241,21 +241,15 @@ public final class SourceText {
 		return text.toLowerCase(Locale.ROOT).replaceAll("\\s+", "");
 	}
 
-	// 영문·숫자로만 된 용어(RSA, VLAN, TCP/IP)는 낱말 경계에서만 센다("hours and"의 "rsa"를 세지 않게).
+	// 영문·숫자로만 된 용어(RSA, VLAN, TCP/IP)는 낱말 경계에서만 센다("hours and"의 "rsa"를 세지 않게, 판단·경계는 TermMatch).
 	// 한글이 든 용어는 조사가 붙으므로 공백을 지운 글에서 부분 문자열로 센다
 	static int occurrences(String text, String term) {
 		String trimmed = term.strip();
 		if (trimmed.isEmpty() || text == null) {
 			return 0;
 		}
-		if (LATIN_TERM.matcher(trimmed).matches()) {
-			String[] words = trimmed.toLowerCase(Locale.ROOT).split("\\s+");
-			StringBuilder regex = new StringBuilder("(?<![a-z0-9])");
-			for (int i = 0; i < words.length; i++) {
-				regex.append(i == 0 ? "" : "\\s*").append(Pattern.quote(words[i]));
-			}
-			regex.append("(?![a-z0-9])");
-			Matcher matcher = Pattern.compile(regex.toString()).matcher(text.toLowerCase(Locale.ROOT));
+		if (TermMatch.isLatin(trimmed)) {
+			Matcher matcher = TermMatch.latinCountPattern(trimmed).matcher(text.toLowerCase(Locale.ROOT));
 			int count = 0;
 			while (matcher.find()) {
 				count++;
