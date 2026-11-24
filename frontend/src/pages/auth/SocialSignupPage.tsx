@@ -24,6 +24,7 @@ import {
   safeReturnTo,
 } from '@/utils';
 import AuthCard from './components/AuthCard';
+import { KAKAO_SIGNUP_NOTICE } from './components/ConsentNotice';
 import SignupAgreements from './components/SignupAgreements';
 import SocialPendingError from './components/SocialPendingError';
 
@@ -152,6 +153,7 @@ function SocialSignupForm({ pending, returnTo }: SocialSignupFormProps) {
       </section>
 
       <SignupAgreements
+        requiredNotice={KAKAO_SIGNUP_NOTICE}
         acknowledged={acknowledged}
         onAcknowledgedChange={setAcknowledged}
         aiConsent={aiConsent}
