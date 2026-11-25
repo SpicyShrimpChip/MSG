@@ -5,6 +5,8 @@ import com.msg.backend.global.error.BusinessException;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.http.HttpStatus;
 
 // 모든 조회에 소유자(userId) 조건을 함께 건다. 남의 자료는 없는 것과 같게 다룬다
@@ -29,4 +31,10 @@ public interface MaterialRepository extends JpaRepository<Material, Long> {
 	List<Material> findAllByUserIdAndCourseId(Long userId, Long courseId);
 
 	List<Material> findAllByUserId(Long userId);
+
+	// 내 자료 파일 크기 합계 (저장 용량 상한 확인)
+	@Query("select coalesce(sum(m.fileSize), 0) from Material m where m.userId = :userId")
+	long sumFileSizeByUserId(@Param("userId") Long userId);
+
+	long countByUserId(Long userId);
 }

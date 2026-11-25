@@ -28,7 +28,7 @@ public class TestStorage implements ApplicationContextInitializer<ConfigurableAp
 
 	private static Path createRoot() {
 		try {
-			Path root = Files.createTempDirectory("ai-lms-test-storage-");
+			Path root = Files.createTempDirectory("msg-test-storage-");
 			Runtime.getRuntime().addShutdownHook(new Thread(() -> deleteRecursively(root)));
 			return root;
 		} catch (IOException e) {

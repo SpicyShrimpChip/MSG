@@ -4,8 +4,10 @@ import static com.msg.backend.support.TestApi.bearer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -15,6 +17,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.msg.backend.domain.auth.dao.RefreshTokenRepository;
 import com.msg.backend.domain.course.application.CourseService;
+import com.msg.backend.domain.material.application.MaterialQuotaProperties;
 import com.msg.backend.domain.material.application.MaterialService;
 import com.msg.backend.domain.quiz.dao.QuizRepository;
 import com.msg.backend.domain.quiz.entity.Quiz;
@@ -93,6 +96,8 @@ class MaterialApiTest {
 	private MutableClock clock;
 	@Autowired
 	private QuizRepository quizRepository;
+	@Autowired
+	private MaterialQuotaProperties quota;
 
 	private String token;
 	private String otherToken;
@@ -397,6 +402,97 @@ class MaterialApiTest {
 		assertThat(materialCount()).isEqualTo(1);
 	}
 
+	// ---------- 저장 용량 상한 (app.material) ----------
+
+	@Test
+	void 내_자료의_크기_합계가_상한을_넘으면_409이고_파일도_행도_남지_않는다() throws Exception {
+		long max = quota.maxTotalSize().toBytes();
+		assertThat(max).isPositive();
+		long pdfSize = TestFiles.pdf().length;
+		long filler = insertFiller(userId("me@example.com"), max - pdfSize + 1);
+		long filesBefore = storedFileCount();
+
+		upload(token, courseId, "노트", pdf("노트.pdf"), "key-1")
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.success").value(false))
+				.andExpect(jsonPath("$.message").value(startsWith("저장 공간이 모자라요.")))
+				.andExpect(jsonPath("$.message").value(endsWith("쓰지 않는 자료를 지운 뒤 다시 올려 주세요.")))
+				.andExpect(jsonPath("$.data").value(nullValue()));
+		assertThat(materialCount()).isEqualTo(1);
+		assertThat(storedFileCount()).isEqualTo(filesBefore);
+
+		// 상한은 사용자마다 따로다
+		uploadedId(upload(otherToken, null, "남의 노트", pdf("노트.pdf")));
+
+		// 합계가 상한과 꼭 같아지는 파일은 올릴 수 있다
+		jdbcTemplate.update("update material set file_size = ? where id = ?", max - pdfSize, filler);
+		uploadedId(upload(token, courseId, "노트", pdf("노트.pdf"), "key-1"));
+	}
+
+	@Test
+	void 내_자료_개수가_상한이면_409이고_하나를_지우면_다시_올릴_수_있다() throws Exception {
+		int maxCount = quota.maxCount();
+		assertThat(maxCount).isPositive();
+		Long me = userId("me@example.com");
+		for (int i = 0; i < maxCount; i++) {
+			insertFiller(me, 1);
+		}
+
+		upload(token, courseId, "노트", pdf("노트.pdf"))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.message").value(
+						"자료는 " + maxCount + "개까지 저장할 수 있어요. 쓰지 않는 자료를 지운 뒤 다시 올려 주세요."));
+		assertThat(materialCount()).isEqualTo(maxCount);
+
+		jdbcTemplate.update("delete from material where id = (select min(id) from material)");
+		uploadedId(upload(token, courseId, "노트", pdf("노트.pdf")));
+		assertThat(materialCount()).isEqualTo(maxCount);
+	}
+
+	@Test
+	void 상한에_닿아도_같은_요청_키로_다시_보낸_올리기는_이미_올린_자료를_돌려준다() throws Exception {
+		long id = uploadedId(upload(token, courseId, "노트", pdf("노트.pdf"), "key-1"));
+		insertFiller(userId("me@example.com"), quota.maxTotalSize().toBytes());
+
+		upload(token, courseId, "노트", pdf("노트.pdf"), "key-1")
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.id").value(id));
+		upload(token, courseId, "노트", pdf("노트.pdf"), "key-2").andExpect(status().isConflict());
+	}
+
+	@Test
+	void 남은_용량보다_많이_동시에_올려도_상한을_넘겨_저장하지_않는다() throws Exception {
+		long pdfSize = TestFiles.pdf().length;
+		// 한 개만 더 들어갈 자리를 남긴다
+		insertFiller(userId("me@example.com"), quota.maxTotalSize().toBytes() - 2 * pdfSize + 1);
+		long filesBefore = storedFileCount();
+		int requests = 5;
+		CountDownLatch start = new CountDownLatch(1);
+		ExecutorService pool = Executors.newFixedThreadPool(requests);
+		try {
+			List<Future<Integer>> results = new java.util.ArrayList<>();
+			for (int i = 0; i < requests; i++) {
+				String key = "key-" + i;
+				results.add(pool.submit(() -> {
+					start.await();
+					return upload(token, courseId, "노트", pdf("노트.pdf"), key).andReturn().getResponse().getStatus();
+				}));
+			}
+			start.countDown();
+			List<Integer> statuses = new java.util.ArrayList<>();
+			for (Future<Integer> result : results) {
+				statuses.add(result.get(30, TimeUnit.SECONDS));
+			}
+			assertThat(statuses).containsOnly(201, 409);
+			assertThat(statuses).filteredOn(code -> code == 201).hasSize(1);
+		} finally {
+			pool.shutdownNow();
+		}
+
+		assertThat(materialCount()).isEqualTo(2);
+		assertThat(storedFileCount()).isEqualTo(filesBefore + 1);
+	}
+
 	// ---------- 목록·상세 ----------
 
 	@Test
@@ -631,6 +727,17 @@ class MaterialApiTest {
 
 	private Long userId(String email) {
 		return jdbcTemplate.queryForObject("select id from users where email = ?", Long.class, email);
+	}
+
+	// 저장소 파일 없이 DB 행만 넣어 저장 용량을 채운다 (상한 확인은 DB의 file_size 합계·행 수로 한다)
+	private long insertFiller(Long userId, long fileSize) {
+		String storageKey = "materials/filler/" + java.util.UUID.randomUUID() + ".pdf";
+		LocalDateTime now = LocalDateTime.now(clock);
+		jdbcTemplate.update("insert into material (user_id, course_id, title, original_file_name, file_format,"
+				+ " content_type, file_size, storage_key, status, created_at, updated_at)"
+				+ " values (?, null, '채우기', 'filler.pdf', 'PDF', 'application/pdf', ?, ?, 'UPLOADED', ?, ?)",
+				userId, fileSize, storageKey, now, now);
+		return jdbcTemplate.queryForObject("select id from material where storage_key = ?", Long.class, storageKey);
 	}
 
 	private int materialCount() {

@@ -60,6 +60,7 @@ Swagger UI: `/swagger-ui/index.html` — 프론트와 API를 맞출 때 이 문�
 - CORS 허용 출처는 설정값으로 관리한다 (로컬: `http://localhost:5173`·`5174`, 운영: 환경변수 `CORS_ALLOWED_ORIGINS`).
 - 업로드 파일은 확장자·크기와 **파일 내용**(실제 형식)을 검증한다(`MaterialFileInspector`). 브라우저가 보낸 MIME은 믿지 않고, 저장 위치(key)는 서버가 만들며 사용자가 보낸 파일 이름을 쓰지 않는다.
 - 자료 올리기는 선택 `requestKey`(64자까지, `material.request_key`, UNIQUE `(user_id, request_key)`)를 받는다(11/24, #210). 같은 사용자·같은 키면 사용자 행을 잠근 채 이미 올린 자료를 찾아 200으로 돌려주고 파일을 다시 저장하지 않는다.
+- 사용자별 자료 저장 용량 상한(11/25, `app.material.max-total-size` 200MB·`max-count` 100개, `MaterialQuotaProperties`): 올리기는 키가 없어도 사용자 행을 잠근 뒤 내 자료의 `file_size` 합계·개수를 세고, 넘으면 저장 전에 409로 거절한다(동시 올리기로 넘기지 못하게). 같은 키 재전송은 상한보다 먼저 확인해 200을 돌려준다. 파일을 저장하는 새 기능을 만들면 이 합계에 넣는다.
 - DB 행과 저장소 파일을 함께 지울 때는 행 삭제 트랜잭션에서 `FileCleanupService.deleteAfterCommit`으로 삭제 작업을 남긴다(커밋 뒤 파일 삭제, 실패하면 주기 작업이 다시 시도). 파일을 먼저 지우지 않는다.
 
 ## DB 마이그레이션 (Flyway)
