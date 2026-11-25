@@ -177,6 +177,10 @@ jobs:
           SQL
           # 나눠 돌릴 테스트 DB(msg_1_test ~ msg_4_test)도 같은 권한으로 만든다
           DB_HOST=127.0.0.1 ./db/create-test-db-shards.sh
+          # 작업이 끝나면 사라지는 CI 전용 컨테이너라 디스크 동기화를 끈다(테스트가 행을 지우고 넣을 때마다 디스크를 기다리지 않게).
+          # 서비스·로컬 DB에는 쓰지 않는다
+          psql -h 127.0.0.1 -U postgres -c "ALTER SYSTEM SET fsync = off" -c "ALTER SYSTEM SET synchronous_commit = off" \
+            -c "ALTER SYSTEM SET full_page_writes = off" -c "SELECT pg_reload_conf()"
 
       - name: PostgreSQL 통합 테스트
         run: |
