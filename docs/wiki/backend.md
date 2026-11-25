@@ -175,3 +175,10 @@
 - 원인: 하루 호출 수 줄(`UserAiCallDaily`·`AiDailyUsage`)은 키를 직접 넣고 `@GeneratedValue`·`@Version`이 없어 Spring Data가 새것으로 보지 않고 `save`를 merge로 처리한다. 모델 셋을 동시에 부를 때 "줄 없음"을 본 스레드의 merge가, 그사이 다른 스레드가 만들고 1을 올린 줄을 찾아 0으로 UPDATE했다. 기대한 기본 키 충돌은 일어나지 않았다.
 - 해결: 두 엔티티가 `Persistable`을 구현해 `start()`로 만든 객체만 `isNew()==true`(`@Transient`, `@PostLoad`·`@PostPersist`에서 false)로 두어 persist → 이미 있으면 기본 키 충돌(잡아서 넘어감). 만들기를 패키지 메서드로 나눠 "수가 있는 줄에 만들기를 불러도 그대로"를 결정적으로 재현했다(고치기 전 0).
 - 다음에는: 키를 직접 넣는 엔티티의 "없으면 만들기"는 `Persistable`이나 `EntityManager.persist`로 한다. 가끔 실패하는 동시성 테스트는 다시 돌리기 전에 운영 코드의 경쟁부터 의심한다.
+
+## ArchUnit 호출 규칙이 `OpenAiClient`가 `HttpLlmClient.complete`를 부른다고 잡는다 (2026-11-25, chore/backend-arch-tests)
+
+- 상황: "`LlmClient.complete`는 `ModelInvoker`만 부른다" 규칙을 넣자 서비스 코드에 없는 호출 세 건(`OpenAiClient`·`AnthropicClient`·`GeminiClient`의 `complete` → `HttpLlmClient.complete`)이 위반으로 나왔다.
+- 원인: `HttpLlmClient`가 package-private이라 javac가 public 하위 클래스마다 `super.complete`를 부르는 다리 메서드를 만든다. ArchUnit은 바이트코드를 읽어 이것도 호출로 본다.
+- 해결: "LlmClient 구현의 `complete` 안에서 부르는 `complete`"만 예외로 두었다(그 `complete`도 `ModelInvoker`만 부르므로 상한은 그대로). 위반 예시 클래스는 스프링·JPA가 읽지 않게 `com.msg.backend` 밖(`com.msg.archfixture`)에 두었다.
+- 다음에는: ArchUnit 규칙은 소스가 아니라 바이트코드 기준이다(다리 메서드·람다·메서드 참조). 규칙을 넣으면 위반 예시로 실제로 잡히는지와 정당한 코드가 통과하는지를 같이 확인한다.
