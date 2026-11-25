@@ -56,9 +56,14 @@ dependencies {
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
+// 테스트를 JVM 여러 개로 나눠 동시에 돌린다(CPU 절반, 최대 4개). JVM마다 메모리 DB·스프링 컨텍스트가 따로라 서로 섞이지 않는다.
+// 4개로 나눴을 때 로컬 H2 테스트가 71초 → 43초였다(11/25). CI 러너(4 vCPU)에서는 2개
+def testForks = Math.min(4, Math.max(1, Runtime.runtime.availableProcessors().intdiv(2)))
+
 // ./gradlew test: H2 메모리 DB로 실행 (PostgreSQL 없이도 돈다)
 tasks.named('test') {
 	useJUnitPlatform()
+	maxParallelForks = testForks
 }
 
 // ./gradlew pgTest: 같은 테스트를 로컬·원격 PostgreSQL(pgvector)의 테스트 전용 DB(msg_test)로 실행한다.

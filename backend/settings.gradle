@@ -1,1 +1,10 @@
 rootProject.name = 'backend'
+
+// 빌드 캐시(gradle.properties의 org.gradle.caching=true)는 내 PC의 ~/.gradle/caches/build-cache-1에만 쓴다.
+// CI(GitHub Actions는 CI=true)에서는 끈다: setup-java가 ~/.gradle/caches를 복원하므로 켜 두면
+// 같은 코드의 테스트가 실행되지 않고 지난 결과로 통과할 수 있다. CI는 늘 처음부터 돌린다
+buildCache {
+	local {
+		enabled = !System.getenv('CI')
+	}
+}

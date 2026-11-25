@@ -6,9 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "lint": "eslint . --cache --cache-strategy content --cache-location node_modules/.cache/eslint/",
+    "format": "prettier --write . --cache",
+    "format:check": "prettier --check . --cache",
     "test": "vitest run",
     "preview": "vite preview",
     "build:wasm": "node scripts/build-wasm.mjs",
@@ -61,11 +61,11 @@
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [
-      "eslint --fix",
-      "prettier --write"
+      "eslint --fix --cache --cache-strategy content --cache-location node_modules/.cache/eslint/",
+      "prettier --write --cache"
     ],
     "*.{css,json,md}": [
-      "prettier --write"
+      "prettier --write --cache"
     ]
   }
 }
