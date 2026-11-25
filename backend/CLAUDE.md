@@ -70,7 +70,7 @@ Swagger UI: `/swagger-ui/index.html` — 프론트와 API를 맞출 때 이 문�
 - 버전 번호는 `db/migration`과 `db/vector`가 **함께** 쓴다. 같은 번호를 두 폴더에 쓰지 않는다. pgvector 확장(`db/vector/V0_1`)은 H2에 없어 local·prod·`pgTest`에서만 읽고, 번호를 `0.1`로 둬서 항상 `V1`보다 먼저 돈다.
 - 샘플 데이터는 `db/seed/R__*.sql`(반복 실행)이고 운영 프로필은 읽지 않는다.
 - 앱 계정(`msg_app`)은 데이터 읽기·쓰기만 하고, 표 만들기·변경은 마이그레이션 계정(`msg_migrator`)만 한다.
-- 로컬 DB는 도커(`db/docker-compose.yml`)로 켜고 `db/setup-local-postgres.sh`로 DB·계정을 만든다. 순서와 막힐 때 대처는 `docs/setup.md`. 실제 PostgreSQL 테스트는 `./gradlew pgTest`이고 이름이 `_test`로 끝나는 DB(`msg_test`)에서만 돈다.
+- 로컬 DB는 도커(`db/docker-compose.yml`)로 켜고 `db/setup-local-postgres.sh`로 DB·계정을 만든다. 순서와 막힐 때 대처는 `docs/setup.md`. 실제 PostgreSQL 테스트는 `./gradlew pgTest`이고 이름이 `_test`로 끝나는 DB(`msg_test`)에서만 돈다. 테스트는 JVM 여러 개로 나눠 돈다(11/25): H2 `test`는 자동(CPU 절반, 최대 4개), `pgTest`는 `msgTestDbShards`(내 PC `~/.gradle/gradle.properties`)·`TEST_DB_SHARDS`(CI)를 주면 JVM마다 `msg_1_test`~`msg_N_test`를 쓴다(`TestDatabaseShard`, DB는 `db/create-test-db-shards.sh`). 주지 않으면 `msg_test` 하나. 그래서 테스트끼리 static 값이나 서버 메모리 상태를 공유한다고 가정하지 않는다(JVM마다 따로다).
 
 ## CI와 main 보호
 

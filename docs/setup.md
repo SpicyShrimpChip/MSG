@@ -74,6 +74,15 @@ cd ..
 ./gradlew pgTest     # 같은 테스트를 실제 PostgreSQL(msg_test)로
 ```
 
+`pgTest`를 빠르게(4개로 나눠) 돌리려면 한 번만 준비해요. 안 해도 `pgTest`는 예전처럼 `msg_test` 하나로 돌아요.
+
+```bash
+./db/create-test-db-shards.sh                                # msg_1_test ~ msg_4_test를 msg_test와 같은 권한으로 만들어요
+echo "msgTestDbShards=4" >> ~/.gradle/gradle.properties      # 내 PC에만 저장돼요(커밋 안 됨)
+```
+
+로컬 측정(11/25): `pgTest` 86초 → 47초. `./gradlew test`(H2)는 준비 없이 자동으로 나눠 돌아요(71초 → 40초).
+
 프론트를 이 백엔드에 연결하려면 `frontend/.env.development.local`(커밋 안 됨)에 `VITE_USE_MOCK=false`를 넣어요. 끝나면 지워요.
 
 ## 매일 쓰는 명령

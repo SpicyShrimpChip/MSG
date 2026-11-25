@@ -136,6 +136,8 @@ jobs:
 
     env:
       TEST_DB_URL: jdbc:postgresql://127.0.0.1:5432/msg_test
+      # pgTest를 JVM 4개로 나눠 각자 msg_1_test ~ msg_4_test를 쓴다(아래 db/create-test-db-shards.sh가 만든다)
+      TEST_DB_SHARDS: "4"
       DB_USERNAME: msg_app
       DB_PASSWORD: ci-app-password
       DB_MIGRATION_USERNAME: msg_migrator
@@ -173,6 +175,8 @@ jobs:
           ALTER DEFAULT PRIVILEGES FOR ROLE msg_migrator IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO msg_app;
           ALTER DEFAULT PRIVILEGES FOR ROLE msg_migrator IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO msg_app;
           SQL
+          # 나눠 돌릴 테스트 DB(msg_1_test ~ msg_4_test)도 같은 권한으로 만든다
+          DB_HOST=127.0.0.1 ./db/create-test-db-shards.sh
 
       - name: PostgreSQL 통합 테스트
         run: |

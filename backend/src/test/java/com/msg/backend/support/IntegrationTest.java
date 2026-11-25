@@ -25,7 +25,7 @@ import org.springframework.test.context.ContextConfiguration;
 @Retention(RetentionPolicy.RUNTIME)
 @SpringBootTest
 @AutoConfigureMockMvc
-@ContextConfiguration(initializers = {TestDatabaseGuard.class, TestStorage.class, TestLlm.class, TestKakao.class})
+@ContextConfiguration(initializers = {TestDatabaseShard.class, TestDatabaseGuard.class, TestStorage.class, TestLlm.class, TestKakao.class})
 @Import(IntegrationTest.ClockConfig.class)
 public @interface IntegrationTest {
 
