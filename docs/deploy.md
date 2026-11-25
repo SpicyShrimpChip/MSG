@@ -104,6 +104,7 @@ AWS 콘솔 작업·비밀값 입력은 사람이 한다. 순서대로 하면 30�
 
 - 백엔드 변경이 main에 머지되고 CI가 끝나면 서버에서 `cd ~/MSG && git pull && cd deploy && ./deploy.sh`. DB·업로드 파일·인증서는 볼륨에 있어 그대로 남는다.
 - 새 이미지에 문제가 있으면 `.env`에 `BACKEND_IMAGE=ghcr.io/spicyshrimpchip/msg-backend:sha-<이전 커밋 7자리>`를 넣고 `./deploy.sh`. 고친 뒤 그 줄을 지운다. **DB 마이그레이션이 들어간 변경은 이미지만 되돌리면 안 맞을 수 있다**(백업에서 복원).
+- 로그는 `docker compose logs --tail=100 backend`(caddy·db도 같다)로 본다. 컨테이너 로그는 서비스마다 10MB 파일 3개(최대 30MB)까지만 남고 오래된 것부터 지워진다(`compose.yaml`의 `x-logging`). 백엔드는 파일 로그를 따로 쓰지 않고 이 로그에만 남긴다.
 
 ## 배포 뒤 점검표
 
@@ -166,4 +167,5 @@ EC2는 계정 사이에 그대로 넘길 수 없어서, 새 서버를 띄우고 
 ## 비용 관리
 
 - 예산 알림(월 10달러)과 크레딧 잔액을 주마다 본다. 인스턴스를 **중지**해도 디스크(EBS)와 연결 안 된 탄력적 IP는 요금이 나온다.
+- 디스크(20GB)는 주마다 서버에서 `df -h`(전체 남은 공간)와 `docker system df`(이미지·볼륨·컨테이너가 쓰는 양)로 본다. 쓰면서 늘어나는 것은 DB·업로드 파일과 그 7일치 백업(`deploy/backups/`)이다.
 - AI 요금은 AWS가 아니라 제공사(OpenAI·Anthropic·Google) 콘솔에서 나간다. 지출 한도는 제공사 콘솔과 `AI_DAILY_CALL_LIMIT`로 함께 건다.
