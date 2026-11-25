@@ -137,7 +137,7 @@ jobs:
     env:
       TEST_DB_URL: jdbc:postgresql://127.0.0.1:5432/msg_test
       # pgTest를 JVM 4개로 나눠 각자 msg_1_test ~ msg_4_test를 쓴다(아래 db/create-test-db-shards.sh가 만든다)
-      TEST_DB_SHARDS: "4"
+      TEST_DB_SHARDS: "2"
       DB_USERNAME: msg_app
       DB_PASSWORD: ci-app-password
       DB_MIGRATION_USERNAME: msg_migrator
