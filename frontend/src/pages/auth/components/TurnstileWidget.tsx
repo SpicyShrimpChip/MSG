@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import { TURNSTILE_SITE_KEY } from './turnstile';
 
-// Cloudflare Turnstile(자동 가입 방지). 사이트 키(VITE_TURNSTILE_SITE_KEY)가 없으면 쓰지 않는다
-// 서버 비밀 키(TURNSTILE_SECRET_KEY)와 같이 켠다. 개인정보 처리방침 7·8·14번에 적어 둔 대로 회원가입 화면에서만 불러온다
-export const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY ?? '';
+// Cloudflare Turnstile 위젯. 사이트 키와 켜는 조건은 turnstile.ts
 
 const SCRIPT_SRC =
   'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
