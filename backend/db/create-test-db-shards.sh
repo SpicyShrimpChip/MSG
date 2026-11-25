@@ -3,7 +3,8 @@
 # setup-local-postgres.sh로 msg_test와 두 계정(msg_app·msg_migrator)을 만든 뒤 한 번 실행한다:
 #   cd backend && ./db/create-test-db-shards.sh
 # 그다음 ~/.gradle/gradle.properties(내 PC에만, 커밋 안 됨)에 msgTestDbShards=4 를 넣으면 pgTest가 4개로 나눠 돈다.
-# 넣지 않으면 pgTest는 예전처럼 msg_test 하나로 돈다. CI는 이 스크립트를 PGPASSWORD와 함께 부른다(backend-ci.yml).
+# 넣지 않으면 pgTest는 예전처럼 msg_test 하나로 돈다. 관리자 비밀번호는 PGPASSWORD 환경변수로 줄 수도 있다.
+# CI(4 vCPU)는 나누지 않는다: JVM 4개·2개·1개로 재 봤지만 실행마다 편차(같은 설정 85초·129초)가 더 커서 이득을 확인하지 못했다(11/25).
 #
 # 권한은 msg_test와 같다: migrator가 DB 소유자(테이블 생성·변경), 앱 계정은 데이터 읽기·쓰기만, vector 확장은 관리자가 미리 설치.
 # 이 PC에 psql이 없으면 도커 컨테이너(backend/db/docker-compose.yml)의 psql로 대신한다(관리자 비밀번호를 묻지 않음).

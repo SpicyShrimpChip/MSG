@@ -71,7 +71,7 @@ tasks.named('test') {
 // 테스트는 데이터를 지우므로 이름이 _test로 끝나는 DB가 아니면 시작하지 않는다 (테스트 코드의 TestDatabaseGuard도 한 번 더 막는다)
 def testDbUrl = System.getenv('TEST_DB_URL') ?: 'jdbc:postgresql://localhost:5432/msg_test'
 // 나눠 돌릴 수. 테스트 DB msg_1_test ~ msg_N_test가 있어야 한다(db/create-test-db-shards.sh). 기본 1이면 예전처럼 msg_test 하나로 돈다.
-// 내 PC는 ~/.gradle/gradle.properties의 msgTestDbShards=4, CI는 TEST_DB_SHARDS 환경변수로 켠다. JVM마다 DB를 고르는 곳은 테스트의 TestDatabaseShard
+// 내 PC는 ~/.gradle/gradle.properties의 msgTestDbShards=4(또는 TEST_DB_SHARDS 환경변수)로 켠다. CI는 4 vCPU라 나누지 않는다. JVM마다 DB를 고르는 곳은 테스트의 TestDatabaseShard
 def testDbShards = ((findProperty('msgTestDbShards') ?: System.getenv('TEST_DB_SHARDS') ?: '1') as String).toInteger()
 tasks.register('pgTest', Test) {
 	description = 'PostgreSQL 테스트 DB(msg_test)로 전체 테스트를 실행한다'
