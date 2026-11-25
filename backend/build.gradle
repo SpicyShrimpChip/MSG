@@ -53,6 +53,8 @@ dependencies {
 
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
+	// 구조 규칙 자동 검사 (src/test/.../architecture). 스프링을 띄우지 않고 컴파일된 클래스만 읽는다
+	testImplementation 'com.tngtech.archunit:archunit-junit5:1.5.1'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
