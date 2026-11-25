@@ -30,13 +30,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 코드 가져오기
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Buildx 설정
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: 이미지 만들기
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: backend
           push: false
@@ -54,13 +54,13 @@ jobs:
       packages: write
     steps:
       - name: 코드 가져오기
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Buildx 설정
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: GHCR 로그인
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -72,7 +72,7 @@ jobs:
 
       # latest는 서버가 받는 이름, sha-*는 문제가 생겼을 때 이전 이미지로 되돌리는 이름
       - name: 이미지 만들고 올리기
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: backend
           push: true
@@ -93,10 +93,10 @@ jobs:
 
     steps:
       - name: 코드 가져오기
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Java 17 설정
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: "temurin"
           java-version: "17"
@@ -105,9 +105,10 @@ jobs:
             backend/*.gradle*
             backend/gradle/wrapper/gradle-wrapper.properties
 
-      # gradle-wrapper.jar가 공식 배포본인지 확인한다
+      # gradle-wrapper.jar가 공식 배포본인지 확인한다.
+      # v6부터 캐시 기능이 별도 상용 약관(gradle-actions-caching)으로 바뀌어, MIT이고 Node 24를 쓰는 v5에 둔다(11/25)
       - name: Gradle Wrapper 검증
-        uses: gradle/actions/wrapper-validation@v4
+        uses: gradle/actions/wrapper-validation@v5
 
       - name: 빌드·테스트
         run: ./gradlew build --no-daemon
@@ -143,10 +144,10 @@ jobs:
 
     steps:
       - name: 코드 가져오기
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Java 17 설정
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: "temurin"
           java-version: "17"
