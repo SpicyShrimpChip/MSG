@@ -11,7 +11,7 @@ import { FADE_UP, SWEEP_TRANSITION } from '@/constants';
 import { StartPaths } from '@/components';
 import PrivacyNotice from '../PrivacyNotice';
 import { SceneMotionContext } from './sceneMotionContext';
-import { STORY_STEPS } from './StoryScenes';
+import { STORY_STEPS } from './storySteps';
 
 const TOTAL = STORY_STEPS.length;
 // 다음 장면으로 넘어가기까지 스크롤할 양 (화면 높이 대비). 11/6: 76vh → 55vh로 줄임

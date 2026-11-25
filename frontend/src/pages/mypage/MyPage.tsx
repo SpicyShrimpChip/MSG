@@ -31,11 +31,11 @@ import {
 import { useAuthStore } from '@/store';
 import type { User } from '@/types';
 import { DELETE_CONFIRM_TEXT, deleteAccountRequest } from '@/utils';
+import { NoticeList } from '@/pages/auth/components/ConsentNotice';
 import {
   AI_CONSENT_NOTICE,
   AI_QUIZ_CONSENT_NOTICE,
-  NoticeList,
-} from '@/pages/auth/components/ConsentNotice';
+} from '@/pages/auth/components/consentNotices';
 import WordList from '@/pages/analysis/components/import/WordList';
 import type { MainLocationState } from '@/pages/main/components/WithdrawnToast';
 

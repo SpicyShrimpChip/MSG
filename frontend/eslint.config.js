@@ -3,6 +3,7 @@ import globals from 'globals';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactX from 'eslint-plugin-react-x';
 import reactDom from 'eslint-plugin-react-dom';
+import { reactRefresh } from 'eslint-plugin-react-refresh';
 import tseslint from 'typescript-eslint';
 import eslintConfigPrettier from 'eslint-config-prettier';
 
@@ -85,6 +86,9 @@ export default tseslint.config(
       ...tseslint.configs.recommended,
       reactX.configs['recommended-typescript'],
       reactDom.configs.recommended,
+      // Fast Refresh: 컴포넌트 파일은 컴포넌트만 내보낸다(상수는 허용, error).
+      // 상수·도우미 함수·훅은 같은 폴더의 별도 파일로 나눈다. 섞여 있으면 개발 중 그 파일을 고칠 때 화면 상태가 초기화된다.
+      reactRefresh.configs.vite(),
     ],
 
     // 린트 적용할 파일 확장자 지정

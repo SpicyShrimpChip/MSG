@@ -18,16 +18,12 @@ import {
   type MarkPattern,
 } from './marks';
 import { MARKDOWN_COMPONENTS } from './markdownComponents';
+import { SOURCE_NAME } from './sourceName';
 
 // 가져온 대화를 채팅창처럼 보여 준다 (2단계 대화 보기, 3단계 가린 내용 확인에서 같이 쓴다).
 // 가린 표시는 파랑, 찾은 키워드·검색어는 형광펜으로 칠한다.
 // 사용자의 기록이라 AI 말풍선도 보라색(이 서비스의 AI가 쓴 것)으로 칠하지 않고 서비스 이름만 붙인다.
 // HTML 문자열로 그리지 않는다: 마크다운은 react-markdown이 React 요소로 만들고, 대화 속 HTML은 그리지 않는다
-
-export const SOURCE_NAME: Record<ConversationSource, string> = {
-  chatgpt: 'ChatGPT',
-  claude: 'Claude',
-};
 
 // 가린 곳 목록에서 고른 가린 표시 하나를 진하게 칠하는 CSS Custom Highlight 이름 (index.css의 ::highlight)
 const FOCUS_HIGHLIGHT = 'mask-focus';

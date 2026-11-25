@@ -18,9 +18,8 @@ import KakaoLoginButton from './components/KakaoLoginButton';
 import MockAuthNotice from './components/MockAuthNotice';
 import PasswordRules from './components/PasswordRules';
 import SignupAgreements from './components/SignupAgreements';
-import TurnstileWidget, {
-  TURNSTILE_SITE_KEY,
-} from './components/TurnstileWidget';
+import TurnstileWidget from './components/TurnstileWidget';
+import { TURNSTILE_SITE_KEY } from './components/turnstile';
 
 // 자동 가입 방지는 사이트 키가 있고 실제 서버와 연결된 모드에서만 (백엔드가 없는 빌드에는 가입이 없다)
 const BOT_CHECK_ON = TURNSTILE_SITE_KEY !== '' && !NO_BACKEND;
