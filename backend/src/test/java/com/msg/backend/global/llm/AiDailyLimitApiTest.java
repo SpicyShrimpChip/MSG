@@ -55,6 +55,8 @@ class AiDailyLimitApiTest {
 	private MutableClock clock;
 	@Autowired
 	private AiCallQuota quota;
+	@Autowired
+	private DbAiCallQuota dbQuota;
 
 	private String token;
 	private long courseId;
@@ -116,6 +118,18 @@ class AiDailyLimitApiTest {
 
 		assertThat(quota.tryAcquire()).isTrue();
 		assertThat(todayCount()).isEqualTo(1);
+	}
+
+	// 동시 요청 재현: 다른 요청이 "줄 없음"을 본 뒤 이 요청이 줄을 만들고 수를 올린 상태에서, 그 요청이 줄 만들기를 부른다
+	@Test
+	void 줄_만들기는_이미_있는_줄의_수를_덮어쓰지_않는다() {
+		fillToday(5);
+
+		dbQuota.createRow(today());
+
+		assertThat(todayCount()).isEqualTo(5);
+		assertThat(quota.tryAcquire()).isTrue();
+		assertThat(todayCount()).isEqualTo(6);
 	}
 
 	@Test
