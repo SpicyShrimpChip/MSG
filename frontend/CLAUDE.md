@@ -1,201 +1,129 @@
 # CLAUDE.md — frontend
 
-루트 `CLAUDE.md`의 원칙(미결 사항, 개인정보 처리, 판단 근거 표시)을 먼저 따른다.
+루트 `CLAUDE.md`의 원칙(미결 사항, 개인정보 처리, 판단 근거 표시)을 먼저 따른다. 화면·기능의 자세한 흐름은 `docs/frontend-guide.md`(아래 "N절"은 이 문서의 절).
 
 ## 스택
 
-React 19, TypeScript 6, Vite 8, Tailwind CSS 4, React Router 7(`createBrowserRouter` 배열 라우팅),
-TanStack Query 5(서버 상태), Zustand 5(클라이언트 UI 상태만), Axios, zod(LLM 출력 검증), Motion(`motion` 패키지, 움직임)
+React 19, TypeScript 6, Vite 8, Tailwind CSS 4, React Router 7(`createBrowserRouter` 배열 라우팅), TanStack Query 5(서버 상태), Zustand 5(클라이언트 UI 상태만), Axios, zod(LLM 출력 검증), Motion(`motion` 패키지)
 
 버전별 주의 (예제·자료가 이전 버전 기준인 경우가 많다):
 
-- **Tailwind 4:** `tailwind.config.js`를 만들지 않는다. 테마 색상·폰트는 CSS의 `@theme`에 정의하고, Vite 플러그인(`@tailwindcss/vite`)으로 연결한다.
+- **Tailwind 4:** `tailwind.config.js`를 만들지 않는다. 테마 색상·폰트는 CSS `@theme`에 정의하고 Vite 플러그인(`@tailwindcss/vite`)으로 연결한다.
 - **React 19:** `forwardRef` 없이 `ref`를 일반 prop으로 받는다. `propTypes`·`defaultProps`는 쓰지 않는다.
-- **React Router 7:** 라우터 정의 방식은 v6 데이터 라우터와 같다. 프레임워크 모드(파일 기반 라우팅, `react-router.config.ts`)는 쓰지 않는다.
+- **React Router 7:** v6 데이터 라우터 방식. 프레임워크 모드(파일 기반 라우팅, `react-router.config.ts`)는 쓰지 않는다.
 
 ## 명령어
 
 ```bash
 npm run dev      # 개발 서버 (http://localhost:5173)
 npm run lint     # ESLint
-npm run format   # Prettier로 형식·클래스 순서 맞추기 (CI의 형식 검사가 실패하면 실행)
+npm run format   # Prettier로 형식·클래스 순서 맞추기 (CI 형식 검사가 실패하면 실행)
 npm test         # Vitest (src/**/*.test.ts)
 npm run build    # 타입 체크 + 빌드
 ```
 
-작업을 마치면 `npm run lint && npm run format:check && npm test && npm run build`가 통과해야 한다.
-테스트는 화면이 아니라 틀리면 안 되는 로직(대화 파싱·마스킹, 점수 계산, API 응답 처리)에 쓴다.
+작업을 마치면 `npm run lint && npm run format:check && npm test && npm run build`가 통과해야 한다. 테스트는 화면이 아니라 틀리면 안 되는 로직(대화 파싱·마스킹, 점수 계산, API 응답 처리)에 쓴다.
 
-**ESLint가 막는 프로젝트 규칙**(`eslint.config.js`, `no-restricted-syntax`·`no-restricted-imports`, 커밋 훅·CI에서 오류): 아래 각 절의 규칙 중 코드 모양으로 확인할 수 있는 4가지다. 예외는 설정 파일의 `files` 객체로 해당 항목만 빼고(같은 규칙을 덮어쓰면 옵션이 합쳐지지 않으므로 남길 항목을 다시 넘긴다), 한 줄 예외는 `// eslint-disable-next-line <규칙> -- 이유`.
+**ESLint가 막는 규칙**(`eslint.config.js`, 이유는 실패 메시지에): `motion.*`(→ `m.*`), `dangerouslySetInnerHTML`, `import.meta.env.VITE_USE_MOCK` 직접 읽기(→ `useDemoStore.ts`), `useMutation` 직접 가져오기(→ `useSingleFlightMutation`), 컴포넌트 파일에서 컴포넌트 아닌 것 내보내기(`react-refresh/only-export-components`). 컴포넌트 파일은 컴포넌트만 내보낸다(개발 중 Fast Refresh가 상태를 유지하도록). 상수·도우미 함수는 같은 폴더의 소문자 파일로(`storySteps.ts`, `consentNotices.ts` 처럼). 파일 예외는 `files` 객체로 해당 항목만 빼고(같은 규칙을 덮어쓰면 옵션이 합쳐지지 않으니 남길 항목을 다시 넘긴다), 한 줄 예외는 `// eslint-disable-next-line <규칙> -- 이유`. 색 코드·`dark:` 클래스처럼 className 안을 봐야 하는 규칙은 오탐이 쉬워 리뷰에서 본다.
 
-- `motion.div` 등 JSX의 `motion.*`, `motion/react`의 `motion`·`motion/react-client` 가져오기 → `m.*` (움직임)
-- `dangerouslySetInnerHTML` (루트 `CLAUDE.md` 보안 원칙)
-- `import.meta.env.VITE_USE_MOCK` 직접 읽기 → `useDemoStore.ts`의 `isMockData()`·`useMockData()`·`NO_BACKEND` (예외: `store/useDemoStore.ts`)
-- `@tanstack/react-query`의 `useMutation` → `useSingleFlightMutation` (예외: `hooks/useSingleFlightMutation.ts`)
+## 폴더 구조
 
-색 코드·`dark:` 클래스처럼 className 문자열 안을 봐야 하는 규칙은 오탐이 쉬워 넣지 않았다(리뷰에서 본다).
+`src/`: `api/`(Axios 인스턴스·기능별 API 함수), `components/`(공통 UI·레이아웃·`AsyncBoundary`), `constants/`, `hooks/`(`useCourses`·`useMe` 등), `mocks/`(백엔드 없이 쓰는 샘플 데이터), `pages/`(페이지는 default export, 페이지 전용 컴포넌트는 `pages/<페이지>/components/`), `router/`(라우트·로그인 가드), `store/`(Zustand), `styles/`, `types/`(백엔드 DTO와 같은 모양), `utils/`(`conversation/` 대화 파싱·필터·마스킹, `layout/` 배치 JSON 스키마).
 
-## 폴더 구조 (보일러플레이트 기준)
+## 코드 규칙
 
-```
-src/
-├── api/          Axios 인스턴스·인터셉터, 기능별 API 함수 (materials.api.ts 등)
-├── components/   공통 UI, 레이아웃(Header·GNB·Footer), AsyncBoundary, Chatbot
-├── constants/    메뉴 구성, 라벨 매핑 등 상수
-├── hooks/        공통 커스텀 훅 (`useCourses`: 내 과목 목록, `useMe`: 로그인했을 때 내 정보)
-├── mocks/        백엔드 없이 개발할 때 쓰는 샘플 데이터
-├── pages/        페이지(default export). 페이지 전용 컴포넌트는 pages/<페이지>/components/ 에 둔다
-├── router/       라우트 정의, 로그인 가드
-├── store/        Zustand 스토어 (인증 세션 등)
-├── styles/       전역 CSS, Tailwind 설정 연동
-├── types/        타입 정의. 백엔드 DTO와 같은 모양으로 맞춘다
-└── utils/        conversation/(대화 파싱·필터·마스킹), layout/(배치 JSON 스키마·렌더러) 등
-```
-
-- import는 `@/` 절대경로를 쓰고, 공통 컴포넌트는 배럴(`index.ts`)로 내보낸다.
-- 화면을 만들 때 공통 부품을 먼저 쓴다: 버튼 `Button`, 흰 카드 `Card`, 작은 알약 `Chip`, 점수·비중 막대 `ScoreBar`(개념 막대는 `level`을 넘기면 보완 필요가 붉게), 금방 끝나는 저장을 기다리는 동안 도는 아이콘 `Spinner`, AI 응답을 오래 기다리는 안내 상자 `AiWaiting`(점 구슬 + 글, `thinking-orbs`를 처음 뜰 때 받는다. 세 모델 분석은 `weaving`, 그 밖의 AI 작업은 `connecting`, 아이콘 자리에 구슬만 넣을 때는 `AiOrb`), 파일 끌어다 놓기 `FileDropZone`, 회색 안내 상자(아이콘+글) `Notice`, 입력칸 `TextInput`·`SelectInput`(그 밖의 칸 모양은 `FIELD_CLASS`), 폼 줄과 오류 문구 `FormRow`(`error`), AI 글 `AiNote`·`AiBadge`(화면의 "AI 표시가 있는 내용은…" 안내 한 줄은 `AiLegend`), 강점·보완 `LevelBadge`. 같은 클래스 묶음을 세 번째로 쓰게 되면 공통 부품으로 뺀다.
-- 클래스를 조건에 따라 붙이거나 부품이 받은 `className`과 합칠 때는 템플릿 문자열 대신 `cn()`(`utils/cn.ts`)을 쓴다. 겹치는 클래스는 뒤에 넘긴 값이 이긴다. `@theme`에 `--text-*`·`--container-*` 토큰을 추가하면 `cn.ts`에도 이름을 넣는다(빠뜨리면 글자 크기 클래스가 색으로 오인돼 지워진다).
-- 클래스 순서는 손으로 맞추지 않는다. `prettier-plugin-tailwindcss`가 저장·커밋할 때 `className`과 `cn()` 안의 클래스를 Tailwind 권장 순서로 정렬한다(`.prettierrc`). `TONE_CLASS` 같은 상수 문자열은 정렬 대상이 아니다.
-- 서버 데이터를 만들거나 바꾸는 저장 버튼은 `useMutation` 대신 `useSingleFlightMutation`(`hooks/`)을 쓴다(11/24, #210). `disabled={isPending}`는 다시 그린 뒤에야 걸려 더블클릭·연타가 두 번 보내므로, `mutate` 직전에 동기 잠금(`utils/submitLock.ts`)을 걸고 요청이 끝나면 푼다. 한 화면의 두 버튼이 서로 겹치면 안 되면 같은 잠금을 넘긴다(`ConceptFeedbackBox`). 자료 올리기는 서버 요청 키(`requestKey`)도 함께 보낸다. `useMutation`을 직접 가져오면 ESLint가 막는다(`eslint.config.js`).
-- 서버 데이터는 React Query로만 다루고 Zustand에 복사하지 않는다. 쿼리 키는 문자열로 직접 쓰지 않고 API 파일의 상수(`ME_QUERY_KEY`, `COURSES_QUERY_KEY`)나 훅을 쓴다.
-- 로딩·에러 처리는 `useSuspenseQuery` + `AsyncBoundary`로 한다. 불러오는 동안은 `LoadingFallback`(회색 틀 `Skeleton`)이 보인다. `AsyncBoundary`는 `QueryErrorResetBoundary`로 감싸 "다시 시도"가 실패한 조회를 다시 부르게 한다(빼면 같은 오류 화면이 남는다). 상세 화면처럼 없거나 남의 것(서버 404)일 수 있는 화면은 `notFoundAction`(예: `{ label: '퀴즈 목록으로', to: '/quizzes' }`)을 넘겨, 404면 "다시 시도" 대신 목록으로 가는 버튼을 보여 준다. 화면을 그리다 난 오류와 배포 뒤 옛 화면 코드 불러오기 실패는 라우터 루트의 `RouteErrorPage`가 받는다(코드 불러오기 실패는 30초 안에 한 번만 자동 새로고침).
-- 페이지는 처음 방문할 때만 코드를 불러온다. `router/index.tsx`에 `lazyPage(() => import('@/pages/...'))`로 추가하고, 페이지 파일은 default export로 만든다(메인·404만 처음부터 불러온다). 여러 페이지를 한 번에 export하는 모음 파일(`pages/index.ts`)은 만들지 않는다. 쪼개지지 않는다.
+- import는 `@/` 절대경로, 공통 컴포넌트는 배럴(`index.ts`)로 내보낸다.
+- 화면은 `components/common`의 공통 부품(1절)을 먼저 쓴다. 같은 클래스 묶음을 세 번째로 쓰면 공통 부품으로 뺀다.
+- 조건부 클래스·받은 `className` 합치기는 템플릿 문자열 대신 `cn()`(`utils/cn.ts`, 겹치면 뒤 값이 이김). **`@theme`에 `--text-*`·`--container-*` 토큰을 추가하면 `cn.ts`에도 이름을 넣는다**(빠뜨리면 글자 크기 클래스가 색으로 오인돼 지워진다).
+- 클래스 순서는 손으로 맞추지 않는다(`prettier-plugin-tailwindcss`가 `className`·`cn()` 안을 정렬, `TONE_CLASS` 같은 상수 문자열은 제외).
+- 서버 데이터를 바꾸는 저장 버튼은 `useSingleFlightMutation`. `disabled={isPending}`는 다시 그린 뒤에야 걸려 연타가 두 번 가므로 `mutate` 직전에 동기 잠금(`utils/submitLock.ts`)을 건다. 서로 겹치면 안 되는 두 버튼은 같은 잠금을 넘기고(`ConceptFeedbackBox`), 자료 올리기는 `requestKey`도 보낸다.
+- 서버 데이터는 React Query로만 다루고 Zustand에 복사하지 않는다. 쿼리 키는 문자열로 쓰지 않고 API 파일 상수(`ME_QUERY_KEY` 등)나 훅을 쓴다.
+- 로딩·에러는 `useSuspenseQuery` + `AsyncBoundary`. 그 안의 `QueryErrorResetBoundary`를 빼지 않는다(빼면 "다시 시도"가 같은 오류 화면을 남긴다). 서버 404일 수 있는 상세 화면은 `notFoundAction`을 넘긴다(2절).
+- 페이지는 `router/index.tsx`에 `lazyPage(() => import('@/pages/...'))`로 추가한다(메인·404만 처음부터). 페이지 모음 파일(`pages/index.ts`)은 만들지 않는다(코드가 쪼개지지 않는다).
 
 ## 움직임 (Motion)
 
-- 기준값은 `constants/motion.ts`(시간·곡선·`FADE_UP`)와 `index.css`의 `--default-transition-*`에 모아 둔다. 두 곳의 값은 같이 맞춘다. 느낌이 어색하면 이 값만 고친다.
-- `main.tsx`에서 `LazyMotion`(필요한 기능만, `strict`)과 `MotionConfig reducedMotion="user"`로 감쌌다. 그래서 컴포넌트에서는 `motion.div` 대신 **`import * as m from 'motion/react-m'`의 `m.div`**를 쓴다. `motion.div`를 쓰면 번들이 커지고 `strict`에서 오류가 난다. ESLint가 막는다(`eslint.config.js`).
-- 나타나고 사라지는 요소(펼침 패널, 말풍선, 결과 문구)는 `AnimatePresence` + `m.*`. 단순한 색·그림자 전환은 CSS(`index.css`가 링크·버튼·입력칸에 기본으로 걸어 둔다)로 충분하다.
-- 페이지 전환은 `PageTransition`(본문 페이드인), 코드 불러오는 동안은 `NavigationProgress`(화면 위 진행 막대).
-- 스크롤에 따라 장면이 바뀌는 구간(메인 스크롤 소개): 긴 구간 안에 `sticky` 무대를 두고 `useScroll`의 진행도로 단계를 넘긴다. 장면 전환 곡선은 `SWEEP_TRANSITION`. 장면 안 요소는 `SceneMotion`의 `Reveal`·`MaskSwap`·`SlotItem`으로 차례로 움직이고, 좁은 화면·"동작 줄이기"에서는 `SceneMotionContext`를 꺼서 고정 없이 세로로 쌓고 마지막 모습만 보여 준다
-- 화면 모드를 바꿀 때는 **View Transitions**로 이전 화면과 새 화면을 겹쳐 서서히 바꾼다(`useThemeStore`의 `applyTheme`, 시간 350ms·곡선 `cubic-bezier(0.4, 0, 0.2, 1)`, `--theme-transition-*`). 색을 하나씩 섞는 방식(CSS 전환)은 쓰지 않는다: 글자색과 배경색이 서로 반대로 뒤집히는 전환을 색별로 섞으면 중간에 두 밝기가 같아져(대비 1.5~2.5까지 떨어짐) 글자가 잠깐 사라졌다 나타나 컷편집처럼 보였다. 전환하는 동안 `theme-vt` 클래스가 색 토큰·요소 전환을 모두 끈다.
-- 연달아 눌러도 선택과 화면이 어긋나지 않도록 `applyTheme`은 `<html>`의 `dark` 클래스 대신 아직 적용되지 않은 최신 목표(`pendingDark`)를 먼저 본다. 이 값을 지우지 않는다.
-- View Transitions를 지원하지 않는 브라우저의 폴백: 색 토큰(`--color-*`)을 `src/styles/theme-transition.css`에서 `@property`(`<color>` 타입)로 등록하고 `:root`에서 `transition`을 걸어 토큰을 쓰는 모든 요소가 함께 서서히 따라오게 한다. 그동안 `theme-switching` 클래스(400ms)가 요소별 전환을 꺼서 한 박자씩 늦게 따라오지 않게 한다. "동작 줄이기"를 켠 기기는 두 방식 모두 쓰지 않고 바로 바뀐다.
-- **색 토큰을 추가하면 `styles/theme-transition.css`에도 같은 이름을 등록하고 `transition` 목록에 넣는다**(폴백용). 빠뜨려도 오류는 없지만 폴백에서 그 색만 서서히 안 바뀌고 즉시 바뀐다. 이 파일의 색 부분은 `index.css`의 `@theme` 값에서 만든 것이다(초기값은 라이트 값).
-- 미리보기 창이 숨겨져 있으면 프레임이 안 그려져서 View Transition이 시작되지 않는다(화면 모드가 안 바뀐 것처럼 보임). 개발 중 확인할 때는 창을 보이게 하거나 스크린샷을 찍어 프레임을 만든다.
-- Motion으로 움직이는 요소(`ThemeToggle`의 해·달 아이콘)는 CSS 전환이 아니라서 `theme-switching`의 영향을 받지 않는다. 같은 이유로, 화면 모드와 함께 움직여야 하는 요소는 CSS 전환보다 Motion을 쓴다.
-- "동작 줄이기"를 켠 기기에서는 CSS 움직임이 사실상 꺼지고(`index.css`), Motion은 이동·회전(transform) 움직임을 건너뛴다. 새 움직임도 이 설정에서 정보를 잃지 않아야 한다(움직임으로만 알려 주지 않는다).
+- 기준값은 `constants/motion.ts`와 `index.css`의 `--default-transition-*`. 두 곳을 같이 맞추고, 느낌이 어색하면 이 값만 고친다.
+- `motion.div` 대신 `motion/react-m`의 `m.div`(`LazyMotion strict`라 번들이 커지고 오류가 난다). 나타나고 사라지는 요소는 `AnimatePresence` + `m.*`, 단순한 색·그림자 전환은 CSS면 충분하다.
+- 화면 모드 전환은 View Transitions(3절). 색을 하나씩 섞는 CSS 전환으로 바꾸지 않는다(중간에 글자·바탕 밝기가 같아져 글자가 잠깐 사라진다). `applyTheme`의 `pendingDark`는 지우지 않는다(연타해도 선택과 화면이 어긋나지 않게 하는 값).
+- **색 토큰을 추가하면 `styles/theme-transition.css`에도 같은 이름을 `@property`로 등록하고 `transition` 목록에 넣는다**(빠뜨려도 오류는 없지만 폴백에서 그 색만 즉시 바뀐다).
+- 화면 모드와 함께 움직여야 하는 요소는 CSS 전환보다 Motion을 쓴다(`theme-switching`이 Motion은 끄지 않는다).
+- 미리보기 창이 숨겨져 있으면 View Transition이 시작되지 않는다. 확인할 때는 창을 보이게 하거나 스크린샷을 찍는다.
+- "동작 줄이기"에서도 정보를 잃지 않아야 한다(움직임으로만 알려 주지 않는다).
 
 ## 백엔드 연동
 
-- 환경변수: `VITE_API_BASE_URL`(기본 `/api`), `VITE_USE_MOCK`. 팀 공유 값은 `.env.development`(커밋), 내 PC에서만 바꿀 값은 `.env.development.local`(커밋 안 됨)
-- 요청 경로는 항상 `/api/...`. 개발 중에는 Vite 프록시가 `localhost:8080`으로, 배포 때는 Vercel rewrite가 백엔드로 넘긴다. 그래서 백엔드 컨트롤러 경로도 `/api`로 시작한다
-- 배포는 Vercel(`frontend/vercel.json`, 모든 경로를 `index.html`로). 운영 주소 https://lms-seven-tawny.vercel.app/ (목업 모드, main 머지 때 자동 배포, PR마다 미리보기). 빌드 설정·환경변수(`VITE_USE_MOCK`, `HUSKY=0`)는 `docs/deploy.md`
-- `VITE_USE_MOCK=true`는 "연결할 백엔드가 없는 빌드"다. **목업이냐를 판단하는 곳은 `store/useDemoStore.ts` 하나**이고 세 가지를 구분한다(11/20): `NO_BACKEND`(백엔드 없음: 로그인 가드·세션 복원·로그인 닫힘 안내·Turnstile), `DEMO_AVAILABLE`(체험 버튼을 켤 수 있음, 11/21부터 실제 서버 빌드에서도 true), `isMockData()`·`useMockData()`(지금 데이터를 `mocks/`에서 읽는지 = 백엔드가 없거나 체험 중). API 함수는 `if (isMockData()) return mockX()`(React 밖이라 부르는 순간의 값), 화면의 "예시 데이터" 문구·동작은 컴포넌트 맨 위 `const mockData = useMockData()`로 읽는다. `import.meta.env.VITE_USE_MOCK`을 다른 파일에서 직접 읽지 않는다(ESLint가 막는다, `eslint.config.js`). 예시: `api/notices.api.ts`
-- 백엔드에 바라는 API(제안)는 `docs/frontend-requests.md`에 모은다. 새 화면에서 API가 필요해지면 거기에 추가하고, 목업도 같은 모양으로 만든다
-- 백엔드 공통 응답 형식: `{ success: boolean, message: string, data: T }` (`types/api.ts`의 `ApiResponse<T>`)
-- API 함수는 `api/request.ts`의 `request<T>()`로 요청한다. 성공하면 `data`만 돌려주고, 실패하면 화면에 보여 줄 문구를 담은 `ApiError`를 던진다(`AsyncBoundary`가 받는다)
+- 환경변수 `VITE_API_BASE_URL`(기본 `/api`)·`VITE_USE_MOCK`. 팀 공유 값은 `.env.development`(커밋), 내 PC 값은 `.env.development.local`(커밋 안 됨).
+- 요청 경로는 항상 `/api/...`(개발은 Vite 프록시가 `localhost:8080`으로, 배포는 Vercel rewrite가 백엔드로). 그래서 백엔드 컨트롤러 경로도 `/api`로 시작한다.
+- 배포는 Vercel(`frontend/vercel.json`). 운영 주소 https://lms-seven-tawny.vercel.app/ (목업 모드, main 머지 때 자동 배포, PR마다 미리보기). 빌드 설정·환경변수(`VITE_USE_MOCK`, `HUSKY=0`)는 `docs/deploy.md`.
+- **목업 판단은 `store/useDemoStore.ts` 한 곳**(`NO_BACKEND`·`DEMO_AVAILABLE`·`isMockData()`·`useMockData()`, 4절). API 함수는 `if (isMockData()) return mockX()`, 화면은 컴포넌트 맨 위 `const mockData = useMockData()`. 예시: `api/notices.api.ts`.
+- 백엔드에 바라는 API(제안)는 `docs/frontend-requests.md`에 모은다. 새 화면에 API가 필요하면 거기에 추가하고, 목업도 같은 모양으로 만든다.
+- 공통 응답 `{ success, message, data }`(`ApiResponse<T>`). API 함수는 `api/request.ts`의 `request<T>()`로 부른다(성공하면 `data`만, 실패하면 화면 문구를 담은 `ApiError`를 던진다).
 
-## 로그인·인증 구조 (주미 인증 API 연결)
+## 로그인·인증 (구조는 4절)
 
-- **로그인 상태**는 `store/useAuthStore.ts`(Zustand)가 든다. `status`는 `unknown`(새로고침 뒤 세션 복원 중) / `authenticated` / `anonymous`이고, Access Token은 **메모리에만** 둔다(localStorage에 저장하지 않는다). localStorage에는 "로그인한 적 있음" 표시(`msg-has-session`)만 남겨, 새로고침 뒤 갱신 요청을 보낼지 정한다.
-- **새로고침 복원:** `main.tsx`가 `restoreSession()`(`api/auth.api.ts`)을 불러 HttpOnly 쿠키의 Refresh Token으로 Access Token을 다시 받는다.
-- **토큰 갱신(`api/axios.ts`):** 요청 인터셉터가 `Authorization: Bearer`를 붙인다. 401이 오면 `refreshAccessToken()`으로 한 번 갱신하고 원래 요청을 다시 보낸다. 여러 요청이 동시에 401을 받아도 갱신은 한 번만 보낸다(Refresh Token은 한 번 쓰면 폐기돼서, 두 번 보내면 서버가 재사용으로 보고 세션을 끊는다). 탭끼리는 Web Locks(`navigator.locks`, 이름 `msg-auth-refresh`)로 차례를 지키고, Web Locks가 없으면 그냥 보낸다(서버가 10초 유예로 받아 준다, #211). `/auth/*` 요청은 갱신하지 않고, 갱신이 실패하면 `clearSession()`으로 로그아웃 상태가 된다. `X-Requested-With` 헤더는 CSRF 방어라 지우지 않는다.
-- **화면 가드:** `router/RequireAuth.tsx`는 로그인이 필요한 화면을 감싼다(`unknown`이면 로딩, `anonymous`면 `/login`으로 보내고 `state.from`으로 원래 화면에 돌아온다). `router/RequireAdmin.tsx`는 반드시 `RequireAuth` 안에 두고 `useMe()`의 `role`이 `ADMIN`이 아니면 안내 화면을 보여 준다. 가드는 안내용일 뿐이고 진짜 권한은 서버가 요청마다 확인한다. 내 데이터를 보여 주는 새 화면은 `RequireAuth` 아래에 넣는다.
-- **내 정보**는 스토어가 아니라 `hooks/useMe.ts`(React Query `['me']`)로 읽고, 로그인했을 때만 불러온다.
-- **목업 모드(`VITE_USE_MOCK=true`, Vercel 배포)에는 로그인이 없어서 "체험 모드"로 가드를 통과한다(11/4).** `store/useDemoStore.ts`의 `active`(탭 `sessionStorage`)가 켜져 있어야 `RequireAuth`가 화면을 열고, 아니면 `/login`으로 보낸다. 켜는 곳은 `DemoStartButton`("로그인 없이 체험해 보기": 메인 첫 화면·시작 안내·로그인/가입 화면의 안내 상자 `MockAuthNotice`)이고, 체험 중에는 `DemoBanner`(`Layout` 맨 위 띠, 상단바와 한 묶음으로 화면 위에 고정)가 "예시 데이터"라고 알리며 "체험 끝내기"로 끈다. 체험을 시작·끝낼 때 목업 기록(`msg-mock-*`, 공지 제외)을 지우고, 체험 중에는 계정 메뉴를 숨기며 마이페이지는 "체험에서는 보여 드리지 않아요" 안내를 보여 준다. 끝낼 때는 가드가 먼저 `/login`으로 보내 버리지 않게 `window.location.assign('/')`로 메인을 새로 불러온다. 체험 중 만든 퀴즈(`msg-mock-created-quizzes`)도 새로고침해도 남고, 새 퀴즈 id는 가장 큰 id 다음이라 앞 퀴즈 결과를 이어받지 않는다. 예시 분석·사전사후평가 비교는 정보보호개론(과목 1)만 있고, 다른 과목은 "예시 결과가 없어요"·"아직 사전평가가 없어요"로 보여 준다(다른 과목에 정보보호 개념을 보여 주지 않는다, 11/20). 관리자 화면(`RequireAdmin`)은 체험에서도 열지 않는다. **실제 서버 모드(`VITE_USE_MOCK=false`)에서도 체험을 켤 수 있다(11/21, 주소 하나로 체험·실제 서비스):** 로그인하지 않았을 때만 체험 버튼이 보이고(로그인·가입 화면 안내 상자에도), 시작할 때 React Query 캐시를 비운다. 체험 중에는 가드가 로그인 없이 화면을 열고, API 함수는 `isMockData()`로 서버를 부르지 않으며(`store/useDemoStore.test.ts`가 지킨다), 새로고침해도 세션을 되살리지 않는다. 체험 중에 로그인하면 `login()`이 체험을 끝내고 그때부터 내 데이터를 읽는다.
-- 개발 중 매번 체험 버튼을 누르기 번거로우면 `.env.development.local`에 `VITE_MOCK_OPEN_ACCESS=true`를 넣는다(목업 모드에서 가드를 모두 연다, 관리자 포함. 공개 배포에는 넣지 않는다). 실제 로그인으로 확인하려면 `VITE_USE_MOCK=false`를 넣고 백엔드를 켠다(`docs/setup.md`).
+- Access Token은 **메모리에만** 둔다. localStorage에 저장하지 않는다(`msg-has-session` 표시만).
+- 동시에 401을 받아도 토큰 갱신은 한 번만 보낸다(Refresh Token은 한 번 쓰면 폐기돼, 두 번 보내면 서버가 재사용으로 보고 세션을 끊는다). `X-Requested-With` 헤더는 CSRF 방어라 지우지 않는다.
+- 내 데이터를 보여 주는 새 화면은 `RequireAuth` 아래에, `RequireAdmin`은 반드시 `RequireAuth` 안에 둔다. 가드는 안내용이고 진짜 권한은 서버가 요청마다 확인한다. 내 정보는 스토어가 아니라 `useMe()`로 읽는다.
+- 체험 중에는 API 함수가 서버를 부르지 않고(`useDemoStore.test.ts`가 지킨다) 새로고침해도 세션을 되살리지 않는다. 관리자 화면은 체험에서도 열지 않는다.
+- `VITE_MOCK_OPEN_ACCESS=true`(`.env.development.local`)는 목업 모드에서 가드를 모두 연다(관리자 포함). **공개 배포에는 넣지 않는다.** 실제 로그인 확인은 `VITE_USE_MOCK=false` + 백엔드(`docs/setup.md`).
 
-## 주요 화면 (GNB 4개 + 드롭다운)
+## 화면별 규칙 (메뉴·흐름은 5절)
 
-메뉴 순서는 학습 흐름을 따른다(11/6): 학습자료(모으기: 과목·자료·AI 대화 가져오기) → 학습분석(진단: 대시보드) → 맞춤학습(공부·확인: 커리큘럼·사전·사후평가·퀴즈) → 이용안내. 주소와 메뉴 묶음이 다를 수 있어서(`/analysis/import`는 학습자료) 현재 위치는 `components/layout/menuActive.ts`의 `currentMenuPath`가 가장 구체적인 경로 하나로 고른다.
+- 메뉴 순서는 학습 흐름(학습자료 → 학습분석 → 맞춤학습 → 이용안내). 현재 위치는 `menuActive.ts`의 `currentMenuPath`가 고른다.
+- 커리큘럼 "학습 완료"는 공부한 기록일 뿐 이해 여부·숙련도를 바꾸지 않는다.
+- 퀴즈 AI 기능은 `me.aiQuizConsent`(대화 분석 동의와 별도)가 있어야 쓴다. 풀던 답은 탭 sessionStorage(`quizDraft.ts`)에만 둔다.
+- 자료 본문 전송은 `ai-status.materialContentEnabled`가 꺼져 있으면 체크를 숨기고 이유를 보여 주고, 켜져 있어도 요청마다 확인 체크를 받는다. 평가 비교에서 채점 대기는 틀린 답으로 세지 않고, 채점 판단이 AI 1개뿐이면 "AI 1개만 판단 (다수결 아님)".
+- 공지사항은 메인과 주 메뉴에 두지 않는다. 공지 본문은 글자로만 다룬다(HTML 해석 금지). "관리자" 링크는 `me.role === 'ADMIN'`일 때만.
+- 처리방침 링크 이름은 띄어 쓴 "개인정보 처리방침"(작성지침).
+- 가입 뒤 돌아갈 화면(`state.from`)은 주소에 넣지 않는다(외부 링크로 엉뚱한 곳에 보낼 수 없게).
+- 회원가입: 필수 정보는 동의가 아니라 "개인정보 수집·이용 안내" + **확인** 체크 하나, AI 대화 분석만 **선택 동의**로 따로 두고 처음엔 체크하지 않는다. "가입하면 동의한 것으로 간주" 같은 문구는 쓰지 않는다.
 
-- 학습자료: 내 학습자료(목록), 자료 업로드, 자료 상세(탭: 요약 / 핵심 개념 / 퀴즈 / AI 요약 영상-준비 중)
-- 맞춤학습: 맞춤 커리큘럼(`/curriculum?courseId=`, `GET /api/curriculum/courses/{id}`의 `flow`: STEP 1 사전 테스트 → 2 핵심 개념 학습("개념 보기" → 자료 상세 `?tab=concepts&concept=`, 개념 카드의 "학습 완료"는 `POST /api/materials/{id}/concepts/progress`, 진행률은 `flow.progress`. 자료 개념이 없고 키워드 개념뿐이면 카드에 "퀴즈로 확인하기"(→ `/quizzes/new?courseId=&concept=`)가 뜨고, 진도는 사전 테스트를 낸 뒤 채점된 키워드 퀴즈 수로 센다) → 3 개념별 확인 퀴즈(`/quizzes/new?checkMaterialId=&checkConceptId=`, 결과로 이해 확인·복습 필요·추가 확인 필요) → 4 사후 평가. 학습 완료는 공부했다는 기록일 뿐 이해 여부·숙련도를 바꾸지 않는다. 단계 상태·요약은 서버 규칙이라 파랑, 기존 개념별 순서·"이 순서인 이유"는 접힌 "복습 우선순위와 근거"에, AI 다음 개념 제안만 보라), 퀴즈(목록·만들기 `/quizzes/new`·풀기·결과, 모의시험 선택). 만들기 요청 키는 탭 sessionStorage에 두고 새로 고치면 `GET /api/quizzes/generations/{key}`로 결과를 찾는다. 퀴즈 AI 기능은 `me.aiQuizConsent`(AI 퀴즈 처리 동의, 대화 분석 동의와 별도)가 있어야 쓸 수 있다. 학습 모드 3가지(시험 대비·자기개발·업무 활용)와 객관식·주관식·서술형. 풀던 답은 탭의 sessionStorage(`quizDraft.ts`)에만 두고, 점수·채점 상태·결과 판단은 서버 값 그대로(파랑), 해설·피드백·모범 답안·다음 개념 제안만 AI(보라)로 보여 준다
-- 사전·사후평가(`/assessments`, 11/3): 과목에 연결된 자료를 골라 사전평가 → 공부 → 사후평가(같은 개념·유형·문항 수·난이도). 평가할 개념은 자료에서 뽑은 개념(`MaterialConceptPanel`, 자료 상세 "핵심 개념" 탭과 공용: 근거 문장은 자료 원문이라 회색 인용, AI 설명만 보라), 없으면 과목 키워드. 자료 본문 전송은 서버 설정(`ai-status.materialContentEnabled`, 기본 꺼짐)이 꺼져 있으면 체크를 숨기고 이유를 보여 준다. 켜져 있어도 요청마다 확인 체크가 있어야 한다. 대시보드 아래쪽 `AssessmentComparisonPanel`(맨 위 요약 칸의 "자세히"가 내려오는 곳)이 사전(주황 `chart-pre`)·사후(파랑 `chart-post`) 막대, %p 변화, 오른 개념·아직 부족한 개념(복습 퀴즈 링크), 비교 주의 문장을 서버 값 그대로 보여 준다(채점 대기는 틀린 답으로 세지 않음). 채점 판단이 AI 1개뿐이면 "AI 1개만 판단 (다수결 아님)"
-- 학습분석: 학습 대시보드(학습 분석 API, 배치 JSON 틀). AI 대화 가져오기는 주소는 `/analysis/import`지만 메뉴는 학습자료
-- 공지사항(목록·상세): 11/5 멘토링에서 커뮤니티 메뉴를 뺐다(AI 기능이 없어 서비스가 산만해 보이고, 익명성을 지키는 서비스 정체성과 맞지 않는다). 화면·API는 남아 있고, 관리자 공지 관리와 검색 결과에서만 연다
-- 관리자(`/admin/notices`·`new`·`:id/edit`, 관리자만): 공지 작성·수정·삭제. `RequireAdmin`(`RequireAuth` 안)은 안내용 가드이고 진짜 권한은 서버가 `/api/admin/**`에서 매번 확인한다. 상단바 "관리자" 링크는 `me.role === 'ADMIN'`일 때만 보인다. 목업 모드에서는 체험 모드에서도 열지 않고(개발 중 `VITE_MOCK_OPEN_ACCESS=true`만 예외), 그때 공지는 브라우저(`msg-mock-notices`)에만 저장된다. 공지 본문은 글자로만 다룬다(HTML 해석 금지)
-- 이용안내: 서비스 소개, 개인정보 처리방침(작성지침에 따라 링크 이름은 띄어 쓴 "개인정보 처리방침", 푸터에서 굵게)
-- 메인(`/`): 지금은 비로그인 소개 하나 — 파란 띠 → 바로가기 4칸 → 스크롤 5단계 소개(`pages/main/components/story/`) → 시작 안내(`StartPaths`) → 개인정보 안내. 로그인 홈(가입 직후·기록 쌓는 중·기록 있음)은 아직 없음(흐름은 정해 둠)
-- 그 외: 로그인, 회원가입(비밀번호 4조건 실시간 표시, `VITE_TURNSTILE_SITE_KEY`가 있고 실제 모드면 Cloudflare Turnstile 자동 가입 방지 `TurnstileWidget`: 확인 전엔 가입 버튼을 막고, 가입이 실패하면 토큰을 새로 받는다. 처리방침 7·8·14번에 적었다), 마이페이지(동의 철회·데이터 삭제, 대화 가져올 때 가릴 단어), 검색
-- 가입 뒤 이동: 로그인 가드나 시작 안내가 `state.from`(가려던 화면)을 넘기면 회원가입 → 로그인 화면이 그대로 이어 받아, 로그인 뒤 그 화면으로 보낸다. 주소에 넣지 않아 외부 링크로 엉뚱한 곳에 보낼 수 없고, 새로고침하면 사라져 메인으로 간다
-- 회원가입 동의(`SignupAgreements`, 「개인정보 처리 통합 안내서」 2025.7. Ⅳ 기준): 서비스에 꼭 필요한 정보는 필수 동의가 아니라 "개인정보 수집·이용 안내"(항목·목적·근거·보유 기간)를 보여 주고 **확인** 체크 하나(이용약관 포함)로 받는다. AI 대화 분석만 **선택 동의**로 따로 두고 목적·항목·보유 기간·거부해도 되는 점을 함께 알리며, 처음엔 체크하지 않은 상태로 둔다. "가입하면 동의한 것으로 간주" 같은 문구는 쓰지 않는다
+## AI 대화 가져오기 (흐름은 6절)
 
-## AI 대화 가져오기 (브라우저 처리)
+- 읽은 대화는 이 화면의 메모리에만 두고 서버·브라우저 저장소에 남기지 않는다. 그래서 과목 등록도 이 화면 안에서 하고, 흐름 안에 `/courses`로 가는 링크를 두지 않는다(나가면 파일을 다시 올려야 한다).
+- Worker 안의 파일은 `@/utils` 묶음 대신 필요한 파일만 가져온다(화면 코드가 Worker 묶음에 섞이지 않게). 다시 가리는 동안에는 "다음: 보내기"를 막는다(보낼 글이 늘 지금 단어로 가린 결과가 되게).
+- **러스트 WASM 빌드 결과(`src/wasm/conversation-core`)는 커밋한다**(Vercel에 러스트가 없다). `wasm/conversation-core`를 고치면 `npm run build:wasm`(rustup `wasm32-unknown-unknown`, `wasm-pack`) 후 같이 커밋한다. CI `npm run check:wasm`이 소스 해시(`SOURCE_HASH`)로 빠뜨림을 잡는다.
+- 가리기 규칙을 러스트로 옮길 때는 JS 정규식과 결과를 맞춘다: `\d`·`\b`는 ASCII로 직접 쓰고 `regex`에 없는 앞뒤 확인은 코드로(`fancy_regex`는 40배 넘게 느림, `docs/wiki/frontend.md`).
+- **키워드 규칙(영문은 낱말 경계, 한글이 들면 부분 문자열)은 서버 `TermMatch`와 같다. 바꾸면 `filter.ts`·`TermMatch`와 양쪽 테스트 표(`filter.test.ts`·`TermMatchTest`)를 같이 고친다**(다르면 화면에서 고른 대화가 분석에서 빠진다). 형광펜(`marks.ts`)도 같은 규칙.
+- 새 서비스는 `utils/conversation/sources/index.ts`에 추가한다(Gemini는 2단계 후보). 공식 형식 문서가 없어 형식이 바뀌면 실제 파일로 다시 확인하고, 읽지 못하면 무엇이 잘못됐는지 알려 준다. **실제 기록 파일은 레포에 넣지 않는다.**
+- Claude 목록 파일(`manifest-*.json`)의 zip 링크를 우리 서버가 대신 열지 않는다(claude.ai 로그인이 필요하고 원본이 서버로 오면 안 된다).
+- 가릴 단어는 서버에 보내지 않고 localStorage 계정별 키에만 둔다(단어 목록 자체가 개인정보). 읽기·쓰기는 `utils/maskWords.ts` 한 곳(동기화로 바꿀 때 이 파일만 고친다). 동의 철회·탈퇴가 성공하면 지운다.
+- AI 답변 마크다운은 `react-markdown`으로 React 요소를 만든다(HTML 문자열 금지, 대화 속 HTML은 그리지 않음). 사용자의 기록이라 AI 말풍선도 보라색으로 칠하지 않는다.
+- 체크한 대화만 가린 상태로 보내고, 큰 대화도 메시지를 버리지 않고 조각으로 나눈다.
 
-화면은 `pages/analysis/ConversationImportPage.tsx`(4단계: 파일 고르기 → 공부한 대화 고르기 → 가린 내용 확인 → 보내기), 단계별 부품은 `pages/analysis/components/import/`. 읽은 대화는 이 화면의 메모리에만 두고 서버·브라우저 저장소에 남기지 않는다.
+## 학습 대시보드 (화면 구성은 7절)
 
-- **Web Worker(11/21):** 파일 읽기(zip 풀기·파싱, `utils/conversation/readExportFiles.ts`)와 가리기(가린 곳 목록 포함, `maskConversationWithSpots`)는 대화 처리 Worker(`utils/conversation/worker/`)에서 한다. 화면은 `readExportFilesOffThread`·`maskConversationsOffThread`(가리기 단계는 `useMaskedConversations`)만 부르고, Worker를 만들 수 없거나 깨지면 같은 함수를 화면 스레드에서 부른다. Worker 안에서 읽는 파일은 `@/utils` 묶음 대신 필요한 파일만 가져온다(화면 코드가 Worker 묶음에 섞이지 않게). 다시 가리는 동안에는 "다음: 보내기"를 막아, 보낼 글이 늘 지금 단어로 가린 결과가 되게 한다
-- **러스트 WebAssembly(11/21, `wasm/conversation-core`):** zip 항목 압축 풀기·CRC 확인과 개인정보 가리기는 러스트 크레이트를 WASM으로 빌드해 Worker에서 부른다(`utils/conversation/core.ts`, 쓰기 전에 `loadConversationCore()`). JSON 파싱은 브라우저 `JSON.parse`(이미 네이티브)를 그대로 쓴다. 빌드 결과(`src/wasm/conversation-core`)는 **커밋한다**(Vercel에 러스트가 없다). 러스트 소스를 고치면 `npm run build:wasm`(rustup `wasm32-unknown-unknown` 대상, `wasm-pack` 필요) 후 결과를 같이 커밋하고, CI의 `npm run check:wasm`이 소스 해시(`SOURCE_HASH`)로 빠뜨림을 잡는다. JS 정규식과 같은 결과를 내려고 `\d`·`\b`는 ASCII로 직접 쓰고, 러스트 `regex`에 없는 앞뒤 확인은 코드로 한다(되돌아가며 찾는 `fancy_regex`는 40배 넘게 느렸다). 위치는 UTF-16 단위로 돌려준다. 테스트는 `src/test/setupWasm.ts`가 WASM을 먼저 초기화한다. zip 열기에 쓰던 fflate는 이제 테스트에서 zip을 만들 때만 쓴다(개발 의존성). 11/21 측정(글 344만 자·zip 52MB, Node): 압축 풀기+CRC는 예전 JS(fflate)보다 2.3배 빠르고, 가리기는 V8 정규식과 비슷하거나 조금 느리다
-- **파일 읽기:** 내보낸 zip을 압축 풀지 않고 받는다. `utils/conversation/archive.ts`가 zip을 `Blob.slice`로 필요한 부분만 읽는다(3GB zip도 통째로 메모리에 올리지 않는다). `zipReader.ts`가 끝의 중앙 목차(ZIP64 포함)를 읽어 대화 기록 파일(`conversations*.json`)만 꺼내 풀고(deflate 해제·CRC 확인은 러스트 WASM, 푼 크기 합계 상한 300MB), 목차가 없는 잘린 zip은 앞에서부터 로컬 헤더를 따라가며 건지고 "파일이 잘려 있어요" 안내를 낸다. 잘린 ChatGPT zip(3.5GB, 대화 527개)을 2026-11-02에 이 방식으로 읽는 것까지 확인했다. 크기를 데이터 뒤에 적는 zip(data descriptor)은 아직 못 읽는다. 대화 없이 알려진 파일(`user.json`, `conversation_asset_file_names.json` 등)은 이름으로 알아보고 조용히 건너뛴다(회색 안내 `MergedImport.notices`). 압축을 푼 `conversations.json`도 받는다. 여러 파일을 고르면 `merge.ts`가 같은 대화를 하나로 합친다
-- **서비스별 구조:** `utils/conversation/sources/`(`chatgpt.ts`, `claude.ts`)에 서비스마다 파일을 알아보고 읽는 방법을 둔다. 새 서비스는 `sources/index.ts` 목록에 추가한다(Gemini는 2단계 후보). Claude는 2026-10-31, ChatGPT는 2026-11-01 실제 내보내기 파일로 확인했다. ChatGPT 답변의 출처·위젯 표시(`\ue200종류\ue202인자\ue201`)는 파서가 지우고 이름·링크 글자만 남긴다. 공식 형식 문서가 없으니 형식이 바뀌면 실제 파일로 다시 확인한다
-- **Claude 목록 파일:** Claude 내보내기는 먼저 "다운로드 목록 파일"(`manifest-....json`, 대화 없음)을 준다. `manifest.ts`가 알아보고 안의 zip 링크만 보여 준다. 링크를 우리 서버가 대신 열지 않는다(claude.ai 로그인이 필요하고 원본이 서버로 오면 안 된다)
-- **고르기:** `assign.ts`가 내 과목 키워드로 공부한 대화를 과목별로 나누고, `search.ts`가 본문 검색·정렬을 한다(모두 브라우저 안). 키워드는 대소문자를 무시하고, **영문 키워드(ASCII 영문·숫자와 공백·`./+#&-`로만 된 것)는 낱말 경계에서만** 찾는다(앞뒤가 ASCII 영문·숫자가 아니어야 함: "ship"의 "IP"는 안 걸리고 "IP를"은 걸림). 한글이 든 키워드는 부분 문자열이다(11/25, `filter.ts`). 서버 분석 입력(`TermMatch`)과 같은 규칙이라 한쪽을 바꾸면 다른 쪽과 양쪽 테스트 표(`filter.test.ts`·`TermMatchTest`)를 같이 고친다. 검색어는 부분 문자열 그대로다
-- **과목은 이 화면 안에서 등록한다(11/6):** 읽은 대화는 메모리에만 있어서 내 과목 화면으로 나가면 파일을 다시 올려야 한다. 그래서 키워드 있는 과목이 없으면 파일 고르기 전에 과목 폼(`CourseGate` → `CourseQuickForm`, 내 과목 화면의 `CourseForm` 재사용)을 먼저 보여 주고, 2단계의 "과목·키워드 더하기"도 그 자리에서 연다. 키워드를 더하면 읽은 대화를 다시 나누고, 새로 걸린 대화는 선택된 상태로 들어간다. 이 흐름 안에 `/courses`로 가는 링크를 두지 않는다
-- **가리기:** 규칙(이메일·전화번호·주민번호·카드번호·키·IP, 내 이름 `[이름]`, 사용자가 넣은 단어 `[가린 단어]`)은 러스트 WASM(`wasm/conversation-core/src/mask.rs`)에 있고, `mask.ts`는 그것을 불러 가린 곳 목록을 만든다. 3단계에서 가린 곳 목록과 원래 글자(이 화면에서만)를 보여 준다
-- **가릴 단어 저장:** 마이페이지와 3단계 "이 브라우저에 기억하기"로 저장한 단어는 서버에 보내지 않고 localStorage에 계정별 키(`msg-mask-words:<id>`)로만 둔다(단어 목록 자체가 개인정보). 읽기·쓰기는 `utils/maskWords.ts` 한 곳에 모으고 화면은 `useSavedMaskWords` 훅으로 쓴다. 기기 간 동기화로 바꿀 때는 이 파일만 고친다. 동의 철회·탈퇴가 성공하면 지운다
-- **대화 보기:** `ConversationView.tsx`가 2·3단계에서 대화를 채팅창 모양으로 보여 준다. AI 답변 마크다운은 `react-markdown`으로 React 요소를 만들고(HTML 문자열 금지, 대화 속 HTML은 그리지 않음), 요소 모양은 `markdownComponents.tsx`(링크는 새 탭, 다른 사이트 이미지는 불러오지 않음), 가린 표시(파랑)·키워드 형광펜은 `marks.ts`(학습 키워드는 고른 규칙과 같이 낱말 경계로, 검색어는 부분 문자열로 칠한다). 3단계 가린 곳 목록의 "보기"는 그 줄만 원래 글자를 보여 주고(위 "원래 글자 보기"는 전체), 본문의 그 가린 표시 하나를 CSS Custom Highlight(`::highlight(mask-focus)`)로 진하게 칠하고 스크롤한다(`focus.markIndex` = `MaskedSpot.labelIndex`, 코드 블록 안도 칠한다. 본문은 서버로 가는 모습 그대로 `[IP]`처럼 보인다). 사용자의 기록이라 AI 말풍선도 보라색으로 칠하지 않는다
-- **보내기:** 사용자가 체크한 대화만 가린 상태로 보낸다. `send.ts`가 과목마다, 요청 크기(1MB, 임시값)와 대화 수(50개)에 맞춰 나누고, 혼자 큰 대화는 메시지를 버리지 않고 조각으로 나눈다(`docs/frontend-requests.md` "대화 가져오기")
-- 내보내기 형식은 바뀔 수 있으므로 실제 파일로 검증하고, 읽지 못하면 무엇이 잘못됐는지 알려 준다. 실제 기록 파일은 레포에 넣지 않는다
+- 타입은 백엔드 `AnalysisRun` 그대로(`types/analysis.ts`).
+- **모델 비교는 정확도·숙련도가 아니다.** "3개 중 2개 같음"처럼 모델 개수로만 보여 준다(`describeComparison`, 퍼센트 금지). 근거 부족은 이해 부족과 다른 모양(회색 점선, 물음표, `UnderstandingBadge`)으로 그린다. 연결 안 된 모델은 숨기지 않고 "연결 안 됨"으로 보여 준다.
+- 모델이 모두 실패한 분석은 이전 결과를 덮지 않고 안내로만 보여 준다.
+- 숙련도는 숫자 점수 없이 단계·근거로 보여 준다. 사용자 피드백은 AI 판단을 바꾸지 않는다(추천 순서는 서버가 매긴다).
+- 연결된 모델이 없거나 과목 키워드가 없으면 분석 버튼을 막고 이유를 보여 준다. 분석 오류는 서버 `message`를 그대로 보여 준다.
+- 목업에서는 화면마다 "예시 데이터"를 붙이지 않고 체험 띠(`DemoBanner`) 하나로 알린다. 예외로 대시보드는 판단 근거 투명성 원칙에 따라 "실제 AI 모델이 판단한 결과가 아니에요"를 한 번 더 둔다.
 
-## 학습 대시보드 (학습 분석 API, 11/2)
+## 대시보드 동적 배치 (8절)
 
-- `/analysis`는 과목을 골라 백엔드 학습 분석 API(`api/analysis.api.ts`: `providers`, `runs/latest`(`LatestAnalysis`: 모델이 판단한 최근 결과 `run` + 그 뒤의 진행 중·실패한 시도 `lastAttempt`, 없으면 404 → 둘 다 `null`), `runs` 시작)로 그린다. 타입은 백엔드 `AnalysisRun` 그대로(`types/analysis.ts`). 모델이 모두 실패한 분석은 이전 결과를 덮지 않고 안내(`FailedAttemptNotice`)로만 보여 주고, 서버가 분석 중이라고 하면(새로고침해도) `AiWaiting`을 띄우고 버튼을 막은 채 끝날 때까지 다시 확인한다(11/24, #209·#214). GPT·Claude·Gemini가 따로 판단한 결과를 개념마다 비교해 보여 준다.
-- **비교는 정확도·숙련도가 아니다.** "2개 모두 같음", "3개 중 2개 같음"처럼 모델 개수로만 보여 준다(`describeComparison`, 퍼센트 금지). 판단 근거 부족은 이해 부족과 다른 모양(회색 점선, 물음표)으로 그린다(`UnderstandingBadge`). 연결 안 된 모델은 "연결 안 됨"으로 숨기지 않고 보여 준다.
-- 모델이 하나도 연결되지 않았거나 과목 키워드가 없으면 분석 버튼을 막고 이유를 보여 준다. 분석 오류는 서버 `message`를 그대로 보여 준다. 목업에서는 화면마다 "예시 데이터"를 붙이지 않고 맨 위 체험 띠(`DemoBanner`) 하나로 알린다. 예외로 대시보드(`DashboardPage`)는 AI 판단 결과를 보여 주는 화면이라 판단 근거 투명성 원칙에 따라 "실제 AI 모델이 판단한 결과가 아니에요" 안내를 한 번 더 둔다(11/25).
-- **화면 구성(11/24):** 위에서 아래로 맨 위 요약 칸 4개(`SummaryStrip`: 숙련도 분포·모델 의견 개수·사전→사후평가·학습 진도) → 공부할 순서대로 본 개념 목록(`ConceptList`) → 모델 연결 상태·분석 요약 → 사전·사후평가 비교·학습 진도 자세히. 개념 한 줄에 순서·이름·숙련도·모델마다 판단 칩(`ModelVerdictChip`)을 두고, 누르면 그 자리에서 왼쪽은 코드 값(숙련도 근거·변화·내 피드백), 오른쪽은 AI(추천 공부 방법·모델별 판단과 근거 `ConceptJudgments`)가 펼쳐진다. 처음엔 1번 개념만 펼친다. 새 분석이 도착하면 영역마다 테두리 빛이 한 바퀴 돈다(`ResultBeam`).
-- **숙련도(코드 계산, `concepts[].mastery`):** 개념 줄의 숙련도(`MasteryMeter`: 세 칸 막대 + 아이콘 + 근거 부족·보완 필요·보통·강점)와 펼친 칸의 근거(`MasteryEvidence`: 반영한 퀴즈 문제 수·얻은 점수 비율, 대화 수·모델 판단, 근거 부족이면 `quizNeeded`로 "퀴즈 N문제 더"). 그 아래 "이 개념의 변화"(`MasteryTrend`: 단계×날짜 점 그림 최근 6개 + 기록 목록, 문장은 `utils/mastery.ts`)와 바로 앞 기록 대비 "한 단계 올랐어요"(근거 부족·산식 변경이 끼면 표시 안 함). 숫자 점수는 보여 주지 않고, 코드 값이라 AI 보라색을 쓰지 않는다. 방사형 그래프·과목별 비중은 아직 없다.
-- "이 판단, 내 생각과 맞나요?"(`ConceptFeedbackBox`, 펼친 칸 왼쪽 숙련도 근거 아래): 이미 알아요 / 더 공부할래요 / 선택 취소를 피드백 API(`PUT·DELETE`)로 저장하고 최근 분석을 다시 불러온다. 내 선택은 AI 판단을 바꾸지 않고 "더 공부할래요"만 추천 순서 맨 앞으로 옮긴다(순서는 서버가 매긴다). "이미 알아요"를 고르면 "확인 퀴즈 만들기"(`/quizzes/new?mode=self_development&concept=`)로 가고, 그 뒤에 푼 결과(`concepts[].quiz.confirmation`, 서버 코드 규칙)를 같은 상자에 보여 준다.
+- 배치 JSON은 `unknown`으로 받아 zod로 검증한 뒤에만 쓰고(`parseDashboardLayout`), 실패하면 **기본 배치**(`DEFAULT_LAYOUT`)로 보여 준다. 거르는 조건은 8절.
+- 영역은 모두 한 줄 전체로 위에서 아래로 쌓는다(좌우로 나누면 표 옆이 크게 빈다).
+- 이유 말풍선은 호버만 쓰지 않는다(클릭·탭 고정, 키보드로도 뜸). 사용자가 "기본 배치로 보기"로 AI 배치를 끌 수 있어야 한다.
+- 새 영역은 `DashboardComponentId` 타입, `DASHBOARD_COMPONENT_IDS`, `DEFAULT_LAYOUT`, `DashboardPage`의 `renderComponent`를 함께 고친다.
 
-## 대시보드 동적 배치
+## 디자인 (푸른 계열, 시안 v3, 상단바·색 토큰 표는 9절)
 
-- 배치 JSON은 `unknown`으로 받아 zod 스키마로 검증한 뒤에만 사용한다 (`utils/layout/dashboardLayout.ts`의 `parseDashboardLayout`). **지금 백엔드는 배치를 주지 않아(`AnalysisRun.layout` 없음) 실제 화면은 기본 배치이고, 목업에만 예시 배치가 있다.**
-- 허용 영역 id(11/24 5개 → 3개): `summary`(맨 위 요약 칸 `SummaryStrip`), `concepts`(개념 목록 `ConceptList`), `models`(모델 연결 상태 + 분석 요약). 영역은 모두 한 줄 전체로 위에서 아래로 쌓는다(예전처럼 표와 상세를 좌우로 나누면 상세가 길어 표 옆이 크게 비고, 시선이 좌우로 오갔다). `size`는 스키마에 남아 있지만 화면에서는 쓰지 않는다.
-- 없는 id, 같은 영역·같은 순서 번호 중복, 80자를 넘거나 빈 이유, 형식이 다른 숫자는 검증에서 거르고 **기본 배치**(`DEFAULT_LAYOUT`)로 보여 준다. 배치에서 빠진 영역은 기본 순서로 뒤에 붙인다.
-- 각 영역 제목 오른쪽 "이 자리인 이유" 말풍선(AI, 보라색)으로 이유를 보여 준다. 마우스를 올리거나 키보드로 가면 뜨고, 클릭·탭하면 고정, Esc·바깥 클릭으로 닫힌다(휴대폰·키보드 사용자도 볼 수 있게 호버만 쓰지 않는다). 그리고 맨 위 한 줄 띠(`LayoutSummary`)에 전체 이유와 **배치할 때 본 숫자**(코드, 파란색)를 나란히 보여 주고, **"기본 배치로 보기"**로 사용자가 AI 배치를 끌 수 있다.
-- "PDF로 받기"는 브라우저 인쇄(`window.print()`)를 연다. 상단바·푸터·버튼은 `print:hidden`으로 인쇄에서 뺀다.
-- 새 영역을 추가하려면 `DashboardComponentId` 타입, `DASHBOARD_COMPONENT_IDS`, `DEFAULT_LAYOUT`, `DashboardPage`의 `renderComponent`를 함께 고친다.
-
-## 디자인 (푸른 계열, 시안 v3 확정 2026-10-27)
-
-시안: Claude 디자인 캔버스 "AI LMS 현대화 시안"(메인, 학습 분석 배치 A·B, 자료 올리기), "AI LMS 메인 홈 시안"(스크롤 소개, 글라스 비교). 10/26 회의에서 기관형 LMS 톤(두 줄 네이비 GNB, 상아 바탕, 가운데 제목)을 "푸른 계열"로 바꾸기로 했다. 대회 심사에 디자인 배점이 없으므로 겉틀은 단순하게 두고, AI가 보이는 화면에 공을 들인다.
-
-- 상단바 한 줄: 왼쪽 로고 → 주 메뉴(선택된 메뉴는 연한 파랑 알약 + 파란 굵은 글자, 호버 드롭다운. 알약은 하나뿐이라 마우스·키보드로 옮긴 메뉴로 미끄러져 가고 벗어나면 제자리로 돌아온다(11/6, `Gnb`가 칸을 재서 움직임). 11/24부터 알약의 왼쪽·오른쪽 끝을 따로 움직여(가는 쪽 앞 끝은 빠른 스프링, 뒤 끝은 느린 스프링 `PILL_*_SPRING`) 늘어났다 끌려오듯 줄고, 늘어난 만큼 높이를 살짝 줄인다. 필터 없음) → 오른쪽 검색·계정(로그인 글자 + 회원가입 버튼)·화면 모드 버튼(해·달 하나). 1024px 미만은 주 메뉴 대신 햄버거 메뉴(`MobileMenu`, 흰 패널)이고, 이때도 흰 상단바가 위에 붙어 따라온다(11/6, 메뉴가 화면보다 길면 패널 안에서 스크롤). 1024px 이상에서는 본문 폭(1152px)의 흰 알약(64px, 거의 불투명한 바탕 + 흐림)이 위에 떠 있다. **아래로 내리면 상단바가 숨고, 조금이라도 위로 올리면 스프링으로 다시 나온다(11/24, `useHideOnScroll`, 학습 화면을 읽는 동안 자리를 비워 둔다).** 맨 위 근처, 키보드 포커스·마우스가 상단바 안에 있을 때, 햄버거 메뉴·휴대폰 검색칸이 열려 있을 때는 숨기지 않는다. 체험 모드 띠는 숨지 않고 상단바가 그 뒤로 빠진다. 숨은 동안 빈 자리는 클릭을 통과시킨다(`Layout`의 묶음 `pointer-events-none`). 그래서 스크롤 때 높이 줄이기·검색칸 접기는 없앴고, 검색칸은 넓은 화면에서 늘 펼쳐 둔다(휴대폰 폭만 돋보기). 메뉴는 로고 옆(48px)에 붙이고 검색·계정은 오른쪽 끝에 둔다(메뉴를 정가운데에 두면 넓은 오른쪽 묶음 때문에 오른쪽으로 쏠려 보였다). 첫 화면 파란 띠는 상단바 자리 밑까지 끌어올린다(Hero `lg:-mt-20`). 바깥 자리(h-20)는 고정이라 아래 내용이 들썩이지 않는다
-- 유리 재질(`styles/glass.css`)은 내용 위에 떠 있는 조작 영역(상단바 알약 등)에만 쓰고, 점수·근거·표처럼 읽는 내용에는 쓰지 않는다. 굴절(SVG 필터 `GlassSurface`)은 11/24에 뺐다: 사이트 대부분인 흰 바탕에서는 보이지 않고, 첫 화면 파란 띠 위에서는 알약이 연보라 판이 됐는데 코드·스크롤 비용·크롬 오류만 남았다. 지금은 `.glass`(흐림 + 그림자)에 상단바만 바탕을 `bg-surface-raised/90`으로 덮는다. "투명도 줄이기"는 단색
-- 서브페이지(`SubPage`): 왼쪽 정렬 큰 제목·부제. `HOME > 경로`는 쓰지 않는다(현재 위치는 주 메뉴 선택 표시로 알려 준다). 폼·글 위주 화면은 `narrow`(`form` 896px·`reading` 1024px)를 넘겨 제목과 본문을 같은 폭으로 가운데에 둔다(넓은 창에서 왼쪽으로 쏠리지 않게, 11/6). 화면 안쪽에는 `max-w-*`를 따로 두지 않는다. 표·카드 목록 화면은 넘기지 않고 전체 폭
-- 폼(`FormRow`): 위에 라벨, 아래 입력칸(높이 44px)을 세로로 쌓는다. 표 형식(회색 라벨 칸)은 쓰지 않는다. 파일 고르기는 끌어다 놓는 영역 + 숨긴 입력칸
-- 공지사항은 메인과 주 메뉴에 두지 않는다
+- 심사에 디자인 배점이 없어 겉틀은 단순하게 두고 AI가 보이는 화면에 공을 들인다.
+- 유리 재질(`styles/glass.css`)은 떠 있는 조작 영역(상단바 알약 등)에만 쓰고, 점수·근거·표처럼 읽는 내용에는 쓰지 않는다.
+- 서브페이지(`SubPage`)·폼(`FormRow`) 배치 규칙과 본문 폭·글자 크기 토큰은 9절을 따른다.
 
 ### 색 규칙
 
-Tailwind 4 `@theme`에 아래 이름으로 등록한다(`src/index.css`). Tailwind 기본 팔레트(`blue-600` 등)를 덮어쓰지 않도록 의미 기반 이름을 쓴다.
-
-| 토큰                                               | 값                                                 | 쓰는 곳                                                                  |
-| -------------------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------ |
-| `brand` / `on-brand` / `on-brand-hover`            | `#133b9e` / `#ffffff` / `#c3d3fb`                  | 메인 첫 화면 띠처럼 넓은 짙은 파랑 면과 그 위 글자                       |
-| `heading`                                          | `#0f1b33`                                          | 페이지 제목, 카드 제목                                                   |
-| `heading-soft`                                     | `#1e3a8a`                                          | 섹션 제목, 표 상단선                                                     |
-| `primary` / `on-primary` / `primary-hover`         | `#1d4ed8` / `#ffffff` / `#1e40af`                  | 모든 버튼·글자 링크, 선택된 메뉴, 로고, 숙련도 점수 막대                 |
-| `primary-soft`                                     | `#eaf1ff`                                          | 작은 강조: 아이콘 상자, 선택된 단계·버튼                                 |
-| `primary-pill`                                     | `#dbe6ff`                                          | 알약형 보조 버튼                                                         |
-| `surface` / `surface-raised` / `surface-muted`     | `#ffffff` / `#ffffff` / `#f4f7fd`                  | 사이트 바탕 / 카드·입력칸·드롭다운 / 표 머리·연한 칸·막대 바탕           |
-| `hero` / `section`                                 | `#f4f7fd` / `#f4f7fd`                              | 메인 첫 화면 띠 / 큰 안내 상자(시작 안내, 서비스 소개 상자)              |
-| `footer`                                           | `#eaf1ff`                                          | 푸터 배경 (글자는 `heading`)                                             |
-| `line` / `line-strong`                             | `#e3e9f3` / `#c9d3e3`                              | 구분선, 카드 테두리                                                      |
-| `input-border`                                     | `#7c8598`                                          | 입력칸·검색칸 테두리 (바탕 대비 3:1 이상)                                |
-| `ai` / `ai-soft` / `ai-border` / `ai-chip`         | `#6d28d9` / `#f8f5ff` / `#ddd2fb` / `#f3effe`      | AI가 만든 콘텐츠만                                                       |
-| `highlight` / `on-highlight`                       | `#fde68a` / `#3f2d00` (다크 `#6b5310` / `#fff3c4`) | 가져온 대화에서 찾은 키워드·검색어 형광펜만 (가린 표시는 `primary-soft`) |
-| `strength` / `strength-soft`                       | `#15803d` / `#e7f6ec`                              | 강점 표시                                                                |
-| `weakness` / `weakness-soft` / `weakness-bar`      | `#c0392b` / `#fdecea` / `#e0574a`                  | 보완 필요 표시 / 그 바탕 / 보완 필요 개념의 점수 막대                    |
-| `danger`                                           | `#b91c1c`                                          | 오류 메시지만                                                            |
-| `overlay`                                          | `#0f1b33` (다크 `#000000`)                         | 확인 창 뒤를 덮는 막 (`backdrop:bg-overlay/50`)                          |
-| `window-close` / `window-minimize` / `window-zoom` | `#ff5f57` / `#febc2e` / `#28c840` (다크 같음)      | 스크롤 소개 장면 창 틀의 맥 창 버튼 점 (꾸밈용, 글자에 쓰지 않음)        |
-
-- **바탕은 흰색, 넓은 면은 옅은 파랑, 강조는 파랑.** 바탕은 흰색, 넓은 면(띠, 큰 상자, 푸터)은 옅은 파랑(`surface-muted`·`section`·`footer`)으로 나누고, 누를 수 있거나 선택된 것만 파랑(`primary` 계열)으로 칠한다. 카드는 흰색에 테두리(`line`)로 구분한다.
-
-- **블루 = 코드가 계산한 값과 일반 UI, 퍼플(`ai`) = AI가 만든 것.** 판단 근거 투명성 원칙을 색으로 보여 주는 장치이므로 예외 없이 지킨다.
-  - `ai` 색: AI 설명, 판단 근거 요약, AI 추천 학습 순서와 "이 순서인 이유", 챗봇 답변, 대시보드 "왜 여기에 있나요?"
-  - 버튼은 AI 기능을 실행하더라도 항상 `primary`. 필요하면 아이콘만 `ai`로 붙인다.
-  - 숙련도 점수·그래프는 코드가 계산한 값이므로 `primary`. `ai`로 칠하지 않는다.
-- **색만으로 의미를 전달하지 않는다.** AI 요소에는 반짝이 아이콘과 "AI" 글자를, 강점에는 체크 아이콘과 "강점", 보완 필요에는 느낌표 아이콘과 "보완 필요"를 항상 함께 붙인다. AI 요소가 있는 화면에는 "이 표시가 있는 내용은 AI가 작성했어요" 안내를 둔다.
-- 보완 필요는 붉은 계열(`weakness`, 10/27 결정: 주황보다 눈에 띄게)이지만 오류처럼 보이지 않도록 항상 느낌표 아이콘과 "보완 필요" 글자를 함께 쓰고, 강점(초록)과는 밝기도 다르게 둔다(적록색약). 오류 빨강(`danger`)은 파싱 실패·입력 오류 같은 오류에만 쓰고 보완 필요에 쓰지 않는다.
-- **컴포넌트에 색 코드(`text-[#…]`, `bg-white`, `text-white`)를 직접 쓰지 않는다.** 바탕·글자·구분선도 `surface`, `ink`, `line` 계열 토큰만 쓴다. 버튼 글자는 `on-primary`, 짙은 파랑 띠(`brand`) 위 글자는 `on-brand`.
-- **다크모드:** 표의 값은 밝은 모드 기준이고, 어두운 값은 `src/index.css`의 `:root.dark`에서 같은 토큰을 다시 정의한다. 컴포넌트에 `dark:` 클래스를 붙이지 않는다. 새 토큰을 추가하면 어두운 값도 함께 넣고(그리고 `styles/theme-transition.css`에 등록하고), 글자·바탕 쌍의 대비 4.5:1을 확인한다. 기본값은 기기 설정을 따르고, 상단바의 화면 모드 버튼 하나(`ThemeToggle`, 누르면 지금 보이는 모드의 반대로 바뀜, `useThemeStore`)로 바꾼다. 어두운 값은 시안 v3를 어둡게 옮긴 남색 기 바탕(`surface` `#0f141e` < 카드 `#161d2b` < 연한 칸 `#1c2434`)에 밝은 파랑(`#7aa5f5`)이다. 그림자 색은 `heading` 대신 `brand`를 쓴다(어두운 모드에서 `heading`은 밝아서 그림자가 빛처럼 보인다).
-- 페이지 본문 폭은 `max-w-page`(1200px), 자주 쓰는 글자 크기는 `text-body`(15px)·`text-caption`(13px)·`text-display`(40px) 토큰을 쓴다.
-
-- 폰트: Pretendard (대체: Noto Sans KR, 시스템 폰트)
-- 접근성: 키보드 포커스 표시, 이미지·아이콘 대체 텍스트, 글자 대비 4.5:1 이상, 애니메이션은 `prefers-reduced-motion`을 따른다
+- 색은 `src/index.css`의 `@theme`에 의미 기반 이름으로 등록한다(Tailwind 기본 팔레트 `blue-600` 등을 덮어쓰지 않게).
+- **바탕은 흰색, 넓은 면(띠·큰 상자·푸터)은 옅은 파랑, 누를 수 있거나 선택된 것만 파랑(`primary`).** 카드는 흰색에 테두리(`line`).
+- **블루 = 코드가 계산한 값과 일반 UI, 퍼플(`ai`) = AI가 만든 것.** 판단 근거 투명성 원칙을 색으로 보여 주는 장치라 예외 없이 지킨다. 점수·채점 상태·결과 판단·단계 상태·숙련도는 서버 값 그대로 파랑, 해설·피드백·모범 답안·다음 개념 제안처럼 AI가 만든 것만 보라, 자료 원문 근거 문장은 회색 인용. 버튼은 AI 기능이라도 항상 `primary`(필요하면 아이콘만 `ai`).
+- **색만으로 의미를 전달하지 않는다.** AI는 반짝이 아이콘 + "AI", 강점은 체크 아이콘 + "강점", 보완 필요는 느낌표 아이콘 + "보완 필요"를 항상 붙인다. AI 요소가 있는 화면에는 "이 표시가 있는 내용은 AI가 작성했어요" 안내를 둔다.
+- 보완 필요(`weakness`, 붉은 계열)는 오류처럼 보이지 않게 아이콘·글자를 함께 쓰고 강점(초록)과 밝기를 다르게 둔다(적록색약). `danger`는 오류에만 쓰고 보완 필요에 쓰지 않는다. `highlight`는 가져온 대화의 키워드·검색어 형광펜에만.
+- **컴포넌트에 색 코드(`text-[#…]`, `bg-white`, `text-white`)를 직접 쓰지 않는다.** `surface`·`ink`·`line` 계열 토큰만. 버튼 글자는 `on-primary`, `brand` 위 글자는 `on-brand`.
+- **다크모드:** `src/index.css`의 `:root.dark`에서 같은 토큰을 다시 정의하고, 컴포넌트에 `dark:` 클래스를 붙이지 않는다. 새 토큰은 어두운 값도 넣고 `theme-transition.css`에 등록하고 글자·바탕 대비 4.5:1을 확인한다. 그림자 색은 `heading` 대신 `brand`(어두운 모드에서 `heading`은 밝아 그림자가 빛처럼 보인다).
+- 접근성: 키보드 포커스 표시, 이미지·아이콘 대체 텍스트, 글자 대비 4.5:1 이상, 애니메이션은 `prefers-reduced-motion`을 따른다.
 
 ## 문구 규칙
 
