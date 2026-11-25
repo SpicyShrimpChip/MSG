@@ -6,6 +6,74 @@ import reactDom from 'eslint-plugin-react-dom';
 import tseslint from 'typescript-eslint';
 import eslintConfigPrettier from 'eslint-config-prettier';
 
+// ── 프로젝트 규칙 (frontend/CLAUDE.md·루트 CLAUDE.md에 글로 적힌 것을 자동으로 막는다) ──
+// 예외 파일은 아래 별도 설정 객체에서 해당 항목만 빼고 다시 건다.
+// ESLint는 같은 규칙을 파일별 설정으로 덮어쓸 때 옵션을 합치지 않고 통째로 바꾸므로,
+// 항목을 상수로 나눠 두고 예외 파일에는 나머지 항목만 넘긴다.
+
+// motion.div 등: LazyMotion strict(main.tsx) 아래에서는 m.* 만 쓴다 (frontend/CLAUDE.md 움직임)
+const NO_MOTION_COMPONENT = {
+  selector: "JSXOpeningElement[name.object.name='motion']",
+  message:
+    "motion.div 대신 'motion/react-m'의 m.div를 써 주세요 (frontend/CLAUDE.md 움직임)",
+};
+
+// HTML 문자열 렌더링 금지 (루트 CLAUDE.md 보안 원칙)
+const DANGEROUS_HTML_MESSAGE =
+  'HTML 문자열 렌더링은 쓰지 않아요 (루트 CLAUDE.md 보안 원칙)';
+const NO_DANGEROUS_HTML = [
+  {
+    selector: "JSXAttribute[name.name='dangerouslySetInnerHTML']",
+    message: DANGEROUS_HTML_MESSAGE,
+  },
+  // createElement(..., { dangerouslySetInnerHTML }) 나 props 객체로 넘기는 경우
+  {
+    selector: "Property[key.name='dangerouslySetInnerHTML']",
+    message: DANGEROUS_HTML_MESSAGE,
+  },
+];
+
+// 목업 여부는 store/useDemoStore.ts 한 곳에서만 판단한다 (frontend/CLAUDE.md 백엔드 연동)
+const MOCK_ENV_MESSAGE =
+  '목업 여부는 store/useDemoStore.ts의 isMockData()·useMockData()·NO_BACKEND로 읽어 주세요 (frontend/CLAUDE.md 백엔드 연동)';
+const NO_MOCK_ENV = [
+  // import.meta.env.VITE_USE_MOCK
+  {
+    selector: "MemberExpression[property.name='VITE_USE_MOCK']",
+    message: MOCK_ENV_MESSAGE,
+  },
+  // import.meta.env['VITE_USE_MOCK']
+  {
+    selector: "MemberExpression[property.value='VITE_USE_MOCK']",
+    message: MOCK_ENV_MESSAGE,
+  },
+  // const { VITE_USE_MOCK } = import.meta.env
+  {
+    selector: "ObjectPattern > Property[key.name='VITE_USE_MOCK']",
+    message: MOCK_ENV_MESSAGE,
+  },
+];
+
+// 서버 데이터를 저장하는 버튼은 동기 잠금이 걸린 훅을 쓴다 (frontend/CLAUDE.md, #210)
+const NO_USE_MUTATION = {
+  name: '@tanstack/react-query',
+  importNames: ['useMutation'],
+  message:
+    '서버 데이터를 저장하는 버튼은 hooks의 useSingleFlightMutation을 써 주세요 (더블클릭 중복 저장 방지, #210)',
+};
+
+// motion 컴포넌트 묶음을 가져오는 길도 막는다. LazyMotion·MotionConfig·AnimatePresence·useScroll 등은 그대로 쓴다
+const MOTION_IMPORT_MESSAGE =
+  "motion.div 대신 'motion/react-m'의 m.div를 써 주세요 (frontend/CLAUDE.md 움직임)";
+const NO_MOTION_IMPORT = [
+  {
+    name: 'motion/react',
+    importNames: ['motion'],
+    message: MOTION_IMPORT_MESSAGE,
+  },
+  { name: 'motion/react-client', message: MOTION_IMPORT_MESSAGE },
+];
+
 export default tseslint.config(
   // 빌드 결과물 폴더는 린트 검사에서 제외
   // src/wasm은 wasm-pack이 만든 파일(npm run build:wasm), wasm/*/target은 러스트 빌드 결과
@@ -36,6 +104,38 @@ export default tseslint.config(
     // 세부 규칙 커스텀
     rules: {
       ...reactHooks.configs.recommended.rules,
+
+      // 프로젝트 규칙 (위 상수 참고)
+      'no-restricted-syntax': [
+        'error',
+        NO_MOTION_COMPONENT,
+        ...NO_DANGEROUS_HTML,
+        ...NO_MOCK_ENV,
+      ],
+      'no-restricted-imports': [
+        'error',
+        { paths: [NO_USE_MUTATION, ...NO_MOTION_IMPORT] },
+      ],
+    },
+  },
+
+  // 예외: 목업 여부를 판단하는 원본 파일이라 여기서만 VITE_USE_MOCK을 읽는다
+  {
+    files: ['src/store/useDemoStore.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        NO_MOTION_COMPONENT,
+        ...NO_DANGEROUS_HTML,
+      ],
+    },
+  },
+
+  // 예외: useSingleFlightMutation 구현이 useMutation을 감싸는 곳이라 여기서만 가져온다
+  {
+    files: ['src/hooks/useSingleFlightMutation.ts'],
+    rules: {
+      'no-restricted-imports': ['error', { paths: NO_MOTION_IMPORT }],
     },
   },
 
