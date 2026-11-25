@@ -1,11 +1,11 @@
 import { Link } from 'react-router-dom';
+import { NoticeList } from './ConsentNotice';
 import {
   AI_CONSENT_NOTICE,
   AI_QUIZ_CONSENT_NOTICE,
-  NoticeList,
   REQUIRED_NOTICE,
   type Notice,
-} from './ConsentNotice';
+} from './consentNotices';
 
 // 회원가입의 이용 안내와 선택 동의.
 // 「개인정보 처리 통합 안내서」(2025.7.) Ⅳ 동의를 받는 방법을 따른다:

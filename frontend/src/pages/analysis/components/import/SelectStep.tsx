@@ -25,9 +25,10 @@ import {
   type SearchHit,
   type ParsedConversation,
 } from '@/utils';
-import ConversationView, { SOURCE_NAME } from './ConversationView';
+import ConversationView from './ConversationView';
 import CourseQuickForm from './CourseQuickForm';
 import { MARK_CLASS } from './marks';
+import { SOURCE_NAME } from './sourceName';
 
 // 대화마다 들어갈 과목과 보낼지 여부 (키: conversationKey)
 export type ConversationChoices = Record<

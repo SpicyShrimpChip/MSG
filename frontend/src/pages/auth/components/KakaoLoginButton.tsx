@@ -3,7 +3,7 @@ import { getSocialProviders } from '@/api';
 import { NO_BACKEND, useDemoStore } from '@/store';
 import { kakaoStartUrl } from '@/utils';
 
-export const SOCIAL_PROVIDERS_QUERY_KEY = ['social-providers'] as const;
+const SOCIAL_PROVIDERS_QUERY_KEY = ['social-providers'] as const;
 
 interface KakaoLoginButtonProps {
   // 로그인 뒤 돌아갈 화면 경로 (사이트 안 경로만, 아니면 첫 화면)

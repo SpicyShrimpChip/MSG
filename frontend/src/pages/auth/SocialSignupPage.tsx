@@ -24,7 +24,7 @@ import {
   safeReturnTo,
 } from '@/utils';
 import AuthCard from './components/AuthCard';
-import { KAKAO_SIGNUP_NOTICE } from './components/ConsentNotice';
+import { KAKAO_SIGNUP_NOTICE } from './components/consentNotices';
 import SignupAgreements from './components/SignupAgreements';
 import SocialPendingError from './components/SocialPendingError';
 

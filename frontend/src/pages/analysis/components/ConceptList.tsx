@@ -16,7 +16,7 @@ import Panel from './Panel';
 import { ModelVerdictChip } from './UnderstandingBadge';
 
 // 목록의 한 줄로 내려갈 때 쓰는 id (개념 이름에는 띄어쓰기·괄호가 있어 순번으로 만든다)
-export const conceptRowId = (index: number) => `concept-row-${index + 1}`;
+const conceptRowId = (index: number) => `concept-row-${index + 1}`;
 
 // 모델들이 권한 공부 방법 (처음 나온 것 하나). 없으면 null
 function firstActivity(concept: ConceptResult): string | null {
