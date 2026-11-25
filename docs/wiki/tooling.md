@@ -132,3 +132,10 @@
 - 원인: `application.yaml`은 실행 폴더 기준 `optional:file:.env`만 읽는다. 워크트리의 `backend`에는 `.env`가 없어 `local` 프로필의 DB 비밀번호가 빈다.
 - 해결: 메인 체크아웃의 브랜치를 바꾸지 않고, 워크트리 `backend`에서 `SPRING_CONFIG_IMPORT='optional:file:../../../../backend/.env[.properties]' ./gradlew pgTest`로 메인 체크아웃의 `.env`를 가리켰다(값은 테스트 JVM만 읽는다). 결과 XML의 `jdbc:postgresql://…/msg_test`로 실제 PostgreSQL에서 돈 것을 확인했다.
 - 다음에는: 도커의 로컬 DB 컨테이너를 먼저 켜고, 워크트리 깊이가 다르면 상대 경로의 `../` 수를 맞춘다.
+
+## 워크트리에서 백엔드만 고쳐도 푸시가 `tsc` 오류로 막힌다 (2026-11-25, fix/material-storage-quota)
+
+- 상황: 워크트리에서 백엔드만 고치고 푸시했더니 pre-push 훅이 "This is not the tsc command you are looking for"로 실패했다.
+- 원인: 훅(`frontend/.husky/pre-push`)은 현재 폴더 기준 `cd frontend && npx tsc -b`를 돈다. 새 워크트리에는 `frontend/node_modules`가 없다.
+- 해결: 워크트리의 `frontend`에서 `npm ci` 뒤 다시 푸시했다(훅을 건너뛰지 않음). `npm ci`의 `prepare`(husky)가 공유 git 설정의 `core.hooksPath`를 상대 경로 `frontend/.husky/_`로 다시 쓴다. 메인 체크아웃에서도 같은 폴더를 가리켜 동작은 같다.
+- 다음에는: 워크트리에서 푸시할 일이 있으면 처음에 `frontend`의 `npm ci`부터 한다.
