@@ -37,7 +37,7 @@ public class MaterialController {
 	@Operation(summary = "자료 올리기", description = "multipart/form-data. PDF·PPTX·TXT·MD, 20MB까지. "
 			+ "확장자와 파일 내용이 함께 맞아야 한다. 성공하면 status는 uploaded(AI 분석 전)다. "
 			+ "requestKey(선택, 64자까지)를 함께 보내면 같은 키로 다시 보낸 요청(더블클릭·재시도)은 새로 저장하지 않고 "
-			+ "이미 올린 자료를 200으로 돌려준다.")
+			+ "이미 올린 자료를 200으로 돌려준다. 내 자료의 크기 합계·개수가 상한(app.material)을 넘으면 저장하지 않고 409.")
 	@PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public ResponseEntity<ApiResponse<MaterialUploadResponse>> upload(
 			@AuthenticationPrincipal AuthUser authUser,

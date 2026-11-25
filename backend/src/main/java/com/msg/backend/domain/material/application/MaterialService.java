@@ -17,6 +17,8 @@ import com.msg.backend.global.storage.FileStorageException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -35,6 +37,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.util.unit.DataSize;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
@@ -49,6 +52,10 @@ import org.springframework.web.multipart.MultipartFile;
  * <p>같은 올리기가 두 번 오는 경우(더블클릭·연타·응답을 못 받은 재시도, #210): 화면이 올리기마다 만든 요청 키를 함께 보내면
  * 같은 사용자·같은 키의 두 번째 요청은 파일을 저장하지 않고 이미 올린 자료를 돌려준다. 동시에 온 경우는 사용자 행을 잠가
  * 차례로 처리하고, 그래도 (user_id, request_key) UNIQUE에 걸리면 트랜잭션이 롤백되며 방금 저장한 파일을 지운다.
+ *
+ * <p>저장 용량 상한(app.material, MaterialQuotaProperties): 한 사용자가 자료를 계속 올려 서버 디스크를 채우지 못하게
+ * 내 자료의 파일 크기 합계·개수를 저장 전에 확인하고 넘으면 409로 거절한다. 동시에 여러 개를 올려 상한을 넘기지 못하게
+ * 요청 키가 없어도 사용자 행을 잠근 뒤 센다(같은 사용자의 올리기는 차례로 처리된다).
  */
 @Slf4j
 @Service
@@ -60,6 +67,11 @@ public class MaterialService {
 
 	static final String REQUEST_KEY_TOO_LONG_MESSAGE = "요청 키가 너무 길어요.";
 
+	static final String TOTAL_SIZE_EXCEEDED_MESSAGE_FORMAT = "저장 공간이 모자라요. 자료는 모두 합쳐 %s까지 저장할 수 있고 "
+			+ "지금 %s를 쓰고 있어요. 쓰지 않는 자료를 지운 뒤 다시 올려 주세요.";
+
+	static final String COUNT_EXCEEDED_MESSAGE_FORMAT = "자료는 %d개까지 저장할 수 있어요. 쓰지 않는 자료를 지운 뒤 다시 올려 주세요.";
+
 	private final MaterialRepository materialRepository;
 	private final UserRepository userRepository;
 	private final CourseRepository courseRepository;
@@ -68,6 +80,7 @@ public class MaterialService {
 	private final MaterialFileInspector fileInspector;
 	private final FileStorage fileStorage;
 	private final FileCleanupService fileCleanupService;
+	private final MaterialQuotaProperties quota;
 	private final Clock clock;
 
 	public List<MaterialSummaryResponse> getMaterials(Long userId) {
@@ -100,10 +113,11 @@ public class MaterialService {
 	public Uploaded upload(Long userId, Long courseId, String rawTitle, String rawRequestKey, MultipartFile file) {
 		String title = title(rawTitle);
 		String requestKey = requestKey(rawRequestKey);
+		// 사용자 행을 잠가 같은 사용자의 올리기를 차례로 처리한다.
+		// 같은 키로 동시에 온 요청은 앞 요청이 커밋될 때까지 기다렸다가 그 자료를 찾아 돌려준다 (파일을 두 번 저장하지 않는다).
+		// 키가 달라도 앞 요청이 커밋된 뒤에 저장 용량을 세므로, 동시에 여러 개를 올려 상한을 넘기지 못한다
+		userRepository.lockLoginUser(userId);
 		if (requestKey != null) {
-			// 사용자 행을 잠가 같은 사용자의 키 있는 올리기를 차례로 처리한다.
-			// 같은 키로 동시에 온 요청은 앞 요청이 커밋될 때까지 기다렸다가 그 자료를 찾아 돌려준다 (파일을 두 번 저장하지 않는다)
-			userRepository.lockLoginUser(userId);
 			var existing = materialRepository.findByUserIdAndRequestKey(userId, requestKey);
 			if (existing.isPresent()) {
 				return new Uploaded(MaterialUploadResponse.from(existing.get()), true);
@@ -112,6 +126,8 @@ public class MaterialService {
 		if (courseId != null) {
 			courseRepository.checkOwned(courseId, userId);
 		}
+		// 파일을 임시 폴더로 옮기거나 검사하기 전에 거절한다. getSize()는 서버가 실제로 받은 바이트 수다
+		checkQuota(userId, file.getSize());
 		Path received = receive(file);
 		try {
 			InspectedFile inspected = fileInspector.inspect(file.getOriginalFilename(), received);
@@ -153,6 +169,28 @@ public class MaterialService {
 				.map(Material::getStorageKey)
 				.filter(Objects::nonNull)
 				.toList());
+	}
+
+	// 이 파일을 더하면 내 자료의 개수·크기 합계가 상한을 넘는지. 사용자 행을 잠근 뒤에만 부른다
+	private void checkQuota(Long userId, long incomingSize) {
+		if (quota.limitsCount() && materialRepository.countByUserId(userId) >= quota.maxCount()) {
+			throw new BusinessException(HttpStatus.CONFLICT, COUNT_EXCEEDED_MESSAGE_FORMAT.formatted(quota.maxCount()));
+		}
+		if (quota.limitsTotalSize()) {
+			long used = materialRepository.sumFileSizeByUserId(userId);
+			if (used + incomingSize > quota.maxTotalSize().toBytes()) {
+				throw new BusinessException(HttpStatus.CONFLICT, TOTAL_SIZE_EXCEEDED_MESSAGE_FORMAT
+						.formatted(megabytes(quota.maxTotalSize().toBytes()), megabytes(used)));
+			}
+		}
+	}
+
+	// 화면에 보여 줄 크기 (예: 200MB, 185.3MB). 소수 첫째 자리까지, .0은 뗀다
+	static String megabytes(long bytes) {
+		BigDecimal mb = BigDecimal.valueOf(bytes)
+				.divide(BigDecimal.valueOf(DataSize.ofMegabytes(1).toBytes()), 1, RoundingMode.DOWN)
+				.stripTrailingZeros();
+		return mb.toPlainString() + "MB";
 	}
 
 	private void store(String storageKey, Path content) {

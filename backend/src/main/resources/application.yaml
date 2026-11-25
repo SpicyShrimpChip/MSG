@@ -49,6 +49,14 @@ app:
     # 지우지 못한 파일(file_deletion_task)을 다시 지우는 간격
     cleanup-retry-interval: 10m
 
+  # 사용자 한 명이 저장할 수 있는 학습자료 양. 넘으면 올리기 전에 409로 거절한다 (한 사람이 서버 디스크를 채우지 못하게).
+  # 200MB = 파일 상한(20MB)짜리 10개, 흔한 강의 PDF(2~10MB)면 수십 개. 운영 디스크(20GB)에 DB·이미지·7일치 백업(업로드 폴더도
+  # 매일 통째로 묶는다)이 함께 있어 넉넉하되 크지 않게 잡았다. 0 이하면 상한 없음
+  # TODO(미결): 사용자 테스트 뒤 조정. 200MB·100개는 근거 없는 초기값이다
+  material:
+    max-total-size: ${MATERIAL_USER_MAX_TOTAL_SIZE:200MB}
+    max-count: ${MATERIAL_USER_MAX_COUNT:100}
+
   # AI 대화 가져오기 요청 한 번의 최대 크기. 프론트는 1MB(MAX_REQUEST_BYTES, nginx 기본 한도) 안으로 나눠 보내고,
   # 메시지 하나는 20,000자, 제목은 500자로 맞춰 보낸다 (frontend/src/utils/conversation/send.ts)
   conversation-import:
