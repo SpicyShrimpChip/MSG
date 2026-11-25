@@ -125,6 +125,19 @@ class UserAiCallLimitApiTest {
 		assertThat(todayCount(userId)).isEqualTo(1);
 	}
 
+	// 동시 요청 재현: 분석은 모델 셋을 동시에 부른다. 한 호출이 "줄 없음"을 본 뒤 다른 호출이 줄을 만들고 수를 올린 상태에서,
+	// 앞 호출이 줄 만들기를 부른다
+	@Test
+	void 줄_만들기는_이미_있는_줄의_수를_덮어쓰지_않는다() {
+		fill(userId, 2);
+
+		quota.createUserRow(userId, today());
+
+		assertThat(todayCount(userId)).isEqualTo(2);
+		assertThat(quota.tryAcquireForUser(userId)).isTrue();
+		assertThat(todayCount(userId)).isEqualTo(3);
+	}
+
 	@Test
 	void 과목을_지워도_줄지_않고_탈퇴하면_지운다() throws Exception {
 		fakeLlm.get(LlmProvider.GPT).answer(QuizFixtures.threeTypes(false));

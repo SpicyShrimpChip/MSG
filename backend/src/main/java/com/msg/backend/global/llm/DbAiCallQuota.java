@@ -90,11 +90,22 @@ class DbAiCallQuota implements AiCallQuota {
 		return deleted;
 	}
 
-	// 오늘 줄이 없으면 만든다. 두 요청이 동시에 만들면 하나는 기본 키 충돌로 실패하는데, 줄은 이미 있으니 그대로 넘어간다
+	// 오늘 줄이 없으면 만든다
 	private void ensureRow(LocalDate today) {
-		if (repository.existsById(today)) {
-			return;
+		if (!repository.existsById(today)) {
+			createRow(today);
 		}
+	}
+
+	private void ensureUserRow(Long userId, LocalDate today) {
+		if (!userRepository.existsById(new UserAiCallDaily.Key(userId, today))) {
+			createUserRow(userId, today);
+		}
+	}
+
+	// 줄을 만든다. 없는 줄을 본 뒤 다른 요청이 먼저 만들고 수를 올렸을 수 있다.
+	// 그때는 기본 키 충돌로 실패하고(이미 있는 줄은 그대로) 넘어간다
+	void createRow(LocalDate today) {
 		try {
 			newTransaction().executeWithoutResult(status -> repository.saveAndFlush(AiDailyUsage.start(today)));
 		} catch (DataIntegrityViolationException e) {
@@ -102,10 +113,7 @@ class DbAiCallQuota implements AiCallQuota {
 		}
 	}
 
-	private void ensureUserRow(Long userId, LocalDate today) {
-		if (userRepository.existsById(new UserAiCallDaily.Key(userId, today))) {
-			return;
-		}
+	void createUserRow(Long userId, LocalDate today) {
 		try {
 			newTransaction().executeWithoutResult(
 					status -> userRepository.saveAndFlush(UserAiCallDaily.start(userId, today)));
