@@ -66,7 +66,7 @@ React Router로 화면을 나누기 때문에 `/analysis`처럼 바로 들어오
 - **주소는 Vercel 하나.** 브라우저는 같은 출처로 `/api`를 부르므로 로그인 쿠키(SameSite=Strict)·CORS가 단순하다.
 - **RDS·S3는 쓰지 않는다.** DB·업로드 파일은 도커 볼륨(`pgdata`·`uploads`)에 두고 매일 백업한다. 비용과 설정을 줄이려는 선택이다.
 - **시드니 리전:** AWS 무료 플랜은 가입 때 정해진 리전 하나만 열린다. 한국에서 요청마다 0.1~0.15초쯤 더 걸린다. 처리방침 7·8번에 적었다.
-- **이미지:** main에 백엔드 변경이 머지되면 CI(`backend-ci.yml`의 `docker-publish`)가 테스트 통과 뒤 `ghcr.io/spicyshrimpchip/msg-backend:latest`와 `:sha-<7자리>`로 올린다. 서버에서는 빌드하지 않는다(2GB에서 Gradle 빌드와 DB를 같이 돌리면 메모리가 모자랄 수 있다).
+- **이미지:** main에 백엔드 변경이 머지되면 CI(`backend-ci.yml`의 `docker-publish`)가 테스트 통과 뒤 `ghcr.io/spicyshrimpchip/msg-backend:latest`와 `:sha-<7자리>`로 올린다. 이미지에 넣는 jar는 `build-and-test`가 테스트한 것을 그대로 쓴다(`backend/Dockerfile`의 `prebuilt` 대상, 이미지 안에서 다시 컴파일하지 않음). 로컬 `docker build`와 PR의 이미지 확인은 소스에서 jar를 만드는 기본 대상(`runtime`)이다. 서버에서는 빌드하지 않는다(2GB에서 Gradle 빌드와 DB를 같이 돌리면 메모리가 모자랄 수 있다).
 
 ## 처음 띄우기
 

@@ -45,6 +45,7 @@ jobs:
 
   # main에 머지되면 테스트 두 개가 통과한 뒤 이미지를 만들어 GHCR(ghcr.io/spicyshrimpchip/msg-backend)에 올린다.
   # 서버는 deploy/deploy.sh로 이 이미지를 받는다. 이미지에는 비밀값이 없다(실행할 때 환경변수로 넘긴다)
+  # jar는 build-and-test가 테스트한 것을 그대로 넣는다(Dockerfile의 prebuilt 대상). PR의 docker-build는 소스에서 만드는 기본 대상을 확인한다
   docker-publish:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
@@ -66,6 +67,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: 테스트한 jar 받기
+        uses: actions/download-artifact@v8
+        with:
+          name: backend-jar
+          path: backend/prebuilt
+
       - name: 커밋 7자리
         id: sha
         run: echo "short=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
@@ -75,14 +82,15 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: backend
+          target: prebuilt
           push: true
           # 예전 docker push와 같은 단일 이미지로 올린다(빌드 증명서 목록을 따로 붙이지 않음)
           provenance: false
           tags: |
             ghcr.io/spicyshrimpchip/msg-backend:latest
             ghcr.io/spicyshrimpchip/msg-backend:sha-${{ steps.sha.outputs.short }}
-          cache-from: type=gha,scope=backend-image
-          cache-to: type=gha,scope=backend-image,mode=max
+          cache-from: type=gha,scope=backend-image-prebuilt
+          cache-to: type=gha,scope=backend-image-prebuilt,mode=max
 
   # H2 메모리 DB로 빌드·전체 테스트
   build-and-test:
@@ -112,6 +120,22 @@ jobs:
 
       - name: 빌드·테스트
         run: ./gradlew build --no-daemon
+
+      # main 머지 때 docker-publish가 이 jar를 그대로 이미지에 넣는다(이미지 안에서 다시 컴파일하지 않게)
+      - name: 실행 jar 넘기기
+        if: github.event_name == 'push'
+        run: |
+          mkdir -p prebuilt
+          cp "$(ls build/libs/*.jar | grep -v -- '-plain.jar')" prebuilt/app.jar
+
+      - name: 실행 jar 올리기
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-jar
+          path: backend/prebuilt/app.jar
+          retention-days: 1
+          if-no-files-found: error
 
   # 같은 테스트를 실제 PostgreSQL 16(+pgvector)으로 실행: Flyway 마이그레이션, UNIQUE 제약, vector 확장 확인
   postgres-test:

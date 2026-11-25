@@ -20,6 +20,8 @@ frontend/dist/
 
 # backend
 backend/build/
+# CI가 이미지에 넣으려고 잠깐 두는 jar (backend/Dockerfile의 prebuilt 대상)
+backend/prebuilt/
 backend/bin/
 backend/.gradle/
 backend/out/
