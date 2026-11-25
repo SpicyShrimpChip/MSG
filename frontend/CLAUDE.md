@@ -26,6 +26,15 @@ npm run build    # 타입 체크 + 빌드
 작업을 마치면 `npm run lint && npm run format:check && npm test && npm run build`가 통과해야 한다.
 테스트는 화면이 아니라 틀리면 안 되는 로직(대화 파싱·마스킹, 점수 계산, API 응답 처리)에 쓴다.
 
+**ESLint가 막는 프로젝트 규칙**(`eslint.config.js`, `no-restricted-syntax`·`no-restricted-imports`, 커밋 훅·CI에서 오류): 아래 각 절의 규칙 중 코드 모양으로 확인할 수 있는 4가지다. 예외는 설정 파일의 `files` 객체로 해당 항목만 빼고(같은 규칙을 덮어쓰면 옵션이 합쳐지지 않으므로 남길 항목을 다시 넘긴다), 한 줄 예외는 `// eslint-disable-next-line <규칙> -- 이유`.
+
+- `motion.div` 등 JSX의 `motion.*`, `motion/react`의 `motion`·`motion/react-client` 가져오기 → `m.*` (움직임)
+- `dangerouslySetInnerHTML` (루트 `CLAUDE.md` 보안 원칙)
+- `import.meta.env.VITE_USE_MOCK` 직접 읽기 → `useDemoStore.ts`의 `isMockData()`·`useMockData()`·`NO_BACKEND` (예외: `store/useDemoStore.ts`)
+- `@tanstack/react-query`의 `useMutation` → `useSingleFlightMutation` (예외: `hooks/useSingleFlightMutation.ts`)
+
+색 코드·`dark:` 클래스처럼 className 문자열 안을 봐야 하는 규칙은 오탐이 쉬워 넣지 않았다(리뷰에서 본다).
+
 ## 폴더 구조 (보일러플레이트 기준)
 
 ```
@@ -47,7 +56,7 @@ src/
 - 화면을 만들 때 공통 부품을 먼저 쓴다: 버튼 `Button`, 흰 카드 `Card`, 작은 알약 `Chip`, 점수·비중 막대 `ScoreBar`(개념 막대는 `level`을 넘기면 보완 필요가 붉게), 금방 끝나는 저장을 기다리는 동안 도는 아이콘 `Spinner`, AI 응답을 오래 기다리는 안내 상자 `AiWaiting`(점 구슬 + 글, `thinking-orbs`를 처음 뜰 때 받는다. 세 모델 분석은 `weaving`, 그 밖의 AI 작업은 `connecting`, 아이콘 자리에 구슬만 넣을 때는 `AiOrb`), 파일 끌어다 놓기 `FileDropZone`, 회색 안내 상자(아이콘+글) `Notice`, 입력칸 `TextInput`·`SelectInput`(그 밖의 칸 모양은 `FIELD_CLASS`), 폼 줄과 오류 문구 `FormRow`(`error`), AI 글 `AiNote`·`AiBadge`(화면의 "AI 표시가 있는 내용은…" 안내 한 줄은 `AiLegend`), 강점·보완 `LevelBadge`. 같은 클래스 묶음을 세 번째로 쓰게 되면 공통 부품으로 뺀다.
 - 클래스를 조건에 따라 붙이거나 부품이 받은 `className`과 합칠 때는 템플릿 문자열 대신 `cn()`(`utils/cn.ts`)을 쓴다. 겹치는 클래스는 뒤에 넘긴 값이 이긴다. `@theme`에 `--text-*`·`--container-*` 토큰을 추가하면 `cn.ts`에도 이름을 넣는다(빠뜨리면 글자 크기 클래스가 색으로 오인돼 지워진다).
 - 클래스 순서는 손으로 맞추지 않는다. `prettier-plugin-tailwindcss`가 저장·커밋할 때 `className`과 `cn()` 안의 클래스를 Tailwind 권장 순서로 정렬한다(`.prettierrc`). `TONE_CLASS` 같은 상수 문자열은 정렬 대상이 아니다.
-- 서버 데이터를 만들거나 바꾸는 저장 버튼은 `useMutation` 대신 `useSingleFlightMutation`(`hooks/`)을 쓴다(11/24, #210). `disabled={isPending}`는 다시 그린 뒤에야 걸려 더블클릭·연타가 두 번 보내므로, `mutate` 직전에 동기 잠금(`utils/submitLock.ts`)을 걸고 요청이 끝나면 푼다. 한 화면의 두 버튼이 서로 겹치면 안 되면 같은 잠금을 넘긴다(`ConceptFeedbackBox`). 자료 올리기는 서버 요청 키(`requestKey`)도 함께 보낸다.
+- 서버 데이터를 만들거나 바꾸는 저장 버튼은 `useMutation` 대신 `useSingleFlightMutation`(`hooks/`)을 쓴다(11/24, #210). `disabled={isPending}`는 다시 그린 뒤에야 걸려 더블클릭·연타가 두 번 보내므로, `mutate` 직전에 동기 잠금(`utils/submitLock.ts`)을 걸고 요청이 끝나면 푼다. 한 화면의 두 버튼이 서로 겹치면 안 되면 같은 잠금을 넘긴다(`ConceptFeedbackBox`). 자료 올리기는 서버 요청 키(`requestKey`)도 함께 보낸다. `useMutation`을 직접 가져오면 ESLint가 막는다(`eslint.config.js`).
 - 서버 데이터는 React Query로만 다루고 Zustand에 복사하지 않는다. 쿼리 키는 문자열로 직접 쓰지 않고 API 파일의 상수(`ME_QUERY_KEY`, `COURSES_QUERY_KEY`)나 훅을 쓴다.
 - 로딩·에러 처리는 `useSuspenseQuery` + `AsyncBoundary`로 한다. 불러오는 동안은 `LoadingFallback`(회색 틀 `Skeleton`)이 보인다. `AsyncBoundary`는 `QueryErrorResetBoundary`로 감싸 "다시 시도"가 실패한 조회를 다시 부르게 한다(빼면 같은 오류 화면이 남는다). 상세 화면처럼 없거나 남의 것(서버 404)일 수 있는 화면은 `notFoundAction`(예: `{ label: '퀴즈 목록으로', to: '/quizzes' }`)을 넘겨, 404면 "다시 시도" 대신 목록으로 가는 버튼을 보여 준다. 화면을 그리다 난 오류와 배포 뒤 옛 화면 코드 불러오기 실패는 라우터 루트의 `RouteErrorPage`가 받는다(코드 불러오기 실패는 30초 안에 한 번만 자동 새로고침).
 - 페이지는 처음 방문할 때만 코드를 불러온다. `router/index.tsx`에 `lazyPage(() => import('@/pages/...'))`로 추가하고, 페이지 파일은 default export로 만든다(메인·404만 처음부터 불러온다). 여러 페이지를 한 번에 export하는 모음 파일(`pages/index.ts`)은 만들지 않는다. 쪼개지지 않는다.
@@ -55,7 +64,7 @@ src/
 ## 움직임 (Motion)
 
 - 기준값은 `constants/motion.ts`(시간·곡선·`FADE_UP`)와 `index.css`의 `--default-transition-*`에 모아 둔다. 두 곳의 값은 같이 맞춘다. 느낌이 어색하면 이 값만 고친다.
-- `main.tsx`에서 `LazyMotion`(필요한 기능만, `strict`)과 `MotionConfig reducedMotion="user"`로 감쌌다. 그래서 컴포넌트에서는 `motion.div` 대신 **`import * as m from 'motion/react-m'`의 `m.div`**를 쓴다. `motion.div`를 쓰면 번들이 커지고 `strict`에서 오류가 난다.
+- `main.tsx`에서 `LazyMotion`(필요한 기능만, `strict`)과 `MotionConfig reducedMotion="user"`로 감쌌다. 그래서 컴포넌트에서는 `motion.div` 대신 **`import * as m from 'motion/react-m'`의 `m.div`**를 쓴다. `motion.div`를 쓰면 번들이 커지고 `strict`에서 오류가 난다. ESLint가 막는다(`eslint.config.js`).
 - 나타나고 사라지는 요소(펼침 패널, 말풍선, 결과 문구)는 `AnimatePresence` + `m.*`. 단순한 색·그림자 전환은 CSS(`index.css`가 링크·버튼·입력칸에 기본으로 걸어 둔다)로 충분하다.
 - 페이지 전환은 `PageTransition`(본문 페이드인), 코드 불러오는 동안은 `NavigationProgress`(화면 위 진행 막대).
 - 스크롤에 따라 장면이 바뀌는 구간(메인 스크롤 소개): 긴 구간 안에 `sticky` 무대를 두고 `useScroll`의 진행도로 단계를 넘긴다. 장면 전환 곡선은 `SWEEP_TRANSITION`. 장면 안 요소는 `SceneMotion`의 `Reveal`·`MaskSwap`·`SlotItem`으로 차례로 움직이고, 좁은 화면·"동작 줄이기"에서는 `SceneMotionContext`를 꺼서 고정 없이 세로로 쌓고 마지막 모습만 보여 준다
@@ -72,7 +81,7 @@ src/
 - 환경변수: `VITE_API_BASE_URL`(기본 `/api`), `VITE_USE_MOCK`. 팀 공유 값은 `.env.development`(커밋), 내 PC에서만 바꿀 값은 `.env.development.local`(커밋 안 됨)
 - 요청 경로는 항상 `/api/...`. 개발 중에는 Vite 프록시가 `localhost:8080`으로, 배포 때는 Vercel rewrite가 백엔드로 넘긴다. 그래서 백엔드 컨트롤러 경로도 `/api`로 시작한다
 - 배포는 Vercel(`frontend/vercel.json`, 모든 경로를 `index.html`로). 운영 주소 https://lms-seven-tawny.vercel.app/ (목업 모드, main 머지 때 자동 배포, PR마다 미리보기). 빌드 설정·환경변수(`VITE_USE_MOCK`, `HUSKY=0`)는 `docs/deploy.md`
-- `VITE_USE_MOCK=true`는 "연결할 백엔드가 없는 빌드"다. **목업이냐를 판단하는 곳은 `store/useDemoStore.ts` 하나**이고 세 가지를 구분한다(11/20): `NO_BACKEND`(백엔드 없음: 로그인 가드·세션 복원·로그인 닫힘 안내·Turnstile), `DEMO_AVAILABLE`(체험 버튼을 켤 수 있음, 11/21부터 실제 서버 빌드에서도 true), `isMockData()`·`useMockData()`(지금 데이터를 `mocks/`에서 읽는지 = 백엔드가 없거나 체험 중). API 함수는 `if (isMockData()) return mockX()`(React 밖이라 부르는 순간의 값), 화면의 "예시 데이터" 문구·동작은 컴포넌트 맨 위 `const mockData = useMockData()`로 읽는다. `import.meta.env.VITE_USE_MOCK`을 다른 파일에서 직접 읽지 않는다. 예시: `api/notices.api.ts`
+- `VITE_USE_MOCK=true`는 "연결할 백엔드가 없는 빌드"다. **목업이냐를 판단하는 곳은 `store/useDemoStore.ts` 하나**이고 세 가지를 구분한다(11/20): `NO_BACKEND`(백엔드 없음: 로그인 가드·세션 복원·로그인 닫힘 안내·Turnstile), `DEMO_AVAILABLE`(체험 버튼을 켤 수 있음, 11/21부터 실제 서버 빌드에서도 true), `isMockData()`·`useMockData()`(지금 데이터를 `mocks/`에서 읽는지 = 백엔드가 없거나 체험 중). API 함수는 `if (isMockData()) return mockX()`(React 밖이라 부르는 순간의 값), 화면의 "예시 데이터" 문구·동작은 컴포넌트 맨 위 `const mockData = useMockData()`로 읽는다. `import.meta.env.VITE_USE_MOCK`을 다른 파일에서 직접 읽지 않는다(ESLint가 막는다, `eslint.config.js`). 예시: `api/notices.api.ts`
 - 백엔드에 바라는 API(제안)는 `docs/frontend-requests.md`에 모은다. 새 화면에서 API가 필요해지면 거기에 추가하고, 목업도 같은 모양으로 만든다
 - 백엔드 공통 응답 형식: `{ success: boolean, message: string, data: T }` (`types/api.ts`의 `ApiResponse<T>`)
 - API 함수는 `api/request.ts`의 `request<T>()`로 요청한다. 성공하면 `data`만 돌려주고, 실패하면 화면에 보여 줄 문구를 담은 `ApiError`를 던진다(`AsyncBoundary`가 받는다)

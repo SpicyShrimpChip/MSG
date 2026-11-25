@@ -134,3 +134,10 @@
 - 원인: 같은 판단을 세 곳에 따로 썼다. 한쪽만 고치면 화면에서 고른 대화가 서버에서 빠지거나, 반대로 화면에서 안 고른 메시지가 서버에서 골라진다.
 - 해결: 영문 키워드만 낱말 경계(앞뒤가 ASCII 영문·숫자가 아님)로 찾는 규칙을 백엔드 `global/common/TermMatch`로 모으고 프론트 `filter.ts`·대화 보기 형광펜(`marks.ts`)도 같은 규칙으로 바꿨다. 양쪽 테스트에 같은 표(`TermMatchTest`·`filter.test.ts`)를 둔다. JS 정규식은 앞 글자 확인 대신 `(?:^|[^a-z0-9])`로 쓰고, 형광펜은 여러 단어를 이어 칠해서 앞 글자를 코드로 본다.
 - 다음에는: 키워드로 무언가를 찾는 곳을 새로 만들면 `TermMatch`·`filter.ts`를 쓰고, 규칙을 바꾸면 두 표를 같이 고친다.
+
+## ESLint 규칙에 파일별 예외를 걸면 그 파일에서 같은 규칙의 다른 항목도 사라진다 (2026-11-25, chore/frontend-lint-rules)
+
+- 상황: `no-restricted-syntax`·`no-restricted-imports` 하나에 프로젝트 규칙 여러 개를 넣고, `useDemoStore.ts`·`useSingleFlightMutation.ts`에서만 한 항목을 빼려 했다.
+- 원인: flat config에서 `files` 객체로 같은 규칙을 다시 걸면 옵션이 합쳐지지 않고 통째로 바뀐다(`npx eslint --print-config <파일>`로 확인). 뺄 항목만 생각하고 예외를 쓰면 그 파일에서 나머지 금지도 같이 풀린다. 또 `react-dom/no-dangerously-set-innerhtml`은 권장 설정에서 경고라 `npm run lint`가 실패하지 않아 CI에서 막히지 않았다.
+- 해결: 항목을 `eslint.config.js` 위쪽 상수로 나눠 두고, 예외 객체에는 남길 항목만 다시 넘긴다. 금지는 `error`로 건다.
+- 다음에는: 예외를 더하면 그 파일에 위반 코드를 잠깐 넣어 다른 항목이 아직 잡히는지 `npm run lint`로 본다(설정이 바뀌면 캐시가 있어도 다시 검사한다).
