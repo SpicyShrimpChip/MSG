@@ -11,6 +11,8 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ContextConfiguration;
 
 /**
@@ -43,6 +45,14 @@ public @interface IntegrationTest {
 		@Primary
 		FaultyFileStorage faultyFileStorage(LocalFileStorage localFileStorage) {
 			return new FaultyFileStorage(localFileStorage);
+		}
+
+		// 가입·로그인마다 운영 세기(10)로 해시하면 통합 테스트가 느려진다. 형식($2a$)과 비교 방식은 같고 세기만 4로 낮춘다
+		// (운영 설정은 SecurityConfig, 세기는 해시 안에 적혀 있어 세기 10 해시도 그대로 비교된다)
+		@Bean
+		@Primary
+		PasswordEncoder fastPasswordEncoder() {
+			return new BCryptPasswordEncoder(4);
 		}
 
 		// 학습 분석은 가짜 모델로 돌린다. 테스트마다 resetAll()로 비우고 필요한 모델만 켠다

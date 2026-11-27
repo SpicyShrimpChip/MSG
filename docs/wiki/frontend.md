@@ -156,6 +156,13 @@
 - 해결: 미리보기 페이지에서 `javascript_tool`로 Vite 모듈(`/src/components/common/ConfirmDialog.tsx`, `main.tsx`가 가져오는 `/node_modules/.vite/deps/react.js?v=…`·`react-dom_client.js?v=…` 주소 그대로)을 `import()`해 빈 `div`에 창 3개를 그려 id를 확인하고 바로 지웠다. 버전 꼬리(`?v=`)가 다르면 React가 둘이 되거나 모듈을 못 읽는다.
 - 다음에는: 체험에서 안 열리는 화면의 컴포넌트는 `fetch('/src/main.tsx')`로 deps 주소를 먼저 확인한 뒤 같은 방식으로 따로 그려 본다.
 
+## `src/test/` 초기화 파일의 `vi.mock('@/…')`이 아무 일도 하지 않는다 (2026-11-27, chore/test-hardening)
+
+- 상황: 목업 지연(`mocks/delay.ts`)을 모든 테스트에서 건너뛰려고 `setupFiles`에 `vi.mock('@/mocks/delay', …)`를 넣었는데, 오류 없이 테스트가 여전히 6초 걸렸다.
+- 원인: `@/` 별칭은 Vite `resolve.tsconfigPaths`가 파일을 포함한 tsconfig로 푼다. `tsconfig.app.json`이 `src/test`를 빼 두어 그 안에서는 `@/`가 풀리지 않고, `vi.mock`은 맞는 모듈이 없어도 조용히 넘어간다.
+- 해결: 초기화 파일에서는 상대 경로(`vi.mock('../mocks/delay', …)`)로 썼다.
+- 다음에는: `src/test/` 안에서는 `@/`를 쓰지 않는다. `vi.mock`을 넣은 뒤에는 효과(시간·호출 수)가 실제로 바뀌었는지 한 번 본다.
+
 ## 대시보드가 불러오는 동안 짧은 회색 틀을 보여 주면 다 그린 뒤 아래 구역이 밀린다 (2026-11-27, fix/dashboard-layout-shift)
 
 - 상황: Lighthouse 데스크톱에서 `/?demo=1`(→ `/analysis`)의 CLS가 0.676이었다. 휴대폰은 0.
