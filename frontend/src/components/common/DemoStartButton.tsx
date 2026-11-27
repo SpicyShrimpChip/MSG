@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { DEMO_AVAILABLE, useAuthStore, useDemoStore } from '@/store';
+import { demoStartVisible } from './demoStartVisible';
 
 interface DemoStartButtonProps {
   className?: string;
@@ -11,7 +12,7 @@ interface DemoStartButtonProps {
 }
 
 // "로그인 없이 체험해 보기": 체험 모드를 켜고 예시 데이터 화면으로 간다.
-// 이미 체험 중이거나 로그인한 상태면 숨긴다(내 데이터와 예시가 섞이지 않게). 모양은 놓는 자리에서 className으로 정한다
+// 보이는 조건은 demoStartVisible(체험 중·로그인·세션 되살리는 중이면 숨김). 모양은 놓는 자리에서 className으로 정한다
 function DemoStartButton({
   className,
   to = '/analysis',
@@ -20,12 +21,11 @@ function DemoStartButton({
   const navigate = useNavigate();
   const active = useDemoStore((state) => state.active);
   const start = useDemoStore((state) => state.start);
-  const authenticated = useAuthStore(
-    (state) => state.status === 'authenticated',
-  );
+  const status = useAuthStore((state) => state.status);
   const queryClient = useQueryClient();
 
-  if (!DEMO_AVAILABLE || active || authenticated) return null;
+  if (!demoStartVisible({ available: DEMO_AVAILABLE, active, status }))
+    return null;
 
   return (
     <button

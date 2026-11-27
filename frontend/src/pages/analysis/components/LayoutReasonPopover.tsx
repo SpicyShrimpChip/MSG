@@ -51,7 +51,6 @@ function LayoutReasonPopover({ title, reason }: LayoutReasonPopoverProps) {
     >
       <button
         type="button"
-        aria-label={`${title} 배치 이유 보기`}
         aria-expanded={open}
         aria-controls={popoverId}
         onClick={() => {
@@ -66,6 +65,8 @@ function LayoutReasonPopover({ title, reason }: LayoutReasonPopoverProps) {
         className="inline-flex items-center gap-1 rounded-full bg-ai-chip px-2.5 py-1 text-caption font-medium text-ai hover:bg-ai-chip-hover"
       >
         <Sparkles size={14} aria-hidden="true" />이 자리인 이유
+        {/* 접근 이름이 보이는 글로 시작해야 음성 제어("이 자리인 이유 클릭")가 먹는다 */}
+        <span className="sr-only">: {title}</span>
       </button>
       <AnimatePresence>
         {open && (

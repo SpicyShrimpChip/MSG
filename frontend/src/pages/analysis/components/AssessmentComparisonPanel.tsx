@@ -265,7 +265,7 @@ function AssessmentComparisonPanel({ courseId }: { courseId: number }) {
                 onFocus={() => setHovered(row.key)}
                 onBlur={() => setHovered(null)}
                 className={cn(
-                  'grid grid-cols-[6rem_1fr] items-center gap-3 rounded-lg px-2 py-2 outline-none sm:grid-cols-[8rem_1fr]',
+                  'grid grid-cols-[6rem_1fr] items-center gap-3 rounded-lg px-2 py-2 sm:grid-cols-[8rem_1fr]',
                   hovered === row.key && 'bg-surface-muted',
                   row.key === 'overall' && 'border-b border-line pb-3',
                 )}

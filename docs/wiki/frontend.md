@@ -155,3 +155,10 @@
 - 원인: 마이페이지는 체험에서 "보여 드리지 않아요" 안내만 띄우고, 목업 모드는 로그인이 없어 실제 화면을 열 수 없다.
 - 해결: 미리보기 페이지에서 `javascript_tool`로 Vite 모듈(`/src/components/common/ConfirmDialog.tsx`, `main.tsx`가 가져오는 `/node_modules/.vite/deps/react.js?v=…`·`react-dom_client.js?v=…` 주소 그대로)을 `import()`해 빈 `div`에 창 3개를 그려 id를 확인하고 바로 지웠다. 버전 꼬리(`?v=`)가 다르면 React가 둘이 되거나 모듈을 못 읽는다.
 - 다음에는: 체험에서 안 열리는 화면의 컴포넌트는 `fetch('/src/main.tsx')`로 deps 주소를 먼저 확인한 뒤 같은 방식으로 따로 그려 본다.
+
+## 포커스 직후 읽은 계산 스타일이 옛 값이라 포커스 표시가 안 붙은 줄 안다 (2026-11-27, fix/a11y-focus-contrast)
+
+- 상황: 입력칸 포커스에 `focus-within:ring-1`을 더하고 미리보기에서 Tab 직후 `getComputedStyle`로 테두리·`box-shadow`를 읽었더니 회색 테두리·빈 그림자가 나와 클래스가 안 먹는 줄 알았다.
+- 원인: `index.css`가 `input`·`select` 등에 `border-color`·`box-shadow` 전환을 걸어 두어, 포커스 바로 뒤에는 전환 시작 값이 읽힌다. 그 순간 찍은 스크린샷도 옛 모양이다.
+- 해결: 수백 ms 기다린 뒤 다시 읽어 파랑 테두리와 1px ring이 붙은 것을 확인했다.
+- 다음에는: 포커스·호버 모양을 스크립트나 스크린샷으로 확인할 때는 전환 시간보다 길게 기다린 뒤 읽는다.
