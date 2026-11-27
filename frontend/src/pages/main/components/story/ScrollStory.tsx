@@ -121,8 +121,9 @@ function PinnedStory({ header }: { header: ReactNode }) {
       // 고정된 무대 한 화면 + 단계마다 STEP_SCROLL_VH만큼
       style={{ height: `calc(100svh + ${TOTAL * STEP_SCROLL_VH}vh)` }}
     >
-      {/* 머리말을 무대 안에 두어 장면과 항상 같이 움직인다. 머리말+장면을 한 묶음으로 남은 높이 가운데에 둬서 제목이 장면 바로 위에 온다 */}
-      <div className="sticky top-0 flex h-svh flex-col justify-center gap-6 pt-20 pb-6 [@media(min-height:900px)]:gap-12">
+      {/* 머리말을 무대 안에 두어 장면과 항상 같이 움직인다. 머리말+장면을 한 묶음으로 남은 높이 가운데에 둬서 제목이 장면 바로 위에 온다.
+          위 여백은 상단바 자리(80px)인데, 상단바가 숨으면(Header가 <html data-header-hidden>) 아래와 같게 줄여 장면이 아래로 쏠리지 않게 한다 */}
+      <div className="sticky top-0 flex h-svh flex-col justify-center gap-6 pt-20 pb-6 in-data-[header-hidden]:pt-6 motion-safe:transition-[padding-top] [@media(min-height:900px)]:gap-12">
         {header}
         <div className="grid min-h-0 grid-cols-[minmax(0,5fr)_minmax(0,6fr)] items-center gap-16">
           <div className="flex flex-col gap-8">

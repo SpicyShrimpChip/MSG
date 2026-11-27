@@ -155,6 +155,12 @@ function Header() {
   const hidden =
     scrolledAway && !focusInside && !pointerInside && !menuOpen && !searchOpen;
 
+  // 숨은 상태를 <html data-header-hidden>로 알린다. 상단바 밑에 붙는 화면(메인 소개의 고정 무대)이 비켜 둔 자리를 줄이는 데 쓴다
+  useEffect(() => {
+    document.documentElement.toggleAttribute('data-header-hidden', hidden);
+    return () => document.documentElement.removeAttribute('data-header-hidden');
+  }, [hidden]);
+
   // 휴대폰 검색칸은 상단바를 덮으므로, 칸 바깥을 누르면 확실히 닫는다 (포커스가 안 들어간 채 열린 경우도 닫히게)
   const searchFormRef = useRef<HTMLFormElement>(null);
   useEffect(() => {
