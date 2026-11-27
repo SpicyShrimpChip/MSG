@@ -6,7 +6,7 @@ const TONE_CLASS = {
   // 사용자가 넣은 값(키워드 등)
   neutral: 'bg-surface-muted text-ink-soft',
   // 코드가 센 숫자
-  primary: 'border border-primary-pill bg-primary-soft text-heading',
+  primary: 'border border-line bg-surface-raised text-heading',
 } as const;
 
 interface ChipProps {

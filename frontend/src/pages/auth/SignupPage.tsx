@@ -170,7 +170,7 @@ function SignupPage() {
         >
           <h2
             id="signup-learning"
-            className="text-lg font-extrabold text-heading"
+            className="text-lg font-semibold text-heading"
           >
             학습 목적{' '}
             <span className="text-body font-medium text-ink-muted">(선택)</span>

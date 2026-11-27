@@ -26,7 +26,7 @@ function JudgmentCard({ judgment }: { judgment: ConceptJudgment }) {
   return (
     <li className="flex flex-col gap-3 rounded-xl border border-line p-4">
       <div className="flex items-center justify-between gap-2">
-        <p className="font-extrabold text-heading">
+        <p className="font-semibold text-heading">
           {PROVIDER_LABEL[judgment.provider]}
           {judgment.model && (
             <span className="ml-1.5 text-caption font-medium text-ink-muted">
@@ -59,7 +59,7 @@ function JudgmentCard({ judgment }: { judgment: ConceptJudgment }) {
 
       {judgment.evidence.length > 0 ? (
         <div className="flex flex-col gap-2">
-          <p className="text-caption font-bold text-ink-soft">
+          <p className="text-caption font-semibold text-ink-soft">
             근거 메시지 {judgment.evidence.length}개
           </p>
           <ul className="flex flex-col gap-1.5">
@@ -68,7 +68,7 @@ function JudgmentCard({ judgment }: { judgment: ConceptJudgment }) {
                 key={item.messageId}
                 className="flex flex-col gap-1 rounded-lg bg-surface-muted px-3 py-2.5"
               >
-                <span className="flex flex-wrap items-center gap-1.5 text-caption font-bold text-ink-soft">
+                <span className="flex flex-wrap items-center gap-1.5 text-caption font-semibold text-ink-soft">
                   {EVIDENCE_KIND_LABEL[item.kind]} · {item.conversationTitle}
                   {item.behavior && (
                     <span
@@ -118,7 +118,7 @@ function ConceptJudgments({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <h3 className="font-extrabold text-heading">모델별 판단</h3>
+        <h3 className="font-semibold text-heading">모델별 판단</h3>
         <p className="text-caption text-ink-muted">
           {describeComparison(concept.comparison)}
         </p>
@@ -132,7 +132,9 @@ function ConceptJudgments({
             key={model.provider}
             className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-dashed border-line-strong px-4 py-3 text-body text-ink-muted"
           >
-            <span className="font-bold">{PROVIDER_LABEL[model.provider]}</span>
+            <span className="font-semibold">
+              {PROVIDER_LABEL[model.provider]}
+            </span>
             <span>
               {model.status === 'not_configured'
                 ? '연결 안 됨 · 이번 분석에 참여하지 않았어요'

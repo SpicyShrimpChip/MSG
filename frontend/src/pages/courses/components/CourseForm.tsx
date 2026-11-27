@@ -94,7 +94,7 @@ function CourseForm({
       className="flex max-w-2xl flex-col gap-5"
     >
       {showTitle && (
-        <h2 className="text-xl font-extrabold text-heading">
+        <h2 className="text-xl font-semibold text-heading">
           {editing ? `'${editing.name}' 수정하기` : '과목 추가'}
         </h2>
       )}

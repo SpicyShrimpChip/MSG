@@ -62,7 +62,7 @@ function useAccountItems(): { key: string; node: ReactNode }[] {
         node: (
           <Link
             to="/signup"
-            className="inline-flex h-10 items-center rounded-lg bg-primary px-4 font-bold text-on-primary hover:bg-primary-hover"
+            className="inline-flex h-10 items-center rounded-lg bg-primary px-4 font-semibold text-on-primary hover:bg-primary-hover"
           >
             회원가입
           </Link>
@@ -217,7 +217,7 @@ function Header() {
         <div className="flex items-center max-lg:mr-auto lg:min-w-max lg:shrink-0">
           <Link to="/" className="flex items-center gap-2.5 text-heading">
             <LogoMark />
-            <span className="text-xl font-bold whitespace-nowrap">MSG</span>
+            <span className="text-xl font-semibold whitespace-nowrap">MSG</span>
           </Link>
         </div>
 

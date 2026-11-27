@@ -29,7 +29,7 @@ function ConceptVerificationBox({
     >
       <div className="flex flex-wrap items-center gap-2">
         <ShieldCheck size={18} className="text-primary" aria-hidden="true" />
-        <h3 className="font-extrabold text-heading">판단 검증</h3>
+        <h3 className="font-semibold text-heading">판단 검증</h3>
         <VerificationBadge status={verification.status} />
       </div>
       <ul className="flex list-disc flex-col gap-1 pl-5 text-caption text-ink-soft">

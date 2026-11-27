@@ -151,7 +151,7 @@ function MaterialUploadForm() {
       </div>
 
       <section className="rounded-2xl border border-line p-5">
-        <h2 className="text-body font-bold text-heading">
+        <h2 className="text-body font-semibold text-heading">
           본인이 이용 권한이 있는 자료만 올려 주세요
         </h2>
         <ul className="mt-2 list-disc pl-5 text-body text-ink-soft">

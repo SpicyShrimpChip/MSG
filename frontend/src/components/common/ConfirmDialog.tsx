@@ -48,7 +48,7 @@ function ConfirmDialog({
       <div className="flex flex-col gap-4 p-6">
         <h2
           id="confirm-dialog-title"
-          className="text-lg font-bold text-heading"
+          className="text-lg font-semibold text-heading"
         >
           {title}
         </h2>

@@ -87,7 +87,7 @@ function MaterialCard({
       <div className="flex min-w-0 flex-col gap-1.5">
         <Link
           to={`/materials/${material.id}`}
-          className="font-bold text-heading hover:text-primary hover:underline"
+          className="font-semibold text-heading hover:text-primary hover:underline"
         >
           {material.title}
         </Link>
@@ -156,7 +156,7 @@ function MaterialList() {
         >
           <h2
             id={`material-group-${group.key}`}
-            className="text-lg font-extrabold text-heading"
+            className="text-lg font-semibold text-heading"
           >
             {group.title}{' '}
             <span className="text-body font-medium text-ink-muted">

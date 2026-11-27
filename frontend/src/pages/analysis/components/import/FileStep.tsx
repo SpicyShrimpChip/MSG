@@ -55,7 +55,7 @@ function ManifestNotice({
   return (
     <div className="flex flex-col gap-2 rounded-xl border border-line-strong bg-surface-raised p-4">
       <FileName name={fileName} />
-      <p className="font-bold text-heading">{title}</p>
+      <p className="font-semibold text-heading">{title}</p>
       <ManifestBody expired={expired} message={message} manifest={manifest} />
     </div>
   );
@@ -134,7 +134,7 @@ function FileStep({ imported, onLoaded, onNext }: FileStepProps) {
       aria-labelledby="import-file"
       className="flex flex-col gap-5 p-6 md:p-8"
     >
-      <h2 id="import-file" className="text-xl font-extrabold text-heading">
+      <h2 id="import-file" className="text-xl font-semibold text-heading">
         대화 내보내기 파일 고르기
       </h2>
 
@@ -165,7 +165,7 @@ function FileStep({ imported, onLoaded, onNext }: FileStepProps) {
         파일 받는 방법이 궁금하다면
         <Link
           to="/analysis/import/help/claude"
-          className="inline-flex items-center gap-0.5 font-bold text-primary hover:underline"
+          className="inline-flex items-center gap-0.5 font-semibold text-primary hover:underline"
         >
           Claude 내보내기 도움말
           <ChevronRight size={16} aria-hidden="true" />
@@ -178,7 +178,7 @@ function FileStep({ imported, onLoaded, onNext }: FileStepProps) {
             role="alert"
             className="flex flex-col gap-1.5 rounded-xl border border-danger p-4"
           >
-            <p className="flex items-center gap-2 font-bold text-heading">
+            <p className="flex items-center gap-2 font-semibold text-heading">
               <CircleAlert
                 size={18}
                 className="shrink-0 text-danger"
@@ -210,7 +210,7 @@ function FileStep({ imported, onLoaded, onNext }: FileStepProps) {
               className="flex flex-col gap-1.5 rounded-xl border border-danger p-4"
             >
               <FileName name={error.fileName} />
-              <p className="flex items-center gap-2 font-bold text-heading">
+              <p className="flex items-center gap-2 font-semibold text-heading">
                 <CircleAlert
                   size={18}
                   className="shrink-0 text-danger"
@@ -236,7 +236,9 @@ function FileStep({ imported, onLoaded, onNext }: FileStepProps) {
         ))}
         {count > 0 && (
           <div className="flex flex-col gap-1 rounded-xl bg-primary-soft p-4">
-            <p className="font-bold text-heading">대화 {count}개를 읽었어요.</p>
+            <p className="font-semibold text-heading">
+              대화 {count}개를 읽었어요.
+            </p>
             {(imported!.skippedCount > 0 || imported!.duplicateCount > 0) && (
               <p className="text-body text-ink-soft">
                 {imported!.skippedCount > 0 &&

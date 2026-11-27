@@ -158,7 +158,7 @@ function ConceptCard({
         )}
       >
         <div className="flex flex-wrap items-center gap-2">
-          <p className="text-lg font-bold text-heading">{concept.name}</p>
+          <p className="text-lg font-semibold text-heading">{concept.name}</p>
           <Chip tone={concept.courseKeyword ? 'primary' : 'neutral'}>
             {concept.courseKeyword
               ? '과목 키워드와 같음'
@@ -207,7 +207,7 @@ function ConceptCard({
             )}
 
             <div className="flex flex-col gap-2 rounded-xl border border-line p-4">
-              <p className="text-body font-bold text-heading">
+              <p className="text-body font-semibold text-heading">
                 {concept.studyNote ? '설명 다시 만들기' : '자세한 설명 만들기'}
               </p>
               {blockedReason ? (
@@ -367,7 +367,7 @@ function MaterialConceptPanel({
       )}
 
       <Card as="section" className="flex flex-col gap-3 p-5">
-        <h3 className="text-body font-bold text-heading">
+        <h3 className="text-body font-semibold text-heading">
           {concepts.length === 0 ? '핵심 개념 뽑기' : '핵심 개념 다시 뽑기'}
         </h3>
         <Notice icon={Lock} size="caption" iconClassName="text-primary">

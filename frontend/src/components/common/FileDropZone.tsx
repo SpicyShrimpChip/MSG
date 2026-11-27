@@ -56,7 +56,7 @@ function FileDropZone({
             <Upload size={22} aria-hidden="true" />
           )}
         </span>
-        <span className="font-bold text-heading">{title}</span>
+        <span className="font-semibold text-heading">{title}</span>
         <span className="text-body text-ink-muted">{description}</span>
       </label>
       <input

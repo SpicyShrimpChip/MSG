@@ -9,7 +9,7 @@ function PrivacyNotice() {
         <Lock size={20} aria-hidden="true" />
       </span>
       <div className="min-w-0 flex-[1_1_420px]">
-        <p className="mb-1 font-bold text-heading">
+        <p className="mb-1 font-semibold text-heading">
           원본 대화 파일은 서버로 보내지 않아요
         </p>
         <p className="text-body leading-relaxed text-ink-soft">

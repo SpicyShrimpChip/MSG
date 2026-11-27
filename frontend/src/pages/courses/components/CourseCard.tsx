@@ -14,7 +14,7 @@ function CourseCard({ course, onEdit, onDelete, deleting }: CourseCardProps) {
     <Card as="li" className="flex flex-col gap-3 p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <h3 className="text-lg font-bold text-heading">{course.name}</h3>
+          <h3 className="text-lg font-semibold text-heading">{course.name}</h3>
           <p className="text-caption text-ink-muted">
             {formatSemester(course.semester)}
           </p>

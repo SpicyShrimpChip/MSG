@@ -32,7 +32,7 @@ function LearningProfileFields({
   return (
     <div className="flex flex-col gap-5">
       <fieldset className="flex flex-col gap-3">
-        <legend className="mb-1 font-bold text-heading">
+        <legend className="mb-1 font-semibold text-heading">
           주로 어떤 목적으로 공부하나요?
         </legend>
         <div className="grid gap-2 sm:grid-cols-2">
@@ -48,7 +48,7 @@ function LearningProfileFields({
                     : 'border-line hover:bg-surface-muted',
                 )}
               >
-                <span className="flex items-center gap-2 font-bold text-heading">
+                <span className="flex items-center gap-2 font-semibold text-heading">
                   <input
                     type="radio"
                     name={`${idPrefix}-purpose`}

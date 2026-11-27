@@ -3,7 +3,7 @@ import { Button } from '@/components';
 function NotFoundPage() {
   return (
     <div className="mx-auto flex max-w-page flex-col items-center gap-4 px-6 py-32 text-center">
-      <h1 className="text-3xl font-bold text-heading">
+      <h1 className="text-3xl font-semibold text-heading">
         페이지를 찾을 수 없어요
       </h1>
       <p className="text-ink-soft">

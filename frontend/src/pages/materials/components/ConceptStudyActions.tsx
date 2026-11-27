@@ -55,7 +55,7 @@ function ConceptStudyActions({
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface-muted p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-body font-bold text-heading">학습 상태</span>
+        <span className="text-body font-semibold text-heading">학습 상태</span>
         <StudyStatusBadge status={study.status} />
         {study.studyCount > 1 && (
           <span className="text-caption text-ink-muted">
@@ -72,7 +72,7 @@ function ConceptStudyActions({
 
       {study.status === 'review_needed' && latest && (
         <div className="flex flex-col gap-2 rounded-lg bg-weakness-soft p-3 text-body text-ink">
-          <p className="flex items-center gap-1.5 font-bold text-weakness">
+          <p className="flex items-center gap-1.5 font-semibold text-weakness">
             <CircleAlert size={16} aria-hidden="true" />
             복습 필요
           </p>
@@ -132,7 +132,7 @@ function ConceptStudyActions({
 
       {study.checkHistory.length > 0 && (
         <div className="flex flex-col gap-1">
-          <p className="text-caption font-bold text-ink-soft">
+          <p className="text-caption font-semibold text-ink-soft">
             확인 퀴즈 이력 (최신 순)
           </p>
           <ul className="flex flex-col gap-0.5 text-caption text-ink-soft">

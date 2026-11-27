@@ -39,7 +39,7 @@ function Section({
 }) {
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="flex items-center gap-2 text-lg font-extrabold text-heading">
+      <h2 className="flex items-center gap-2 text-lg font-semibold text-heading">
         <span className="text-primary" aria-hidden="true">
           {icon}
         </span>
@@ -70,7 +70,7 @@ function ResultRow({
       <div className="flex flex-wrap items-center gap-2">
         <Link
           to={to}
-          className="font-bold text-heading underline-offset-4 hover:text-primary hover:underline"
+          className="font-semibold text-heading underline-offset-4 hover:text-primary hover:underline"
         >
           {title}
         </Link>

@@ -40,7 +40,7 @@ function WithdrawnToast() {
         {open && (
           <m.div
             {...FADE_UP}
-            className="pointer-events-auto flex max-w-md items-start gap-3 rounded-xl border border-line bg-surface-raised p-4 text-body text-heading shadow-lg shadow-brand/15"
+            className="pointer-events-auto flex max-w-md items-start gap-3 rounded-xl border border-line bg-surface-raised p-4 text-body text-heading shadow-lg shadow-shade/8"
           >
             <CircleCheck
               size={20}

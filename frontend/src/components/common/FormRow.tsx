@@ -21,7 +21,7 @@ function FormRow({
 }: FormRowProps) {
   return (
     <div className="flex flex-col gap-2">
-      <label htmlFor={htmlFor} className="text-body font-bold text-heading">
+      <label htmlFor={htmlFor} className="text-body font-semibold text-heading">
         {label}
         {required && (
           <span className="ml-1 text-primary">

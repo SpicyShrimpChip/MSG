@@ -54,7 +54,7 @@ function CourseManager() {
       />
 
       <section aria-labelledby="course-list" className="flex flex-col gap-4">
-        <h2 id="course-list" className="text-xl font-extrabold text-heading">
+        <h2 id="course-list" className="text-xl font-semibold text-heading">
           등록한 과목 {courses.length}개
         </h2>
         <ErrorText error={removal.error} />

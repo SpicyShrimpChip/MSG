@@ -29,9 +29,7 @@ function AnalysisSummaryPanel({
         {items.map((item) => (
           <div key={item.label} className="flex flex-col gap-1">
             <dt className="text-caption text-ink-soft">{item.label}</dt>
-            <dd className="text-xl font-extrabold text-heading">
-              {item.value}
-            </dd>
+            <dd className="text-xl font-semibold text-heading">{item.value}</dd>
           </div>
         ))}
       </dl>

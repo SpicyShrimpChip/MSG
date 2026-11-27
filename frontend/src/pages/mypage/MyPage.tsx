@@ -53,7 +53,7 @@ function AccountInfo({ me }: { me: User }) {
           className="flex flex-wrap justify-between gap-x-6 gap-y-1 py-4"
         >
           <dt className="text-body text-ink-soft">{row.label}</dt>
-          <dd className="text-body font-bold text-heading">{row.value}</dd>
+          <dd className="text-body font-semibold text-heading">{row.value}</dd>
         </div>
       ))}
     </dl>
@@ -77,12 +77,12 @@ function AiQuizConsentSection({ me }: { me: User }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2
           id="mypage-ai-quiz-consent"
-          className="text-lg font-extrabold text-heading"
+          className="text-lg font-semibold text-heading"
         >
           AI 퀴즈 처리 동의{' '}
           <span className="text-body font-medium text-ink-muted">(선택)</span>
         </h2>
-        <span className="text-body font-bold text-heading">
+        <span className="text-body font-semibold text-heading">
           {me.aiQuizConsent ? '동의함' : '동의하지 않음'}
         </span>
       </div>
@@ -153,10 +153,7 @@ function LearningProfileSection({ me }: { me: User }) {
       className="flex flex-col gap-4 p-6"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2
-          id="mypage-learning"
-          className="text-lg font-extrabold text-heading"
-        >
+        <h2 id="mypage-learning" className="text-lg font-semibold text-heading">
           학습 목적·관심 직무
         </h2>
         {!editing && (
@@ -199,9 +196,9 @@ function LearningProfileSection({ me }: { me: User }) {
       ) : (
         <dl className="grid gap-1 text-body sm:grid-cols-[auto_1fr] sm:gap-x-6">
           <dt className="text-ink-soft">학습 목적</dt>
-          <dd className="font-bold text-heading">{purposeLabel}</dd>
+          <dd className="font-semibold text-heading">{purposeLabel}</dd>
           <dt className="text-ink-soft">관심 직무</dt>
-          <dd className="font-bold text-heading">
+          <dd className="font-semibold text-heading">
             {jobFieldLabel(me.jobField, me.jobFieldOther) ?? '고르지 않음'}
           </dd>
         </dl>
@@ -241,12 +238,12 @@ function AiConsentSection({ me }: { me: User }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2
           id="mypage-ai-consent"
-          className="text-lg font-extrabold text-heading"
+          className="text-lg font-semibold text-heading"
         >
           AI 대화 분석 동의{' '}
           <span className="text-body font-medium text-ink-muted">(선택)</span>
         </h2>
-        <span className="text-body font-bold text-heading">
+        <span className="text-body font-semibold text-heading">
           {me.aiAnalysisConsent ? '동의함' : '동의하지 않음'}
         </span>
       </div>
@@ -303,10 +300,7 @@ function MaskWordsSection({ me }: { me: User }) {
       aria-labelledby="mypage-mask-words"
       className="flex flex-col gap-4 p-6"
     >
-      <h2
-        id="mypage-mask-words"
-        className="text-lg font-extrabold text-heading"
-      >
+      <h2 id="mypage-mask-words" className="text-lg font-semibold text-heading">
         대화 가져올 때 가릴 단어
       </h2>
       <WordList
@@ -361,7 +355,7 @@ function DeleteAccountSection({ me }: { me: User }) {
       aria-labelledby="mypage-delete"
       className="flex flex-col gap-4 p-6"
     >
-      <h2 id="mypage-delete" className="text-lg font-extrabold text-heading">
+      <h2 id="mypage-delete" className="text-lg font-semibold text-heading">
         탈퇴하고 내 데이터 지우기
       </h2>
       <p className="text-body leading-relaxed text-ink-soft">

@@ -36,7 +36,7 @@ export default function ErrorFallback({
       className="flex flex-col items-center gap-3 rounded-2xl bg-surface-muted px-6 py-14 text-center"
     >
       <CircleAlert size={28} aria-hidden="true" className="text-danger" />
-      <p className="text-lg font-bold text-heading">
+      <p className="text-lg font-semibold text-heading">
         {notFound ? '찾을 수 없어요' : '내용을 불러오지 못했어요'}
       </p>
       <p className="max-w-120 text-body leading-relaxed text-ink-soft">

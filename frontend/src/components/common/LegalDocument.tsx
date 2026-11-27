@@ -43,7 +43,7 @@ function SectionBlock({ block }: { block: LegalBlock }) {
               <th
                 key={cell}
                 scope="col"
-                className="border-b border-line px-3.5 py-3 text-left font-bold"
+                className="border-b border-line px-3.5 py-3 text-left font-semibold"
               >
                 {cell}
               </th>
@@ -56,7 +56,7 @@ function SectionBlock({ block }: { block: LegalBlock }) {
               {row.map((cell, index) => (
                 <td
                   key={block.head[index]}
-                  className={`border-b border-line px-3.5 py-3 align-top leading-relaxed ${index === 0 ? 'font-bold text-heading' : 'text-ink-soft'}`}
+                  className={`border-b border-line px-3.5 py-3 align-top leading-relaxed ${index === 0 ? 'font-semibold text-heading' : 'text-ink-soft'}`}
                 >
                   {cell}
                 </td>
@@ -81,7 +81,10 @@ function LegalDocument({
         aria-labelledby="legal-summary-title"
         className="max-w-3xl rounded-2xl bg-section p-5"
       >
-        <h2 id="legal-summary-title" className="mb-2 font-bold text-heading">
+        <h2
+          id="legal-summary-title"
+          className="mb-2 font-semibold text-heading"
+        >
           한눈에 보기
         </h2>
         <ul className="flex list-disc flex-col gap-1.5 pl-5 leading-relaxed text-ink-soft">
@@ -100,7 +103,7 @@ function LegalDocument({
       )}
 
       <nav aria-label="목차" className="rounded-2xl border border-line p-5">
-        <p className="mb-2 font-bold text-heading">목차</p>
+        <p className="mb-2 font-semibold text-heading">목차</p>
         <ol className="grid gap-x-6 gap-y-1.5 text-body sm:grid-cols-2">
           {sections.map((section) => (
             <li key={section.id}>
@@ -125,7 +128,7 @@ function LegalDocument({
           >
             <h2
               id={`${section.id}-title`}
-              className="text-xl font-extrabold text-heading"
+              className="text-xl font-semibold text-heading"
             >
               {section.title}
             </h2>

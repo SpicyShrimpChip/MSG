@@ -12,14 +12,14 @@ function StatusText({ model }: { model: ModelRun }) {
   switch (model.status) {
     case 'succeeded':
       return (
-        <span className="inline-flex items-center gap-1 font-bold text-strength">
+        <span className="inline-flex items-center gap-1 font-semibold text-strength">
           <CircleCheck size={16} aria-hidden="true" />
           판단함 · 개념 {model.judgedConceptCount}개
         </span>
       );
     case 'not_configured':
       return (
-        <span className="inline-flex items-center gap-1 font-bold text-ink-muted">
+        <span className="inline-flex items-center gap-1 font-semibold text-ink-muted">
           <Unplug size={16} aria-hidden="true" />
           연결 안 됨
         </span>
@@ -27,7 +27,7 @@ function StatusText({ model }: { model: ModelRun }) {
     default:
       // 실패·형식이 맞지 않는 답변: 오류 빨강(danger)은 이런 실패에만 쓴다
       return (
-        <span className="inline-flex items-center gap-1 font-bold text-danger">
+        <span className="inline-flex items-center gap-1 font-semibold text-danger">
           <CircleAlert size={16} aria-hidden="true" />
           {model.status === 'failed'
             ? '판단하지 못했어요'
@@ -48,7 +48,7 @@ function ModelStatusPanel({ models, layoutReason }: ModelStatusPanelProps) {
             className="flex flex-col gap-1 rounded-xl bg-surface-muted px-4 py-3"
           >
             <div className="flex flex-wrap items-center justify-between gap-2 text-body">
-              <span className="font-bold text-heading">
+              <span className="font-semibold text-heading">
                 {PROVIDER_LABEL[model.provider]}
                 {model.model && (
                   <span className="ml-1.5 text-caption font-medium text-ink-muted">

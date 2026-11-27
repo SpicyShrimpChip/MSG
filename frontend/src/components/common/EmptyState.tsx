@@ -17,7 +17,7 @@ function EmptyState({ icon, title, description, action }: EmptyStateProps) {
           {icon}
         </div>
       )}
-      <p className="text-lg font-bold text-heading">{title}</p>
+      <p className="text-lg font-semibold text-heading">{title}</p>
       <p className="max-w-120 text-body leading-relaxed text-ink-soft">
         {description}
       </p>

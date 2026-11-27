@@ -32,7 +32,7 @@ function CourseGate({ children }: { children: ReactNode }) {
       className="flex flex-col gap-5 p-6 md:p-8"
     >
       <div className="flex flex-col gap-2">
-        <h2 id="import-course" className="text-xl font-extrabold text-heading">
+        <h2 id="import-course" className="text-xl font-semibold text-heading">
           먼저 과목과 키워드를 등록해 주세요
         </h2>
         <p className="text-body text-ink-soft">

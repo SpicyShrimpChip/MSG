@@ -180,7 +180,7 @@ function ConversationView({
             ) : (
               <>
                 키워드가 나온 메시지{' '}
-                <span className="font-bold text-heading">
+                <span className="font-semibold text-heading">
                   {cursor + 1} / {hits.length}
                 </span>
               </>

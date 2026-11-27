@@ -139,7 +139,7 @@ function MaterialDetailContent({ materialId }: { materialId: number }) {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-col gap-1.5">
-          <h2 className="text-2xl font-extrabold text-heading">
+          <h2 className="text-2xl font-semibold text-heading">
             {material.title}
           </h2>
           <p className="flex flex-wrap gap-x-3 gap-y-1 text-caption text-ink-muted">

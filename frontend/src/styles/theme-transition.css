@@ -7,7 +7,7 @@
 @property --color-brand {
   syntax: '<color>';
   inherits: true;
-  initial-value: #133b9e;
+  initial-value: #1d3461;
 }
 @property --color-on-brand {
   syntax: '<color>';
@@ -17,27 +17,27 @@
 @property --color-on-brand-hover {
   syntax: '<color>';
   inherits: true;
-  initial-value: #c3d3fb;
+  initial-value: #c9d4ea;
 }
 @property --color-heading {
   syntax: '<color>';
   inherits: true;
-  initial-value: #0f1b33;
+  initial-value: #1c1b19;
 }
 @property --color-heading-soft {
   syntax: '<color>';
   inherits: true;
-  initial-value: #1e3a8a;
+  initial-value: #3a3733;
 }
 @property --color-primary {
   syntax: '<color>';
   inherits: true;
-  initial-value: #1d4ed8;
+  initial-value: #23407a;
 }
 @property --color-primary-hover {
   syntax: '<color>';
   inherits: true;
-  initial-value: #1e40af;
+  initial-value: #1a3163;
 }
 @property --color-on-primary {
   syntax: '<color>';
@@ -47,27 +47,27 @@
 @property --color-primary-soft {
   syntax: '<color>';
   inherits: true;
-  initial-value: #eaf1ff;
+  initial-value: #e9edf5;
 }
 @property --color-primary-pill {
   syntax: '<color>';
   inherits: true;
-  initial-value: #dbe6ff;
+  initial-value: #dde3ef;
 }
 @property --color-primary-pill-hover {
   syntax: '<color>';
   inherits: true;
-  initial-value: #c7d7fe;
+  initial-value: #ced7e8;
 }
 @property --color-footer {
   syntax: '<color>';
   inherits: true;
-  initial-value: #eaf1ff;
+  initial-value: #f2f0eb;
 }
 @property --color-hero {
   syntax: '<color>';
   inherits: true;
-  initial-value: #f4f7fd;
+  initial-value: #f2f0eb;
 }
 @property --color-surface-raised {
   syntax: '<color>';
@@ -77,32 +77,32 @@
 @property --color-section {
   syntax: '<color>';
   inherits: true;
-  initial-value: #f4f7fd;
+  initial-value: #f2f0eb;
 }
 @property --color-ai {
   syntax: '<color>';
   inherits: true;
-  initial-value: #6d28d9;
+  initial-value: #6a45c2;
 }
 @property --color-ai-soft {
   syntax: '<color>';
   inherits: true;
-  initial-value: #f8f5ff;
+  initial-value: #f7f4fc;
 }
 @property --color-ai-border {
   syntax: '<color>';
   inherits: true;
-  initial-value: #ddd2fb;
+  initial-value: #ddd3f3;
 }
 @property --color-ai-chip {
   syntax: '<color>';
   inherits: true;
-  initial-value: #f3effe;
+  initial-value: #f1ecfa;
 }
 @property --color-ai-chip-hover {
   syntax: '<color>';
   inherits: true;
-  initial-value: #e9e0fd;
+  initial-value: #e6ddf6;
 }
 @property --color-highlight {
   syntax: '<color>';
@@ -117,27 +117,27 @@
 @property --color-strength {
   syntax: '<color>';
   inherits: true;
-  initial-value: #15803d;
+  initial-value: #1f7a46;
 }
 @property --color-strength-soft {
   syntax: '<color>';
   inherits: true;
-  initial-value: #e7f6ec;
+  initial-value: #e8f3ec;
 }
 @property --color-weakness {
   syntax: '<color>';
   inherits: true;
-  initial-value: #c0392b;
+  initial-value: #b8432f;
 }
 @property --color-weakness-soft {
   syntax: '<color>';
   inherits: true;
-  initial-value: #fdecea;
+  initial-value: #fbece8;
 }
 @property --color-weakness-bar {
   syntax: '<color>';
   inherits: true;
-  initial-value: #e0574a;
+  initial-value: #d9604c;
 }
 @property --color-chart-pre {
   syntax: '<color>';
@@ -147,12 +147,17 @@
 @property --color-chart-post {
   syntax: '<color>';
   inherits: true;
-  initial-value: #1d4ed8;
+  initial-value: #23407a;
+}
+@property --color-shade {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #1c1b19;
 }
 @property --color-overlay {
   syntax: '<color>';
   inherits: true;
-  initial-value: #0f1b33;
+  initial-value: #1c1b19;
 }
 @property --color-danger {
   syntax: '<color>';
@@ -177,42 +182,42 @@
 @property --color-surface {
   syntax: '<color>';
   inherits: true;
-  initial-value: #ffffff;
+  initial-value: #f8f7f4;
 }
 @property --color-surface-muted {
   syntax: '<color>';
   inherits: true;
-  initial-value: #f4f7fd;
+  initial-value: #f2f0eb;
 }
 @property --color-ink {
   syntax: '<color>';
   inherits: true;
-  initial-value: #0f1b33;
+  initial-value: #1c1b19;
 }
 @property --color-ink-soft {
   syntax: '<color>';
   inherits: true;
-  initial-value: #45526b;
+  initial-value: #57534c;
 }
 @property --color-ink-muted {
   syntax: '<color>';
   inherits: true;
-  initial-value: #5f6b80;
+  initial-value: #6f6a62;
 }
 @property --color-line {
   syntax: '<color>';
   inherits: true;
-  initial-value: #e3e9f3;
+  initial-value: #e8e5df;
 }
 @property --color-line-strong {
   syntax: '<color>';
   inherits: true;
-  initial-value: #c9d3e3;
+  initial-value: #d3cec5;
 }
 @property --color-input-border {
   syntax: '<color>';
   inherits: true;
-  initial-value: #7c8598;
+  initial-value: #8a857c;
 }
 
 :root {
@@ -273,6 +278,7 @@
       var(--theme-transition-ease),
     --color-chart-post var(--theme-transition-duration)
       var(--theme-transition-ease),
+    --color-shade var(--theme-transition-duration) var(--theme-transition-ease),
     --color-overlay var(--theme-transition-duration)
       var(--theme-transition-ease),
     --color-danger var(--theme-transition-duration) var(--theme-transition-ease),

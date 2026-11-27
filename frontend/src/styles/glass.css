@@ -10,14 +10,14 @@
   --glass-tint: rgb(255 255 255 / 0.68);
   --glass-rim-top: rgb(255 255 255 / 0.6);
   /* 머리카락 선: 흰 바탕 위에서도 유리 가장자리가 보이게 하는 아주 옅은 어두운 선 (파란 바탕 위에서는 거의 안 보인다) */
-  --glass-hairline: rgb(15 27 51 / 0.08);
+  --glass-hairline: rgb(28 27 25 / 0.08);
   /* 그림자 두 겹: 가장자리 바로 아래 짧고 진한 것 + 멀리 퍼지는 옅은 것 */
-  --glass-shadow-near: rgb(15 27 51 / 0.06);
-  --glass-shadow: rgb(19 59 158 / 0.16);
+  --glass-shadow-near: rgb(28 27 25 / 0.06);
+  --glass-shadow: rgb(28 27 25 / 0.1);
 }
 
 :root.dark {
-  --glass-tint: rgb(22 29 43 / 0.72);
+  --glass-tint: rgb(28 27 25 / 0.72);
   --glass-rim-top: rgb(255 255 255 / 0.08);
   --glass-hairline: rgb(255 255 255 / 0.07);
   --glass-shadow-near: rgb(0 0 0 / 0.3);

@@ -13,7 +13,7 @@ function QuizCard({ quiz }: { quiz: QuizSummary }) {
       className="flex flex-wrap items-center justify-between gap-4 p-5"
     >
       <div className="flex flex-col gap-1.5">
-        <p className="font-bold text-heading">{quiz.title}</p>
+        <p className="font-semibold text-heading">{quiz.title}</p>
         <p className="flex flex-wrap items-center gap-2 text-caption text-ink-muted">
           {kindLabel && <Chip>{kindLabel}</Chip>}
           <span>{quiz.questionCount}문제</span>

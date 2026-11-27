@@ -133,7 +133,7 @@ function SelectStep({
         aria-labelledby="import-select"
         className="flex flex-col gap-5 p-6 md:p-8"
       >
-        <h2 id="import-select" className="text-xl font-extrabold text-heading">
+        <h2 id="import-select" className="text-xl font-semibold text-heading">
           먼저 과목과 키워드를 등록해 주세요
         </h2>
         <p className="text-body text-ink-soft">
@@ -162,7 +162,7 @@ function SelectStep({
       className="flex flex-col gap-6 p-6 md:p-8"
     >
       <div className="flex flex-col gap-2">
-        <h2 id="import-select" className="text-xl font-extrabold text-heading">
+        <h2 id="import-select" className="text-xl font-semibold text-heading">
           공부한 대화 고르기
         </h2>
         <p className="text-body text-ink-soft">
@@ -215,7 +215,7 @@ function SelectStep({
                   className={cn(
                     'px-3 py-2 text-caption',
                     order === value
-                      ? 'bg-primary-pill font-bold text-heading'
+                      ? 'bg-primary-pill font-semibold text-heading'
                       : 'text-ink-soft hover:bg-surface-muted',
                   )}
                 >
@@ -265,7 +265,7 @@ function SelectStep({
       {courseFormOpen ? (
         <div className="flex flex-col gap-4 rounded-xl border border-line-strong p-5">
           <div className="flex items-center justify-between gap-3">
-            <h3 className="font-bold text-heading">과목·키워드 더하기</h3>
+            <h3 className="font-semibold text-heading">과목·키워드 더하기</h3>
             <Button
               variant="secondary"
               onClick={() => setCourseFormOpen(false)}
@@ -338,7 +338,7 @@ function CourseGroup({
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-3">
       <div className="flex flex-wrap items-end justify-between gap-2 border-b border-line pb-2">
-        <h3 id={headingId} className="text-lg font-bold text-heading">
+        <h3 id={headingId} className="text-lg font-semibold text-heading">
           {course.name}{' '}
           <span className="text-body font-normal text-ink-muted">
             {formatSemester(course.semester)}

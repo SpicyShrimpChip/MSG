@@ -40,7 +40,7 @@ function MasteryTrend({ history }: { history: MasteryRecord[] }) {
   return (
     <div className="flex flex-col gap-3 border-t border-line pt-4">
       <div className="flex flex-col gap-1">
-        <h3 className="font-extrabold text-heading">이 개념의 변화</h3>
+        <h3 className="font-semibold text-heading">이 개념의 변화</h3>
         <p className="text-caption text-ink-muted">
           단계나 근거가 바뀔 때마다 그때 단계를 남겨요.
         </p>
@@ -59,7 +59,7 @@ function MasteryTrend({ history }: { history: MasteryRecord[] }) {
             <div key={lane.stage} className="contents">
               <div
                 className={cn(
-                  'flex h-10 items-center border-b border-line bg-surface-muted px-2.5 text-caption font-bold',
+                  'flex h-10 items-center border-b border-line bg-surface-muted px-2.5 text-caption font-semibold',
                   lane.text,
                 )}
               >
@@ -88,7 +88,7 @@ function MasteryTrend({ history }: { history: MasteryRecord[] }) {
           {shown.map((item) => (
             <div
               key={`date-${item.recordedAt}`}
-              className="flex h-8 items-center justify-center border-l border-line text-caption font-bold text-ink-soft"
+              className="flex h-8 items-center justify-center border-l border-line text-caption font-semibold text-ink-soft"
             >
               {shortDate(item.recordedAt)}
             </div>
@@ -106,11 +106,16 @@ function MasteryTrend({ history }: { history: MasteryRecord[] }) {
             key={`${history.length - index}`}
             className="grid grid-cols-[3rem_minmax(0,1fr)] gap-3 rounded-lg bg-surface-muted px-3 py-2.5"
           >
-            <span className="text-caption font-bold text-ink-soft">
+            <span className="text-caption font-semibold text-ink-soft">
               {item.date}
             </span>
             <div className="flex flex-col gap-1">
-              <p className={cn('text-body font-bold', CHANGE_TEXT[item.stage])}>
+              <p
+                className={cn(
+                  'text-body font-semibold',
+                  CHANGE_TEXT[item.stage],
+                )}
+              >
                 {item.change}
               </p>
               <p className="text-caption text-ink-soft">

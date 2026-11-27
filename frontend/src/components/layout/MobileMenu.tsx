@@ -57,7 +57,7 @@ function MobileMenu({ onClose, account }: MobileMenuProps) {
       <ul className="mx-auto flex max-h-[calc(100svh-5rem)] max-w-page flex-col gap-4 overflow-y-auto overscroll-contain px-6 py-4 max-sm:max-h-[calc(100svh-8.5rem)] max-sm:px-4">
         {MENU.map((group) => (
           <li key={group.label}>
-            <p className="text-base font-bold">{group.label}</p>
+            <p className="text-base font-semibold">{group.label}</p>
             <ul className="mt-1 flex flex-col">
               {group.children.map((child) => {
                 const active = child.path === currentPath;
@@ -69,7 +69,7 @@ function MobileMenu({ onClose, account }: MobileMenuProps) {
                       aria-current={active ? 'page' : undefined}
                       className={`block py-2 text-sm ${
                         active
-                          ? 'font-bold text-primary'
+                          ? 'font-semibold text-primary'
                           : 'text-ink-soft hover:text-heading'
                       }`}
                     >

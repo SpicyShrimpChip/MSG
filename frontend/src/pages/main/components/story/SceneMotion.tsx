@@ -125,7 +125,7 @@ export function MaskSwap({
   const label = swapped ? (
     <span
       ref={labelRef}
-      className="inline-block rounded-md bg-primary-pill px-2 font-bold whitespace-nowrap text-heading"
+      className="inline-block rounded-md bg-primary-pill px-2 font-semibold whitespace-nowrap text-heading"
     >
       {masked}
     </span>

@@ -39,15 +39,15 @@ function SummaryItemView({ item }: { item: StudySummaryItem }) {
       )}
     >
       <div className="flex flex-wrap items-center gap-2">
-        {item.name && <p className="font-bold text-heading">{item.name}</p>}
+        {item.name && <p className="font-semibold text-heading">{item.name}</p>}
         {supplement ? (
-          <span className="inline-flex items-center gap-1 text-caption font-bold text-ai">
+          <span className="inline-flex items-center gap-1 text-caption font-semibold text-ai">
             <AiBadge />
             자료에 없는 AI 보충 설명
           </span>
         ) : (
           <>
-            <span className="inline-flex items-center gap-1 text-caption font-bold text-ai">
+            <span className="inline-flex items-center gap-1 text-caption font-semibold text-ai">
               <AiBadge />
               AI 요약
             </span>
@@ -87,7 +87,7 @@ function Section({
   if (items.length === 0) return null;
   return (
     <section className="flex flex-col gap-2">
-      <h4 className="text-body font-bold text-heading">{title}</h4>
+      <h4 className="text-body font-semibold text-heading">{title}</h4>
       <ul className="flex flex-col gap-2">
         {items.map((item) => (
           <SummaryItemView
@@ -109,7 +109,7 @@ function SummaryView({ summary }: { summary: StudySummary }) {
       <Card className="flex flex-col gap-3 p-5">
         <div className="flex flex-wrap items-center gap-2">
           <ShieldCheck size={18} className="text-primary" aria-hidden="true" />
-          <p className="text-body font-bold text-heading">원문 근거 확인</p>
+          <p className="text-body font-semibold text-heading">원문 근거 확인</p>
           <VerificationBadge status={verification.status} />
         </div>
         <div className="flex flex-wrap gap-2">
@@ -151,7 +151,7 @@ function SummaryView({ summary }: { summary: StudySummary }) {
       <Section title="핵심 정리" items={content.keyPoints} />
       {content.selfCheck.length > 0 && (
         <section className="flex flex-col gap-2">
-          <h4 className="text-body font-bold text-heading">
+          <h4 className="text-body font-semibold text-heading">
             스스로 확인할 질문
           </h4>
           <ol className="flex list-decimal flex-col gap-2 pl-5 text-body text-ink">
@@ -170,7 +170,7 @@ function SummaryView({ summary }: { summary: StudySummary }) {
       )}
       {summary.sources.length > 0 && (
         <section className="flex flex-col gap-2">
-          <h4 className="text-body font-bold text-heading">원문 출처</h4>
+          <h4 className="text-body font-semibold text-heading">원문 출처</h4>
           <div className="flex flex-wrap gap-2">
             {summary.sources.map((source) => (
               <Chip key={source.location}>
@@ -249,7 +249,7 @@ function StudySummaryPanel({
               mutation.reset();
             }}
             className={cn(
-              'rounded-full border px-3 py-1.5 text-caption font-bold',
+              'rounded-full border px-3 py-1.5 text-caption font-semibold',
               purpose === mode.value
                 ? 'border-primary bg-primary-soft text-primary'
                 : 'border-line text-ink-soft hover:bg-surface-muted',
@@ -280,7 +280,7 @@ function StudySummaryPanel({
       )}
 
       <Card as="section" className="flex flex-col gap-3 p-5">
-        <h3 className="text-body font-bold text-heading">
+        <h3 className="text-body font-semibold text-heading">
           {ready ? '요약 다시 만들기' : '요약 만들기'}
         </h3>
         <Notice icon={Lock} size="caption" iconClassName="text-primary">
