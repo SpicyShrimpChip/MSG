@@ -139,6 +139,17 @@ class UserAiCallLimitApiTest {
 	}
 
 	@Test
+	void 돌려주면_오늘_줄이_하나_줄고_줄이_0이면_돌려줘도_0이다() {
+		fill(userId, 2);
+		quota.releaseForUser(userId);
+		assertThat(todayCount(userId)).isEqualTo(1);
+
+		fill(userId, 0);
+		quota.releaseForUser(userId);
+		assertThat(todayCount(userId)).isZero();
+	}
+
+	@Test
 	void 과목을_지워도_줄지_않고_탈퇴하면_지운다() throws Exception {
 		fakeLlm.get(LlmProvider.GPT).answer(QuizFixtures.threeTypes(false));
 		create(token, courseId).andExpect(status().isCreated());

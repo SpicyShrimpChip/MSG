@@ -272,6 +272,7 @@ public class AnswerGradingService {
 			return GradeOutcome.pending(GradingNotes.MODEL_FAILED, maxScore, calledCount);
 		}
 		List<RubricScore> scores = new ArrayList<>();
+		List<RubricLevel> majorities = new ArrayList<>();
 		boolean disagreement = false;
 		int total = 0;
 		for (int i = 0; i < rubric.size(); i++) {
@@ -288,15 +289,39 @@ public class AnswerGradingService {
 					.findFirst()
 					.orElse(null);
 			disagreement |= level == null;
+			majorities.add(level);
 			total += points;
 			scores.add(RubricScore.of(level, points, agree, judged.size(), reason));
 		}
-		EssayJudgment feedback = judged.get(0);
+		// 피드백은 점수와 같은 방향이어야 하므로 과반 수준을 가장 많이 낸 모델의 것을 쓴다(같으면 앞 모델)
+		EssayJudgment feedback = judged.get(
+				feedbackModelIndex(judged.stream().map(EssayJudgment::levels).toList(), majorities));
 		GradingStatus status = disagreement ? GradingStatus.NEEDS_REVIEW : GradingStatus.GRADED;
 		String note = disagreement ? GradingNotes.DISAGREEMENT
 				: judged.size() == 1 ? GradingNotes.SINGLE_MODEL : null;
 		return new GradeOutcome(status, GradingMethod.AI, note, total, maxScore, calledCount, judged.size(),
 				feedback.strengths(), feedback.missing(), feedback.improvements(), feedback.practical(), scores);
+	}
+
+	// 피드백은 점수와 같은 방향이어야 하므로 기준별 과반 수준(과반이 없으면 그 칸 null)을 가장 많이 낸 모델의 순번을 쓴다
+	// (같으면 앞 모델, 과반이 하나도 없으면 0)
+	static int feedbackModelIndex(List<List<RubricLevel>> levelsByModel, List<RubricLevel> majorities) {
+		int best = 0;
+		int bestMatches = -1;
+		for (int model = 0; model < levelsByModel.size(); model++) {
+			List<RubricLevel> levels = levelsByModel.get(model);
+			int matches = 0;
+			for (int i = 0; i < majorities.size(); i++) {
+				if (majorities.get(i) != null && majorities.get(i) == levels.get(i)) {
+					matches++;
+				}
+			}
+			if (matches > bestMatches) {
+				best = model;
+				bestMatches = matches;
+			}
+		}
+		return best;
 	}
 
 	// 기준 하나의 점수 (코드 규칙): 충족 = 배점, 부분 충족 = 배점의 절반(내림), 미충족 = 0

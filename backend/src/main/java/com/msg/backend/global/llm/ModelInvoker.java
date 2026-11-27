@@ -112,11 +112,13 @@ public class ModelInvoker {
 		LlmException.Code lastCode = null;
 		for (int attempt = 1; attempt <= maxAttempts; attempt++) {
 			// 부를 때마다(다시 부를 때도) 사용자 몫 → 서비스 전체 하루 상한에서 한 번을 받아 간다. 다 찼으면 부르지 않는다.
-			// 사용자 몫을 먼저 본다: 몫을 다 쓴 사용자가 서비스 전체 상한을 줄이지 않게
+			// 사용자 몫을 먼저 본다: 몫을 다 쓴 사용자가 서비스 전체 상한을 줄이지 않게.
+			// 서비스 전체 상한에 막히면 부르지 않으므로 받아 간 사용자 몫을 돌려준다
 			if (!quota.tryAcquireForUser(userId)) {
 				return new Outcome(null, LlmException.Code.USER_DAILY_LIMIT, attempt - 1, elapsedMs(started));
 			}
 			if (!quota.tryAcquire()) {
+				quota.releaseForUser(userId);
 				return new Outcome(null, LlmException.Code.DAILY_LIMIT, attempt - 1, elapsedMs(started));
 			}
 			try {

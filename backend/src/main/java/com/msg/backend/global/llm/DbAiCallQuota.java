@@ -70,6 +70,15 @@ class DbAiCallQuota implements AiCallQuota {
 	}
 
 	@Override
+	public void releaseForUser(Long userId) {
+		if (!properties.userEnabled() || userId == null) {
+			return;
+		}
+		LocalDate today = today();
+		newTransaction().executeWithoutResult(status -> userRepository.decrementIfPositive(userId, today));
+	}
+
+	@Override
 	public boolean hasUserRemaining(Long userId, int calls) {
 		if (!properties.userEnabled() || userId == null) {
 			return true;

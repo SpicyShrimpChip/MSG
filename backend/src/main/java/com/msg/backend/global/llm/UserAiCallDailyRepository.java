@@ -14,6 +14,12 @@ public interface UserAiCallDailyRepository extends JpaRepository<UserAiCallDaily
 			+ " where u.userId = :userId and u.usageDate = :usageDate and u.callCount < :limit")
 	int incrementIfBelow(Long userId, LocalDate usageDate, int limit);
 
+	// 0보다 클 때만 1 줄인다 (받아 갔지만 부르지 않은 한 번을 돌려줄 때, 날짜가 바뀌어 줄이 0이면 그대로)
+	@Modifying(flushAutomatically = true, clearAutomatically = true)
+	@Query("update UserAiCallDaily u set u.callCount = u.callCount - 1"
+			+ " where u.userId = :userId and u.usageDate = :usageDate and u.callCount > 0")
+	int decrementIfPositive(Long userId, LocalDate usageDate);
+
 	@Query("select u.callCount from UserAiCallDaily u where u.userId = :userId and u.usageDate = :usageDate")
 	Optional<Integer> findCallCount(Long userId, LocalDate usageDate);
 

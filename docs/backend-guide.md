@@ -38,14 +38,14 @@
 - **프롬프트 캐싱:** Claude는 `AnthropicClient`가 지시문(system) 끝에 `cache_control`을 붙이고, GPT·Gemini는 제공사가 자동으로 캐시한다. 저장하는 입력 토큰 수는 세 제공사 모두 캐시 포함 입력 전체다.
 - **분석 시간 예산:** `app.analysis.deadline` 100초. 배포에서 Vercel 프록시가 첫 응답을 120초까지만 기다리고 프론트 timeout은 115초라 그보다 짧게 둔다. 늦은 모델은 시간 초과(실패)로 두고 나머지 결과를 저장한다.
 - **사용자별 24시간 횟수**(`user_ai_usage`, `global/llm/UserAiUsage`): 분석 시작·퀴즈 만들기·AI 채점 실행 수는 실행 기록(`analysis_run` 등, 과목·제출에 CASCADE)이 아니라 `users`에만 연결한 이 기록으로 센다. 그래서 과목·대화·퀴즈를 지워도 한도가 다시 차지 않는다. 48시간 지난 행은 주기 작업이 지운다. `quiz_ai_call`도 만들기·채점 기록이 지워질 때 연결만 끊고(SET NULL) 남는다. 예외로 자료 개념 뽑기·개념 설명·자료 요약(`MaterialConceptService`·`MaterialSummaryService`)은 `quiz_ai_call` 행(모델 시도마다 한 줄)으로 24시간 횟수를 센다(실사용자 테스트 동안 비용을 보수적으로 세려고 유지).
-- **하루 AI 호출 상한**(서비스 전체 `ai_daily_usage`, 사용자별 몫 `user_ai_call_daily`, `app.ai-daily-limit`): 서비스 전체(`calls`)와 사용자 한 명의 몫(`user-calls`, 모든 기능의 호출 합계, 계정 몇 개로 전체 상한을 다 쓰지 못하게)을 하루(한국 시간 날짜) 단위로 센다. `ModelInvoker`가 부를 때마다(다시 부를 때도) 사용자 몫 → 서비스 전체 순서로 한 번씩 받아 가고, 다 찼으면 부르지 않고 `USER_DAILY_LIMIT`·`DAILY_LIMIT`을 돌려준다. 분석·퀴즈 만들기·자료 개념 뽑기·개념 설명은 시작 전에 `ensureRemaining(userId, 부를 모델 수)`로 확인해 429를 준다(AI 채점은 `BUDGET_EXCEEDED` 대기로 남는다). `user_ai_call_daily`는 모델 스레드가 새 트랜잭션으로 쓰므로 `users`에 외래 키를 걸지 않고, 탈퇴 때 직접 지우며 지난 날짜는 주기 작업이 지운다. 서비스 전체 표는 사용자·과목과 연결하지 않아 과목 삭제·탈퇴·재가입으로 줄지 않는다.
+- **하루 AI 호출 상한**(서비스 전체 `ai_daily_usage`, 사용자별 몫 `user_ai_call_daily`, `app.ai-daily-limit`): 서비스 전체(`calls`)와 사용자 한 명의 몫(`user-calls`, 모든 기능의 호출 합계, 계정 몇 개로 전체 상한을 다 쓰지 못하게)을 하루(한국 시간 날짜) 단위로 센다. `ModelInvoker`가 부를 때마다(다시 부를 때도) 사용자 몫 → 서비스 전체 순서로 한 번씩 받아 가고, 서비스 전체에 막히면 받아 간 사용자 몫은 돌려주며, 다 찼으면 부르지 않고 `USER_DAILY_LIMIT`·`DAILY_LIMIT`을 돌려준다. 분석·퀴즈 만들기·자료 개념 뽑기·개념 설명은 시작 전에 `ensureRemaining(userId, 부를 모델 수)`로 확인해 429를 준다(AI 채점은 `BUDGET_EXCEEDED` 대기로 남는다). `user_ai_call_daily`는 모델 스레드가 새 트랜잭션으로 쓰므로 `users`에 외래 키를 걸지 않고, 탈퇴 때 직접 지우며 지난 날짜는 주기 작업이 지운다. 서비스 전체 표는 사용자·과목과 연결하지 않아 과목 삭제·탈퇴·재가입으로 줄지 않는다.
 
 ## 5. 퀴즈
 
 - 학습 모드(시험 대비·자기개발·업무 활용)마다 지시문이 다르다(`QuizPrompt`). 만들기는 설정된 첫 모델 하나만 부르고(`app.quiz.generation-providers`), `QuizGenerationParser`를 통과한 퀴즈만 저장한다.
 - 비용 상한은 24시간 만들기 요청 수·AI 채점 실행 수(처음·다시 채점, `quiz_grading_run`)·실제 모델 요청 수(`quiz_ai_call` attempts 합) 세 겹이다.
 - 만들기·채점은 전체 시간 예산(`generation-deadline`·`grading-deadline`) 안에서만 기다리고, 저장할 때 기록이 아직 진행 중·마감 전인지 확인해 늦은 결과는 버린다. 모델 호출은 `ModelInvoker`의 QUIZ 스레드 묶음(분석과 분리).
-- 주관식 의미 판단·서술형 채점은 설정된 모델 모두가 따로 판단하고 과반 의견만 쓰며 점수는 코드가 더한다(`AnswerGradingService`).
+- 주관식 의미 판단·서술형 채점은 설정된 모델 모두가 따로 판단하고 과반 의견만 쓰며(서술형 피드백도 과반 수준을 가장 많이 낸 모델의 것) 점수는 코드가 더한다(`AnswerGradingService`).
 - 외부로는 과목 이름·개념·시험 범위·직무 분야·학습자 답(사후평가는 사전평가 문제 글도)만 보낸다.
 
 ## 6. 사전·사후평가·자료 핵심 개념
