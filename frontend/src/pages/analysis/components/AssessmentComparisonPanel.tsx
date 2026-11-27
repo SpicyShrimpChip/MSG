@@ -10,7 +10,7 @@ import {
   Table2,
 } from 'lucide-react';
 import { assessmentComparisonQuery } from '@/api';
-import { Button, Card, Notice } from '@/components';
+import { Button, Card, Notice, TEXT_LINK_CLASS } from '@/components';
 import { cn, conceptQuizLink } from '@/utils';
 import type { ConceptDeltaStatus } from '@/types';
 import {
@@ -190,10 +190,7 @@ function AssessmentComparisonPanel({ courseId }: { courseId: number }) {
       {!submitted(data.pre) && (
         <Notice icon={ClipboardCheck} size="caption">
           사전평가를 만들었지만 아직 풀지 않았어요.{' '}
-          <Link
-            to={`/quizzes/${data.pre.quizId}`}
-            className="font-semibold text-primary underline-offset-4 hover:underline"
-          >
+          <Link to={`/quizzes/${data.pre.quizId}`} className={TEXT_LINK_CLASS}>
             사전평가 풀기
           </Link>
         </Notice>
@@ -205,7 +202,7 @@ function AssessmentComparisonPanel({ courseId }: { courseId: number }) {
             : '아직 사후평가를 보지 않았어요. 공부한 뒤 같은 개념으로 사후평가를 보면 향상 정도를 비교해 드려요.'}{' '}
           <Link
             to={data.post ? `/quizzes/${data.post.quizId}` : '/assessments'}
-            className="font-semibold text-primary underline-offset-4 hover:underline"
+            className={TEXT_LINK_CLASS}
           >
             {data.post ? '사후평가 풀기' : '사후평가 보러 가기'}
           </Link>
@@ -355,7 +352,7 @@ function AssessmentComparisonPanel({ courseId }: { courseId: number }) {
                     </span>
                     <Link
                       to={reviewLink(concept.name)}
-                      className="text-caption font-semibold text-primary underline-offset-4 hover:underline"
+                      className={cn(TEXT_LINK_CLASS, 'text-caption')}
                     >
                       복습 퀴즈 만들기
                     </Link>
@@ -395,7 +392,10 @@ function AssessmentComparisonPanel({ courseId }: { courseId: number }) {
         <button
           type="button"
           onClick={() => setAsTable((value) => !value)}
-          className="flex items-center gap-1 text-caption font-semibold text-primary underline-offset-4 hover:underline"
+          className={cn(
+            TEXT_LINK_CLASS,
+            'flex items-center gap-1 text-caption',
+          )}
         >
           <Table2 size={14} aria-hidden="true" />
           {asTable ? '그래프로 보기' : '표로 보기'}

@@ -14,6 +14,7 @@ import {
   Notice,
   SourceQuote,
   VerificationBadge,
+  ToggleChip,
 } from '@/components';
 import { QUIZ_MODES } from '@/constants';
 import { useMe, useQuizAiStatus, useSingleFlightMutation } from '@/hooks';
@@ -237,25 +238,18 @@ function StudySummaryPanel({
         className="flex flex-wrap gap-2"
       >
         {QUIZ_MODES.map((mode) => (
-          <button
+          <ToggleChip
             key={mode.value}
-            type="button"
             role="radio"
-            aria-checked={purpose === mode.value}
+            on={purpose === mode.value}
             onClick={() => {
               setPurpose(mode.value);
               setConfirmed(false);
               mutation.reset();
             }}
-            className={cn(
-              'rounded-full border px-3 py-1.5 text-caption font-semibold',
-              purpose === mode.value
-                ? 'border-primary bg-primary-soft text-primary'
-                : 'border-line text-ink-soft hover:bg-surface-muted',
-            )}
           >
             {mode.label}
-          </button>
+          </ToggleChip>
         ))}
       </div>
       <p className="text-caption text-ink-soft">

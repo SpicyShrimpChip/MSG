@@ -28,6 +28,7 @@ import {
   Notice,
   SelectInput,
   SubPage,
+  TEXT_LINK_CLASS,
 } from '@/components';
 import {
   DIFFICULTIES,
@@ -98,7 +99,7 @@ function SnapshotLine({
             ? `/quizzes/${snapshot.quizId}`
             : `/quizzes/${snapshot.quizId}/result`
         }
-        className="font-semibold text-primary underline-offset-4 hover:underline"
+        className={TEXT_LINK_CLASS}
       >
         {snapshot.submissionId === null ? '풀기' : '결과 보기'}
       </Link>
@@ -295,10 +296,7 @@ function MaterialAssessment({
         {created?.materialContentNote && (
           <Notice icon={FileText} size="caption">
             {NOTE_MESSAGE[created.materialContentNote]}{' '}
-            <Link
-              to={`/quizzes/${created.id}`}
-              className="font-semibold text-primary underline-offset-4 hover:underline"
-            >
+            <Link to={`/quizzes/${created.id}`} className={TEXT_LINK_CLASS}>
               문제 풀기
             </Link>
           </Notice>

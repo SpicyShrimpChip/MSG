@@ -23,6 +23,8 @@ import {
   SelectInput,
   SubPage,
   TextInput,
+  TEXT_LINK_CLASS,
+  ToggleChip,
 } from '@/components';
 import {
   DIFFICULTIES,
@@ -280,7 +282,7 @@ function QuizCreateForm({ me }: { me: User | null }) {
           필요)가 정해져요.{' '}
           <Link
             to={conceptStudyLink(check.materialId, check.conceptId)}
-            className="font-semibold text-primary underline-offset-4 hover:underline"
+            className={TEXT_LINK_CLASS}
           >
             개념으로 돌아가기
           </Link>
@@ -372,10 +374,9 @@ function QuizCreateForm({ me }: { me: User | null }) {
                 {keywords.map((keyword) => {
                   const on = concepts.includes(keyword);
                   return (
-                    <button
+                    <ToggleChip
                       key={keyword}
-                      type="button"
-                      aria-pressed={on}
+                      on={on}
                       onClick={() =>
                         setConcepts((prev) =>
                           on
@@ -383,15 +384,9 @@ function QuizCreateForm({ me }: { me: User | null }) {
                             : [...prev, keyword],
                         )
                       }
-                      className={cn(
-                        'rounded-full border px-3 py-1.5 text-caption font-medium',
-                        on
-                          ? 'border-primary bg-primary-soft text-primary'
-                          : 'border-line-strong text-ink-soft hover:bg-surface-muted',
-                      )}
                     >
                       {keyword}
-                    </button>
+                    </ToggleChip>
                   );
                 })}
               </div>
@@ -468,10 +463,9 @@ function QuizCreateForm({ me }: { me: User | null }) {
               const disabledCreate =
                 level.value === 'create' && !types.includes('essay');
               return (
-                <button
+                <ToggleChip
                   key={level.value}
-                  type="button"
-                  aria-pressed={on}
+                  on={on}
                   title={level.description}
                   disabled={disabledCreate}
                   onClick={() =>
@@ -481,12 +475,6 @@ function QuizCreateForm({ me }: { me: User | null }) {
                         : [...prev, level.value],
                     )
                   }
-                  className={cn(
-                    'rounded-full border px-3 py-1.5 text-caption font-medium disabled:cursor-not-allowed disabled:opacity-50',
-                    on && !disabledCreate
-                      ? 'border-primary bg-primary-soft text-primary'
-                      : 'border-line-strong text-ink-soft hover:bg-surface-muted',
-                  )}
                 >
                   {level.label}
                   {/* 선택된 칩의 primary-soft 바탕에서 ink-muted는 다크 대비가 4.5:1에 못 미친다 */}
@@ -500,7 +488,7 @@ function QuizCreateForm({ me }: { me: User | null }) {
                   >
                     {level.description}
                   </span>
-                </button>
+                </ToggleChip>
               );
             })}
           </div>

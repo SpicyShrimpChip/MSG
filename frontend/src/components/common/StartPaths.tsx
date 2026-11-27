@@ -5,6 +5,8 @@ import * as m from 'motion/react-m';
 import DemoStartButton from './DemoStartButton';
 import { FADE_UP } from '@/constants';
 import { useAuthStore } from '@/store';
+import { cn } from '@/utils';
+import { TEXT_LINK_CLASS } from './textLinkClass';
 
 const PATHS: {
   to: string;
@@ -94,14 +96,11 @@ function StartPaths({ headingAs: Heading = 'h3' }: StartPathsProps) {
       {!signedIn && (
         <p className="text-body text-ink-soft">
           이미 계정이 있나요?{' '}
-          <Link
-            to="/login"
-            className="font-semibold text-primary underline-offset-4 hover:underline"
-          >
+          <Link to="/login" className={TEXT_LINK_CLASS}>
             로그인
           </Link>
           {/* 로그인하지 않았고 체험을 켤 수 있을 때만 보인다 */}
-          <DemoStartButton className="ml-4 font-semibold text-primary underline-offset-4 hover:underline" />
+          <DemoStartButton className={cn(TEXT_LINK_CLASS, 'ml-4')} />
         </p>
       )}
     </m.div>
