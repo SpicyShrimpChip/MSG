@@ -4,21 +4,6 @@
  * 시간·곡선은 아래 :root의 --theme-transition-*. 글자색처럼 밝기가 뒤집히는 색이 컷편집처럼 보이지 않도록
  * 앞이 몰린 곡선(--default-transition-timing-function) 대신 양쪽이 완만한 곡선을 쓴다. */
 
-@property --color-brand {
-  syntax: '<color>';
-  inherits: true;
-  initial-value: #1d3461;
-}
-@property --color-on-brand {
-  syntax: '<color>';
-  inherits: true;
-  initial-value: #ffffff;
-}
-@property --color-on-brand-hover {
-  syntax: '<color>';
-  inherits: true;
-  initial-value: #c9d4ea;
-}
 @property --color-heading {
   syntax: '<color>';
   inherits: true;
@@ -60,11 +45,6 @@
   initial-value: #ced7e8;
 }
 @property --color-footer {
-  syntax: '<color>';
-  inherits: true;
-  initial-value: #f2f0eb;
-}
-@property --color-hero {
   syntax: '<color>';
   inherits: true;
   initial-value: #f2f0eb;
@@ -224,11 +204,6 @@
   --theme-transition-duration: 350ms;
   --theme-transition-ease: cubic-bezier(0.4, 0, 0.2, 1);
   transition:
-    --color-brand var(--theme-transition-duration) var(--theme-transition-ease),
-    --color-on-brand var(--theme-transition-duration)
-      var(--theme-transition-ease),
-    --color-on-brand-hover var(--theme-transition-duration)
-      var(--theme-transition-ease),
     --color-heading var(--theme-transition-duration)
       var(--theme-transition-ease),
     --color-heading-soft var(--theme-transition-duration)
@@ -246,7 +221,6 @@
     --color-primary-pill-hover var(--theme-transition-duration)
       var(--theme-transition-ease),
     --color-footer var(--theme-transition-duration) var(--theme-transition-ease),
-    --color-hero var(--theme-transition-duration) var(--theme-transition-ease),
     --color-surface-raised var(--theme-transition-duration)
       var(--theme-transition-ease),
     --color-section var(--theme-transition-duration)
