@@ -44,7 +44,7 @@
 
 - 학습 모드(시험 대비·자기개발·업무 활용)마다 지시문이 다르다(`QuizPrompt`). 만들기는 설정된 첫 모델 하나만 부르고(`app.quiz.generation-providers`), `QuizGenerationParser`를 통과한 퀴즈만 저장한다.
 - 비용 상한은 24시간 만들기 요청 수·AI 채점 실행 수(처음·다시 채점, `quiz_grading_run`)·실제 모델 요청 수(`quiz_ai_call` attempts 합) 세 겹이다.
-- 만들기·채점은 전체 시간 예산(`generation-deadline`·`grading-deadline`) 안에서만 기다리고, 저장할 때 기록이 아직 진행 중·마감 전인지 확인해 늦은 결과는 버린다. 모델 호출은 `ModelInvoker`의 QUIZ 스레드 묶음(분석과 분리).
+- 만들기·채점은 전체 시간 예산(`generation-deadline`·`grading-deadline`) 안에서만 기다리고, 저장할 때 기록이 아직 진행 중·마감 전인지 확인해 늦은 결과는 버린다. 채점 실행이 저장할 때 이미 끝나 있으면(다시 채점이 마감 지난 실행을 정리한 뒤) 답을 건드리지 않는다. 모델 호출은 `ModelInvoker`의 QUIZ 스레드 묶음(분석과 분리).
 - 주관식 의미 판단·서술형 채점은 설정된 모델 모두가 따로 판단하고 과반 의견만 쓰며 점수는 코드가 더한다(`AnswerGradingService`).
 - 외부로는 과목 이름·개념·시험 범위·직무 분야·학습자 답(사후평가는 사전평가 문제 글도)만 보낸다.
 

@@ -32,6 +32,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,6 +48,8 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 퀴즈 AI 처리의 안전장치: 호출 한도(처음 채점·다시 채점·모델 요청 수), 진행 중 중복 차단, 시간 예산과 늦은 응답,
@@ -65,6 +73,8 @@ class QuizSafetyApiTest {
 	private FakeLlmClients fakeLlm;
 	@Autowired
 	private MutableClock clock;
+	@Autowired
+	private PlatformTransactionManager transactionManager;
 
 	private String token;
 	private long userId;
@@ -135,6 +145,39 @@ class QuizSafetyApiTest {
 		consent(token, "{\"aiQuiz\":true}").andExpect(jsonPath("$.data.aiQuizConsent").value(true));
 	}
 
+	@Test
+	void 제출이_잠금을_기다리는_동안_동의를_철회하면_모델을_부르지_않고_대기로_둔다() throws Exception {
+		long quizId = generate();
+		enableGraders(List.of("met", "met"));
+		List<Long> ids = questionIds(quizId);
+		int before = fakeLlm.get(LlmProvider.GPT).requests().size();
+		CountDownLatch locked = new CountDownLatch(1);
+		ExecutorService pool = Executors.newFixedThreadPool(2);
+		try {
+			// 다른 요청이 사용자 행을 잠근 채 동의를 철회하는 동안 제출은 잠금 밖 동의 확인을 통과하고 잠금에서 기다린다
+			Future<?> withdraw = pool.submit(() -> new TransactionTemplate(transactionManager).executeWithoutResult(s -> {
+				userRepository.lockLoginUser(userId);
+				locked.countDown();
+				sleep(500);
+				jdbcTemplate.update("update users set ai_quiz_consent = false where id = ?", userId);
+			}));
+			assertThat(locked.await(5, TimeUnit.SECONDS)).isTrue();
+			Future<String> submitted = pool.submit(() -> submit(quizId,
+					List.of(Map.of("questionId", ids.get(2), "text", "PAT 설명")))
+					.andReturn().getResponse().getContentAsString());
+			withdraw.get(30, TimeUnit.SECONDS);
+			String body = submitted.get(30, TimeUnit.SECONDS);
+
+			assertThat((String) JsonPath.read(body, "$.data.results[2].gradingStatus")).isEqualTo("pending");
+			assertThat((String) JsonPath.read(body, "$.data.results[2].gradingMessage"))
+					.contains("AI 퀴즈 처리에 동의하지 않아");
+		} finally {
+			pool.shutdownNow();
+		}
+		assertThat(fakeLlm.get(LlmProvider.GPT).requests()).hasSize(before);
+		assertThat(count("quiz_grading_run")).isZero();
+	}
+
 	// ---------- 채점 한도·중복 ----------
 
 	@Test
@@ -195,6 +238,47 @@ class QuizSafetyApiTest {
 				.andExpect(jsonPath("$.data.results[2].gradingMessage").value(containsString("다시 채점")));
 		assertThat(jdbcTemplate.queryForObject("select status from quiz_grading_run", String.class))
 				.isEqualTo("TIMED_OUT");
+	}
+
+	@Test
+	void 늦게_끝난_채점_실행은_그사이_시작된_다시_채점의_답을_건드리지_않는다() throws Exception {
+		long quizId = generate();
+		List<Long> ids = questionIds(quizId);
+		AtomicBoolean replaced = new AtomicBoolean();
+		Function<LlmRequest, LlmResponse> normal = grader(List.of("met", "met"));
+		// 처음 채점 A가 모델을 기다리는 동안 다시 채점이 한 일을 DB로 재현한다: 마감이 지나 A를 정리하고 B를 시작
+		for (LlmProvider provider : LlmProvider.values()) {
+			fakeLlm.get(provider).respond(request -> {
+				if (request.system().contains("채점 보조자") && replaced.compareAndSet(false, true)) {
+					long runA = jdbcTemplate.queryForObject("select id from quiz_grading_run", Long.class);
+					long submission = jdbcTemplate.queryForObject("select submission_id from quiz_grading_run",
+							Long.class);
+					LocalDateTime later = LocalDateTime.now(clock).plusMinutes(3);
+					jdbcTemplate.update("update quiz_grading_run set status = 'TIMED_OUT', finished_at = ? where id = ?",
+							Timestamp.valueOf(later), runA);
+					insertRuns(submission, 1, "RUNNING", clock.instant().plus(Duration.ofMinutes(4)));
+					// 시계는 DB를 바꾼 뒤에 넘긴다. 먼저 넘기면 다른 모델을 기다리던 채점이 마감을 보고 먼저 반영하러 간다
+					clock.advance(Duration.ofMinutes(3));
+				}
+				return normal.apply(request);
+			});
+		}
+
+		long submissionId = submissionId(submit(quizId, List.of(Map.of("questionId", ids.get(2), "text", "PAT 설명")))
+				.andExpect(status().isCreated()));
+
+		// B가 맡은 답은 그대로 GRADING이어야 B가 결과를 반영할 수 있다
+		assertThat(jdbcTemplate.queryForObject("select grading_note from quiz_answer where question_id = ?",
+				String.class, ids.get(2))).isEqualTo("GRADING");
+		assertThat(jdbcTemplate.queryForList("select status from quiz_grading_run order by id", String.class))
+				.containsExactly("TIMED_OUT", "RUNNING");
+
+		// B도 끝나지 못하고 마감이 지나면 다시 채점으로 정상 채점된다
+		clock.advance(Duration.ofMinutes(5));
+		enableGraders(List.of("met", "met"));
+		regrade(quizId, submissionId)
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.results[2].gradingStatus").value("graded"));
 	}
 
 	@Test
@@ -527,5 +611,14 @@ class QuizSafetyApiTest {
 	private String signupAndLogin(String email, boolean analysis, boolean quiz) throws Exception {
 		return TestApi.signupAndLogin(mockMvc, objectMapper, email,
 				Map.of("agreedAiAnalysis", analysis, "agreedAiQuiz", quiz));
+	}
+
+	private static void sleep(long millis) {
+		try {
+			Thread.sleep(millis);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			throw new IllegalStateException(e);
+		}
 	}
 }

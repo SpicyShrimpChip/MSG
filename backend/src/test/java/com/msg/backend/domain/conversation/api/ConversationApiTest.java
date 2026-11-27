@@ -9,6 +9,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.msg.backend.domain.analysis.dao.AnalysisRunConversationRepository;
+import com.msg.backend.domain.analysis.dao.AnalysisRunRepository;
+import com.msg.backend.domain.analysis.entity.AnalysisRun;
+import com.msg.backend.domain.analysis.entity.AnalysisRunConversation;
 import com.msg.backend.domain.auth.dao.RefreshTokenRepository;
 import com.msg.backend.domain.conversation.dao.ConversationRepository;
 import com.msg.backend.domain.conversation.entity.Conversation;
@@ -25,6 +29,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,6 +43,8 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 대화 가져오기 API. 대화 내용·개인정보는 모두 가상 값이다(실제 내보내기 파일은 쓰지 않는다).
@@ -54,6 +65,12 @@ class ConversationApiTest {
 	private ConversationRepository conversationRepository;
 	@Autowired
 	private JdbcTemplate jdbcTemplate;
+	@Autowired
+	private AnalysisRunRepository runRepository;
+	@Autowired
+	private AnalysisRunConversationRepository runConversationRepository;
+	@Autowired
+	private PlatformTransactionManager transactionManager;
 
 	private String token;
 	private String otherToken;
@@ -420,6 +437,36 @@ class ConversationApiTest {
 	}
 
 	@Test
+	void 분석이_시작되는_중에_대화를_지우면_그_분석도_지워진다() throws Exception {
+		send(token, importBody(UUID.randomUUID().toString(), 1, 1, courseId, List.of(simple("c-1"))))
+				.andExpect(status().isCreated());
+		long conversationId = jdbcTemplate.queryForObject("select id from conversation", Long.class);
+		long userId = jdbcTemplate.queryForObject("select id from users where email = 'me@example.com'", Long.class);
+		CountDownLatch started = new CountDownLatch(1);
+		ExecutorService pool = Executors.newFixedThreadPool(2);
+		try {
+			// 분석 시작(AnalysisService.prepare)처럼 사용자 행을 잠그고 실행과 쓴 대화 행을 넣은 뒤 잠시 뒤에 커밋한다
+			Future<?> analysis = pool.submit(() -> new TransactionTemplate(transactionManager).executeWithoutResult(s -> {
+				userRepository.lockLoginUser(userId);
+				AnalysisRun run = runRepository.saveAndFlush(
+						AnalysisRun.start(userId, courseId, "test", 1, 1, 0, 10, LocalDateTime.now()));
+				runConversationRepository.saveAndFlush(AnalysisRunConversation.of(run.getId(), conversationId));
+				started.countDown();
+				sleep(300);
+			}));
+			assertThat(started.await(5, TimeUnit.SECONDS)).isTrue();
+			Future<Integer> deleted = pool.submit(() -> mockMvc.perform(delete("/api/conversations/" + conversationId)
+					.header(HttpHeaders.AUTHORIZATION, bearer(token))).andReturn().getResponse().getStatus());
+			analysis.get(30, TimeUnit.SECONDS);
+			assertThat(deleted.get(30, TimeUnit.SECONDS)).isEqualTo(200);
+		} finally {
+			pool.shutdownNow();
+		}
+		assertThat(count("conversation")).isZero();
+		assertThat(count("analysis_run")).isZero();
+	}
+
+	@Test
 	void 과목을_지우면_그_과목에_가져온_대화도_지워진다() throws Exception {
 		long secondCourse = createCourse(token, "자료구조");
 		send(token, importBody(UUID.randomUUID().toString(), 1, 2, courseId, List.of(simple("c-1"))));
@@ -508,5 +555,14 @@ class ConversationApiTest {
 
 	private String signupAndLogin(String email, boolean agreedAiAnalysis) throws Exception {
 		return TestApi.signupAndLogin(mockMvc, objectMapper, email, Map.of("agreedAiAnalysis", agreedAiAnalysis));
+	}
+
+	private static void sleep(long millis) {
+		try {
+			Thread.sleep(millis);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			throw new IllegalStateException(e);
+		}
 	}
 }

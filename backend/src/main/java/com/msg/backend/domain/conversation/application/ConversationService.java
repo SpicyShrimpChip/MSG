@@ -102,9 +102,11 @@ public class ConversationService {
 	}
 
 	// 메시지·조각은 conversation을 외래 키(ON DELETE CASCADE)로 가지므로 함께 지워진다.
-	// 이 대화를 쓴 학습 분석도 함께 지운다 (AnalysisCleanup)
+	// 이 대화를 쓴 학습 분석도 함께 지운다 (AnalysisCleanup). 사용자 행을 잠가 같은 사용자의 분석 시작과 차례로 처리한다
+	// (잠금 없이 지우면 커밋 전 분석이 안 보여 지운 대화로 만든 분석이 남는다)
 	@Transactional
 	public void delete(Long userId, Long id) {
+		userRepository.lockLoginUser(userId);
 		Conversation conversation = conversationRepository.findByIdAndUserId(id, userId)
 				.orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE));
 		analysisCleanup.deleteRunsUsingConversation(conversation.getId());

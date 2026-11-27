@@ -166,7 +166,11 @@ public class QuizService {
 			QuizGradingRun run = null;
 			if (!needAi.isEmpty() && note == null) {
 				userRepository.lockLoginUser(userId);
-				note = limitReason(userId);
+				// 잠금 밖에서 본 뒤 철회됐을 수 있어 잠근 뒤 다시 본다(regrade와 같은 순서)
+				note = blockedReason(userId);
+				if (note == null) {
+					note = limitReason(userId);
+				}
 			}
 			for (AnswerGradingService.Item item : needAi) {
 				outcomes.put(item.question().getId(), GradeOutcome.pending(note == null ? GradingNotes.GRADING : note,
@@ -265,6 +269,8 @@ public class QuizService {
 	/**
 	 * 예약한 실행으로 모델을 부르고 결과를 반영한다. 반영은 실행이 아직 진행 중이고 마감 전일 때만 하고(늦은 결과는 버림),
 	 * 어떤 이유로 끝나든 실행을 진행 중으로 남기지 않는다. 반영하지 못한 답은 MODEL_FAILED 대기로 남겨 다시 채점할 수 있다.
+	 * 이미 끝난(다른 요청이 정리한) 실행은 답을 건드리지 않는다. 한 제출의 GRADING 답을 맡은 실행은 하나뿐이라 실행 id를
+	 * 답에 따로 두지 않는다.
 	 */
 	private void executeRun(Long userId, Quiz quiz, Reserved reserved, List<AnswerGradingService.Item> items) {
 		Map<Long, GradeOutcome> outcomes = Map.of();
@@ -280,8 +286,13 @@ public class QuizService {
 		transaction.executeWithoutResult(status -> {
 			userRepository.lockLoginUser(userId);
 			QuizGradingRun run = gradingRunRepository.findById(reserved.runId()).orElse(null);
+			if (run == null || run.getStatus() != QuizGradingRun.Status.RUNNING) {
+				// 다시 채점이 마감 지난 이 실행을 정리했거나 실행이 지워졌다. 지금 GRADING인 답은 다른 실행의 것이다
+				log.info("이미 끝난 채점 실행이라 결과를 반영하지 않는다 (run {})", reserved.runId());
+				return;
+			}
 			LocalDateTime now = LocalDateTime.now(clock);
-			boolean active = run != null && run.isActiveAt(now);
+			boolean active = run.isActiveAt(now);
 			List<QuizAnswer> answers = answerRepository.findAllBySubmissionId(reserved.submissionId());
 			for (QuizAnswer answer : answers) {
 				if (!answer.isBeingGraded()) {
@@ -298,11 +309,9 @@ public class QuizService {
 			submissionRepository.findById(reserved.submissionId()).ifPresent(submission -> submission
 					.updateTotals(totals.correct(), totals.score(), totals.maxScore(), totals.pending(),
 							totals.review()));
-			if (run != null) {
-				run.finish(!active ? QuizGradingRun.Status.TIMED_OUT
-						: results.values().stream().allMatch(o -> o.status() == GradingStatus.PENDING)
-								? QuizGradingRun.Status.FAILED : QuizGradingRun.Status.SUCCEEDED, now);
-			}
+			run.finish(!active ? QuizGradingRun.Status.TIMED_OUT
+					: results.values().stream().allMatch(o -> o.status() == GradingStatus.PENDING)
+							? QuizGradingRun.Status.FAILED : QuizGradingRun.Status.SUCCEEDED, now);
 		});
 	}
 
