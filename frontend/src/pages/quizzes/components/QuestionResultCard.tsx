@@ -101,10 +101,11 @@ function QuestionResultCard({
     <Card as="li" className="flex flex-col gap-3 p-5">
       <div className="flex items-start justify-between gap-3">
         <p className="font-semibold text-heading">
-          <span className="mr-2 text-primary">Q{index + 1}.</span>
-          <span className="mr-2 text-caption font-medium text-ink-muted">
-            [{QUESTION_TYPE_LABELS[item.type]}]
+          {/* 문제 형식은 퀴즈 풀기 화면처럼 대괄호 없이 문제 위 작은 글자로 */}
+          <span className="mb-1 block text-caption font-medium text-ink-muted">
+            {QUESTION_TYPE_LABELS[item.type]}
           </span>
+          <span className="mr-1.5 text-ink-muted">{index + 1}.</span>
           {question.text}
         </p>
         <span
