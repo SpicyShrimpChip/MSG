@@ -74,11 +74,6 @@
   /* 확인 창 뒤를 어둡게 덮는 막 (투명도는 쓰는 곳에서 정한다). 글자색(heading)을 쓰면 어두운 모드에서 밝게 덮인다 */
   --color-overlay: #1c1b19;
 
-  /* 장면 창 틀(맥 창)의 닫기·최소화·확대 버튼 점. 꾸밈용이라 글자에 쓰지 않는다 */
-  --color-window-close: #ff5f57;
-  --color-window-minimize: #febc2e;
-  --color-window-zoom: #28c840;
-
   /* 바탕·본문 글자·보조 글자·구분선. 사이트 바탕은 아주 옅게 따뜻한 회색, 카드는 흰색(surface-raised), 표 머리·연한 칸은 surface-muted */
   --color-surface: #f8f7f4;
   --color-surface-muted: #f2f0eb;
@@ -134,11 +129,6 @@
 
   --color-shade: #000000;
   --color-overlay: #000000;
-
-  /* 맥 창 버튼 색은 어두운 모드에서도 같다 */
-  --color-window-close: #ff5f57;
-  --color-window-minimize: #febc2e;
-  --color-window-zoom: #28c840;
 
   --color-surface: #161513;
   /* 카드(surface-raised) 안의 연한 칸·막대 바탕도 보이도록 raised보다 한 단계 밝게 */

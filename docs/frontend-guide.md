@@ -15,7 +15,7 @@
 - `main.tsx`에서 `LazyMotion`(필요한 기능만, `strict`)과 `MotionConfig reducedMotion="user"`로 감쌌다.
 - 단순한 색·그림자 전환은 `index.css`가 링크·버튼·입력칸에 기본으로 걸어 둔다.
 - 페이지 전환은 `PageTransition`(본문 페이드인), 코드 불러오는 동안은 `NavigationProgress`(화면 위 진행 막대).
-- 스크롤에 따라 장면이 바뀌는 구간(메인 스크롤 소개): 긴 구간 안에 `sticky` 무대를 두고 `useScroll`의 진행도로 단계를 넘긴다. 장면 전환 곡선은 `SWEEP_TRANSITION`. 장면 안 요소는 `SceneMotion`의 `Reveal`·`MaskSwap`·`SlotItem`으로 차례로 움직이고, 좁은 화면·"동작 줄이기"에서는 `SceneMotionContext`를 꺼서 고정 없이 세로로 쌓고 마지막 모습만 보여 준다.
+- 스크롤에 따라 장면이 바뀌는 구간(메인 스크롤 소개): 긴 구간 안에 `sticky` 무대를 두고 `useScroll`의 진행도로 단계를 넘긴다. 장면 전환 곡선은 `SWEEP_TRANSITION`. 장면은 가짜 브라우저 틀(창 점·주소줄) 없이 흰 카드에 화면 이름표만 달고(`SceneCard`), 왼쪽에는 작은 단계 표시·짧은 제목·한두 줄 설명과 지금 단계만 잉크 선으로 짚는 단계 이름 목록을 둔다. 장면 안 요소는 `SceneMotion`의 `Reveal`·`MaskSwap`·`SlotItem`으로 차례로 움직이고, 좁은 화면·"동작 줄이기"에서는 `SceneMotionContext`를 꺼서 고정 없이 세로로 쌓고 마지막 모습만 보여 준다.
 - 화면 모드를 바꿀 때는 **View Transitions**로 이전 화면과 새 화면을 겹쳐 서서히 바꾼다(`useThemeStore`의 `applyTheme`, 시간 350ms·곡선 `cubic-bezier(0.4, 0, 0.2, 1)`, `--theme-transition-*`). 색을 하나씩 섞는 방식(CSS 전환)은 쓰지 않는다: 글자색과 배경색이 서로 반대로 뒤집히는 전환을 색별로 섞으면 중간에 두 밝기가 같아져(대비 1.5~2.5까지 떨어짐) 글자가 잠깐 사라졌다 나타나 컷편집처럼 보였다. 전환하는 동안 `theme-vt` 클래스가 색 토큰·요소 전환을 모두 끈다.
 - View Transitions를 지원하지 않는 브라우저의 폴백: 색 토큰(`--color-*`)을 `src/styles/theme-transition.css`에서 `@property`(`<color>` 타입)로 등록하고 `:root`에서 `transition`을 걸어 토큰을 쓰는 모든 요소가 함께 서서히 따라오게 한다. 그동안 `theme-switching` 클래스(400ms)가 요소별 전환을 꺼서 한 박자씩 늦게 따라오지 않게 한다. "동작 줄이기"를 켠 기기는 두 방식 모두 쓰지 않고 바로 바뀐다. 이 파일의 색 부분은 `index.css`의 `@theme` 값에서 만든 것이다(초기값은 라이트 값).
 - Motion으로 움직이는 요소(`ThemeToggle`의 해·달 아이콘)는 CSS 전환이 아니라서 `theme-switching`의 영향을 받지 않는다.
@@ -123,7 +123,6 @@ Tailwind 4 `@theme`에 아래 이름으로 등록한다(`src/index.css`).
 | `danger` | `#b91c1c` (다크 `#fca5a5`) | 오류 메시지만 |
 | `shade` | `#1c1b19` (다크 `#000000`) | 그림자 색 (`shadow-shade/10`처럼 투명도는 쓰는 곳에서) |
 | `overlay` | `#1c1b19` (다크 `#000000`) | 확인 창 뒤를 덮는 막 (`backdrop:bg-overlay/50`) |
-| `window-close` / `window-minimize` / `window-zoom` | `#ff5f57` / `#febc2e` / `#28c840` (다크 같음) | 스크롤 소개 장면 창 틀의 맥 창 버튼 점 (꾸밈용, 글자에 쓰지 않음) |
 
 - `ai` 색을 쓰는 곳: AI 설명, 판단 근거 요약, AI 추천 학습 순서와 "이 순서인 이유", 챗봇 답변, 대시보드 "왜 여기에 있나요?"
 - 다크모드는 같은 중립 회색을 어둡게 옮긴 바탕(`surface` < 카드 `surface-raised` < 연한 칸 `surface-muted`)에 밝은 잉크 파랑(`#a9bfee`)이다. 기본값은 기기 설정을 따르고, 상단바의 화면 모드 버튼 하나(`ThemeToggle`, 누르면 지금 보이는 모드의 반대로 바뀜, `useThemeStore`)로 바꾼다.
