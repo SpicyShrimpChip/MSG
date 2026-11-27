@@ -391,12 +391,12 @@ function Dashboard() {
       </AsyncBoundary>
 
       {/* 맨 위 요약 칸의 "자세히"가 내려오는 곳. 분석 결과와 따로 과목 기록으로 센다(분석 전에도 보인다) */}
-      <div id={ASSESSMENT_ANCHOR} className="scroll-mt-28">
+      <div id={ASSESSMENT_ANCHOR}>
         <AsyncBoundary key={`assessment-${course.id}`}>
           <AssessmentComparisonPanel courseId={course.id} />
         </AsyncBoundary>
       </div>
-      <div id={PROGRESS_ANCHOR} className="scroll-mt-28">
+      <div id={PROGRESS_ANCHOR}>
         <AsyncBoundary key={`study-${course.id}`}>
           <StudyProgressPanel courseId={course.id} />
         </AsyncBoundary>

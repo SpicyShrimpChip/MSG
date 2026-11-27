@@ -55,7 +55,7 @@ function ConceptRow({
     <li
       id={rowId}
       className={cn(
-        'scroll-mt-28 rounded-2xl border bg-surface-raised transition-colors',
+        'rounded-2xl border bg-surface-raised transition-colors',
         open ? 'border-primary' : 'border-line',
       )}
     >

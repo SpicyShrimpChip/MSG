@@ -39,7 +39,7 @@ npm run build    # 타입 체크 + 빌드
 - 서버 데이터를 바꾸는 저장 버튼은 `useSingleFlightMutation`. `disabled={isPending}`는 다시 그린 뒤에야 걸려 연타가 두 번 가므로 `mutate` 직전에 동기 잠금(`utils/submitLock.ts`)을 건다. 서로 겹치면 안 되는 두 버튼은 같은 잠금을 넘기고(`ConceptFeedbackBox`), 자료 올리기는 `requestKey`도 보낸다.
 - 서버 데이터는 React Query로만 다루고 Zustand에 복사하지 않는다. 쿼리 키는 문자열로 쓰지 않고 API 파일 상수(`ME_QUERY_KEY` 등)나 훅을 쓴다.
 - 로딩·에러는 `useSuspenseQuery` + `AsyncBoundary`. 그 안의 `QueryErrorResetBoundary`를 빼지 않는다(빼면 "다시 시도"가 같은 오류 화면을 남긴다). 서버 404일 수 있는 상세 화면은 `notFoundAction`을 넘긴다(2절).
-- 페이지는 `router/index.tsx`에 `lazyPage(() => import('@/pages/...'))`로 추가한다(메인·404만 처음부터). 페이지 모음 파일(`pages/index.ts`)은 만들지 않는다(코드가 쪼개지지 않는다).
+- 페이지는 `router/index.tsx`에 `lazyPage(() => import('@/pages/...'))`로 추가한다(메인·404만 처음부터). 페이지 모음 파일(`pages/index.ts`)은 만들지 않는다(코드가 쪼개지지 않는다). `handle: { title }`도 단다(탭 제목·이동 알림, `RouteAnnouncer`).
 
 ## 움직임 (Motion)
 
