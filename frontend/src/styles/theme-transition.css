@@ -144,21 +144,6 @@
   inherits: true;
   initial-value: #b91c1c;
 }
-@property --color-window-close {
-  syntax: '<color>';
-  inherits: true;
-  initial-value: #ff5f57;
-}
-@property --color-window-minimize {
-  syntax: '<color>';
-  inherits: true;
-  initial-value: #febc2e;
-}
-@property --color-window-zoom {
-  syntax: '<color>';
-  inherits: true;
-  initial-value: #28c840;
-}
 @property --color-surface {
   syntax: '<color>';
   inherits: true;
@@ -256,12 +241,6 @@
     --color-overlay var(--theme-transition-duration)
       var(--theme-transition-ease),
     --color-danger var(--theme-transition-duration) var(--theme-transition-ease),
-    --color-window-close var(--theme-transition-duration)
-      var(--theme-transition-ease),
-    --color-window-minimize var(--theme-transition-duration)
-      var(--theme-transition-ease),
-    --color-window-zoom var(--theme-transition-duration)
-      var(--theme-transition-ease),
     --color-surface var(--theme-transition-duration)
       var(--theme-transition-ease),
     --color-surface-muted var(--theme-transition-duration)
