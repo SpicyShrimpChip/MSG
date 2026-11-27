@@ -17,7 +17,7 @@
 - 프론트는 모든 요청을 **`/api/...`** 로 보낸다. 컨트롤러 경로도 `/api`로 시작한다. 예: `@RequestMapping("/api/courses")`
 - 스프링은 **8080** 포트로 띄운다. 프론트 개발 서버(5173)가 `/api` 요청을 8080으로 넘겨 준다(Vite 프록시).
   - 브라우저 입장에서는 같은 출처라서 **개발 중에는 CORS 설정 없이도 된다.**
-  - 배포도 Vercel이 `/api`를 백엔드로 넘기는 방식(rewrite)이라 같은 출처다(`docs/deploy.md`). 프론트를 다른 도메인에서 직접 호출하게 되면 그때 CORS를 연다.
+  - 배포도 Vercel이 `/api`를 백엔드로 넘기는 방식(rewrite)으로 같은 출처가 된다(`docs/deploy.md`, 백엔드 배포 뒤 추가). 프론트를 다른 도메인에서 직접 호출하게 되면 그때 CORS를 연다.
 - 프론트는 `.env.development`의 `VITE_USE_MOCK=true`로 가짜 데이터를 쓴다. 백엔드를 띄워 놓고 실제로 붙여 보려면 `frontend/.env.development.local`(커밋 안 됨)에 `VITE_USE_MOCK=false`를 넣는다.
 
 ## 2. 공통 응답 형식
@@ -404,7 +404,7 @@ QuizCreateInput = {
 
 화면: `/analysis` (학습분석 > 학습 대시보드). 과목을 고르면 그 과목의 `runs/latest`를 보여 주고, "분석하기"로 `POST runs`를 부른다. 위 "학습 분석" 절의 응답을 그대로 쓴다(별도 대시보드 API는 없다).
 
-- 영역은 `summary`(맨 위 요약 칸: 숙련도 분포·모델 의견·사전→사후평가·학습 진도) · `concepts`(공부할 순서대로 본 개념 목록, 줄을 누르면 숙련도 근거·모델별 판단이 펼쳐짐) · `models`(모델 연결 상태와 이번 분석 정보) 3개다. 같은 개념 순서를 여러 번 보여 주지 않으려고 한 목록에 모았다. 백엔드가 배치를 만들게 되면 이 3개 id만 쓴다.
+- 영역은 `concepts`(맨 위, 공부할 순서대로 본 개념 목록, 줄을 누르면 숙련도 근거·모델별 판단이 펼쳐짐) · `summary`(요약 칸: 숙련도 분포·모델 의견·사전→사후평가·학습 진도) · `models`(모델 연결 상태와 이번 분석 정보) 3개다. 같은 개념 순서를 여러 번 보여 주지 않으려고 한 목록에 모았다. 백엔드가 배치를 만들게 되면 이 3개 id만 쓴다.
 - 키가 없어 모델이 하나도 연결되지 않으면 "연결된 AI 모델이 없어 지금은 분석할 수 없어요"를 보여 주고 분석 버튼을 막는다. 목업(배포 미리보기)에서는 "예시 데이터예요"를 표시한다.
 - 오류(403·400·409·429·503)는 서버 `message`를 그대로 보여 준다. 화면에 보일 문장이니 사용자에게 다음 행동을 알려 주는 말로 써 주기.
 
@@ -464,7 +464,7 @@ layout = {
 - **평가할 개념:** 자료에서 뽑은 개념이 있으면 그것(`topicSource: 'material'`), 없으면 과목 키워드(`'course'`). 풀기 응답은 문제별 개념을 싣지 않으므로 평가 단위 출처만 `topicSource`라는 이름으로 준다.
 - **비교 (`GET /comparison`):** 그 과목(또는 자료)의 **최신 제출된 사전평가 vs 그 사전평가에 연결된 최신 사후평가**. 각 평가의 가장 최근 제출만, **채점이 끝난 답만** 더한다(대기·확인 필요는 틀린 답으로 세지 않고 빼며 `pendingCount`·`reviewCount`로 알린다). `overallDelta`·`concepts[].delta`는 정답률 차이(%p, 반올림), `concepts[].status`는 서버 규칙(기준 `app.quiz.assessment.concept-min-rate` 0.6): improved / declined / unchanged / still_weak(사후도 기준 미만) / weak·ok(사후 전) / not_taken. `comparability`는 개념 집합·문항 수·유형별 수·난이도가 같은지와 주의 문장(`notes`: 문제는 새로 만든 것, 미채점 답, 자료 본문 사용 여부 차이 등). 숙련도 점수가 아니다.
 - **자료 본문 외부 전송 (`app.material-content.enabled`, 환경변수 `MATERIAL_CONTENT_ENABLED`, 기본 false):** 꺼져 있으면 `useMaterialContent: true` 평가 요청과 핵심 개념 뽑기가 403이고, 평가는 개념 목록으로만 만든다. 켜져 있어도 요청마다 `materialContentConsent: true`(없으면 400)와 AI 퀴즈 처리 동의(없으면 403)가 있어야 한다. 제공사·국가·보관 기간과 처리 근거를 처리방침에 확정하기 전에는 켜지 않는다.
-- **본문 읽기 (`MaterialTextExtractor`, 외부 서비스 없음, PDF는 서버 안의 PDFBox):** TXT·MD(UTF-8), PPTX(슬라이드 글 칸, `[슬라이드 N]`), PDF(쪽마다 `[p. N]`, 최대 100쪽·12,000자, 넘으면 잘림). 글이 없는 PDF(스캔본) → `NO_TEXT`(OCR 미지원), 암호 PDF → `ENCRYPTED`, 손상 → `FAILED`. 본문에 개인정보 패턴(IP 제외 규칙)이 있으면 보내지 않는다(`PERSONAL_INFO`). 평가 만들기는 이때 본문 없이 만들고 `materialContentNote`로 이유를 준다(`materialContentUsed=false`). 뽑은 글은 저장하지 않는다.
+- **본문 읽기 (`MaterialTextExtractor`, 외부 서비스 없음, PDF는 서버 안의 PDFBox):** TXT·MD(UTF-8), PPTX(슬라이드 글 칸, `[슬라이드 N]`), PDF(쪽마다 `[p. N]`, 최대 100쪽). 본문은 60,000자까지 읽고(`source-max-chars`) 그중 개념이 나오는 부분을 12,000자(`max-chars`)만큼 골라 보낸다. 글이 없는 PDF(스캔본) → `NO_TEXT`(OCR 미지원), 암호 PDF → `ENCRYPTED`, 손상 → `FAILED`. 본문에 개인정보 패턴(IP 제외 규칙)이 있으면 보내지 않는다(`PERSONAL_INFO`). 평가 만들기는 이때 본문 없이 만들고 `materialContentNote`로 이유를 준다(`materialContentUsed=false`). 뽑은 글은 저장하지 않는다.
 - **핵심 개념 뽑기:** AI가 `{name, description, quote}` 후보를 내면, 서버가 **이름과 근거 문장(quote)이 정규화한 자료 본문에 실제로 있는지** 확인해 통과한 것만 저장한다(최대 10개, 이름 20자). 근거 위치는 quote 앞의 마지막 `[p. N]`/`[슬라이드 N]` 표시로 서버가 정한다. 과목 키워드와 같은 개념이면 `courseKeyword: true`. 통과한 개념이 없으면 502이고 아무것도 저장하지 않는다. 읽지 못한 자료는 422(`data.reason`: NO_TEXT·ENCRYPTED·EMPTY·FAILED·NOT_SUPPORTED), 개인정보 422, 남의 자료 404, 모델 없음 503, 24시간 한도(만들기 한도와 같은 수, 모델 요청 상한 공유) 429. 자료를 지우면 개념도 지워진다(FK CASCADE).
 - **AI가 하나뿐일 때:** 만들기는 그 모델로, 채점도 그 모델 하나로 한다. 판단이 하나뿐이면 다수결이 아니라 `SINGLE_MODEL`("AI 모델 하나만 판단한 결과예요")로 표시하고 결과 판단은 "추가 확인 필요"(needs_check)로 본다. 화면은 "AI 1개만 판단 (다수결 아님)". 키와 모델 이름이 둘 다 있어야 그 모델을 쓰고, 하나도 없으면 만들기 503·`ai-status.available=false`.
 - 프론트: `pages/assessments/AssessmentPage.tsx`(`/assessments`), `pages/materials/components/MaterialConceptPanel.tsx`(평가 화면·자료 상세 "핵심 개념" 탭 공용), `pages/analysis/components/AssessmentComparisonPanel.tsx`(대시보드 비교).

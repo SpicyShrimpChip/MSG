@@ -22,7 +22,7 @@
 | --- | --- | --- |
 | 회원·세션·공지 | `users`, `refresh_token`, `user_social_account`, `withdrawn_account`, `notice` | 회원, 로그인 세션, 카카오 연결(회원번호만), 탈퇴 뒤 재가입 제한(이메일 HMAC만), 공지사항(본문 `content`는 글자만 저장, 수정 시각 `updated_at`, 작성한 관리자 `author_id`는 탈퇴하면 NULL) |
 | 내 과목 | `course`, `course_keyword` | 내 과목과 키워드(입력 순서 `sort_order`) |
-| 학습자료 | `material`, `file_deletion_task`, `material_concept`, `material_summary` | 올린 자료의 정보(파일 내용은 저장소), 지우지 못한 저장소 파일의 재시도 목록, 자료에서 뽑아 근거를 확인한 핵심 개념, 요약본. 자료·사용자 삭제 때 CASCADE |
+| 학습자료 | `material`, `file_deletion_task`, `material_concept`, `material_summary` | 올린 자료의 정보(파일 내용은 저장소), 지우지 못한 저장소 파일의 재시도 목록, 자료에서 뽑아 근거를 확인한 핵심 개념, 요약본. 자료·사용자 삭제 때 CASCADE(`file_deletion_task`는 FK 없음) |
 | AI 대화 가져오기 | `conversation_import`, `conversation_import_request`, `conversation`, `conversation_part`, `conversation_message` | 가져오기 작업과 받은 요청 번호(재전송 중복 방지), 대화·조각·메시지. 프론트가 가린 글만 저장한다 |
 | 학습 대화 분석 | `analysis_run`, `analysis_run_conversation`, `analysis_model_result`, `analysis_concept_judgment`, `analysis_judgment_evidence`, `analysis_concept_consensus`, `concept_feedback`, `concept_mastery` | 모델별 결과 원본·검증한 판단·근거 메시지·개념별 비교, 학습 피드백, 숙련도 기록(변화 추이). 아래 "학습 대화 개념 분석" |
 | 퀴즈·평가 | `quiz`, `quiz_question`, `quiz_choice`, `quiz_question_concept`, `quiz_submission`, `quiz_answer`, `quiz_suggestion`, `quiz_generation`, `quiz_question_accepted_answer`, `quiz_question_rubric`, `quiz_answer_rubric_score`, `quiz_grading_run`, `quiz_ai_call` | 일반 퀴즈(학습 모드 3가지)·모의시험·사전·사후평가·개념 확인 퀴즈가 모두 `quiz` 행이다. 제출·채점 결과, AI 만들기 요청, 채점 실행 예약, 모델 호출 기록. 아래 "퀴즈·학습 모드" |
@@ -272,7 +272,7 @@ domain/
 | 대화 한 건 삭제 → 분석 (구현됨) | 그 대화를 쓴 `analysis_run` 전체를 앱이 먼저 삭제(`AnalysisCleanup`, 모델이 쓴 이유에 대화 내용이 담길 수 있어서). 모델 결과·판단·근거·비교는 연쇄 삭제, 피드백의 `analysis_run_id`는 NULL | 해당 없음 | - |
 | AI 대화 분석 동의 철회 (구현됨, `PATCH /api/users/me/consents`) | 그 사용자의 `conversation`(조각·메시지 연쇄)과 `conversation_import`(받은 요청 연쇄)를 동의 변경과 같은 트랜잭션에서 삭제. 과목·자료는 남는다. 그 사용자의 `analysis_run`도 모두 삭제(모델 결과·판단·근거·비교 연쇄). 학습 피드백(`concept_feedback`)은 사용자가 쓴 기록이라 남긴다(미결: 철회 때 함께 지울지). 사용자 행을 잠가 같은 사용자의 대화 가져오기·분석과 차례로 처리한다. 숙련도 기록(`concept_mastery`)은 `analysis_run`에 CASCADE로 달려 함께 지워진다 | 해당 없음(대화는 임베딩하지 않는 안) | - |
 | 자료 삭제 → 핵심 개념 (구현됨) | `material_concept`가 FK `ON DELETE CASCADE`로 함께 삭제(근거 문장은 자료 원문이라 남기지 않는다) | 해당 없음 | - |
-| 탈퇴 (구현됨, `DELETE /api/users/me`) | 비밀번호(카카오로만 가입한 계정은 확인 문구) 재확인 → 사용자 행 잠금 → 마지막 관리자면 409 → 그 사용자 자료의 `storage_key`를 `deleteAfterCommit`으로 넘기고 → `users` 삭제(모든 자식 행 `ON DELETE CASCADE`: 세션·과목·자료·개념·퀴즈·평가·제출·대화·분석). 공지 `author_id`는 NULL. 탈퇴 뒤 예전 access token은 사용자가 없어 401, refresh 토큰 행이 없어 갱신 401 | `deleteByUser(userId)` (벡터 단계) | 그 사용자 자료의 원본 파일(커밋 뒤) |
+| 탈퇴 (구현됨, `DELETE /api/users/me`) | 비밀번호(카카오로만 가입한 계정은 확인 문구) 재확인 → 사용자 행 잠금 → 마지막 관리자면 409 → 그 사용자 자료의 `storage_key`를 `deleteAfterCommit`으로 넘기고 → `users` 삭제(모든 자식 행 `ON DELETE CASCADE`: 세션·과목·자료·개념·퀴즈·평가·제출·대화·분석. `user_ai_call_daily`는 FK 없이 `WithdrawalService`가 직접 지움). 공지 `author_id`는 NULL. 탈퇴 뒤 예전 access token은 사용자가 없어 401, refresh 토큰 행이 없어 갱신 401 | `deleteByUser(userId)` (벡터 단계) | 그 사용자 자료의 원본 파일(커밋 뒤) |
 
 - 벡터 DB·파일 삭제는 DB 트랜잭션 밖이라 실패할 수 있다. 파일은 **구현됨**: `FileCleanupService.deleteAfterCommit`이 같은 트랜잭션에 `file_deletion_task`를 남기고 커밋 뒤 지운다. 롤백되면 작업 행도 사라져 파일이 그대로 남고(DB가 가리키는 파일이 먼저 사라지지 않음), 삭제에 실패하면 작업 행이 남아 다시 시도한다. 벡터 삭제도 같은 작업 목록에 붙이면 된다.
 - 올리기는 반대 순서다: 검사 → 파일 저장 → DB 행 저장. DB 저장이나 커밋이 실패하면 방금 저장한 파일을 지우고(트랜잭션 동기화 `afterCompletion`), 그것도 실패하면 `file_deletion_task`로 넘긴다.
@@ -310,7 +310,7 @@ domain/
 
 AI 모델 설정: 키·모델 이름은 환경변수(`OPENAI_API_KEY`·`OPENAI_MODEL`, `ANTHROPIC_API_KEY`·`ANTHROPIC_MODEL`, `GEMINI_API_KEY`·`GEMINI_MODEL`)로만. 하나라도 없으면 미설정(호출하지 않음).
 
-제공사·국가(국외 이전)·보관 기간·학습 미사용 조건은 개인정보 처리방침 7·8번에 있다. 제공사를 바꾸면 같은 PR에서 처리방침도 고친다.
+제공사·국가(국외 이전)·보관 기간은 개인정보 처리방침 7·8번, 학습 미사용 조건은 9번에 있다. 제공사를 바꾸면 같은 PR에서 처리방침도 고친다.
 
 숙련도는 분석 결과와 퀴즈 결과로 `MasteryCalculator`가 계산한다(산식 `frontend-requests.md` 5-10절, 기록 `docs/backend-guide.md` 8절).
 
