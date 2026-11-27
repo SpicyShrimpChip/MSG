@@ -208,6 +208,24 @@ class MaterialConceptApiTest {
 	}
 
 	@Test
+	void 남의_자료로_학습용_설명을_만들면_404이고_모델을_부르지_않는다() throws Exception {
+		long material = upload("노트.txt", "VLAN은 브로드캐스트 도메인을 나눈다".getBytes());
+		extract(material, true).andExpect(status().isOk());
+		int before = fakeLlm.get(LlmProvider.GPT).requests().size();
+		String other = signupAndLogin("other@example.com");
+
+		explain(other, material, "vlan", true).andExpect(status().isNotFound());
+		assertThat(fakeLlm.get(LlmProvider.GPT).requests()).hasSize(before);
+		for (LlmProvider provider : LlmProvider.values()) {
+			if (provider != LlmProvider.GPT) {
+				assertThat(fakeLlm.get(provider).requests()).as(provider + " 호출").isEmpty();
+			}
+		}
+		mockMvc.perform(get("/api/materials/" + material + "/concepts").header(HttpHeaders.AUTHORIZATION, bearer(token)))
+				.andExpect(jsonPath("$.data[0].studyNote").value(nullValue()));
+	}
+
+	@Test
 	void 학습용_설명은_없는_개념_404_확인_없음_400_설명이_비면_502() throws Exception {
 		long material = upload("노트.txt", "VLAN은 브로드캐스트 도메인을 나눈다".getBytes());
 		extract(material, true).andExpect(status().isOk());
@@ -221,8 +239,12 @@ class MaterialConceptApiTest {
 	}
 
 	private ResultActions explain(long material, String conceptId, boolean confirmed) throws Exception {
+		return explain(token, material, conceptId, confirmed);
+	}
+
+	private ResultActions explain(String asToken, long material, String conceptId, boolean confirmed) throws Exception {
 		return mockMvc.perform(post("/api/materials/" + material + "/concepts/study-notes")
-				.header(HttpHeaders.AUTHORIZATION, bearer(token)).contentType(MediaType.APPLICATION_JSON)
+				.header(HttpHeaders.AUTHORIZATION, bearer(asToken)).contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(
 						Map.of("conceptId", conceptId, "materialContentConsent", confirmed))));
 	}
