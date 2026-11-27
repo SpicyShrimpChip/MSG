@@ -15,6 +15,7 @@ import {
   AiWaitingStatus,
   Button,
   Card,
+  Checkbox,
   Chip,
   ErrorText,
   Notice,
@@ -216,18 +217,14 @@ function ConceptCard({
                   뽑기&rdquo;에 있어요.
                 </p>
               ) : (
-                <label className="flex items-start gap-3 text-caption text-heading">
-                  <input
-                    type="checkbox"
-                    checked={confirmed}
-                    onChange={(e) => setConfirmed(e.target.checked)}
-                    className="mt-0.5 size-4 accent-primary"
-                  />
-                  <span>
-                    이 자료의 본문 발췌(최대 12,000자)를 외부 생성형 AI로 보내는
-                    것을 확인했어요. 본인이 이용 권한이 있는 자료예요.
-                  </span>
-                </label>
+                <Checkbox
+                  size="caption"
+                  checked={confirmed}
+                  onChange={setConfirmed}
+                >
+                  이 자료의 본문 발췌(최대 12,000자)를 외부 생성형 AI로 보내는
+                  것을 확인했어요. 본인이 이용 권한이 있는 자료예요.
+                </Checkbox>
               )}
               <ErrorText error={mutation.error} />
               <AiWaitingStatus

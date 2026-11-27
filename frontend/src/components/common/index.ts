@@ -13,6 +13,7 @@ export { default as Button } from './Button';
 export { default as Card } from './Card';
 export { default as ConfirmDialog } from './ConfirmDialog';
 export { default as ErrorText } from './ErrorText';
+export { default as Checkbox } from './Checkbox';
 export { default as ActionNotice } from './ActionNotice';
 export { default as Chip } from './Chip';
 export { default as SubPage } from './SubPage';

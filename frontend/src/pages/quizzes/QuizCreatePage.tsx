@@ -14,6 +14,7 @@ import {
   AsyncBoundary,
   Button,
   Card,
+  Checkbox,
   Chip,
   EmptyState,
   ErrorText,
@@ -559,68 +560,53 @@ function QuizCreateForm({ me }: { me: User | null }) {
               </p>
             ) : (
               <>
-                <label className="flex items-start gap-3 text-body text-heading">
-                  <input
-                    type="checkbox"
-                    checked={useContent}
-                    onChange={(e) => {
-                      setUseContent(e.target.checked);
-                      if (!e.target.checked) setContentConsent(false);
-                    }}
-                    className="mt-1 size-4 accent-primary"
-                  />
-                  <span>
-                    <span className="font-semibold">
-                      자료 본문을 근거로 만들기
-                    </span>
-                    <span className="block text-caption text-ink-soft">
-                      서버가 고른 개념이 나오는 쪽·슬라이드·문단만(최대
-                      12,000자) 보내고, 문제마다 근거 문장을 원문과 대조해 결과
-                      화면에 보여 줘요. 근거를 확인한 문제가 절반이 안 되면
-                      저장하지 않아요.
-                    </span>
+                <Checkbox
+                  checked={useContent}
+                  onChange={(checked) => {
+                    setUseContent(checked);
+                    if (!checked) setContentConsent(false);
+                  }}
+                >
+                  <span className="font-semibold">
+                    자료 본문을 근거로 만들기
                   </span>
-                </label>
+                  <span className="block text-caption text-ink-soft">
+                    서버가 고른 개념이 나오는 쪽·슬라이드·문단만(최대 12,000자)
+                    보내고, 문제마다 근거 문장을 원문과 대조해 결과 화면에 보여
+                    줘요. 근거를 확인한 문제가 절반이 안 되면 저장하지 않아요.
+                  </span>
+                </Checkbox>
                 {useContent && (
-                  <label className="flex items-start gap-3 text-caption text-heading">
-                    <input
-                      type="checkbox"
-                      checked={contentConsent}
-                      onChange={(e) => setContentConsent(e.target.checked)}
-                      className="mt-0.5 size-4 accent-primary"
-                    />
-                    <span>
-                      이 자료의 본문 일부를 외부 생성형 AI로 보내는 것을
-                      확인했어요. 본인이 이용 권한이 있는 자료예요.
-                    </span>
-                  </label>
+                  <Checkbox
+                    size="caption"
+                    checked={contentConsent}
+                    onChange={setContentConsent}
+                  >
+                    이 자료의 본문 일부를 외부 생성형 AI로 보내는 것을
+                    확인했어요. 본인이 이용 권한이 있는 자료예요.
+                  </Checkbox>
                 )}
               </>
             ))}
         </fieldset>
 
         {mode === 'exam_prep' && !check && (
-          <label className="flex items-start gap-3 text-body text-heading">
-            <input
-              type="checkbox"
-              checked={mockExam}
-              onChange={(e) => {
-                setMockExam(e.target.checked);
-                if (!e.target.checked && count > QUIZ_MAX_QUESTIONS)
-                  setCount(QUIZ_MAX_QUESTIONS);
-              }}
-              className="mt-1 size-4 accent-primary"
-            />
-            <span>
-              <span className="font-semibold">모의시험으로 만들기</span>
-              <span className="block text-caption text-ink-soft">
-                범위 전체를 실제 시험처럼 고르게 다뤄요(
-                {MOCK_EXAM_MAX_QUESTIONS}
-                문제까지). 정답·해설은 제출한 뒤에 보여 줘요. 실제 출제를
-                보장하지 않아요.
-              </span>
+          <Checkbox
+            checked={mockExam}
+            onChange={(checked) => {
+              setMockExam(checked);
+              if (!checked && count > QUIZ_MAX_QUESTIONS)
+                setCount(QUIZ_MAX_QUESTIONS);
+            }}
+          >
+            <span className="font-semibold">모의시험으로 만들기</span>
+            <span className="block text-caption text-ink-soft">
+              범위 전체를 실제 시험처럼 고르게 다뤄요(
+              {MOCK_EXAM_MAX_QUESTIONS}
+              문제까지). 정답·해설은 제출한 뒤에 보여 줘요. 실제 출제를 보장하지
+              않아요.
             </span>
-          </label>
+          </Checkbox>
         )}
         {mode === 'exam_prep' && (
           <FormRow
@@ -682,16 +668,9 @@ function QuizCreateForm({ me }: { me: User | null }) {
           : '퀴즈를 만들 때 외부 AI로는 과목 이름·개념·적은 시험 범위·직무 분야만 보내요. 가져온 대화와 학습자료 본문은 보내지 않아요. 이 퀴즈는 자료를 읽지 않고 과목과 개념으로 만들어요.'}
       </Notice>
 
-      {!mockData && !ai.available && (
-        <p role="alert" className="text-body text-danger">
-          {ai.message}
-        </p>
-      )}
+      {!mockData && !ai.available && <ErrorText message={ai.message} />}
       {!mockData && !me?.aiQuizConsent && (
-        <p role="alert" className="text-body text-danger">
-          AI로 퀴즈를 만들려면 AI 퀴즈 처리 동의가 필요해요(대화 분석 동의와
-          별도). 마이페이지에서 동의할 수 있어요.
-        </p>
+        <ErrorText message="AI로 퀴즈를 만들려면 AI 퀴즈 처리 동의가 필요해요(대화 분석 동의와 별도). 마이페이지에서 동의할 수 있어요." />
       )}
       <AiWaitingStatus
         waiting={pendingKey !== null}
@@ -710,11 +689,7 @@ function QuizCreateForm({ me }: { me: User | null }) {
           }}
         />
       )}
-      {recoveredMessage && (
-        <p role="alert" className="text-body text-danger">
-          {recoveredMessage}
-        </p>
-      )}
+      <ErrorText message={recoveredMessage} />
       {mockData && (
         <p className="text-body text-ink-soft">
           예시 데이터예요. 목업에서는 AI를 부르지 않고 예시 문제를 보여 줘요.

@@ -4,7 +4,7 @@
 
 ## 1. 공통 부품
 
-화면을 만들 때 공통 부품을 먼저 쓴다: 버튼 `Button`, 흰 카드 `Card`, 작은 알약 `Chip`, 점수·비중 막대 `ScoreBar`(개념 막대는 `level`을 넘기면 보완 필요가 붉게), 금방 끝나는 저장을 기다리는 동안 도는 아이콘 `Spinner`, AI 응답을 오래 기다리는 안내 상자 `AiWaiting`(점 구슬 + 글, `thinking-orbs`를 처음 뜰 때 받는다. 세 모델 분석은 `weaving`, 그 밖의 AI 작업은 `connecting`, 아이콘 자리에 구슬만 넣을 때는 `AiOrb`. 화면에는 `AiWaitingStatus`로 둔다: 늘 있는 live 영역이라 대기 시작과 완료를 읽는다. 바깥 상자가 이미 live면 `AiWaiting`만), 파일 끌어다 놓기 `FileDropZone`, 회색 안내 상자(아이콘+글) `Notice`, 입력칸 `TextInput`·`SelectInput`(그 밖의 칸 모양은 `FIELD_CLASS`), 카드 여러 장 대신 한 장의 표처럼 보이는 목록 `LIST_PANEL_CLASS`·`LIST_ROW_CLASS`(퀴즈·자료 목록), 폼 줄과 오류 문구 `FormRow`(`error`), AI 글 `AiNote`·`AiBadge`(화면의 "AI 표시가 있는 내용은…" 안내 한 줄은 `AiLegend`), 강점·보완 `LevelBadge`.
+화면을 만들 때 공통 부품을 먼저 쓴다: 버튼 `Button`, 흰 카드 `Card`, 작은 알약 `Chip`, 점수·비중 막대 `ScoreBar`(개념 막대는 `level`을 넘기면 보완 필요가 붉게), 금방 끝나는 저장을 기다리는 동안 도는 아이콘 `Spinner`, AI 응답을 오래 기다리는 안내 상자 `AiWaiting`(점 구슬 + 글, `thinking-orbs`를 처음 뜰 때 받는다. 세 모델 분석은 `weaving`, 그 밖의 AI 작업은 `connecting`, 아이콘 자리에 구슬만 넣을 때는 `AiOrb`. 화면에는 `AiWaitingStatus`로 둔다: 늘 있는 live 영역이라 대기 시작과 완료를 읽는다. 바깥 상자가 이미 live면 `AiWaiting`만), 파일 끌어다 놓기 `FileDropZone`, 회색 안내 상자(아이콘+글) `Notice`, 입력칸 `TextInput`·`SelectInput`(그 밖의 칸 모양은 `FIELD_CLASS`), 카드 여러 장 대신 한 장의 표처럼 보이는 목록 `LIST_PANEL_CLASS`·`LIST_ROW_CLASS`(퀴즈·자료 목록), 폼 줄과 오류 문구 `FormRow`(`error`), 확인 체크 `Checkbox`(작은 글씨 확인은 `size="caption"`), 동작 실패·막힌 이유 문구 `ErrorText`(`error` 또는 `message`), AI 글 `AiNote`·`AiBadge`(화면의 "AI 표시가 있는 내용은…" 안내 한 줄은 `AiLegend`), 강점·보완 `LevelBadge`.
 
 ## 2. 로딩·오류 화면
 

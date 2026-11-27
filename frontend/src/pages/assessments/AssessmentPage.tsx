@@ -21,6 +21,7 @@ import {
   AsyncBoundary,
   Button,
   Card,
+  Checkbox,
   EmptyState,
   ErrorText,
   FormRow,
@@ -252,43 +253,30 @@ function MaterialAssessment({
             <legend className="px-1 text-body font-semibold text-heading">
               자료 본문 쓰기 (선택)
             </legend>
-            <label className="flex items-start gap-3 text-body text-heading">
-              <input
-                type="checkbox"
-                checked={useContent}
-                disabled={!contentAllowed}
-                onChange={(e) => {
-                  setUseContent(e.target.checked);
-                  if (!e.target.checked) setContentConsent(false);
-                }}
-                className="mt-1 size-4 accent-primary"
-              />
-              <span>
-                자료 본문(앞부분 12,000자까지)으로 문제 만들기
-                <span className="block text-caption text-ink-soft">
-                  {readable
-                    ? 'TXT·MD·PPTX와 글이 들어 있는 PDF(100쪽까지)를 읽어요. 스캔한 PDF는 읽지 못해요. 체크하지 않으면 개념 목록으로만 만들어요.'
-                    : '이 형식은 본문을 읽지 못해요. 개념 목록으로만 만들어요.'}
-                </span>
+            <Checkbox
+              checked={useContent}
+              disabled={!contentAllowed}
+              onChange={(checked) => {
+                setUseContent(checked);
+                if (!checked) setContentConsent(false);
+              }}
+            >
+              자료 본문(앞부분 12,000자까지)으로 문제 만들기
+              <span className="block text-caption text-ink-soft">
+                {readable
+                  ? 'TXT·MD·PPTX와 글이 들어 있는 PDF(100쪽까지)를 읽어요. 스캔한 PDF는 읽지 못해요. 체크하지 않으면 개념 목록으로만 만들어요.'
+                  : '이 형식은 본문을 읽지 못해요. 개념 목록으로만 만들어요.'}
               </span>
-            </label>
+            </Checkbox>
             {useContent && (
-              <label className="flex items-start gap-3 text-body text-heading">
-                <input
-                  type="checkbox"
-                  checked={contentConsent}
-                  onChange={(e) => setContentConsent(e.target.checked)}
-                  className="mt-1 size-4 accent-primary"
-                />
-                <span>
-                  이 자료의 본문을 문제를 만들기 위해 외부 생성형 AI로 보내는
-                  것을 확인했어요. 본인이 이용 권한이 있는 자료예요.
-                  <span className="block text-caption text-ink-soft">
-                    이메일·전화번호 같은 개인정보가 보이면 보내지 않아요. 교수님
-                    강의자료·시험 문제 원문은 올리지 말아 주세요.
-                  </span>
+              <Checkbox checked={contentConsent} onChange={setContentConsent}>
+                이 자료의 본문을 문제를 만들기 위해 외부 생성형 AI로 보내는 것을
+                확인했어요. 본인이 이용 권한이 있는 자료예요.
+                <span className="block text-caption text-ink-soft">
+                  이메일·전화번호 같은 개인정보가 보이면 보내지 않아요. 교수님
+                  강의자료·시험 문제 원문은 올리지 말아 주세요.
                 </span>
-              </label>
+              </Checkbox>
             )}
           </fieldset>
         )}
@@ -302,11 +290,7 @@ function MaterialAssessment({
             : ''}
         </Notice>
 
-        {blockedReason && (
-          <p role="alert" className="text-body text-danger">
-            {blockedReason}
-          </p>
-        )}
+        <ErrorText message={blockedReason} />
         <ErrorText error={mutation.error} />
         {created?.materialContentNote && (
           <Notice icon={FileText} size="caption">
