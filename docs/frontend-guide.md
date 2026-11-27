@@ -4,11 +4,11 @@
 
 ## 1. 공통 부품
 
-화면을 만들 때 공통 부품을 먼저 쓴다: 버튼 `Button`, 흰 카드 `Card`, 작은 알약 `Chip`, 점수·비중 막대 `ScoreBar`(개념 막대는 `level`을 넘기면 보완 필요가 붉게), 금방 끝나는 저장을 기다리는 동안 도는 아이콘 `Spinner`, AI 응답을 오래 기다리는 안내 상자 `AiWaiting`(점 구슬 + 글, `thinking-orbs`를 처음 뜰 때 받는다. 세 모델 분석은 `weaving`, 그 밖의 AI 작업은 `connecting`, 아이콘 자리에 구슬만 넣을 때는 `AiOrb`), 파일 끌어다 놓기 `FileDropZone`, 회색 안내 상자(아이콘+글) `Notice`, 입력칸 `TextInput`·`SelectInput`(그 밖의 칸 모양은 `FIELD_CLASS`), 카드 여러 장 대신 한 장의 표처럼 보이는 목록 `LIST_PANEL_CLASS`·`LIST_ROW_CLASS`(퀴즈·자료 목록), 폼 줄과 오류 문구 `FormRow`(`error`), AI 글 `AiNote`·`AiBadge`(화면의 "AI 표시가 있는 내용은…" 안내 한 줄은 `AiLegend`), 강점·보완 `LevelBadge`.
+화면을 만들 때 공통 부품을 먼저 쓴다: 버튼 `Button`, 흰 카드 `Card`, 작은 알약 `Chip`, 점수·비중 막대 `ScoreBar`(개념 막대는 `level`을 넘기면 보완 필요가 붉게), 금방 끝나는 저장을 기다리는 동안 도는 아이콘 `Spinner`, AI 응답을 오래 기다리는 안내 상자 `AiWaiting`(점 구슬 + 글, `thinking-orbs`를 처음 뜰 때 받는다. 세 모델 분석은 `weaving`, 그 밖의 AI 작업은 `connecting`, 아이콘 자리에 구슬만 넣을 때는 `AiOrb`. 화면에는 `AiWaitingStatus`로 둔다: 늘 있는 live 영역이라 대기 시작과 완료를 읽는다. 바깥 상자가 이미 live면 `AiWaiting`만), 파일 끌어다 놓기 `FileDropZone`, 회색 안내 상자(아이콘+글) `Notice`, 입력칸 `TextInput`·`SelectInput`(그 밖의 칸 모양은 `FIELD_CLASS`), 카드 여러 장 대신 한 장의 표처럼 보이는 목록 `LIST_PANEL_CLASS`·`LIST_ROW_CLASS`(퀴즈·자료 목록), 폼 줄과 오류 문구 `FormRow`(`error`), AI 글 `AiNote`·`AiBadge`(화면의 "AI 표시가 있는 내용은…" 안내 한 줄은 `AiLegend`), 강점·보완 `LevelBadge`.
 
 ## 2. 로딩·오류 화면
 
-불러오는 동안은 `LoadingFallback`(회색 틀 `Skeleton`)이 보인다. `AsyncBoundary`는 `QueryErrorResetBoundary`로 감싸 "다시 시도"가 실패한 조회를 다시 부르게 한다. 상세 화면처럼 없거나 남의 것(서버 404)일 수 있는 화면은 `notFoundAction`(예: `{ label: '퀴즈 목록으로', to: '/quizzes' }`)을 넘겨, 404면 "다시 시도" 대신 목록으로 가는 버튼을 보여 준다. 화면을 그리다 난 오류와 배포 뒤 옛 화면 코드 불러오기 실패는 라우터 루트의 `RouteErrorPage`가 받는다(코드 불러오기 실패는 30초 안에 한 번만 자동 새로고침).
+불러오는 동안은 `LoadingFallback`(회색 틀 `Skeleton`)이 보인다. 다 그린 화면이 이 틀보다 훨씬 길어 아래 구역·바닥글이 밀리는 곳은 `AsyncBoundary`의 `fallback`으로 그 화면 모양의 틀을 넘긴다(학습 대시보드 `DashboardSkeleton`은 결과 자리를 화면 높이만큼 잡는다). `AsyncBoundary`는 `QueryErrorResetBoundary`로 감싸 "다시 시도"가 실패한 조회를 다시 부르게 한다. 상세 화면처럼 없거나 남의 것(서버 404)일 수 있는 화면은 `notFoundAction`(예: `{ label: '퀴즈 목록으로', to: '/quizzes' }`)을 넘겨, 404면 "다시 시도" 대신 목록으로 가는 버튼을 보여 준다. 화면을 그리다 난 오류와 배포 뒤 옛 화면 코드 불러오기 실패는 라우터 루트의 `RouteErrorPage`가 받는다(코드 불러오기 실패는 30초 안에 한 번만 자동 새로고침).
 
 ## 3. 움직임
 

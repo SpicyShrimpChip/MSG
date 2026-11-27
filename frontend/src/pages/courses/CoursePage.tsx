@@ -9,6 +9,7 @@ import {
   EmptyState,
   SubPage,
   ErrorText,
+  ActionNotice,
 } from '@/components';
 import type { Course } from '@/types';
 import { compareSemesterDesc } from '@/utils';
@@ -20,6 +21,10 @@ function CourseManager() {
   const { data: courses } = useCourses();
   const [editing, setEditing] = useState<Course | null>(null);
   const [deleting, setDeleting] = useState<Course | null>(null);
+  // 삭제 결과 알림. 누른 삭제 버튼이 목록과 함께 사라지므로 포커스를 이 알림으로 옮긴다
+  const [notice, setNotice] = useState<{ id: number; text: string } | null>(
+    null,
+  );
 
   // 과목을 지우면 그 과목의 자료도 함께 지워지므로 자료 목록도 새로 받는다
   const removal = useSingleFlightMutation({
@@ -34,7 +39,15 @@ function CourseManager() {
   const confirmDelete = () => {
     if (!deleting) return;
     if (editing?.id === deleting.id) setEditing(null);
-    removal.mutate(deleting.id);
+    const { name } = deleting;
+    // 훅의 onSuccess(목록 다시 받기)가 끝난 뒤 불린다
+    removal.mutate(deleting.id, {
+      onSuccess: () =>
+        setNotice((prev) => ({
+          id: (prev?.id ?? 0) + 1,
+          text: `'${name}' 과목을 삭제했어요.`,
+        })),
+    });
     setDeleting(null);
   };
 
@@ -58,6 +71,7 @@ function CourseManager() {
           등록한 과목 {courses.length}개
         </h2>
         <ErrorText error={removal.error} />
+        <ActionNotice notice={notice} />
         {sorted.length === 0 ? (
           <EmptyState
             icon={<BookMarked size={24} aria-hidden="true" />}

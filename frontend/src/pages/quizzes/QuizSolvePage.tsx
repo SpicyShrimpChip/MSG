@@ -11,7 +11,7 @@ import {
   submitQuiz,
 } from '@/api';
 import {
-  AiWaiting,
+  AiWaitingStatus,
   AsyncBoundary,
   Button,
   Card,
@@ -278,12 +278,12 @@ function QuizForm({ quizId }: { quizId: number }) {
 
       <ErrorText error={mutation.error} />
       {/* 주관식·서술형은 외부 AI가 채점해서 오래 걸릴 수 있다. 객관식만 있으면 서버 코드가 바로 채점해 버튼 안 Spinner로 충분하다 */}
-      {mutation.isPending && needsAi && (
-        <AiWaiting>
-          AI가 주관식·서술형 답을 채점하는 중이에요. 최대 1분 40초 걸릴 수
-          있어요.
-        </AiWaiting>
-      )}
+      <AiWaitingStatus
+        waiting={mutation.isPending && needsAi}
+        failed={mutation.isError}
+      >
+        AI가 주관식·서술형 답을 채점하는 중이에요. 최대 1분 40초 걸릴 수 있어요.
+      </AiWaitingStatus>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-body text-ink-soft" aria-live="polite">

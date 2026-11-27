@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useRouteError } from 'react-router-dom';
 import { CircleAlert } from 'lucide-react';
 import { Button } from '@/components';
+import { documentTitle } from '@/router/routeTitle';
 import { isChunkLoadError, shouldAutoReload } from '@/utils';
 
 const RELOAD_KEY = 'msg-chunk-reload-at';
@@ -30,6 +31,14 @@ function markReload(now: number) {
 export default function RouteErrorPage() {
   const error = useRouteError();
   const chunkError = isChunkLoadError(error);
+  const heading = chunkError
+    ? '새 버전이 나왔어요'
+    : '화면을 보여 드리지 못했어요';
+
+  // 라우터 맨 위 오류 화면은 Layout(RouteAnnouncer) 밖이라 탭 제목을 직접 정한다
+  useEffect(() => {
+    document.title = documentTitle(heading);
+  }, [heading]);
 
   // 새 버전이 배포되어 옛 화면 코드를 못 불러온 경우는 한 번만 자동으로 새로고침한다
   useEffect(() => {
@@ -43,9 +52,7 @@ export default function RouteErrorPage() {
   return (
     <main className="mx-auto flex min-h-dvh max-w-page flex-col items-center justify-center gap-4 px-6 text-center">
       <CircleAlert size={32} aria-hidden="true" className="text-danger" />
-      <h1 className="text-2xl font-semibold text-heading">
-        {chunkError ? '새 버전이 나왔어요' : '화면을 보여 드리지 못했어요'}
-      </h1>
+      <h1 className="text-2xl font-semibold text-heading">{heading}</h1>
       <p className="max-w-120 leading-relaxed text-ink-soft">
         {chunkError
           ? '사이트가 업데이트되어 이 화면을 다시 불러와야 해요. 새로고침해 주세요.'

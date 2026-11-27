@@ -11,11 +11,15 @@ interface AsyncBoundaryProps {
   children: ReactNode;
   // 찾는 것이 없을 때(404) "다시 시도" 대신 보여 줄 돌아갈 곳 (예: 퀴즈 목록으로)
   notFoundAction?: NotFoundAction;
+  // 불러오는 동안 보여 줄 화면. 없으면 공통 틀(LoadingFallback).
+  // 다 그린 모양과 높이가 크게 다르면 아래 내용이 밀리므로(화면 밀림) 그 화면 모양의 틀을 넘긴다
+  fallback?: ReactNode;
 }
 
 export default function AsyncBoundary({
   children,
   notFoundAction,
+  fallback = <LoadingFallback />,
 }: AsyncBoundaryProps) {
   const { pathname, search } = useLocation();
 
@@ -32,7 +36,7 @@ export default function AsyncBoundary({
           // 같은 화면에서 주소만 바뀌어도(다른 퀴즈·자료로 이동) 이전 오류 화면을 남기지 않는다
           resetKeys={[pathname, search]}
         >
-          <Suspense fallback={<LoadingFallback />}>{children}</Suspense>
+          <Suspense fallback={fallback}>{children}</Suspense>
         </ErrorBoundary>
       )}
     </QueryErrorResetBoundary>

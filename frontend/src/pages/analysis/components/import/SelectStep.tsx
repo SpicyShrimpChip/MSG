@@ -21,6 +21,7 @@ import {
   searchConversation,
   sortConversations,
   type AssignedConversation,
+  type ConversationChoices,
   type ConversationOrder,
   type SearchHit,
   type ParsedConversation,
@@ -29,12 +30,6 @@ import ConversationView from './ConversationView';
 import CourseQuickForm from './CourseQuickForm';
 import { MARK_CLASS } from './marks';
 import { SOURCE_NAME } from './sourceName';
-
-// 대화마다 들어갈 과목과 보낼지 여부 (키: conversationKey)
-export type ConversationChoices = Record<
-  string,
-  { courseId: number; selected: boolean }
->;
 
 interface SelectStepProps {
   conversations: ParsedConversation[];

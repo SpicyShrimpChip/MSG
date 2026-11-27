@@ -41,6 +41,7 @@ import {
 import AnalysisSummaryPanel from './components/AnalysisSummaryPanel';
 import AssessmentComparisonPanel from './components/AssessmentComparisonPanel';
 import ConceptList from './components/ConceptList';
+import DashboardSkeleton from './components/DashboardSkeleton';
 import LayoutSummary from './components/LayoutSummary';
 import ModelStatusPanel from './components/ModelStatusPanel';
 import StudyProgressPanel from './components/StudyProgressPanel';
@@ -295,14 +296,14 @@ function CourseAnalysis({ course }: { course: Course }) {
           </p>
         )}
         {mutation.isPending && (
-          <AiWaiting state="weaving" live={false}>
+          <AiWaiting state="weaving">
             모델마다 대화를 따로 읽고 있어요. 길면 1분 40초쯤 걸려요. 이 화면을
             떠나지 말아 주세요.
           </AiWaiting>
         )}
         {/* 새로고침하거나 다른 화면에서 돌아와도 서버가 분석 중이면 이어서 보여 준다 */}
         {!mutation.isPending && serverRunning && (
-          <AiWaiting state="weaving" live={false}>
+          <AiWaiting state="weaving">
             모델마다 대화를 따로 읽고 있어요. 길면 1분 40초쯤 걸리고, 끝나면 이
             화면에 결과가 나타나요.
           </AiWaiting>
@@ -383,18 +384,19 @@ function Dashboard() {
         <AiLegend />
       </div>
 
-      {/* 과목을 바꾸면 그 과목의 분석을 새로 불러온다 */}
-      <AsyncBoundary key={course.id}>
+      {/* 과목을 바꾸면 그 과목의 분석을 새로 불러온다.
+          불러오는 동안 결과 자리를 잡아 두어 아래 사전·사후평가 구역이 먼저 그려졌다가 밀리지 않게 한다 */}
+      <AsyncBoundary key={course.id} fallback={<DashboardSkeleton />}>
         <CourseAnalysis course={course} />
       </AsyncBoundary>
 
       {/* 맨 위 요약 칸의 "자세히"가 내려오는 곳. 분석 결과와 따로 과목 기록으로 센다(분석 전에도 보인다) */}
-      <div id={ASSESSMENT_ANCHOR} className="scroll-mt-28">
+      <div id={ASSESSMENT_ANCHOR}>
         <AsyncBoundary key={`assessment-${course.id}`}>
           <AssessmentComparisonPanel courseId={course.id} />
         </AsyncBoundary>
       </div>
-      <div id={PROGRESS_ANCHOR} className="scroll-mt-28">
+      <div id={PROGRESS_ANCHOR}>
         <AsyncBoundary key={`study-${course.id}`}>
           <StudyProgressPanel courseId={course.id} />
         </AsyncBoundary>
@@ -409,7 +411,7 @@ function DashboardPage() {
       title="학습 대시보드"
       description="가져온 대화를 여러 AI 모델이 따로 읽고, 개념마다 판단과 근거를 비교해 보여 드려요"
     >
-      <AsyncBoundary>
+      <AsyncBoundary fallback={<DashboardSkeleton withCourseRow />}>
         <Dashboard />
       </AsyncBoundary>
     </SubPage>

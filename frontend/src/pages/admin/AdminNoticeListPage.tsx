@@ -11,6 +11,7 @@ import {
   SubPage,
   type BoardColumn,
   ErrorText,
+  ActionNotice,
 } from '@/components';
 import type { Notice } from '@/types';
 import { NOTICE_COLUMNS } from '@/pages/notices/components/noticeColumns';
@@ -19,6 +20,10 @@ function NoticeAdminTable() {
   const queryClient = useQueryClient();
   const { data: notices } = useNotices();
   const [deleting, setDeleting] = useState<Notice | null>(null);
+  // 삭제 결과 알림. 누른 삭제 버튼이 표와 함께 사라지므로 포커스를 이 알림으로 옮긴다
+  const [notice, setNotice] = useState<{ id: number; text: string } | null>(
+    null,
+  );
 
   const removal = useSingleFlightMutation({
     mutationFn: deleteNotice,
@@ -64,6 +69,7 @@ function NoticeAdminTable() {
       </div>
 
       <ErrorText error={removal.error} />
+      <ActionNotice notice={notice} />
 
       <BoardTable
         columns={columns}
@@ -78,7 +84,17 @@ function NoticeAdminTable() {
         description="목록과 상세 화면에서 모두 사라지고 되돌릴 수 없어요."
         confirmLabel="삭제하기"
         onConfirm={() => {
-          if (deleting) removal.mutate(deleting.id);
+          if (deleting) {
+            const { title } = deleting;
+            // 훅의 onSuccess(목록 다시 받기)가 끝난 뒤 불린다
+            removal.mutate(deleting.id, {
+              onSuccess: () =>
+                setNotice((prev) => ({
+                  id: (prev?.id ?? 0) + 1,
+                  text: `'${title}' 공지를 삭제했어요.`,
+                })),
+            });
+          }
           setDeleting(null);
         }}
         onCancel={() => setDeleting(null)}

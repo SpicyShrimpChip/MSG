@@ -10,7 +10,7 @@ import {
 } from '@/api';
 import { useMockData } from '@/store';
 import {
-  AiWaiting,
+  AiWaitingStatus,
   AsyncBoundary,
   Button,
   Card,
@@ -86,7 +86,8 @@ function isQuizMode(value: string | null): value is QuizMode {
 
 // 퀴즈 만들기: 학습 모드·과목·문제 유형·난이도·문제 수를 골라 서버에 AI 생성을 부탁한다.
 // 서버가 구조·정답·채점 기준을 검증하고 통과한 퀴즈만 저장한다. 실패하면 서버 message를 그대로 보여 준다
-// 이전에 보낸 만들기 요청이 남아 있으면 끝날 때까지 상태를 확인한다 (서버 마감 100초)
+// 이전에 보낸 만들기 요청이 남아 있으면 끝날 때까지 상태를 확인한다 (서버 마감 100초).
+// 확인만 하고 그리지는 않는다. 대기 안내는 부모의 AiWaitingStatus가 보여 준다(이 컴포넌트가 사라져도 live 영역은 남게)
 function PendingGeneration({
   requestKey,
   onDone,
@@ -113,12 +114,7 @@ function PendingGeneration({
       onDone(data.message);
     }
   }, [data, error, navigate, onDone]);
-  return (
-    <AiWaiting state="connecting">
-      이전에 보낸 퀴즈 만들기 요청을 확인하고 있어요. 끝나면 바로 문제 화면으로
-      이동해요.
-    </AiWaiting>
-  );
+  return null;
 }
 
 function QuizCreateForm({ me }: { me: User | null }) {
@@ -702,6 +698,14 @@ function QuizCreateForm({ me }: { me: User | null }) {
           별도). 마이페이지에서 동의할 수 있어요.
         </p>
       )}
+      <AiWaitingStatus
+        waiting={pendingKey !== null}
+        failed={recoveredMessage !== null}
+        state="connecting"
+      >
+        이전에 보낸 퀴즈 만들기 요청을 확인하고 있어요. 끝나면 바로 문제
+        화면으로 이동해요.
+      </AiWaitingStatus>
       {pendingKey && (
         <PendingGeneration
           requestKey={pendingKey}
@@ -724,12 +728,14 @@ function QuizCreateForm({ me }: { me: User | null }) {
 
       <ErrorText error={mutation.error} />
 
-      {mutation.isPending && (
-        <AiWaiting state="connecting">
-          AI가 문제를 만드는 중이에요. 최대 1분 40초 걸릴 수 있어요. 화면을 새로
-          고쳐도 결과를 다시 찾아 줘요.
-        </AiWaiting>
-      )}
+      <AiWaitingStatus
+        waiting={mutation.isPending}
+        failed={mutation.isError}
+        state="connecting"
+      >
+        AI가 문제를 만드는 중이에요. 최대 1분 40초 걸릴 수 있어요. 화면을 새로
+        고쳐도 결과를 다시 찾아 줘요.
+      </AiWaitingStatus>
       <div className="flex flex-wrap items-center gap-3">
         <Button
           type="submit"

@@ -153,7 +153,7 @@ function StepSection({
       as="section"
       aria-labelledby={titleId}
       className={cn(
-        'flex scroll-mt-28 flex-col gap-4 p-5 md:p-6',
+        'flex flex-col gap-4 p-5 md:p-6',
         stage.status === 'current' && 'border-2 border-primary',
       )}
     >

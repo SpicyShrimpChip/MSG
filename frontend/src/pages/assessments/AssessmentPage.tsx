@@ -17,7 +17,7 @@ import {
   useSingleFlightMutation,
 } from '@/hooks';
 import {
-  AiWaiting,
+  AiWaitingStatus,
   AsyncBoundary,
   Button,
   Card,
@@ -318,12 +318,15 @@ function MaterialAssessment({
           </Notice>
         )}
 
-        {mutation.isPending && (
-          <AiWaiting state="connecting">
-            AI가 {mutation.variables === 'post' ? '사후' : '사전'}평가 문제를
-            만드는 중이에요. 최대 1분 40초 걸릴 수 있어요.
-          </AiWaiting>
-        )}
+        <AiWaitingStatus
+          waiting={mutation.isPending}
+          failed={mutation.isError}
+          doneText="평가 문제를 만들었어요."
+          state="connecting"
+        >
+          AI가 {mutation.variables === 'post' ? '사후' : '사전'}평가 문제를
+          만드는 중이에요. 최대 1분 40초 걸릴 수 있어요.
+        </AiWaitingStatus>
         <div className="flex flex-wrap items-center gap-2">
           <Button
             disabled={

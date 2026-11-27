@@ -11,6 +11,7 @@ import { StartPaths } from '@/components';
 import { cn } from '@/utils';
 import PrivacyNotice from '../PrivacyNotice';
 import { SceneMotionContext } from './sceneMotionContext';
+import { storyStepText } from './storyAnnouncement';
 import { STORY_STEPS } from './storySteps';
 
 const TOTAL = STORY_STEPS.length;
@@ -36,13 +37,19 @@ const SCENE_VARIANTS = {
 // 주인공은 장면이라 틀은 흰 카드 + 얇은 선 + 작은 그림자로 조용하게 둔다
 function SceneCard({
   screen,
+  hidden = false,
   children,
 }: {
   screen: string;
+  // 화면 낭독기에서 감출지(넓은 화면은 단계 글을 따로 읽어 주므로 꾸밈 장면을 감춘다)
+  hidden?: boolean;
   children: ReactNode;
 }) {
   return (
-    <figure className="m-0 overflow-hidden rounded-2xl border border-line bg-surface-raised shadow-lg shadow-shade/6">
+    <figure
+      aria-hidden={hidden || undefined}
+      className="m-0 overflow-hidden rounded-2xl border border-line bg-surface-raised shadow-lg shadow-shade/6"
+    >
       <figcaption className="px-6 pt-5 text-caption text-ink-muted">
         {screen}
       </figcaption>
@@ -55,6 +62,8 @@ function SceneCard({
 function PinnedStory({ header }: { header: ReactNode }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ step: 0, direction: 1 });
+  // 단계 이름을 눌렀을 때만 그 단계 문장을 읽는다(스크롤로 바뀔 때마다 읽으면 시끄럽다)
+  const [announcement, setAnnouncement] = useState('');
   const { step, direction } = view;
   const { scrollYProgress } = useScroll({
     target: trackRef,
@@ -74,6 +83,7 @@ function PinnedStory({ header }: { header: ReactNode }) {
   const goTo = (index: number) => {
     const track = trackRef.current;
     if (!track) return;
+    setAnnouncement(storyStepText(STORY_STEPS[index], index, TOTAL));
     const top = track.getBoundingClientRect().top + window.scrollY;
     const scrollable = track.offsetHeight - window.innerHeight;
     window.scrollTo({
@@ -94,10 +104,19 @@ function PinnedStory({ header }: { header: ReactNode }) {
           위 여백은 상단바 자리(80px)인데, 상단바가 숨으면(Header가 <html data-header-hidden>) 아래와 같게 줄여 장면이 아래로 쏠리지 않게 한다 */}
       <div className="sticky top-0 flex h-svh flex-col justify-center gap-6 pt-20 pb-6 in-data-[header-hidden]:pt-6 motion-safe:transition-[padding-top] [@media(min-height:900px)]:gap-12">
         {header}
+        {/* 화면 낭독기용 전체 단계. 눈에 보이는 무대는 지금 단계만 DOM에 있어 나머지를 읽지 못하므로 따로 둔다 */}
+        <ol className="sr-only">
+          {STORY_STEPS.map((item, index) => (
+            <li key={item.title}>{storyStepText(item, index, TOTAL)}</li>
+          ))}
+        </ol>
+        <p aria-live="polite" className="sr-only">
+          {announcement}
+        </p>
         <div className="grid min-h-0 grid-cols-[minmax(0,4fr)_minmax(0,7fr)] items-center gap-14">
           <div className="flex flex-col gap-8">
-            {/* 단계 표시 + 제목 + 한두 줄 설명 */}
-            <div className="min-h-52">
+            {/* 단계 표시 + 제목 + 한두 줄 설명. 위 화면 낭독기용 목록과 겹쳐 읽히지 않게 감춘다 */}
+            <div aria-hidden="true" className="min-h-52">
               <AnimatePresence mode="wait" initial={false}>
                 <m.div key={step} {...FADE_UP} className="flex flex-col gap-4">
                   <p className="text-caption text-ink-muted">
@@ -138,7 +157,7 @@ function PinnedStory({ header }: { header: ReactNode }) {
             </ol>
           </div>
 
-          <SceneCard screen={current.screen}>
+          <SceneCard screen={current.screen} hidden>
             {/* 들어오는 장면과 나가는 장면을 같은 칸에 겹쳐 둔다. 높이를 고정해 장면마다 창이 들썩이지 않게 한다 */}
             <div className="grid h-110 overflow-hidden px-6.5 pt-4 pb-6.5">
               <AnimatePresence initial={false} custom={direction}>
