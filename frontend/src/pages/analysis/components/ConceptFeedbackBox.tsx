@@ -9,7 +9,7 @@ import {
   saveConceptFeedback,
 } from '@/api';
 import type { ConceptFeedbackType, ConceptResult } from '@/types';
-import { Button } from '@/components';
+import { Button, ErrorText } from '@/components';
 import { cn, conceptQuizLink, createSubmitLock } from '@/utils';
 
 interface ConceptFeedbackBoxProps {
@@ -144,11 +144,7 @@ function ConceptFeedbackBox({
             </Link>
           </p>
         )}
-        {error && (
-          <p role="alert" className="text-body text-danger">
-            {error.message}
-          </p>
-        )}
+        <ErrorText error={error} />
       </div>
 
       {concept.feedback && (

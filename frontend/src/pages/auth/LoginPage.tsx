@@ -66,11 +66,7 @@ function LoginPage() {
     <AuthCard title="로그인" description="계정으로 계속해요">
       <form onSubmit={handleSubmit} className="flex w-full flex-col gap-5">
         <MockAuthNotice from={from} />
-        {socialError && (
-          <p role="alert" className="text-body text-danger">
-            {socialError}
-          </p>
-        )}
+        <ErrorText message={socialError} />
         {state.signedUpEmail && (
           <p role="status" className="text-body text-ink-soft">
             가입이 완료됐어요. 로그인해 주세요.

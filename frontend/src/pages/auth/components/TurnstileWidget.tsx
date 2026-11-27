@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { ErrorText } from '@/components';
 import { TURNSTILE_SITE_KEY } from './turnstile';
 
 // Cloudflare Turnstile 위젯. 사이트 키와 켜는 조건은 turnstile.ts
@@ -106,10 +107,7 @@ export default function TurnstileWidget({
 
   if (loadFailed) {
     return (
-      <p role="alert" className="text-body text-danger">
-        자동 가입 방지 확인을 불러오지 못했어요. 인터넷 연결을 확인하고
-        새로고침해 주세요.
-      </p>
+      <ErrorText message="자동 가입 방지 확인을 불러오지 못했어요. 인터넷 연결을 확인하고 새로고침해 주세요." />
     );
   }
   return <div ref={containerRef} />;
