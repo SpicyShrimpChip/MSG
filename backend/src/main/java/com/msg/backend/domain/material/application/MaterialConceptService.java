@@ -29,8 +29,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -50,7 +48,8 @@ import org.springframework.util.StringUtils;
  * (2) 트랜잭션 밖에서 본문을 읽고 개인정보를 검사한다(큰 PDF를 읽는 동안 같은 사용자의 다른 요청을 막지 않게).
  * (3) 모델도 트랜잭션 밖에서 부르고, 저장할 때 다시 잠가 자료 404를 본다. 그 사이 자료가 지워지면 (2)에서 파일을 못 읽어 422가 될 수 있다.
  *
- * <p>모델이 낸 개념은 서버가 확인한다: 개념 이름(20자 이내)이 본문에 실제로 나와야 하고, 근거 문장이 본문에 그대로 있어야 한다.
+ * <p>모델이 낸 개념은 서버가 확인한다: 개념 이름(20자 이내)이 본문에 실제로 나와야 하고, 근거 문장이 본문에 그대로 있어야 한다
+ * (근거 문장은 요약·퀴즈와 같은 SourceText.locate 규칙으로 공백·대소문자를 무시하고 대조한다).
  * 근거 위치(쪽·슬라이드)는 모델 말이 아니라 서버가 본문에서 찾는다. 확인을 통과한 개념이 없으면 저장하지 않는다(502).
  * 같은 자료로 다시 뽑으면 이전 개념을 바꾼다. 모델은 설정 순서의 첫 모델 하나, 실패하면 남은 시간 안에서 다음 모델.
  */
@@ -88,7 +87,6 @@ public class MaterialConceptService {
 	static final String CONCEPT_CHANGED_MESSAGE = "그 사이 핵심 개념을 다시 뽑아 설명을 저장하지 않았어요. 새 개념에서 다시 시도해 주세요.";
 	static final String NOTE_INVALID_MESSAGE = "AI가 쓴 개념 설명의 형식이 맞지 않아 저장하지 않았어요. 다시 시도해 주세요.";
 	static final String NOTE_FAILED_MESSAGE = "AI 모델의 응답을 받지 못해 개념 설명을 만들지 못했어요. 잠시 뒤 다시 시도해 주세요.";
-	private static final Pattern MARKER =Pattern.compile("\\[(p\\. \\d+|슬라이드 \\d+)]");
 
 	private final UserRepository userRepository;
 	private final MaterialRepository materialRepository;
@@ -225,13 +223,13 @@ public class MaterialConceptService {
 		String quote = LlmJson.text(node.get("contextQuote"));
 		String location = null;
 		if (quote != null) {
-			String haystack = normalize(materialText);
-			int at = quote.length() < MIN_QUOTE_LENGTH || quote.length() > MaterialConcept.QUOTE_MAX_LENGTH ? -1
-					: haystack.indexOf(normalize(quote));
-			if (at < 0) {
+			Optional<SourceText.Located> found = quote.length() < MIN_QUOTE_LENGTH
+					|| quote.length() > MaterialConcept.QUOTE_MAX_LENGTH ? Optional.empty()
+							: SourceText.locate(materialText, quote);
+			if (found.isEmpty()) {
 				quote = null;
 			} else {
-				location = location(haystack, at);
+				location = found.get().location();
 			}
 		}
 		return Optional.of(new Note(explanation,
@@ -299,9 +297,8 @@ public class MaterialConceptService {
 					|| quote.length() < MIN_QUOTE_LENGTH || quote.length() > MaterialConcept.QUOTE_MAX_LENGTH) {
 				continue;
 			}
-			String normalizedQuote = normalize(quote);
-			int at = haystack.indexOf(normalizedQuote);
-			if (at < 0 || !haystack.contains(normalize(name))) {
+			Optional<SourceText.Located> found = SourceText.locate(prepared.text(), quote);
+			if (found.isEmpty() || !haystack.contains(normalize(name))) {
 				continue;
 			}
 			String key = Course.nameKey(name);
@@ -312,23 +309,13 @@ public class MaterialConceptService {
 			if (description != null && description.length() > MaterialConcept.DESCRIPTION_MAX_LENGTH) {
 				description = description.substring(0, MaterialConcept.DESCRIPTION_MAX_LENGTH);
 			}
-			verified.add(new Verified(key, name, description, location(haystack, at), quote,
+			verified.add(new Verified(key, name, description, found.get().location(), quote,
 					courseKeys.contains(key)));
 		}
 		return verified;
 	}
 
-	// 근거 문장 앞의 마지막 쪽·슬라이드 표시
-	private static String location(String haystack, int at) {
-		Matcher matcher = MARKER.matcher(haystack.substring(0, at));
-		String last = null;
-		while (matcher.find()) {
-			last = matcher.group(1);
-		}
-		return last;
-	}
-
-	// 대소문자·공백 차이를 무시하고 비교한다
+	// 개념 이름 확인용: 대소문자·공백 차이를 무시하고 비교한다 (인용 대조는 SourceText.locate)
 	static String normalize(String text) {
 		return text.toLowerCase(Locale.ROOT).replaceAll("\\s+", " ").strip();
 	}

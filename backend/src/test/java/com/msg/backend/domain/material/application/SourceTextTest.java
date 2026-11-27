@@ -79,6 +79,19 @@ class SourceTextTest {
 	}
 
 	@Test
+	void locate는_띄어쓰기_차이를_무시하고_앞의_마지막_위치를_준다() {
+		assertThat(SourceText.locate("[p. 1]\n소개\n\n[p. 2]\n공개키로 암호화하면\n개인키로만 풀 수 있다",
+				"공개 키로 암호화하면 개인 키로만")).contains(new SourceText.Located("p. 2"));
+		assertThat(SourceText.locate("[슬라이드 3]\nVLAN은 브로드캐스트 도메인을 나눈다", "vlan은 브로드캐스트"))
+				.contains(new SourceText.Located("슬라이드 3"));
+		// 위치 표시가 없는 글은 위치 없이 찾는다
+		assertThat(SourceText.locate("공개키로 암호화하면 개인키로만 풀 수 있다", "공개 키로 암호화"))
+				.contains(new SourceText.Located(null));
+		assertThat(SourceText.locate("공개키로 암호화하면", "양자 컴퓨터")).isEmpty();
+		assertThat(SourceText.locate("공개키로 암호화하면", "   ")).isEmpty();
+	}
+
+	@Test
 	void 정답_표현이_근거에_나오는지는_참고_신호로_본다() {
 		assertThat(SourceText.mentions("공개키와 개인키 한 쌍", "개인 키")).isTrue();
 		assertThat(SourceText.mentions("공개키와 개인키 한 쌍", "해시")).isFalse();

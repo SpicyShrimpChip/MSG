@@ -237,6 +237,31 @@ class MaterialConceptApiTest {
 	}
 
 	@Test
+	void 띄어쓰기만_다른_인용도_자료_문장으로_받는다() throws Exception {
+		String quote = "공개 키로 암호화하면 개인 키로만 풀 수 있다";
+		fakeLlm.get(LlmProvider.GPT).answer("{\"concepts\":[{\"name\":\"공개키\",\"description\":\"d\","
+				+ "\"quote\":\"" + quote + "\"}]}");
+		long material = upload("노트.txt", "공개키로 암호화하면 개인키로만 풀 수 있다".getBytes());
+
+		extract(material, true).andExpect(status().isOk())
+				.andExpect(jsonPath("$.data", hasSize(1)))
+				.andExpect(jsonPath("$.data[0].evidenceQuote").value(quote));
+	}
+
+	@Test
+	void 설명의_연결_문장도_띄어쓰기_차이를_무시한다() throws Exception {
+		long material = upload("슬라이드.pptx", TestFiles.pptxWithSlides("네트워크 개요",
+				"VLAN은 브로드캐스트 도메인을 나눈다", "트렁크 포트는 태그를 붙인다"));
+		extract(material, true).andExpect(status().isOk());
+		fakeLlm.get(LlmProvider.GPT).answer("{\"explanation\":\"VLAN은 스위치 하나를 여러 개의 논리적인 망으로 나누는 기술이다.\","
+				+ "\"contextQuote\":\"트렁크포트는 태그를 붙인다\"}");
+
+		explain(material, "vlan", true).andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.studyNote.contextQuote").value("트렁크포트는 태그를 붙인다"))
+				.andExpect(jsonPath("$.data.studyNote.contextLocation").value("슬라이드 3"));
+	}
+
+	@Test
 	void 지어낸_개념만_오면_저장하지_않고_502() throws Exception {
 		fakeLlm.get(LlmProvider.GPT).answer("{\"concepts\":[{\"name\":\"OSPF\",\"quote\":\"OSPF는 없다\"}]}");
 		long material = upload("노트.txt", "VLAN은 브로드캐스트 도메인을 나눈다".getBytes());
