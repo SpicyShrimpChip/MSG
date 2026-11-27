@@ -56,8 +56,11 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 자료 파일을 바꾸는 API가 없어(올릴 때만 storageKey가 정해짐) 조회·재사용 때 원본 파일 해시는 비교하지 않는다(11/25).
  * 해시는 요약을 새로 만들 때만 계산해 어느 파일로 만들었는지 기록으로 남긴다.
  *
- * <p>동시 요청: 사용자 행을 잠근 채 진행 중 기록(RUNNING + 마감)을 남기고, 진행 중이면 409. 모델은 트랜잭션 밖에서 부르고,
- * 저장할 때 아직 진행 중·마감 전인지 확인한다. 실패하면 이전 요약이 있으면 그대로 둔다.
+ * <p>동시 요청: (1) 사용자 행을 잠근 트랜잭션에서 진행 중이면 409, 재사용이면 반환, 보내기 전 확인(MaterialAiGate), 과목과 고르기 용어를
+ * 읽는다. (2) 트랜잭션 밖에서 본문을 읽고 보낼 부분을 고르고 개인정보를 검사하고 원본 해시를 계산한다(큰 PDF를 읽는 동안 같은 사용자의
+ * 다른 요청을 막지 않게). (3) 다시 잠가 (1)의 409·재사용·보내기 전 확인을 같은 메서드로 다시 하고(그 사이 다른 요청이 시작했으면 409,
+ * 끝냈으면 재사용) 진행 중 기록(RUNNING + 마감)을 남긴다. 그 사이 자료가 지워지면 (2)에서 파일을 못 읽어 422가 될 수 있다. 모델은 트랜잭션 밖에서 부르고, 저장할 때 아직 진행 중·마감 전인지 확인한다.
+ * 실패하면 이전 요약이 있으면 그대로 둔다.
  *
  * <p>검증: MaterialSummaryParser가 항목마다 원문 인용을 확인한다. 인용이 원문에 있다는 것만 확인하며 요약 전체의 사실성을 확정하지 않는다.
  */
@@ -173,7 +176,13 @@ public class MaterialSummaryService {
 	public StudySummaryResponse generate(Long userId, Long materialId, String purposeValue, boolean confirmed,
 			boolean regenerate) {
 		QuizMode purpose = purpose(purposeValue);
-		Prepared prepared = transaction.execute(status -> prepare(userId, materialId, purpose, confirmed, regenerate));
+		Planned planned = transaction.execute(status -> plan(userId, materialId, purpose, confirmed, regenerate));
+		if (planned.reused() != null) {
+			return planned.reused();
+		}
+		Selected selected = select(planned);
+		Prepared prepared = transaction.execute(status -> start(userId, materialId, purpose, confirmed, regenerate,
+				planned, selected));
 		if (prepared.reused() != null) {
 			return prepared.reused();
 		}
@@ -207,10 +216,24 @@ public class MaterialSummaryService {
 		}
 	}
 
-	private Prepared prepare(Long userId, Long materialId, QuizMode purpose, boolean confirmed, boolean regenerate) {
+	// 잠금 안에서 확인한 것. reused가 있으면 모델을 부르지 않고 그것을 돌려준다
+	private record Checked(User user, Material material, Optional<MaterialSummary> existing, List<LlmClient> clients,
+			StudySummaryResponse reused) {
+	}
+
+	// (1)의 결과: 본문을 읽고 고르는 데 쓸 것 (material은 트랜잭션이 끝난 뒤 읽기에만 쓴다)
+	private record Planned(Material material, String courseName, List<String> focus, StudySummaryResponse reused) {
+	}
+
+	// (2)의 결과: 보낼 글과 그 위치, 원본 해시
+	private record Selected(String text, List<String> scope, boolean truncated, String hash) {
+	}
+
+	// 진행 중 409·재사용·보내기 전 확인. (1)과 (3)이 같은 순서로 부른다 (사용자 행을 잠근 트랜잭션 안에서)
+	private Checked check(Long userId, Long materialId, QuizMode purpose, boolean confirmed, boolean regenerate,
+			LocalDateTime now) {
 		User user = userRepository.lockLoginUser(userId);
 		Material material = materialRepository.getOwned(materialId, userId);
-		LocalDateTime now = LocalDateTime.now(clock);
 		Optional<MaterialSummary> existing = summaryRepository.findByMaterialIdAndUserIdAndPurpose(materialId, userId,
 				purpose);
 		if (existing.isPresent()) {
@@ -220,15 +243,23 @@ public class MaterialSummaryService {
 			}
 			if (!regenerate && summary.hasResult() && staleReason(summary) == null) {
 				// 같은 지시문: 모델을 부르지 않는다 (동의·한도와 관계없이 저장한 결과를 보여 준다)
-				return new Prepared(null, purpose, null, null, false, null, null, null, null, null,
-						toResponse(summary, true, null, false));
+				return new Checked(user, material, existing, null, toResponse(summary, true, null, false));
 			}
 		}
 		// 재사용 판단 뒤에 확인한다: 저장한 요약은 동의·한도와 관계없이 다시 보여 준다
 		List<LlmClient> clients = gate.checkBeforeSend(user, confirmed, QuizAiCall.SUMMARY,
 				contentProperties.summaryDailyLimit(),
 				new MaterialAiGate.Messages(QUIZ_CONSENT_MESSAGE, NO_MODEL_MESSAGE, LIMIT_MESSAGE));
-		MaterialTextExtractor.Extracted extracted = gate.read(material, contentProperties.sourceMaxChars());
+		return new Checked(user, material, existing, clients, null);
+	}
+
+	// (1) 잠금 안: 확인하고 과목 이름과 고르기 용어(이 자료의 핵심 개념·과목 키워드)를 읽는다
+	private Planned plan(Long userId, Long materialId, QuizMode purpose, boolean confirmed, boolean regenerate) {
+		Checked checked = check(userId, materialId, purpose, confirmed, regenerate, LocalDateTime.now(clock));
+		if (checked.reused() != null) {
+			return new Planned(null, null, null, checked.reused());
+		}
+		Material material = checked.material();
 		Course course = gate.courseOrNull(material, userId);
 		// 길면 핵심 개념·과목 키워드가 나오는 부분을 고른다 (짧으면 전체)
 		Set<String> focus = new LinkedHashSet<>();
@@ -237,10 +268,17 @@ public class MaterialSummaryService {
 		if (course != null) {
 			focus.addAll(course.getKeywords());
 		}
+		return new Planned(material, course == null ? material.getTitle() : course.getName(), new ArrayList<>(focus),
+				null);
+	}
+
+	// (2) 트랜잭션 밖: 본문을 읽고 보낼 부분을 고르고 그 부분의 개인정보를 검사한다
+	private Selected select(Planned planned) {
+		MaterialTextExtractor.Extracted extracted = gate.read(planned.material(), contentProperties.sourceMaxChars());
 		// 요약은 자료 전체를 다루므로 예산 안에 들어가면 모두 보내고, 길 때만 핵심 개념·과목 키워드가 나오는 부분을 고른다
 		SourceText source = SourceText.parse(extracted.text());
 		SourceText.Selection selection = source.select(
-				source.renderedLength() <= contentProperties.maxChars() ? List.of() : new ArrayList<>(focus),
+				source.renderedLength() <= contentProperties.maxChars() ? List.of() : planned.focus(),
 				contentProperties.maxChars());
 		if (selection.text().isBlank()) {
 			throw new BusinessException(HttpStatus.UNPROCESSABLE_ENTITY,
@@ -249,7 +287,20 @@ public class MaterialSummaryService {
 		// 요약은 고른 부분만 보내므로 그 부분을 검사한다
 		gate.requireNoPersonalInfo(selection.text());
 		// 어느 파일로 만들었는지 기록으로만 남긴다 (조회·재사용 때 비교하지 않는다)
-		String hash = hash(material);
+		String hash = hash(planned.material());
+		return new Selected(selection.text(), selection.locations(), selection.truncated() || extracted.truncated(),
+				hash);
+	}
+
+	// (3) 다시 잠가 (1)과 같은 확인을 하고 진행 중 기록을 남긴다
+	private Prepared start(Long userId, Long materialId, QuizMode purpose, boolean confirmed, boolean regenerate,
+			Planned planned, Selected selected) {
+		LocalDateTime now = LocalDateTime.now(clock);
+		Checked checked = check(userId, materialId, purpose, confirmed, regenerate, now);
+		if (checked.reused() != null) {
+			return new Prepared(null, purpose, null, null, false, null, null, null, null, null, checked.reused());
+		}
+		Optional<MaterialSummary> existing = checked.existing();
 		Instant deadline = clock.instant().plus(quizProperties.generationDeadline());
 		LocalDateTime deadlineAt = LocalDateTime.ofInstant(deadline, clock.getZone());
 		MaterialSummary summary;
@@ -264,10 +315,10 @@ public class MaterialSummaryService {
 		} catch (DataIntegrityViolationException e) {
 			throw new BusinessException(HttpStatus.CONFLICT, RUNNING_MESSAGE);
 		}
+		User user = checked.user();
 		String jobLabel = JobField.labelOf(user.getJobField(), user.getJobFieldOther());
-		return new Prepared(summary.getId(), purpose, selection.text(), selection.locations(),
-				selection.truncated() || extracted.truncated(), hash,
-				course == null ? material.getTitle() : course.getName(), jobLabel, clients, deadline, null);
+		return new Prepared(summary.getId(), purpose, selected.text(), selected.scope(), selected.truncated(),
+				selected.hash(), planned.courseName(), jobLabel, checked.clients(), deadline, null);
 	}
 
 	private StudySummaryResponse save(Long userId, Prepared prepared, MaterialSummaryParser.Parsed parsed,

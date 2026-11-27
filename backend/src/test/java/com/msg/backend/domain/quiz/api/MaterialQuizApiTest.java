@@ -16,6 +16,7 @@ import com.msg.backend.domain.user.dao.UserRepository;
 import com.msg.backend.global.llm.LlmProvider;
 import com.msg.backend.global.llm.LlmResponse;
 import com.msg.backend.support.FakeLlmClients;
+import com.msg.backend.support.FaultyFileStorage;
 import com.msg.backend.support.IntegrationTest;
 import com.msg.backend.support.TestApi;
 import com.msg.backend.support.TestPdfs;
@@ -25,6 +26,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,6 +62,8 @@ class MaterialQuizApiTest {
 	private FakeLlmClients fakeLlm;
 	@Autowired
 	private JdbcTemplate jdbcTemplate;
+	@Autowired
+	private FaultyFileStorage faultyFileStorage;
 
 	private String token;
 	private long courseId;
@@ -63,6 +72,8 @@ class MaterialQuizApiTest {
 	@BeforeEach
 	void setUp() throws Exception {
 		fakeLlm.resetAll();
+		faultyFileStorage.reset();
+		pool = Executors.newFixedThreadPool(2);
 		refreshTokenRepository.deleteAllInBatch();
 		userRepository.deleteAllInBatch();
 		token = TestApi.signupAndLogin(mockMvc, objectMapper, "me@example.com",
@@ -71,6 +82,15 @@ class MaterialQuizApiTest {
 		material = upload(TestPdfs.withPages("Course history and grading policy", "Office hours and contacts list",
 				"RSA is a public key algorithm. RSA uses a key pair", "Exam schedule announcement",
 				"VLAN splits broadcast domains"));
+	}
+
+	// 잠금 테스트의 두 요청을 공용 풀이 아닌 전용 스레드에서 보낸다 (기다리는 동안 공용 풀이 모자라지 않게)
+	private ExecutorService pool;
+
+	@AfterEach
+	void tearDown() {
+		faultyFileStorage.reset();
+		pool.shutdownNow();
 	}
 
 	@Test
@@ -151,6 +171,56 @@ class MaterialQuizApiTest {
 	}
 
 	@Test
+	void 자료_본문은_요청마다_한_번만_읽고_같은_요청_키로_다시_보내면_읽지_않는다() throws Exception {
+		fakeLlm.get(LlmProvider.GPT).respond(request -> new LlmResponse(QuizFixtures.forRequest(request.user()), 10, 10));
+		Map<String, Object> body = body(List.of("RSA"), true);
+		faultyFileStorage.reset();
+
+		long quizId = ((Number) JsonPath.read(create(body).andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.materialContentUsed").value(true))
+				.andReturn().getResponse().getContentAsString(), "$.data.id")).longValue();
+		assertThat(faultyFileStorage.openCount()).isEqualTo(1);
+
+		create(body).andExpect(status().isOk()).andExpect(jsonPath("$.data.id").value(quizId));
+		assertThat(faultyFileStorage.openCount()).isEqualTo(1);
+		assertThat(fakeLlm.get(LlmProvider.GPT).requests()).hasSize(1);
+	}
+
+	@Test
+	void 본문을_쓰지_않거나_요청이_틀리면_본문을_읽지_않는다() throws Exception {
+		fakeLlm.get(LlmProvider.GPT).respond(request -> new LlmResponse(QuizFixtures.forRequest(request.user()), 10, 10));
+		faultyFileStorage.reset();
+		create(body(List.of("RSA"), false)).andExpect(status().isCreated());
+		Map<String, Object> noConsent = body(List.of("RSA"), true);
+		noConsent.put("materialContentConsent", false);
+		create(noConsent).andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("자료 본문을 외부 AI로 보내려면 확인에 체크해 주세요."));
+		create(body(List.of("없는개념"), true)).andExpect(status().isBadRequest());
+		assertThat(faultyFileStorage.openCount()).isZero();
+	}
+
+	@Test
+	void 본문을_읽는_동안_같은_사용자의_다른_요청을_막지_않는다() throws Exception {
+		fakeLlm.get(LlmProvider.GPT).respond(request -> new LlmResponse(QuizFixtures.forRequest(request.user()), 10, 10));
+		CountDownLatch reading = new CountDownLatch(1);
+		CountDownLatch release = new CountDownLatch(1);
+		faultyFileStorage.pauseNextOpen(reading, release);
+
+		CompletableFuture<Integer> quiz = CompletableFuture.supplyAsync(() -> statusOf(() ->
+				create(body(List.of("RSA"), true))), pool);
+		assertThat(reading.await(10, TimeUnit.SECONDS)).isTrue();
+		CompletableFuture<Integer> other = CompletableFuture.supplyAsync(() -> statusOf(() ->
+				uploadRequest(TestPdfs.withPages("Another material"))), pool);
+		try {
+			assertThat(other.get(10, TimeUnit.SECONDS)).isEqualTo(201);
+		} finally {
+			release.countDown();
+		}
+		assertThat(quiz.get(30, TimeUnit.SECONDS)).isEqualTo(201);
+		assertThat(jdbcTemplate.queryForObject("select material_content_used from quiz", Boolean.class)).isTrue();
+	}
+
+	@Test
 	void 창조만_고르고_객관식을_섞으면_모델을_부르지_않고_400과_안내를_준다() throws Exception {
 		create(body(List.of("RSA"), false, List.of("multiple_choice", "essay"), 2, List.of("create")))
 				.andExpect(status().isBadRequest())
@@ -199,11 +269,28 @@ class MaterialQuizApiTest {
 				.andExpect(status().is2xxSuccessful());
 	}
 
+	@FunctionalInterface
+	private interface Request {
+		ResultActions send() throws Exception;
+	}
+
+	private static int statusOf(Request request) {
+		try {
+			return request.send().andReturn().getResponse().getStatus();
+		} catch (Exception e) {
+			throw new IllegalStateException(e);
+		}
+	}
+
+	private ResultActions uploadRequest(byte[] content) throws Exception {
+		return mockMvc.perform(multipart("/api/materials")
+				.file(new MockMultipartFile("file", "정보보호개론.pdf", null, content))
+				.param("title", "정보보호개론").param("courseId", String.valueOf(courseId))
+				.header(HttpHeaders.AUTHORIZATION, bearer(token)));
+	}
+
 	private long upload(byte[] content) throws Exception {
-		String response = mockMvc.perform(multipart("/api/materials")
-						.file(new MockMultipartFile("file", "정보보호개론.pdf", null, content))
-						.param("title", "정보보호개론").param("courseId", String.valueOf(courseId))
-						.header(HttpHeaders.AUTHORIZATION, bearer(token)))
+		String response = uploadRequest(content)
 				.andExpect(status().isCreated())
 				.andReturn().getResponse().getContentAsString();
 		return ((Number) JsonPath.read(response, "$.data.id")).longValue();

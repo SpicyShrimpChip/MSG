@@ -46,6 +46,10 @@ import org.springframework.util.StringUtils;
  * AI 퀴즈 처리 동의, 이번 요청의 확인(materialContentConsent), 연결된 모델, 24시간 한도(뽑기 횟수·모델 요청 수),
  * 본문을 읽을 수 있음(PDF 암호·스캔본·손상은 거절), 본문에 개인정보 패턴이 없음.
  *
+ * <p>단계: (1) 사용자 행을 잠근 트랜잭션에서 자료 404·보내기 전 확인(MaterialAiGate)·과목 이름과 키워드를 읽고 커밋한다.
+ * (2) 트랜잭션 밖에서 본문을 읽고 개인정보를 검사한다(큰 PDF를 읽는 동안 같은 사용자의 다른 요청을 막지 않게).
+ * (3) 모델도 트랜잭션 밖에서 부르고, 저장할 때 다시 잠가 자료 404를 본다. 그 사이 자료가 지워지면 (2)에서 파일을 못 읽어 422가 될 수 있다.
+ *
  * <p>모델이 낸 개념은 서버가 확인한다: 개념 이름(20자 이내)이 본문에 실제로 나와야 하고, 근거 문장이 본문에 그대로 있어야 한다.
  * 근거 위치(쪽·슬라이드)는 모델 말이 아니라 서버가 본문에서 찾는다. 확인을 통과한 개념이 없으면 저장하지 않는다(502).
  * 같은 자료로 다시 뽑으면 이전 개념을 바꾼다. 모델은 설정 순서의 첫 모델 하나, 실패하면 남은 시간 안에서 다음 모델.
@@ -121,12 +125,17 @@ public class MaterialConceptService {
 		});
 	}
 
+	// 잠금 안에서 확인한 것 (material은 트랜잭션이 끝난 뒤 본문을 읽는 데만 쓴다)
+	private record Checked(Material material, String courseName, List<String> keywords, List<LlmClient> clients) {
+	}
+
 	private record Prepared(String text, String courseName, List<String> keywords, List<LlmClient> clients) {
 	}
 
 	public List<MaterialConceptResponse> extract(Long userId, Long materialId, boolean confirmed) {
-		Prepared prepared = transaction.execute(status -> prepare(userId, materialId, confirmed, QuizAiCall.CONCEPTS,
+		Checked checked = transaction.execute(status -> check(userId, materialId, confirmed, QuizAiCall.CONCEPTS,
 				properties.dailyGenerationLimit(), "핵심 개념을 뽑을"));
+		Prepared prepared = read(checked);
 		ObjectNode input = objectMapper.createObjectNode();
 		input.put("course", prepared.courseName());
 		ArrayNode keywords = input.putArray("courseKeywords");
@@ -148,7 +157,7 @@ public class MaterialConceptService {
 	}
 
 	// 학습용 설명 하나에 필요한 것: 저장된 개념, 자료 본문 발췌 (보내기 조건은 개념 뽑기와 같다)
-	private record NotePrepared(Prepared prepared, MaterialConcept concept, List<String> otherConcepts) {
+	private record NoteChecked(Checked checked, MaterialConcept concept, List<String> otherConcepts) {
 	}
 
 	/**
@@ -157,7 +166,7 @@ public class MaterialConceptService {
 	 * 경우에 남긴다. 개념 이름·근거(V10)는 바꾸지 않으므로 사전·사후평가의 개념 체계는 그대로다. 다시 만들면 이전 설명을 바꾼다.
 	 */
 	public MaterialConceptResponse explain(Long userId, Long materialId, String conceptId, boolean confirmed) {
-		NotePrepared note = transaction.execute(status -> {
+		NoteChecked note = transaction.execute(status -> {
 			// 개념 목록을 한 번 읽어 대상 개념과 다른 개념 이름을 함께 얻는다
 			List<MaterialConcept> concepts = conceptRepository.findAllByMaterialIdAndUserIdOrderBySortOrderAsc(materialId,
 					userId);
@@ -171,10 +180,10 @@ public class MaterialConceptService {
 			}
 			List<String> others = concepts.stream().map(MaterialConcept::getName)
 					.filter(name -> !name.equals(concept.getName())).toList();
-			return new NotePrepared(prepare(userId, materialId, confirmed, QuizAiCall.CONCEPT_NOTE, properties.conceptNoteDailyLimit(),
-					"개념 설명을 만들"), concept, others);
+			return new NoteChecked(check(userId, materialId, confirmed, QuizAiCall.CONCEPT_NOTE,
+					properties.conceptNoteDailyLimit(), "개념 설명을 만들"), concept, others);
 		});
-		Prepared prepared = note.prepared();
+		Prepared prepared = read(note.checked());
 		ObjectNode input = objectMapper.createObjectNode();
 		input.put("course", prepared.courseName());
 		ObjectNode target = input.putObject("concept");
@@ -249,18 +258,24 @@ public class MaterialConceptService {
 		return MaterialConceptResponse.from(concept);
 	}
 
-	private Prepared prepare(Long userId, Long materialId, boolean confirmed, String purpose, int dailyLimit,
+	// (1) 사용자 행을 잠근 트랜잭션 안에서 부른다
+	private Checked check(Long userId, Long materialId, boolean confirmed, String purpose, int dailyLimit,
 			String action) {
 		User user = userRepository.lockLoginUser(userId);
 		Material material = materialRepository.getOwned(materialId, userId);
 		List<LlmClient> clients = gate.checkBeforeSend(user, confirmed, purpose, dailyLimit,
 				new MaterialAiGate.Messages(QUIZ_CONSENT_MESSAGE, NO_MODEL_MESSAGE, MaterialAiGate.limitMessage(action)));
-		// 개념 뽑기는 본문 전체(app.material-content.max-chars까지)를 보내므로 전체를 검사한다
-		String text = gate.read(material, contentProperties.maxChars()).text();
-		gate.requireNoPersonalInfo(text);
+		// 과목 키워드는 지연 로딩이라 트랜잭션 안에서 복사해 둔다
 		Course course = gate.courseOrNull(material, userId);
-		return new Prepared(text, course == null ? material.getTitle() : course.getName(),
+		return new Checked(material, course == null ? material.getTitle() : course.getName(),
 				course == null ? List.of() : List.copyOf(course.getKeywords()), clients);
+	}
+
+	// (2) 트랜잭션 밖에서 부른다. 개념 뽑기는 본문 전체(app.material-content.max-chars까지)를 보내므로 전체를 검사한다
+	private Prepared read(Checked checked) {
+		String text = gate.read(checked.material(), contentProperties.maxChars()).text();
+		gate.requireNoPersonalInfo(text);
+		return new Prepared(text, checked.courseName(), checked.keywords(), checked.clients());
 	}
 
 	record Verified(String key, String name, String description, String location, String quote,

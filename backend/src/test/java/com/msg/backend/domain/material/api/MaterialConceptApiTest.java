@@ -21,6 +21,7 @@ import com.msg.backend.global.llm.LlmProvider;
 import com.msg.backend.global.llm.LlmRequest;
 import com.msg.backend.global.llm.LlmResponse;
 import com.msg.backend.support.FakeLlmClients;
+import com.msg.backend.support.FaultyFileStorage;
 import com.msg.backend.support.IntegrationTest;
 import com.msg.backend.support.TestApi;
 import com.msg.backend.support.TestFiles;
@@ -33,6 +34,12 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -73,6 +80,8 @@ class MaterialConceptApiTest {
 	private JdbcTemplate jdbcTemplate;
 	@Autowired
 	private Clock clock;
+	@Autowired
+	private FaultyFileStorage faultyFileStorage;
 
 	private String token;
 	private long courseId;
@@ -80,11 +89,22 @@ class MaterialConceptApiTest {
 	@BeforeEach
 	void setUp() throws Exception {
 		fakeLlm.resetAll();
+		faultyFileStorage.reset();
+		pool = Executors.newFixedThreadPool(2);
 		refreshTokenRepository.deleteAllInBatch();
 		userRepository.deleteAllInBatch();
 		token = signupAndLogin("me@example.com");
 		courseId = createCourse(List.of("VLAN", "NAT"));
 		fakeLlm.get(LlmProvider.GPT).respond(this::answer);
+	}
+
+	// 잠금 테스트의 두 요청을 공용 풀이 아닌 전용 스레드에서 보낸다 (기다리는 동안 공용 풀이 모자라지 않게)
+	private ExecutorService pool;
+
+	@AfterEach
+	void tearDown() {
+		faultyFileStorage.reset();
+		pool.shutdownNow();
 	}
 
 	// 개념 뽑기 지시문이면 개념, 아니면 요청에 맞춘 가짜 문제
@@ -189,6 +209,31 @@ class MaterialConceptApiTest {
 				.andExpect(jsonPath("$.message")
 						.value("오늘 AI 호출 한도를 다 써서 지금은 개념 설명을 만들 수 없어요. 내일 다시 시도해 주세요."));
 		assertThat(fakeLlm.get(LlmProvider.GPT).requests()).hasSize(1);
+	}
+
+	@Test
+	void 본문을_읽는_동안_같은_사용자의_다른_요청을_막지_않는다() throws Exception {
+		long material = upload("노트.txt", "VLAN은 브로드캐스트 도메인을 나눈다".getBytes());
+		extract(material, true).andExpect(status().isOk());
+		for (String target : List.of("extract", "explain")) {
+			CountDownLatch reading = new CountDownLatch(1);
+			CountDownLatch release = new CountDownLatch(1);
+			faultyFileStorage.pauseNextOpen(reading, release);
+			fakeLlm.get(LlmProvider.GPT).respond(target.equals("extract") ? this::answer
+					: request -> new LlmResponse("{\"explanation\":\"VLAN은 스위치 하나를 여러 개의 논리적인 망으로 나누는 기술이다.\"}", 10, 10));
+
+			CompletableFuture<Integer> running = CompletableFuture.supplyAsync(() -> statusOf(() ->
+					target.equals("extract") ? extract(material, true) : explain(material, "vlan", true)), pool);
+			assertThat(reading.await(10, TimeUnit.SECONDS)).as(target).isTrue();
+			CompletableFuture<Integer> other = CompletableFuture.supplyAsync(() -> statusOf(() ->
+					uploadRequest("다른.txt", "다른 자료".getBytes())), pool);
+			try {
+				assertThat(other.get(10, TimeUnit.SECONDS)).as(target).isEqualTo(201);
+			} finally {
+				release.countDown();
+			}
+			assertThat(running.get(30, TimeUnit.SECONDS)).as(target).isEqualTo(200);
+		}
 	}
 
 	@Test
@@ -361,11 +406,28 @@ class MaterialConceptApiTest {
 						"materialId", material, "kind", kind))));
 	}
 
+	@FunctionalInterface
+	private interface Request {
+		ResultActions send() throws Exception;
+	}
+
+	private static int statusOf(Request request) {
+		try {
+			return request.send().andReturn().getResponse().getStatus();
+		} catch (Exception e) {
+			throw new IllegalStateException(e);
+		}
+	}
+
+	private ResultActions uploadRequest(String name, byte[] content) throws Exception {
+		return mockMvc.perform(multipart("/api/materials")
+				.file(new MockMultipartFile("file", name, null, content))
+				.param("title", name.substring(0, name.indexOf('.'))).param("courseId", String.valueOf(courseId))
+				.header(HttpHeaders.AUTHORIZATION, bearer(token)));
+	}
+
 	private long upload(String name, byte[] content) throws Exception {
-		String response = mockMvc.perform(multipart("/api/materials")
-						.file(new MockMultipartFile("file", name, null, content))
-						.param("title", name.substring(0, name.indexOf('.'))).param("courseId", String.valueOf(courseId))
-						.header(HttpHeaders.AUTHORIZATION, bearer(token)))
+		String response = uploadRequest(name, content)
 				.andExpect(status().isCreated())
 				.andReturn().getResponse().getContentAsString();
 		return ((Number) JsonPath.read(response, "$.data.id")).longValue();

@@ -18,6 +18,7 @@ import com.msg.backend.global.llm.AiCallQuota;
 import com.msg.backend.global.llm.LlmException;
 import com.msg.backend.global.llm.LlmProvider;
 import com.msg.backend.support.FakeLlmClients;
+import com.msg.backend.support.FaultyFileStorage;
 import com.msg.backend.support.IntegrationTest;
 import com.msg.backend.support.TestApi;
 import com.msg.backend.support.TestPdfs;
@@ -31,6 +32,12 @@ import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -77,6 +84,8 @@ class MaterialSummaryApiTest {
 	private JdbcTemplate jdbcTemplate;
 	@Autowired
 	private Clock clock;
+	@Autowired
+	private FaultyFileStorage faultyFileStorage;
 
 	private String token;
 	private long courseId;
@@ -85,12 +94,23 @@ class MaterialSummaryApiTest {
 	@BeforeEach
 	void setUp() throws Exception {
 		fakeLlm.resetAll();
+		faultyFileStorage.reset();
+		pool = Executors.newFixedThreadPool(2);
 		refreshTokenRepository.deleteAllInBatch();
 		userRepository.deleteAllInBatch();
 		token = signupAndLogin("me@example.com");
 		courseId = TestApi.createCourse(mockMvc, objectMapper, token, "정보보호개론", List.of("공개키 암호", "VLAN"));
 		material = upload("정보보호개론.pdf", TestPdfs.withPages("Course introduction and history",
 				"Public key encryption uses a key pair", "VLAN splits broadcast domains"));
+	}
+
+	// 잠금 테스트의 두 요청을 공용 풀이 아닌 전용 스레드에서 보낸다 (기다리는 동안 공용 풀이 모자라지 않게)
+	private ExecutorService pool;
+
+	@AfterEach
+	void tearDown() {
+		faultyFileStorage.reset();
+		pool.shutdownNow();
 	}
 
 	@Test
@@ -261,6 +281,47 @@ class MaterialSummaryApiTest {
 	}
 
 	@Test
+	void 진행_중인_요약이_있으면_409이고_마감이_지났으면_새로_만든다() throws Exception {
+		fakeLlm.get(LlmProvider.GPT).answer(SUMMARY);
+		Long userId = jdbcTemplate.queryForObject("select id from users where email = 'me@example.com'", Long.class);
+		LocalDateTime now = LocalDateTime.now(clock);
+		jdbcTemplate.update("insert into material_summary (user_id, material_id, purpose, status, deadline_at, updated_at)"
+				+ " values (?, ?, 'EXAM_PREP', 'RUNNING', ?, ?)", userId, material,
+				Timestamp.valueOf(now.plusMinutes(1)), Timestamp.valueOf(now));
+
+		generate("exam_prep", true, false).andExpect(status().isConflict())
+				.andExpect(jsonPath("$.message").value("이 자료의 요약을 만들고 있어요. 끝난 뒤 다시 시도해 주세요."));
+		assertThat(fakeLlm.get(LlmProvider.GPT).requests()).isEmpty();
+		assertThat(faultyFileStorage.openCount()).isZero();
+
+		jdbcTemplate.update("update material_summary set deadline_at = ?", Timestamp.valueOf(now.minusMinutes(1)));
+		generate("exam_prep", true, false).andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.reused").value(false));
+		assertThat(jdbcTemplate.queryForObject("select count(*) from material_summary", Integer.class)).isEqualTo(1);
+	}
+
+	@Test
+	void 본문을_읽는_동안_같은_사용자의_다른_요청을_막지_않는다() throws Exception {
+		fakeLlm.get(LlmProvider.GPT).answer(SUMMARY);
+		CountDownLatch reading = new CountDownLatch(1);
+		CountDownLatch release = new CountDownLatch(1);
+		faultyFileStorage.pauseNextOpen(reading, release);
+
+		CompletableFuture<Integer> summary = CompletableFuture.supplyAsync(() -> statusOf(() ->
+				generate("exam_prep", true, false)), pool);
+		assertThat(reading.await(10, TimeUnit.SECONDS)).isTrue();
+		// 본문을 읽는 동안 사용자 행을 잠그는 다른 요청(자료 올리기)이 기다리지 않고 끝난다
+		CompletableFuture<Integer> other = CompletableFuture.supplyAsync(() -> statusOf(() ->
+				uploadRequest("노트.txt", "다른 자료".getBytes())), pool);
+		try {
+			assertThat(other.get(10, TimeUnit.SECONDS)).isEqualTo(201);
+		} finally {
+			release.countDown();
+		}
+		assertThat(summary.get(30, TimeUnit.SECONDS)).isEqualTo(200);
+	}
+
+	@Test
 	void 남의_자료로_요약을_만들면_404이고_모델을_부르지_않는다() throws Exception {
 		fakeLlm.get(LlmProvider.GPT).answer(SUMMARY);
 		String other = signupAndLogin("other@example.com");
@@ -319,11 +380,28 @@ class MaterialSummaryApiTest {
 				.header(HttpHeaders.AUTHORIZATION, bearer(token))).andExpect(status().isOk());
 	}
 
+	@FunctionalInterface
+	private interface Request {
+		ResultActions send() throws Exception;
+	}
+
+	private static int statusOf(Request request) {
+		try {
+			return request.send().andReturn().getResponse().getStatus();
+		} catch (Exception e) {
+			throw new IllegalStateException(e);
+		}
+	}
+
+	private ResultActions uploadRequest(String name, byte[] content) throws Exception {
+		return mockMvc.perform(multipart("/api/materials")
+				.file(new MockMultipartFile("file", name, null, content))
+				.param("title", name.substring(0, name.indexOf('.'))).param("courseId", String.valueOf(courseId))
+				.header(HttpHeaders.AUTHORIZATION, bearer(token)));
+	}
+
 	private long upload(String name, byte[] content) throws Exception {
-		String response = mockMvc.perform(multipart("/api/materials")
-						.file(new MockMultipartFile("file", name, null, content))
-						.param("title", name.substring(0, name.indexOf('.'))).param("courseId", String.valueOf(courseId))
-						.header(HttpHeaders.AUTHORIZATION, bearer(token)))
+		String response = uploadRequest(name, content)
 				.andExpect(status().isCreated())
 				.andReturn().getResponse().getContentAsString();
 		return ((Number) JsonPath.read(response, "$.data.id")).longValue();

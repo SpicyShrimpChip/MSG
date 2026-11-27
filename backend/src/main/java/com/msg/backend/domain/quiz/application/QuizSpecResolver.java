@@ -33,6 +33,8 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -40,6 +42,8 @@ import org.springframework.util.StringUtils;
 
 /**
  * 퀴즈 만들기 요청을 검사해 QuizSpec으로 만든다. 사용자 행을 잠근 QuizGenerationService의 트랜잭션 안에서 부른다.
+ * 자료 본문은 잠금 밖에서 미리 읽어(contentPlan → readContent) 넘길 수 있다. 미리 읽은 것과 자료·개념·표시가 같을 때만 쓰고,
+ * 다르면(그 사이 사전평가·자료 개념이 바뀜) 여기서 다시 읽는다.
  *
  * <p>검사 순서(첫 오류를 돌려준다): 과목 → 자료 → 평가 종류 → 개념 확인 퀴즈 → 사후평가의 사전평가 → 모드 → 유형 → 문제 수·모의시험
  * → 난이도 → 인지 수준 → 개념 → 시험 범위 → 직무 분야 → 자료 본문. 사후평가는 사전평가의 개념·유형·문항 수·난이도·모드·인지 수준을 쓰고
@@ -110,14 +114,86 @@ class QuizSpecResolver {
 		}
 	}
 
-	private record Content(String excerpt, String note, List<String> scope, List<String> missing) {
+	record Content(String excerpt, String note, List<String> scope, List<String> missing) {
 
 		static Content none(String note) {
 			return new Content(null, note, List.of(), List.of());
 		}
 	}
 
+	/** 본문을 읽어야 하는 요청이면 무엇을 읽을지. material은 트랜잭션이 끝난 뒤 읽기에만 쓴다 */
+	record ContentPlan(Material material, List<String> concepts, String note) {
+
+		boolean sameAs(ContentPlan other) {
+			return other != null && material.getId().equals(other.material.getId())
+					&& Objects.equals(material.getStorageKey(), other.material.getStorageKey())
+					&& concepts.equals(other.concepts) && Objects.equals(note, other.note);
+		}
+	}
+
+	/** 잠금 밖에서 미리 읽은 자료 본문 */
+	record PrefetchedContent(ContentPlan plan, Content content) {
+	}
+
+	/**
+	 * 본문을 미리 읽을 수도 있는 요청인지 검사 없이 빠르게 거른다: 전송 기능이 켜져 있고 자료를 골랐고, 본문 보내기를 골랐거나
+	 * 사후평가(사전평가가 본문을 썼으면 같게)일 때만. 아니면 미리 읽지 않고 잠금 안의 검사가 그대로 판단한다.
+	 */
+	boolean mayUseContent(QuizCreateRequest request) {
+		return contentProperties.enabled() && request.materialId() != null
+				&& (Boolean.TRUE.equals(request.useMaterialContent()) || (StringUtils.hasText(request.assessmentKind())
+						&& AssessmentKind.fromApiValue(request.assessmentKind()).orElse(null) == AssessmentKind.POST));
+	}
+
+	/**
+	 * 잠금 밖 미리 읽기용: resolve와 같은 순서로 요청을 검사하고(오류도 같다), 본문을 읽어야 하면 무엇을 읽을지 돌려준다.
+	 * 트랜잭션 안에서 부른다(사용자 행 잠금은 필요 없다).
+	 */
+	Optional<ContentPlan> contentPlan(Long userId, QuizCreateRequest request) {
+		return Optional.ofNullable(draft(userId, request).plan());
+	}
+
+	/** 트랜잭션 밖에서 부른다: 본문을 읽어 개념이 나오는 부분을 고른다 */
+	PrefetchedContent readContent(ContentPlan plan) {
+		return new PrefetchedContent(plan, read(plan));
+	}
+
 	QuizSpec resolve(Long userId, QuizCreateRequest request) {
+		return resolve(userId, request, null);
+	}
+
+	QuizSpec resolve(Long userId, QuizCreateRequest request, PrefetchedContent prefetched) {
+		Draft draft = draft(userId, request);
+		Content content;
+		if (draft.plan() == null) {
+			content = draft.noContent();
+		} else if (prefetched != null && draft.plan().sameAs(prefetched.plan())) {
+			content = prefetched.content();
+		} else {
+			content = read(draft.plan());
+		}
+		return draft.toSpec(content);
+	}
+
+	// 본문을 빼고 검사를 마친 요청. 본문은 plan이 있으면 읽고, 없으면 noContent
+	private record Draft(Course course, Material material, QuizMode mode, Set<QuestionType> types, int count,
+			QuizDifficulty difficulty, List<String> concepts, String examScope, JobField jobField, String jobFieldOther,
+			boolean mockExam, AssessmentKind kind, Pre pre, String conceptSource, MaterialConcept checkConcept,
+			List<BloomLevel> bloomTargets, ContentPlan plan, Content noContent) {
+
+		QuizSpec toSpec(Content content) {
+			return new QuizSpec(course, material == null ? null : material.getId(),
+					material == null ? null : material.getTitle(), mode, List.copyOf(types),
+					QuizTypePlan.plan(mode, types, count), difficulty, concepts, examScope, jobField, jobFieldOther, mockExam,
+					kind, pre.quiz() == null ? null : pre.quiz().getId(),
+					pre.questions().stream().map(QuizQuestion::getContent).limit(MAX_AVOID_QUESTIONS).toList(),
+					content.excerpt(), content.note(), conceptSource,
+					checkConcept == null ? null : checkConcept.getConceptKey(),
+					checkConcept == null ? null : checkConcept.getName(), bloomTargets, content.scope(), content.missing());
+		}
+	}
+
+	private Draft draft(Long userId, QuizCreateRequest request) {
 		Course course = courseRepository.getOwned(request.courseId(), userId);
 		Material material = material(userId, request, course);
 		AssessmentKind kind = assessmentKind(request, material);
@@ -164,15 +240,10 @@ class QuizSpecResolver {
 				jobFieldOther = user.getJobFieldOther();
 			}
 		}
-		Content content = materialContent(request, material, pre.quiz(), concepts);
-		return new QuizSpec(course, material == null ? null : material.getId(),
-				material == null ? null : material.getTitle(), mode, List.copyOf(types),
-				QuizTypePlan.plan(mode, types, count), difficulty, concepts, examScope, jobField, jobFieldOther, mockExam,
-				kind, pre.quiz() == null ? null : pre.quiz().getId(),
-				pre.questions().stream().map(QuizQuestion::getContent).limit(MAX_AVOID_QUESTIONS).toList(),
-				content.excerpt(), content.note(), conceptSource,
-				checkConcept == null ? null : checkConcept.getConceptKey(),
-				checkConcept == null ? null : checkConcept.getName(), bloomTargets, content.scope(), content.missing());
+		ContentPlan plan = materialContent(request, material, pre.quiz(), concepts);
+		return new Draft(course, material, mode, types, count, difficulty, concepts, examScope, jobField, jobFieldOther,
+				mockExam, kind, pre, conceptSource, checkConcept, bloomTargets, plan,
+				plan == null ? Content.none(noContentNote(pre.quiz())) : null);
 	}
 
 	// 인지 수준: 사후평가는 사전평가에서 고른 수준(없으면 사전평가 문제의 수준), 아니면 요청 값, 없으면 모드 기본값
@@ -306,17 +377,17 @@ class QuizSpecResolver {
 		return examScope;
 	}
 
-	// 학습자료 본문: 사용자가 이 요청에서 보내기를 고르고 확인한 경우에만 읽는다. 사후평가는 사전평가가 본문을 썼으면 같게
-	private Content materialContent(QuizCreateRequest request, Material material, Quiz pre, List<String> concepts) {
+	// 학습자료 본문: 사용자가 이 요청에서 보내기를 고르고 확인한 경우에만 읽는다. 사후평가는 사전평가가 본문을 썼으면 같게.
+	// 읽어야 하면 무엇을 읽을지, 아니면 null (읽지 않을 때의 표시는 noContentNote)
+	private ContentPlan materialContent(QuizCreateRequest request, Material material, Quiz pre, List<String> concepts) {
 		boolean requested = Boolean.TRUE.equals(request.useMaterialContent());
 		if (requested && !contentProperties.enabled()) {
 			// 운영 설정·처리방침 확정 전에는 자료 본문을 외부로 보내지 않는다
 			throw new BusinessException(HttpStatus.FORBIDDEN, MaterialContentProperties.DISABLED_MESSAGE);
 		}
 		boolean wantContent = contentProperties.enabled() && (requested || (pre != null && pre.isMaterialContentUsed()));
-		String note = pre != null && pre.isMaterialContentUsed() && !contentProperties.enabled() ? "DISABLED" : null;
 		if (!wantContent) {
-			return Content.none(note);
+			return null;
 		}
 		if (material == null) {
 			throw badRequest(CONTENT_NEEDS_MATERIAL_MESSAGE);
@@ -324,6 +395,19 @@ class QuizSpecResolver {
 		if (!Boolean.TRUE.equals(request.materialContentConsent())) {
 			throw badRequest(MaterialAiGate.CONSENT_MESSAGE);
 		}
+		return new ContentPlan(material, List.copyOf(concepts), noContentNote(pre));
+	}
+
+	// 사전평가가 본문을 썼는데 지금 전송 기능이 꺼져 있으면 DISABLED
+	private String noContentNote(Quiz pre) {
+		return pre != null && pre.isMaterialContentUsed() && !contentProperties.enabled() ? "DISABLED" : null;
+	}
+
+	// 본문을 읽어 개념이 나오는 부분을 고른다. 읽지 못하거나 개인정보가 있으면 본문 없이(이유만 남김)
+	private Content read(ContentPlan plan) {
+		Material material = plan.material();
+		List<String> concepts = plan.concepts();
+		String note = plan.note();
 		MaterialTextExtractor.Extracted extracted = textExtractor.extract(material, contentProperties.sourceMaxChars());
 		if (extracted.status() != MaterialTextExtractor.Status.OK) {
 			return Content.none(extracted.status().name());
