@@ -358,10 +358,16 @@ class QuizGenerationApiTest {
 				.andExpect(jsonPath("$.data[0].gradedCount").value(3))
 				.andExpect(jsonPath("$.data[0].score").value(2))
 				.andExpect(jsonPath("$.data[0].maxScore").value(8))
+				// 점수 합은 2/8이지만 문제마다 센 득점률 합은 1 + 1 + 0
+				.andExpect(jsonPath("$.data[0].ratedCount").value(3))
+				.andExpect(jsonPath("$.data[0].rateSum").value(2.0))
 				.andExpect(jsonPath("$.data[0].weak").value(true))
 				.andExpect(jsonPath("$.data[0].confirmation").value("not_confirmed"))
 				.andExpect(jsonPath("$.data[1].conceptId").value("vlan"))
-				.andExpect(jsonPath("$.data[1].questionCount").value(1));
+				.andExpect(jsonPath("$.data[1].questionCount").value(1))
+				// 개념이 둘인 서술형 하나의 득점률이 vlan에도 한 번 들어간다
+				.andExpect(jsonPath("$.data[1].ratedCount").value(1))
+				.andExpect(jsonPath("$.data[1].rateSum").value(0.0));
 
 		mockMvc.perform(get("/api/quizzes/concept-stats").param("courseId", String.valueOf(courseId))
 						.header(HttpHeaders.AUTHORIZATION, bearer(otherToken)))

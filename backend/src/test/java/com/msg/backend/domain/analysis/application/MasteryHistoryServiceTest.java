@@ -49,4 +49,12 @@ class MasteryHistoryServiceTest {
 		assertThat(MasteryHistoryService.shouldRecord("partial", null, mastery("normal", 3, 0.67, 1, "understood")))
 				.isTrue();
 	}
+
+	@Test
+	void 산식_버전만_바뀌어도_기록한다() {
+		var v2 = new AnalysisRunResponse.Mastery("normal", null, 0, 3, 0.67, 1, "understood", "2", null, List.of());
+
+		assertThat(MasteryHistoryService.shouldRecord("completed", LAST, v2)).isTrue();
+		assertThat(MasteryHistoryService.shouldRecord("partial", LAST, v2)).isTrue();
+	}
 }

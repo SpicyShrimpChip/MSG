@@ -277,4 +277,8 @@ export interface ConceptQuizStats extends QuizConceptStat {
   confirmation:
     'confirmed' | 'not_confirmed' | 'needs_check' | 'not_taken' | null;
   lastSubmittedAt: string | null;
+  // 숙련도에 넣은 문제 수 (채점이 끝나고 만점이 있는 문제)
+  ratedCount: number;
+  // 그 문제마다 (얻은 점수 ÷ 그 문제 만점)을 더한 값. 숙련도 계산에 쓴다
+  rateSum: number;
 }

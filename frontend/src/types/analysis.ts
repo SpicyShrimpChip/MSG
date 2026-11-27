@@ -138,6 +138,7 @@ export interface ConceptMastery {
   score: number | null;
   evidenceWeight: number;
   quizGradedCount: number;
+  // 문제별 평균 득점률 (0~1, 문제마다 점수 ÷ 만점의 평균). 퀴즈 근거가 없으면 null
   quizRate: number | null;
   conversationCount: number;
   conversationStatus: ConversationUnderstanding | null;
@@ -153,6 +154,7 @@ export interface MasteryRecord {
   recordedAt: string;
   level: MasteryStage;
   quizGradedCount: number;
+  // 문제별 평균 득점률 (0~1). 퀴즈 근거가 없으면 null. 산식 1 기록은 점수 합 비율
   quizRate: number | null;
   conversationCount: number;
   conversationStatus: ConversationUnderstanding | null;
