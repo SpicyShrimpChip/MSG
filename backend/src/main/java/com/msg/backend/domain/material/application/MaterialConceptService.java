@@ -135,7 +135,7 @@ public class MaterialConceptService {
 		LlmRequest request = new LlmRequest(SYSTEM, input.toString(), properties.conceptMaxOutputTokens());
 		Instant deadline = clock.instant().plus(properties.generationDeadline());
 		QuizModelFallback.Tracker tracker = new QuizModelFallback.Tracker(null);
-		var success = modelFallback.run(prepared.clients(),
+		var success = modelFallback.runOrBadGateway(prepared.clients(),
 				new QuizModelFallback.Call(userId, QuizAiCall.CONCEPTS, null, request, deadline, false), raw -> {
 					List<Verified> verified = verify(raw, prepared);
 					if (verified.isEmpty()) {
@@ -143,11 +143,8 @@ public class MaterialConceptService {
 						return Optional.empty();
 					}
 					return Optional.of(verified);
-				}, tracker);
-		if (success.isPresent()) {
-			return transaction.execute(status -> save(userId, materialId, success.get().value(), success.get().client()));
-		}
-		throw new BusinessException(HttpStatus.BAD_GATEWAY, tracker.anyResponse() ? NO_VALID_MESSAGE : MODEL_FAILED_MESSAGE);
+				}, tracker, NO_VALID_MESSAGE, MODEL_FAILED_MESSAGE);
+		return transaction.execute(status -> save(userId, materialId, success.value(), success.client()));
 	}
 
 	// 학습용 설명 하나에 필요한 것: 저장된 개념, 자료 본문 발췌 (보내기 조건은 개념 뽑기와 같다)
@@ -189,19 +186,16 @@ public class MaterialConceptService {
 		LlmRequest request = new LlmRequest(NOTE_SYSTEM, input.toString(), properties.conceptNoteMaxOutputTokens());
 		Instant deadline = clock.instant().plus(properties.generationDeadline());
 		QuizModelFallback.Tracker tracker = new QuizModelFallback.Tracker(null);
-		var success = modelFallback.run(prepared.clients(),
+		var success = modelFallback.runOrBadGateway(prepared.clients(),
 				new QuizModelFallback.Call(userId, QuizAiCall.CONCEPT_NOTE, null, request, deadline, false), raw -> {
 					Optional<Note> parsed = parseNote(raw, prepared.text());
 					if (parsed.isEmpty()) {
 						log.warn("{} 모델의 개념 설명 형식이 맞지 않았다", tracker.last().provider());
 					}
 					return parsed;
-				}, tracker);
-		if (success.isPresent()) {
-			return transaction.execute(status -> saveNote(userId, materialId, conceptId, success.get().value(),
-					success.get().client()));
-		}
-		throw new BusinessException(HttpStatus.BAD_GATEWAY, tracker.anyResponse() ? NOTE_INVALID_MESSAGE : NOTE_FAILED_MESSAGE);
+				}, tracker, NOTE_INVALID_MESSAGE, NOTE_FAILED_MESSAGE);
+		return transaction.execute(status -> saveNote(userId, materialId, conceptId, success.value(),
+				success.client()));
 	}
 
 	record Note(String explanation, String materialContext, String contextQuote, String contextLocation,
