@@ -44,8 +44,8 @@ const layoutSchema = z.object({
 export const DEFAULT_LAYOUT: DashboardLayout = {
   explanation: null,
   items: [
-    { component: 'summary', order: 1, size: 'wide', aiReason: null },
-    { component: 'concepts', order: 2, size: 'wide', aiReason: null },
+    { component: 'concepts', order: 1, size: 'wide', aiReason: null },
+    { component: 'summary', order: 2, size: 'wide', aiReason: null },
     { component: 'models', order: 3, size: 'wide', aiReason: null },
   ],
 };

@@ -78,7 +78,7 @@ function Tile({
   more?: ReactNode;
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-2.5 rounded-xl bg-surface-muted p-4">
+    <div className="flex min-w-0 flex-col gap-2 xl:border-l xl:border-line xl:pl-6 xl:first:border-l-0 xl:first:pl-0">
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-caption font-semibold text-ink-soft">{label}</h3>
         {more}
@@ -232,7 +232,7 @@ interface SummaryStripProps {
   layoutReason?: string | null;
 }
 
-// 대시보드 맨 위 요약 칸 4개. 모두 코드가 센 값이다(숙련도·모델 의견은 이번 분석, 평가·진도는 과목 기록)
+// 대시보드 요약 칸 4개(기본 배치에서 공부할 개념 목록 바로 아래). 상자 대신 얇은 세로선으로 나눈다. 모두 코드가 센 값이다(숙련도·모델 의견은 이번 분석, 평가·진도는 과목 기록)
 function SummaryStrip({ run, layoutReason }: SummaryStripProps) {
   const overview = summarizeConcepts(run.concepts);
   return (
@@ -241,7 +241,7 @@ function SummaryStrip({ run, layoutReason }: SummaryStripProps) {
       description="모든 숫자는 정해진 규칙으로 센 값이에요."
       layoutReason={layoutReason}
     >
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-x-8 gap-y-6 sm:grid-cols-2 xl:grid-cols-4 xl:gap-x-6">
         <Tile label={`개념별 숙련도 · ${overview.total}개`}>
           <div
             className="flex h-2.5 gap-0.5 overflow-hidden rounded-full"
