@@ -7,6 +7,7 @@ import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -24,6 +25,8 @@ import java.util.regex.Pattern;
  * 한 부분 안에 인용 낱말이 60% 이상 있으면 PARTIAL, 아니면 FAILED, 인용이 없거나 너무 짧으면(10자 미만, 지시문은 10~200자) INSUFFICIENT.
  * PARTIAL의 인용은 원문이 아니라 AI가 쓴 문장이므로 돌려주지 않는다(위치만 준다). 화면이 원문 인용으로 보여 주지 않게.
  * 위치는 AI가 적은 값이 아니라 인용을 찾은 자리 앞의 마지막 위치 표시다.</li>
+ * <li>찾기(locate): check의 그대로 있음(VERIFIED) 판정과 위치 찾기만. 자료 핵심 개념·개념 설명의 인용도 이 규칙으로 대조한다
+ * (길이 기준·일부 일치 없음은 그 기능의 규칙이라 MaterialConceptService에 있다).</li>
  * </ul>
  * 인용이 원문에 있다는 것만 확인한다. 그 인용을 바탕으로 쓴 설명·정답이 사실인지는 확정하지 않는다.
  */
@@ -51,6 +54,10 @@ public final class SourceText {
 	 * filtered는 개념이 나오는 부분을 골랐는지(false면 앞에서부터 채움), truncated는 예산 때문에 빠진 부분이 있는지
 	 */
 	public record Selection(String text, List<String> locations, boolean filtered, boolean truncated) {
+	}
+
+	/** 인용을 찾은 자리. location은 그 앞의 마지막 위치 표시(없으면 null) */
+	public record Located(String location) {
 	}
 
 	/** 인용 확인 결과. quote는 원문에 그대로 있는 인용(VERIFIED일 때만, 나머지는 null), location은 서버가 찾은 위치 */
@@ -188,6 +195,19 @@ public final class SourceText {
 	}
 
 	/**
+	 * 인용이 글 안에 그대로 있는지 공백·대소문자 차이를 무시하고 찾는다. 있으면 그 앞의 마지막 위치 표시, 없거나 인용이 비면 빈 값.
+	 */
+	public static Optional<Located> locate(String text, String quote) {
+		String needle = compact(quote);
+		if (needle.isEmpty()) {
+			return Optional.empty();
+		}
+		String haystack = compact(text);
+		int at = haystack.indexOf(needle);
+		return at < 0 ? Optional.empty() : Optional.of(new Located(compactLocation(haystack, at)));
+	}
+
+	/**
 	 * AI가 든 인용을 실제로 보낸 글(위치 표시 포함)에서 확인한다.
 	 */
 	public static QuoteCheck check(String sentText, String quote) {
@@ -198,12 +218,10 @@ public final class SourceText {
 		if (trimmed.length() > MAX_QUOTE_LENGTH) {
 			trimmed = trimmed.substring(0, MAX_QUOTE_LENGTH);
 		}
-		String haystack = compact(sentText);
-		String needle = compact(trimmed);
-		int at = needle.isEmpty() ? -1 : haystack.indexOf(needle);
+		Optional<Located> found = locate(sentText, trimmed);
 		SourceText parsed = parse(sentText);
-		if (at >= 0) {
-			String location = compactLocation(haystack, at);
+		if (found.isPresent()) {
+			String location = found.get().location();
 			return new QuoteCheck(VerificationStatus.VERIFIED, trimmed, location, sectionText(parsed, location));
 		}
 		// 일부 일치: 한 부분 안에 인용 낱말이 충분히 있으면
