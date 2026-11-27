@@ -85,10 +85,10 @@ function MaterialCard({
   const date = formatDate(material.createdAt);
   return (
     <li className={LIST_ROW_CLASS}>
-      <div className="flex min-w-0 flex-col gap-1.5">
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <Link
           to={`/materials/${material.id}`}
-          className="font-semibold text-heading hover:text-primary hover:underline"
+          className="font-semibold break-words text-heading hover:text-primary hover:underline"
         >
           {material.title}
         </Link>

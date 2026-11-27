@@ -59,7 +59,7 @@ function KeywordInput({ id, keywords, onChange }: KeywordInputProps) {
           onBlur={commit}
           placeholder={keywords.length === 0 ? '프로세스, 스케줄링' : ''}
           aria-describedby={`${id}-error`}
-          className="h-7 min-w-24 flex-1 bg-transparent px-1 text-body outline-none placeholder:text-ink-muted"
+          className="h-7 min-w-24 flex-1 bg-transparent px-1 text-body outline-hidden placeholder:text-ink-muted"
         />
       </div>
       <p

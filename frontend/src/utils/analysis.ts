@@ -6,6 +6,7 @@ import type {
   ConceptResult,
   LatestAnalysis,
   MasteryStage,
+  ModelRunStatus,
   UnderstandingStatus,
 } from '@/types';
 
@@ -29,6 +30,21 @@ export const UNDERSTANDING_LABEL: Record<UnderstandingStatus, string> = {
   not_understood: '이해 부족',
   insufficient_evidence: '판단 근거 부족',
 };
+
+// 모델 표식 칸 아래 짧은 글자. 칸이 좁아 "판단 근거 부족"을 "근거 부족"으로 줄인다
+const VERDICT_MARK_LABEL: Record<UnderstandingStatus, string> = {
+  ...UNDERSTANDING_LABEL,
+  insufficient_evidence: '근거 부족',
+};
+
+// 판단이 없으면 연결 안 된 모델("연결 안 됨")과 연결됐지만 실패했거나 그 개념을 빠뜨린 모델("판단 없음")을 나눈다
+export function verdictMarkLabel(
+  status: UnderstandingStatus | null,
+  modelStatus: ModelRunStatus,
+): string {
+  if (status) return VERDICT_MARK_LABEL[status];
+  return modelStatus === 'not_configured' ? '연결 안 됨' : '판단 없음';
+}
 
 // 모델들의 판단을 정확도가 아니라 "몇 개 모델이 같은 판단을 했는지"로 읽는다
 export function describeComparison(comparison: ConceptComparison): string {

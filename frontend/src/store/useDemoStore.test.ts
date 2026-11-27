@@ -15,6 +15,7 @@ import {
   startAnalysis,
 } from '@/api';
 import { api } from '@/api/axios';
+import { useAuthStore } from '@/store/useAuthStore';
 import {
   DEMO_AVAILABLE,
   NO_BACKEND,
@@ -87,6 +88,37 @@ describe('실제 서버 빌드의 체험 모드', () => {
     useDemoStore.getState().start();
     await restoreSession();
     expect(refresh).toHaveBeenCalledTimes(1);
+    vi.unstubAllGlobals();
+  });
+
+  // "로그인한 적 있음" 표시만 있는 저장소. 표시를 지우는지 removeItem으로 본다
+  const stubSessionHint = () => {
+    const removeItem = vi.fn();
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => (key === 'msg-has-session' ? '1' : null),
+      setItem: () => undefined,
+      removeItem,
+      key: () => null,
+      length: 0,
+    });
+    return removeItem;
+  };
+
+  it('체험 중 새로고침은 이 탭만 익명으로 두고, 다른 탭이 쓰는 로그인 표시는 지우지 않는다', async () => {
+    const removeItem = stubSessionHint();
+    useDemoStore.getState().start();
+    await restoreSession();
+    expect(useAuthStore.getState().status).toBe('anonymous');
+    expect(removeItem).not.toHaveBeenCalledWith('msg-has-session');
+    vi.unstubAllGlobals();
+  });
+
+  it('체험이 아닌데 세션 갱신이 실패하면 로그인 표시를 지운다', async () => {
+    const removeItem = stubSessionHint();
+    vi.spyOn(api, 'post').mockRejectedValue(new Error('쿠키 만료'));
+    await restoreSession();
+    expect(useAuthStore.getState().status).toBe('anonymous');
+    expect(removeItem).toHaveBeenCalledWith('msg-has-session');
     vi.unstubAllGlobals();
   });
 });

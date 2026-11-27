@@ -6,6 +6,7 @@ import {
   PROVIDER_LABEL,
   cn,
   describeComparison,
+  verdictMarkLabel,
 } from '@/utils';
 import ConceptFeedbackBox from './ConceptFeedbackBox';
 import ConceptJudgments from './ConceptJudgments';
@@ -101,23 +102,19 @@ function ConceptRow({
             <span className="text-caption text-ink-muted">숙련도 계산 전</span>
           )}
         </span>
-        <span
-          role="list"
-          aria-label="모델별 판단"
-          className="col-span-2 col-start-2 flex gap-1.5 lg:col-span-1 lg:col-start-4 lg:row-start-1"
-        >
+        <span className="col-span-2 col-start-2 flex gap-1.5 lg:col-span-1 lg:col-start-4 lg:row-start-1">
+          <span className="sr-only">모델별 판단 </span>
           {models.map((model) => {
             const judgment = concept.judgments.find(
               (item) => item.provider === model.provider,
             );
+            const status = judgment?.status ?? null;
             return (
               <ModelVerdictMark
                 key={model.provider}
                 provider={PROVIDER_LABEL[model.provider]}
-                status={judgment?.status ?? null}
-                missingLabel={
-                  model.status === 'not_configured' ? '연결 안 됨' : undefined
-                }
+                status={status}
+                label={verdictMarkLabel(status, model.status)}
               />
             );
           })}
@@ -191,7 +188,7 @@ function ConceptList({
   return (
     <Panel
       title="공부할 순서대로 본 개념"
-      description="순서는 정해진 규칙으로 정해요: 더 공부하겠다고 고른 개념, 이해 부족, 부분 이해, 의견이 갈린 개념, 근거 부족, 이해 순이에요. 오른쪽 세 칸은 모델마다의 판단이고, 숙련도는 퀴즈와 대화 판단을 규칙으로 계산한 단계예요. 줄을 누르면 근거가 펼쳐져요."
+      description="순서는 정해진 규칙으로 정해요: 더 공부하겠다고 고른 개념, 이해 부족, 부분 이해, 의견이 갈린 개념, 근거 부족, 이해 순이에요. 모델 이름이 붙은 칸은 모델마다의 판단이고, 숙련도는 퀴즈와 대화 판단을 규칙으로 계산한 단계예요. 줄을 누르면 근거가 펼쳐져요."
       layoutReason={layoutReason}
     >
       {concepts.length === 0 ? (

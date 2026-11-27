@@ -12,6 +12,7 @@ import {
   newestAnalysisId,
   sortByStudyOrder,
   summarizeConcepts,
+  verdictMarkLabel,
 } from './analysis';
 
 const comparison = (
@@ -39,6 +40,25 @@ describe('describeComparison', () => {
 
   it('정확도처럼 퍼센트로 보여 주지 않는다', () => {
     expect(describeComparison(comparison('majority', 3, 2))).not.toMatch(/%/);
+  });
+});
+
+describe('verdictMarkLabel', () => {
+  it('판단이 있으면 칸에 맞는 짧은 글자를 쓴다', () => {
+    expect(verdictMarkLabel('understood', 'succeeded')).toBe('이해');
+    expect(verdictMarkLabel('partial', 'succeeded')).toBe('부분 이해');
+    expect(verdictMarkLabel('not_understood', 'succeeded')).toBe('이해 부족');
+    expect(verdictMarkLabel('insufficient_evidence', 'succeeded')).toBe(
+      '근거 부족',
+    );
+  });
+  it("연결 안 된 모델은 '연결 안 됨'", () => {
+    expect(verdictMarkLabel(null, 'not_configured')).toBe('연결 안 됨');
+  });
+  it("연결됐지만 실패했거나 그 개념을 빠뜨린 모델은 '판단 없음'", () => {
+    expect(verdictMarkLabel(null, 'failed')).toBe('판단 없음');
+    expect(verdictMarkLabel(null, 'invalid_output')).toBe('판단 없음');
+    expect(verdictMarkLabel(null, 'succeeded')).toBe('판단 없음');
   });
 });
 
