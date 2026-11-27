@@ -12,7 +12,7 @@
 
 ## 3. 움직임
 
-- `main.tsx`에서 `LazyMotion`(필요한 기능만, `strict`)과 `MotionConfig reducedMotion="user"`로 감쌌다.
+- `main.tsx`에서 `LazyMotion`(필요한 기능만, `strict`)과 `MotionConfig reducedMotion="user"`로 감쌌다. 그래서 `motion.div` 대신 `motion/react-m`의 `m.div`를 쓴다(`motion.*`은 번들을 키우고 `strict`라 오류가 난다).
 - 단순한 색·그림자 전환은 `index.css`가 링크·버튼·입력칸에 기본으로 걸어 둔다.
 - 페이지 전환은 `PageTransition`(본문 페이드인), 코드 불러오는 동안은 `NavigationProgress`(화면 위 진행 막대).
 - 스크롤에 따라 장면이 바뀌는 구간(메인 스크롤 소개): 긴 구간 안에 `sticky` 무대를 두고 `useScroll`의 진행도로 단계를 넘긴다. 장면 전환 곡선은 `SWEEP_TRANSITION`. 장면은 가짜 브라우저 틀(창 점·주소줄) 없이 흰 카드에 화면 이름표만 달고(`SceneCard`), 왼쪽에는 작은 단계 표시·짧은 제목·한두 줄 설명과 지금 단계만 잉크 선으로 짚는 단계 이름 목록을 둔다. 장면 안 요소는 `SceneMotion`의 `Reveal`·`MaskSwap`·`SlotItem`으로 차례로 움직이고, 좁은 화면·"동작 줄이기"에서는 `SceneMotionContext`를 꺼서 고정 없이 세로로 쌓고 마지막 모습만 보여 준다.
@@ -62,12 +62,12 @@
 - **Web Worker:** 파일 읽기(zip 풀기·파싱, `utils/conversation/readExportFiles.ts`)와 가리기(가린 곳 목록 포함, `maskConversationWithSpots`)는 대화 처리 Worker(`utils/conversation/worker/`)에서 한다. 화면은 `readExportFilesOffThread`·`maskConversationsOffThread`(가리기 단계는 `useMaskedConversations`)만 부르고, Worker를 만들 수 없거나 깨지면 같은 함수를 화면 스레드에서 부른다.
 - **러스트 WebAssembly(`wasm/conversation-core`):** zip 항목 압축 풀기·CRC 확인과 개인정보 가리기는 러스트 크레이트를 WASM으로 빌드해 Worker에서 부른다(`utils/conversation/core.ts`, 쓰기 전에 `loadConversationCore()`). JSON 파싱은 브라우저 `JSON.parse`(이미 네이티브)를 그대로 쓴다. 위치는 UTF-16 단위로 돌려준다. 테스트는 `src/test/setupWasm.ts`가 WASM을 먼저 초기화한다. zip 열기에 쓰던 fflate는 이제 테스트에서 zip을 만들 때만 쓴다(개발 의존성). 측정(글 344만 자·zip 52MB, Node): 압축 풀기+CRC는 예전 JS(fflate)보다 2.3배 빠르고, 가리기는 V8 정규식과 비슷하거나 조금 느리다
 - **파일 읽기:** 내보낸 zip을 압축 풀지 않고 받는다. `utils/conversation/archive.ts`가 zip을 `Blob.slice`로 필요한 부분만 읽는다(3GB zip도 통째로 메모리에 올리지 않는다). `zipReader.ts`가 끝의 중앙 목차(ZIP64 포함)를 읽어 대화 기록 파일(`conversations*.json`)만 꺼내 풀고(deflate 해제·CRC 확인은 러스트 WASM, 푼 크기 합계 상한 300MB), 목차가 없는 잘린 zip은 앞에서부터 로컬 헤더를 따라가며 건지고 "파일이 잘려 있어요" 안내를 낸다. 잘린 ChatGPT zip(3.5GB, 대화 527개)을 이 방식으로 읽는 것까지 확인했다. 크기를 데이터 뒤에 적는 zip(data descriptor)은 아직 못 읽는다. 대화 없이 알려진 파일(`user.json`, `conversation_asset_file_names.json` 등)은 이름으로 알아보고 조용히 건너뛴다(회색 안내 `MergedImport.notices`). 압축을 푼 `conversations.json`도 받는다. 여러 파일을 고르면 `merge.ts`가 같은 대화를 하나로 합친다
-- **서비스별 구조:** `utils/conversation/sources/`(`chatgpt.ts`, `claude.ts`)에 서비스마다 파일을 알아보고 읽는 방법을 둔다. Claude·ChatGPT 모두 실제 내보내기 파일로 확인했다. ChatGPT 답변의 출처·위젯 표시(`종류인자`)는 파서가 지우고 이름·링크 글자만 남긴다
-- **Claude 목록 파일:** Claude 내보내기는 먼저 "다운로드 목록 파일"(`manifest-....json`, 대화 없음)을 준다. `manifest.ts`가 알아보고 안의 zip 링크만 보여 준다
+- **서비스별 구조:** `utils/conversation/sources/`(`chatgpt.ts`, `claude.ts`)에 서비스마다 파일을 알아보고 읽는 방법을 두고, 새 서비스는 `index.ts`에 추가한다(Gemini는 2단계 후보). Claude·ChatGPT 모두 실제 내보내기 파일로 확인했다. ChatGPT 답변의 출처·위젯 표시(`종류인자`)는 파서가 지우고 이름·링크 글자만 남긴다
+- **Claude 목록 파일:** Claude 내보내기는 먼저 "다운로드 목록 파일"(`manifest-....json`, 대화 없음)을 준다. `manifest.ts`가 알아보고 안의 zip 링크만 보여 준다. 그 링크를 우리 서버가 대신 열지 않는다(claude.ai 로그인이 필요하고 원본이 서버로 오면 안 된다)
 - **고르기:** `assign.ts`가 내 과목 키워드로 공부한 대화를 과목별로 나누고, `search.ts`가 본문 검색·정렬을 한다(모두 브라우저 안). 키워드는 대소문자를 무시하고, **영문 키워드(ASCII 영문·숫자와 공백·`./+#&-`로만 된 것)는 낱말 경계에서만** 찾는다(앞뒤가 ASCII 영문·숫자가 아니어야 함: "ship"의 "IP"는 안 걸리고 "IP를"은 걸림). 한글이 든 키워드는 부분 문자열이다(`filter.ts`). 검색어는 부분 문자열 그대로다
 - **과목 등록:** 키워드 있는 과목이 없으면 파일 고르기 전에 과목 폼(`CourseGate` → `CourseQuickForm`, 내 과목 화면의 `CourseForm` 재사용)을 먼저 보여 주고, 2단계의 "과목·키워드 더하기"도 그 자리에서 연다. 키워드를 더하면 읽은 대화를 다시 나누고, 새로 걸린 대화는 선택된 상태로 들어간다
-- **가리기:** 규칙(이메일·전화번호·주민번호·카드번호·키·IP, 내 이름 `[이름]`, 사용자가 넣은 단어 `[가린 단어]`)은 러스트 WASM(`wasm/conversation-core/src/mask.rs`)에 있고, `mask.ts`는 그것을 불러 가린 곳 목록을 만든다. 3단계에서 가린 곳 목록과 원래 글자(이 화면에서만)를 보여 준다
-- **가릴 단어 저장:** 마이페이지와 3단계 "이 브라우저에 기억하기"로 저장한 단어는 localStorage에 계정별 키(`msg-mask-words:<id>`)로만 둔다. 화면은 `useSavedMaskWords` 훅으로 쓴다. 동의 철회·탈퇴가 성공하면 지운다
+- **가리기:** 규칙(이메일·전화번호·주민번호·카드번호·키·IP, 내 이름 `[이름]`, 사용자가 넣은 단어 `[가린 단어]`)은 러스트 WASM(`wasm/conversation-core/src/mask.rs`)에 있고, `mask.ts`는 그것을 불러 가린 곳 목록을 만든다. 규칙을 러스트로 옮길 때 JS 정규식과 결과를 맞추려면 `\d`·`\b`는 ASCII로 직접 쓰고 `regex`에 없는 앞뒤 확인은 코드로 한다(`fancy_regex`는 40배 넘게 느림, `docs/wiki/frontend.md`). 3단계에서 가린 곳 목록과 원래 글자(이 화면에서만)를 보여 준다
+- **가릴 단어 저장:** 마이페이지와 3단계 "이 브라우저에 기억하기"로 저장한 단어는 localStorage에 계정별 키(`msg-mask-words:<id>`)로만 둔다. 읽기·쓰기는 `utils/maskWords.ts` 한 곳이라 기기 간 동기화로 바꿀 때 이 파일만 고친다. 화면은 `useSavedMaskWords` 훅으로 쓴다. 동의 철회·탈퇴가 성공하면 지운다
 - **대화 보기:** `ConversationView.tsx`가 2·3단계에서 대화를 채팅창 모양으로 보여 준다. AI 답변 마크다운은 `react-markdown`으로 React 요소를 만들고, 요소 모양은 `markdownComponents.tsx`(링크는 새 탭, 다른 사이트 이미지는 불러오지 않음), 가린 표시(파랑)·키워드 형광펜은 `marks.ts`(학습 키워드는 고른 규칙과 같이 낱말 경계로, 검색어는 부분 문자열로 칠한다). 3단계 가린 곳 목록의 "보기"는 그 줄만 원래 글자를 보여 주고(위 "원래 글자 보기"는 전체), 본문의 그 가린 표시 하나를 CSS Custom Highlight(`::highlight(mask-focus)`)로 진하게 칠하고 스크롤한다(`focus.markIndex` = `MaskedSpot.labelIndex`, 코드 블록 안도 칠한다. 본문은 서버로 가는 모습 그대로 `[IP]`처럼 보인다)
 - **보내기:** 사용자가 체크한 대화만 가린 상태로 보낸다. `send.ts`가 과목마다, 요청 크기(1MB, 임시값)와 대화 수(50개)에 맞춰 나누고, 혼자 큰 대화는 메시지를 버리지 않고 조각으로 나눈다(`docs/frontend-requests.md` "대화 가져오기")
 
@@ -103,7 +103,7 @@
 
 ### 색 토큰
 
-Tailwind 4 `@theme`에 아래 이름으로 등록한다(`src/index.css`).
+Tailwind 4 `@theme`에 아래 이름으로 등록한다(`src/index.css`, 기본 팔레트 `blue-600` 등을 덮어쓰지 않는 의미 기반 이름).
 
 | 토큰 | 라이트 / 다크 | 쓰는 곳 |
 | --- | --- | --- |
@@ -124,7 +124,16 @@ Tailwind 4 `@theme`에 아래 이름으로 등록한다(`src/index.css`).
 | `shade` | `#1c1b19` (다크 `#000000`) | 그림자 색 (`shadow-shade/10`처럼 투명도는 쓰는 곳에서) |
 | `overlay` | `#1c1b19` (다크 `#000000`) | 확인 창 뒤를 덮는 막 (`backdrop:bg-overlay/50`) |
 
-- `ai` 색을 쓰는 곳: AI 설명, 판단 근거 요약, AI 추천 학습 순서와 "이 순서인 이유", 챗봇 답변, 대시보드 "왜 여기에 있나요?"
+- `ai` 색을 쓰는 곳: AI 설명, 판단 근거 요약, AI 추천 학습 순서와 "이 순서인 이유", 챗봇 답변, 대시보드 "왜 여기에 있나요?", 해설·피드백·모범 답안·다음 개념 제안. 점수·채점 상태·결과 판단·단계 상태·숙련도는 서버 값 그대로 파랑(`primary`)이다.
 - 다크모드는 같은 중립 회색을 어둡게 옮긴 바탕(`surface` < 카드 `surface-raised` < 연한 칸 `surface-muted`)에 밝은 잉크 파랑(`#a9bfee`)이다. 기본값은 기기 설정을 따르고, 상단바의 화면 모드 버튼 하나(`ThemeToggle`, 누르면 지금 보이는 모드의 반대로 바뀜, `useThemeStore`)로 바꾼다.
 - 페이지 본문 폭은 `max-w-page`(1200px), 자주 쓰는 글자 크기는 `text-body`(15px)·`text-caption`(13px) 토큰을 쓴다.
 - 폰트: Pretendard (대체: Noto Sans KR, 시스템 폰트)
+
+## 10. 폴더 구조와 도구
+
+- **폴더:** `src/`는 `api/`(Axios 인스턴스·기능별 API 함수), `components/`(공통 UI·레이아웃·`AsyncBoundary`), `constants/`, `hooks/`(`useCourses`·`useMe` 등), `mocks/`(백엔드 없이 쓰는 샘플 데이터), `pages/`(페이지는 default export, 페이지 전용 컴포넌트는 `pages/<페이지>/components/`), `router/`(라우트·로그인 가드), `store/`(Zustand), `styles/`, `types/`(백엔드 DTO와 같은 모양), `utils/`(`conversation/` 대화 파싱·필터·마스킹, `layout/` 배치 JSON 스키마)로 나눈다.
+- **ESLint가 막는 규칙**(`eslint.config.js`, 이유는 실패 메시지에): `motion.*`(→ `m.*`), `dangerouslySetInnerHTML`, `import.meta.env.VITE_USE_MOCK` 직접 읽기(→ `useDemoStore.ts`), `useMutation` 직접 가져오기(→ `useSingleFlightMutation`), 컴포넌트 파일에서 컴포넌트 아닌 것 내보내기(`react-refresh/only-export-components`). 컴포넌트 파일은 컴포넌트만 내보낸다(개발 중 Fast Refresh가 상태를 유지하도록). 상수·도우미 함수는 같은 폴더의 소문자 파일로(`storySteps.ts`, `consentNotices.ts` 처럼).
+- **ESLint 예외:** 파일 예외는 `files` 객체로 해당 항목만 빼고(같은 규칙을 덮어쓰면 옵션이 합쳐지지 않으니 남길 항목을 다시 넘긴다), 한 줄 예외는 `// eslint-disable-next-line <규칙> -- 이유`.
+- **클래스 순서:** `prettier-plugin-tailwindcss`가 `className`·`cn()` 안을 정렬한다. `TONE_CLASS` 같은 상수 문자열은 정렬하지 않는다.
+- **요청 경로:** 개발은 Vite 프록시가 `/api`를 `localhost:8080`으로, 배포는 Vercel rewrite가 백엔드로 넘긴다.
+- **러스트 WASM 빌드:** `npm run build:wasm`에는 rustup `wasm32-unknown-unknown` 대상과 `wasm-pack`이 필요하다. CI `npm run check:wasm`은 소스 해시(`SOURCE_HASH`)로 빌드 결과 커밋을 빠뜨렸는지 잡는다.

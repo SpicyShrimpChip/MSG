@@ -5,7 +5,7 @@
 학습 자료와 ChatGPT·Claude 등 생성형 AI 대화 기록을 분석해 개념별 강점·약점을 진단하고,
 요약·퀴즈·커리큘럼·챗봇·대시보드로 학습 순서를 계속 다시 짜 주는 학습 서비스.
 서비스 이름은 **MSG(My Study Guide)**로 통일한다. 예전 이름 `ai-lms`·`AI LMS`는 새로 쓰지 않는다(공모전 주제 이름 "개인 맞춤형 AI LMS"로 적힌 옛 기록은 그대로 둔다).
-기획 배경은 `docs/handover.md`, 사용자 원문 발언은 `docs/conversation-log.md`, 프론트가 백엔드에 바라는 API는 `docs/frontend-requests.md`.
+프론트가 백엔드에 바라는 API는 `docs/frontend-requests.md`. 처음 기획 배경(인수인계 문서·사용자 원문 발언)은 레포 밖 팀 노트에 보관했다.
 
 ## 사용자 유형 (서비스는 하나, 진입 경로만 다름)
 
