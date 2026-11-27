@@ -156,6 +156,20 @@
 - 해결: 미리보기 페이지에서 `javascript_tool`로 Vite 모듈(`/src/components/common/ConfirmDialog.tsx`, `main.tsx`가 가져오는 `/node_modules/.vite/deps/react.js?v=…`·`react-dom_client.js?v=…` 주소 그대로)을 `import()`해 빈 `div`에 창 3개를 그려 id를 확인하고 바로 지웠다. 버전 꼬리(`?v=`)가 다르면 React가 둘이 되거나 모듈을 못 읽는다.
 - 다음에는: 체험에서 안 열리는 화면의 컴포넌트는 `fetch('/src/main.tsx')`로 deps 주소를 먼저 확인한 뒤 같은 방식으로 따로 그려 본다.
 
+## `src/test/` 초기화 파일의 `vi.mock('@/…')`이 아무 일도 하지 않는다 (2026-11-27, chore/test-hardening)
+
+- 상황: 목업 지연(`mocks/delay.ts`)을 모든 테스트에서 건너뛰려고 `setupFiles`에 `vi.mock('@/mocks/delay', …)`를 넣었는데, 오류 없이 테스트가 여전히 6초 걸렸다.
+- 원인: `@/` 별칭은 Vite `resolve.tsconfigPaths`가 파일을 포함한 tsconfig로 푼다. `tsconfig.app.json`이 `src/test`를 빼 두어 그 안에서는 `@/`가 풀리지 않고, `vi.mock`은 맞는 모듈이 없어도 조용히 넘어간다.
+- 해결: 초기화 파일에서는 상대 경로(`vi.mock('../mocks/delay', …)`)로 썼다.
+- 다음에는: `src/test/` 안에서는 `@/`를 쓰지 않는다. `vi.mock`을 넣은 뒤에는 효과(시간·호출 수)가 실제로 바뀌었는지 한 번 본다.
+
+## 대시보드가 불러오는 동안 짧은 회색 틀을 보여 주면 다 그린 뒤 아래 구역이 밀린다 (2026-11-27, fix/dashboard-layout-shift)
+
+- 상황: Lighthouse 데스크톱에서 `/?demo=1`(→ `/analysis`)의 CLS가 0.676이었다. 휴대폰은 0.
+- 원인: 공통 틀 `LoadingFallback`은 약 360px라 ① 과목을 불러오는 동안 바닥글이 첫 화면에 보였다가 밀려나고(0.49) ② 분석 결과보다 먼저 그려진 사전·사후평가 구역이 결과가 들어오며 밀려났다(0.185). 휴대폰은 화면이 좁아 처음부터 둘 다 첫 화면 밖이었다. Motion의 투명도·`y` 이동(transform)은 CLS에 들어가지 않았다.
+- 해결: `AsyncBoundary`에 `fallback`을 받게 하고, 대시보드는 결과 자리를 화면 높이(`min-h-screen`)만큼 잡는 `DashboardSkeleton`을 넘겼다. 같은 측정에서 0.676 → 0.
+- 다음에는: 내장 브라우저 창이 숨겨져 있으면 `layout-shift` 기록이 0으로 나온다(화면을 안 그린다). 창이 숨겨져 있으면 헤드리스 Chrome을 CDP로 띄워 같은 `PerformanceObserver`로 잰다(Lighthouse와 같은 값이 나왔다). 밀린 요소는 `sources[].node`, 위치 변화는 `previousRect`·`currentRect`로 본다.
+
 ## 닫히며 사라지는 햄버거 메뉴의 링크로 옮기면 포커스가 본문으로 가지 않는다 (2026-11-27, fix/a11y-navigation)
 
 - 상황: 화면을 옮긴 뒤 "포커스를 잃었을 때만" 본문(`main`)으로 옮기는 `RouteAnnouncer`를 넣었는데, 휴대폰 폭 햄버거 메뉴로 옮기면 포커스가 body로 떨어졌다.
