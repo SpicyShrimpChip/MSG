@@ -24,11 +24,6 @@
   /* 페이지 본문 최대 폭 (1200px) → max-w-page */
   --container-page: 75rem;
 
-  /* 메인 첫 화면 띠처럼 넓은 짙은 잉크 남색 면과 그 위 글자 */
-  --color-brand: #1d3461;
-  --color-on-brand: #ffffff;
-  --color-on-brand-hover: #c9d4ea;
-
   /* 페이지 제목, 섹션 제목·표 상단선·보조 링크 */
   --color-heading: #1c1b19;
   --color-heading-soft: #3a3733;
@@ -44,8 +39,7 @@
   /* 푸터: 옅은 중립 회색 (글자는 heading) */
   --color-footer: #f2f0eb;
 
-  /* 메인 첫 화면 띠 배경과 그 위에 올라온 카드 바탕 */
-  --color-hero: #f2f0eb;
+  /* 바탕 위에 올라온 카드 바탕 */
   --color-surface-raised: #ffffff;
   /* 큰 안내 상자(3단계 카드, 서비스 소개 상자) 바탕. 작은 강조(아이콘 상자, 선택 상태)는 primary-soft */
   --color-section: #f2f0eb;
@@ -102,11 +96,6 @@
 :root.dark {
   color-scheme: dark;
 
-  /* 메인 첫 화면 띠: 짙은 잉크 남색 (위 글자는 흰색 그대로) */
-  --color-brand: #16213a;
-  --color-on-brand: #ffffff;
-  --color-on-brand-hover: #b6c3de;
-
   --color-heading: #efebe4;
   /* 섹션 제목: 링크(primary)처럼 보이지 않는 밝은 회색 */
   --color-heading-soft: #d9d4cb;
@@ -121,7 +110,6 @@
 
   --color-footer: #121110;
 
-  --color-hero: #201e1b;
   --color-surface-raised: #1c1b19;
   --color-section: #201e1b;
 
