@@ -63,7 +63,7 @@ public class AuthController {
 			HttpServletRequest httpRequest,
 			HttpServletResponse httpResponse) {
 		requireXmlHttpRequest(requestedWith);
-		// 운영은 프록시 뒤라 server.forward-headers-strategy(application-prod.yaml)로 읽은 접속 IP다
+		// 운영은 프록시(Caddy)가 넘긴 접속 IP를 server.forward-headers-strategy(application-prod.yaml)로 읽는다. 프록시가 믿는 범위는 deploy/Caddyfile
 		LoginResult result = authService.login(request, httpRequest.getRemoteAddr());
 		refreshTokenCookies.write(httpResponse, result.refreshToken());
 		return ApiResponse.success(new LoginResponse(result.accessToken(), result.user()));

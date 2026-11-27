@@ -175,8 +175,10 @@ class AuthApiTest {
 		login("spread@example.com", PASSWORD, "10.20.0.99")
 				.andExpect(status().isTooManyRequests())
 				.andExpect(jsonPath("$.message").value("로그인 시도가 너무 많아요. 10분 뒤 다시 시도해 주세요."));
-		// 잠긴 동안의 시도는 세지 않으므로 잠금이 늘어나지 않는다
-		login("spread@example.com", PASSWORD, "10.20.0.98").andExpect(status().isTooManyRequests());
+		// 잠긴 동안 틀린 시도는 세지 않으므로, 잠금이 풀린 뒤 다시 잠기지 않는다
+		for (int i = 0; i < 10; i++) {
+			login("spread@example.com", "Wrong000!", "10.20.1." + i).andExpect(status().isTooManyRequests());
+		}
 
 		clock.advance(Duration.ofMinutes(10));
 		login("spread@example.com", PASSWORD, "10.20.0.97").andExpect(status().isOk());
