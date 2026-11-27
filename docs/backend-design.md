@@ -11,7 +11,7 @@
 | --- | --- | --- |
 | **PostgreSQL** (`msg`) | 사용 중 | 회원·인증 세션, 과목, 학습 기록, 숙련도·근거, 커리큘럼, 업로드 파일 메타데이터, 자료 조각(Chunk) 원문, AI 생성 결과 메타데이터, 대시보드 배치. **소유권(누구 데이터인지)의 기준** |
 | **벡터 검색** (pgvector) | 확장만 설치(`db/vector`). 임베딩 테이블은 챗봇 검색 구현 때 추가 | 자료 조각 임베딩, 유사도 검색용 인덱스. 같은 PostgreSQL 안에 두므로 `user_id` 조건을 SQL로 함께 건다 |
-| **파일 저장소** (`global/storage`) | `FileStorage` 인터페이스 + `LocalFileStorage`(로컬 폴더, `app.storage.local.root`) 구현. S3는 미결 | 업로드 원본(자료·과목을 지울 때까지 보관), 나중에 AI가 만든 이미지·영상 파일 |
+| **파일 저장소** (`global/storage`) | `FileStorage` 인터페이스 + `LocalFileStorage`(로컬 폴더, `app.storage.local.root`) 구현. 운영은 도커 볼륨, S3는 쓰지 않는다(`docs/deploy.md`) | 업로드 원본(자료·과목을 지울 때까지 보관), 나중에 AI가 만든 이미지·영상 파일 |
 
 - 벡터 DB는 **검색 인덱스일 뿐 원본이 아니다.** 임베딩은 자료 조각 원문에서 언제든 다시 만들 수 있어야 한다.
 - 로컬 테스트는 H2(PostgreSQL 모드)도 지원한다. 두 DB에서 모두 돌도록 DB 전용 문법(JSON 타입, 전용 함수)은 쓰지 않는다. H2에 없는 pgvector 확장은 `db/vector/` 마이그레이션으로 분리해 local·prod에서만 적용한다.
@@ -249,7 +249,7 @@ global/
 ├── embedding/    EmbeddingClient (임베딩 모델 미결)
 ├── vector/       VectorStore 인터페이스 — upsert, search(filter), deleteByMaterial, deleteByUser
 │                 구현: PgVectorStore(pgvector, 확정) — 구현체는 인터페이스 뒤에 둔다
-└── storage/      FileStorage (로컬 / S3)
+└── storage/      FileStorage (로컬 디스크, 다른 저장소는 구현 추가)
 domain/
 ├── material/     업로드 → 텍스트 추출 → 조각 나누기(material_chunk) → 임베딩 → VectorStore.upsert
 └── chatbot/      질문 → VectorStore.search → DB에서 소유권 재확인 → LLM 답변 + chat_citation
@@ -352,7 +352,7 @@ TODO(미결):
 
 - 원본은 AI 분석(글 뽑기·요약·퀴즈)에 다시 쓰므로 **올린 직후 지우지 않고, 자료나 그 과목을 지울 때까지 보관한다.** 다른 사용자와 공유하지 않는다.
 - 저장 위치는 `app.storage.local.root`(환경변수 `STORAGE_LOCAL_ROOT`, 기본 `backend/uploads`, `.gitignore`에 있음). 운영은 서버를 다시 배포해도 지워지지 않는 위치로 지정한다.
-- **TODO(미결):** 원본의 장기 보관 기간과 자동 삭제(예: 글 뽑기·분석이 끝난 뒤 N일 지나면 원본만 지우고 `storage_key`를 NULL로), 운영 저장소(AWS S3 등). 정해지면 개인정보 처리방침(`PrivacyPage.tsx` 4번)도 같은 PR에서 고친다.
+- **TODO(미결):** 원본의 장기 보관 기간과 자동 삭제(예: 글 뽑기·분석이 끝난 뒤 N일 지나면 원본만 지우고 `storage_key`를 NULL로). 정해지면 개인정보 처리방침(`PrivacyPage.tsx` 4번)도 같은 PR에서 고친다.
 
 ## 7. AI 분석·RAG와의 연결
 

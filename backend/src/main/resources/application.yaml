@@ -40,7 +40,7 @@ spring:
 
 app:
   # 업로드 원본 저장소. 원본은 AI 분석에 다시 쓰므로 자료나 과목을 지울 때까지 보관한다
-  # TODO(미결): 원본의 장기 보관 기간·자동 삭제 정책, AWS S3 등 운영 저장소는 정해지지 않았다 (docs/backend-design.md)
+  # TODO(미결): 원본의 장기 보관 기간·자동 삭제 정책은 정해지지 않았다 (docs/backend-design.md). 운영 저장소는 도커 볼륨(STORAGE_LOCAL_ROOT)
   storage:
     type: local
     local:

@@ -4,9 +4,8 @@ import java.io.InputStream;
 import java.nio.file.Path;
 
 /**
- * 업로드 원본 같은 파일을 저장하는 곳. 지금은 로컬 디스크(LocalFileStorage)이고, S3 같은 다른 저장소는
- * 이 인터페이스의 구현을 추가하고 app.storage.type으로 고른다.
- * TODO(미결): AWS 세부 서비스(S3 등)는 정해지지 않았다.
+ * 업로드 원본 같은 파일을 저장하는 곳. 운영은 EC2의 도커 볼륨(uploads)에 LocalFileStorage로 두고 S3는 쓰지 않는다.
+ * 다른 저장소가 필요해지면 이 인터페이스의 구현을 추가하고 app.storage.type으로 고른다.
  *
  * <p>key는 서버가 만든 값만 쓴다(사용자가 보낸 파일 이름을 key에 넣지 않는다).
  * 영문·숫자·'_'·'-'·'.'과 '/' 구분만 허용하고, 각 구간은 영문·숫자로 시작해야 한다 (예: materials/3/0b9f….pdf).
