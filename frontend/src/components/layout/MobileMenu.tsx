@@ -2,6 +2,7 @@ import { useEffect, type MouseEvent, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import * as m from 'motion/react-m';
 import { MENU, MOTION_TRANSITION } from '@/constants';
+import { cn } from '@/utils';
 import { focusMainContent } from './mainContent';
 import { currentMenuPath } from './menuActive';
 
@@ -77,11 +78,12 @@ function MobileMenu({ onClose, account }: MobileMenuProps) {
                       to={child.path}
                       onClick={closeAndFocusMain}
                       aria-current={active ? 'page' : undefined}
-                      className={`block py-2 text-sm ${
+                      className={cn(
+                        'block py-2 text-sm',
                         active
                           ? 'font-semibold text-primary'
-                          : 'text-ink-soft hover:text-heading'
-                      }`}
+                          : 'text-ink-soft hover:text-heading',
+                      )}
                     >
                       {child.label}
                     </Link>

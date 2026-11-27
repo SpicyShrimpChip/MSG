@@ -39,11 +39,6 @@
   inherits: true;
   initial-value: #dde3ef;
 }
-@property --color-primary-pill-hover {
-  syntax: '<color>';
-  inherits: true;
-  initial-value: #ced7e8;
-}
 @property --color-footer {
   syntax: '<color>';
   inherits: true;
@@ -202,8 +197,6 @@
     --color-primary-soft var(--theme-transition-duration)
       var(--theme-transition-ease),
     --color-primary-pill var(--theme-transition-duration)
-      var(--theme-transition-ease),
-    --color-primary-pill-hover var(--theme-transition-duration)
       var(--theme-transition-ease),
     --color-footer var(--theme-transition-duration) var(--theme-transition-ease),
     --color-surface-raised var(--theme-transition-duration)

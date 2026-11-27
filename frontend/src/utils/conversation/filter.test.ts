@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   containsKeyword,
-  filterByKeywords,
   isLatinKeyword,
+  keywordHaystackOf,
   keywordTargets,
+  matchKeywords,
 } from './filter';
 import type { ParsedConversation } from './types';
 
@@ -49,9 +50,15 @@ describe('학습 키워드 찾기 규칙', () => {
       title: '네트워크 질문 IP',
       messages: [{ role: 'user', text: 'shipping은 상관없어요' }],
     };
-    expect(filterByKeywords([conversation], ['IP'])).toHaveLength(1);
+    const targets = keywordTargets(['IP']);
+    expect(matchKeywords(keywordHaystackOf(conversation), targets)).toEqual([
+      'IP',
+    ]);
     expect(
-      filterByKeywords([{ ...conversation, title: '배송 질문' }], ['IP']),
+      matchKeywords(
+        keywordHaystackOf({ ...conversation, title: '배송 질문' }),
+        targets,
+      ),
     ).toEqual([]);
   });
 

@@ -1,6 +1,6 @@
 import { useState, type KeyboardEvent } from 'react';
 import { Chip, FIELD_CLASS } from '@/components';
-import { addKeywords } from '@/utils';
+import { addKeywords, cn } from '@/utils';
 
 interface KeywordInputProps {
   id: string;
@@ -40,7 +40,10 @@ function KeywordInput({ id, keywords, onChange }: KeywordInputProps) {
   return (
     <div className="flex flex-col gap-1.5">
       <div
-        className={`flex min-h-10 flex-wrap items-center gap-1.5 px-2 py-1.5 ${FIELD_CLASS}`}
+        className={cn(
+          'flex min-h-10 flex-wrap items-center gap-1.5 px-2 py-1.5',
+          FIELD_CLASS,
+        )}
       >
         {keywords.map((keyword) => (
           <Chip

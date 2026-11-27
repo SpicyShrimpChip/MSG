@@ -190,3 +190,10 @@
 - 원인: `index.css`가 `input`·`select` 등에 `border-color`·`box-shadow` 전환을 걸어 두어, 포커스 바로 뒤에는 전환 시작 값이 읽힌다. 그 순간 찍은 스크린샷도 옛 모양이다.
 - 해결: 수백 ms 기다린 뒤 다시 읽어 파랑 테두리와 1px ring이 붙은 것을 확인했다.
 - 다음에는: 포커스·호버 모양을 스크립트나 스크린샷으로 확인할 때는 전환 시간보다 길게 기다린 뒤 읽는다.
+
+## 템플릿 문자열 클래스를 `cn()`으로 바꾸면 줄 높이가 사라질 수 있다 (2026-11-27, chore/frontend-dead-code)
+
+- 상황: `` `w-full ... leading-relaxed ${FIELD_CLASS}` ``를 `cn('w-full ... leading-relaxed', FIELD_CLASS)`로 그대로 옮겼다.
+- 원인: tailwind-merge는 글자 크기(`text-body`, Tailwind 4에서 줄 높이도 정함)가 뒤에 오면 앞의 `leading-*`를 겹치는 클래스로 보고 지운다. 템플릿 문자열은 둘 다 남겼다.
+- 해결: `cn(FIELD_CLASS, '... leading-relaxed')`처럼 순서를 바꿨다(뒤에 오는 `leading-*`는 글자 크기를 지우지 않는다). 분기마다 옛 문자열과 `cn()` 결과의 클래스 집합을 node 스크립트로 비교했다.
+- 다음에는: 템플릿 문자열을 `cn()`으로 옮길 때는 결과 클래스가 같은지 분기마다 비교한다. 특히 글자 크기 클래스가 든 상수(`FIELD_CLASS`)를 뒤에 붙이는 곳.

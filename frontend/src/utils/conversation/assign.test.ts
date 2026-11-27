@@ -73,6 +73,32 @@ describe('assignToCourses', () => {
       assignToCourses(items, [{ ...security, keywords: [] }]).assigned,
     ).toEqual([]);
   });
+
+  it('키워드의 대소문자와 앞뒤 공백을 무시한다', () => {
+    const items = [conversation('a', 'RSA 키 길이는?')];
+    expect(
+      assignToCourses(items, [{ ...security, keywords: [' rsa '] }]).assigned,
+    ).toHaveLength(1);
+  });
+
+  it('키워드가 공백뿐이면 아무것도 고르지 않는다', () => {
+    const items = [conversation('a', '암호화')];
+    expect(
+      assignToCourses(items, [{ ...security, keywords: ['  ', ''] }]).assigned,
+    ).toEqual([]);
+  });
+
+  it('제목과 메시지 사이도 낱말 경계로 본다', () => {
+    const item = {
+      ...conversation('a', 'shipping은 상관없어요'),
+      title: '네트워크 질문 IP',
+    };
+    const course = { ...security, keywords: ['IP'] };
+    expect(assignToCourses([item], [course]).assigned).toHaveLength(1);
+    expect(
+      assignToCourses([{ ...item, title: '배송 질문' }], [course]).assigned,
+    ).toEqual([]);
+  });
 });
 
 describe('mergeParseResults', () => {

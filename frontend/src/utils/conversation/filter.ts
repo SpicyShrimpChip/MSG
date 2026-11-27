@@ -3,12 +3,6 @@ import { escapeRegExp } from './mask';
 import { lowerCasedTextOf } from './shared';
 import type { ParsedConversation } from './types';
 
-export interface KeywordMatch {
-  conversation: ParsedConversation;
-  // 이 대화에서 찾은 키워드 (등록한 순서)
-  matchedKeywords: string[];
-}
-
 // 학습 키워드를 찾는 규칙 (백엔드 global/common/TermMatch와 같다. 한쪽을 고치면 다른 쪽도 같이 고친다.
 // 다르면 여기서 고른 대화가 서버 분석 때 "키워드가 없다"로 빠진다). 대소문자는 무시한다.
 // - 영문 키워드: ASCII 영문·숫자로 시작하고 ASCII 영문·숫자와 공백·. / + # & - 로만 된 키워드(RSA, VLAN, TCP/IP, C++).
@@ -78,25 +72,4 @@ export function matchKeywords(
   return targets
     .filter((target) => containsKeyword(haystack, target))
     .map((target) => target.keyword);
-}
-
-// 내 과목 키워드가 제목이나 메시지에 들어 있는 대화만 고른다 (대소문자 무시, 영문 키워드는 낱말 경계에서만).
-// 키워드가 하나도 없으면 아무것도 고르지 않는다: 공부와 상관없는 대화가 통째로 넘어가면 안 되기 때문이다.
-export function filterByKeywords(
-  conversations: ParsedConversation[],
-  keywords: string[],
-): KeywordMatch[] {
-  const targets = keywordTargets(keywords);
-  if (targets.length === 0) return [];
-
-  const matches: KeywordMatch[] = [];
-  for (const conversation of conversations) {
-    const matchedKeywords = matchKeywords(
-      keywordHaystackOf(conversation),
-      targets,
-    );
-    if (matchedKeywords.length > 0)
-      matches.push({ conversation, matchedKeywords });
-  }
-  return matches;
 }

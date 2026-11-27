@@ -26,7 +26,10 @@ function ScoreBar({ value, level, delay = 0, className }: ScoreBarProps) {
       )}
     >
       <m.span
-        className={`block h-full rounded-full ${level === 'weakness' ? 'bg-weakness-bar' : 'bg-primary'}`}
+        className={cn(
+          'block h-full rounded-full',
+          level === 'weakness' ? 'bg-weakness-bar' : 'bg-primary',
+        )}
         initial={{ width: 0 }}
         animate={{ width: `${percent}%` }}
         transition={{

@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Upload } from 'lucide-react';
+import { cn } from '@/utils';
 import Spinner from './Spinner';
 
 interface FileDropZoneProps {
@@ -43,11 +44,12 @@ function FileDropZone({
           setDragging(false);
           if (!busy) onFiles([...e.dataTransfer.files]);
         }}
-        className={`flex cursor-pointer flex-col items-center gap-2.5 rounded-2xl border-2 border-dashed px-6 py-10 text-center hover:border-primary hover:bg-primary-soft ${
+        className={cn(
+          'flex cursor-pointer flex-col items-center gap-2.5 rounded-2xl border-2 border-dashed px-6 py-10 text-center hover:border-primary hover:bg-primary-soft',
           dragging
             ? 'border-primary bg-primary-soft'
-            : 'border-line-strong bg-surface-muted'
-        }`}
+            : 'border-line-strong bg-surface-muted',
+        )}
       >
         <span className="flex size-12 items-center justify-center rounded-xl bg-primary text-on-primary">
           {busy ? (
