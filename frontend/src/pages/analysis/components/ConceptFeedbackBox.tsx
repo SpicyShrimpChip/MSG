@@ -9,7 +9,7 @@ import {
   saveConceptFeedback,
 } from '@/api';
 import type { ConceptFeedbackType, ConceptResult } from '@/types';
-import { Button, ErrorText } from '@/components';
+import { Button, ErrorText, TEXT_LINK_CLASS } from '@/components';
 import { cn, conceptQuizLink, createSubmitLock } from '@/utils';
 
 interface ConceptFeedbackBoxProps {
@@ -136,10 +136,7 @@ function ConceptFeedbackBox({
         {current === 'want_to_study' && (
           <p className="rounded-xl bg-surface-muted px-4 py-3 text-body leading-relaxed text-ink-soft">
             추천 학습 순서 맨 앞에 넣었어요. AI 판단은 그대로예요.{' '}
-            <Link
-              to="/curriculum"
-              className="font-semibold text-primary underline-offset-4 hover:underline"
-            >
+            <Link to="/curriculum" className={TEXT_LINK_CLASS}>
               맞춤 커리큘럼에서 복습 퀴즈·자료 보기
             </Link>
           </p>

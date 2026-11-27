@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { TEXT_LINK_CLASS } from '@/components';
 import type { ConceptMastery } from '@/types';
 import {
   UNDERSTANDING_LABEL,
@@ -84,7 +85,7 @@ function MasteryEvidence({ courseId, concept, mastery }: MasteryEvidenceProps) {
               {' '}
               <Link
                 to={conceptQuizLink(courseId, concept)}
-                className="font-semibold text-primary underline-offset-4 hover:underline"
+                className={TEXT_LINK_CLASS}
               >
                 퀴즈 {mastery.quizNeeded}문제 더 풀면 단계가 나와요
               </Link>

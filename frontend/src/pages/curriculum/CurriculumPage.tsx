@@ -25,6 +25,7 @@ import {
   SelectInput,
   StudyStatusBadge,
   SubPage,
+  TEXT_LINK_CLASS,
 } from '@/components';
 import { SUGGESTION_LABEL } from '@/constants';
 import { useMockData } from '@/store';
@@ -172,7 +173,7 @@ function StepSection({
         {prev ? (
           <a
             href={`#${anchor(prev.key)}`}
-            className="inline-flex items-center gap-1 font-semibold text-primary underline-offset-4 hover:underline"
+            className={cn(TEXT_LINK_CLASS, 'inline-flex items-center gap-1')}
           >
             <ArrowLeft size={14} aria-hidden="true" />
             이전: {prev.title}
@@ -183,7 +184,7 @@ function StepSection({
         {next && (
           <a
             href={`#${anchor(next.key)}`}
-            className="inline-flex items-center gap-1 font-semibold text-primary underline-offset-4 hover:underline"
+            className={cn(TEXT_LINK_CLASS, 'inline-flex items-center gap-1')}
           >
             다음: {next.title}
             <ArrowRight size={14} aria-hidden="true" />
