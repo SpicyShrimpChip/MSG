@@ -201,10 +201,10 @@ class MaterialSummaryApiTest {
 		generate("unknown", true, false).andExpect(status().isBadRequest());
 
 		long personal = upload("연락.txt", "공개키 암호 문의는 me@example.com 으로".getBytes());
-		generateFor(personal, "exam_prep", true).andExpect(status().isUnprocessableEntity())
+		generateFor(token, personal, "exam_prep", true).andExpect(status().isUnprocessableEntity())
 				.andExpect(jsonPath("$.data.reason").value("PERSONAL_INFO"));
 		long scanned = upload("스캔.pdf", TestPdfs.withPages((String) null));
-		generateFor(scanned, "exam_prep", true).andExpect(status().isUnprocessableEntity())
+		generateFor(token, scanned, "exam_prep", true).andExpect(status().isUnprocessableEntity())
 				.andExpect(jsonPath("$.data.reason").value("NO_TEXT"));
 
 		String other = signupAndLogin("other@example.com");
@@ -215,6 +215,18 @@ class MaterialSummaryApiTest {
 				.contentType(MediaType.APPLICATION_JSON).content("{\"aiQuiz\":false}")).andExpect(status().isOk());
 		generate("exam_prep", true, false).andExpect(status().isForbidden());
 		assertThat(fakeLlm.get(LlmProvider.GPT).requests()).isEmpty();
+	}
+
+	@Test
+	void 남의_자료로_요약을_만들면_404이고_모델을_부르지_않는다() throws Exception {
+		fakeLlm.get(LlmProvider.GPT).answer(SUMMARY);
+		String other = signupAndLogin("other@example.com");
+
+		generateFor(other, material, "exam_prep", true).andExpect(status().isNotFound());
+		for (LlmProvider provider : LlmProvider.values()) {
+			assertThat(fakeLlm.get(provider).requests()).as(provider + " 호출").isEmpty();
+		}
+		assertThat(jdbcTemplate.queryForObject("select count(*) from material_summary", Integer.class)).isZero();
 	}
 
 	@Test
@@ -253,9 +265,9 @@ class MaterialSummaryApiTest {
 				.content(objectMapper.writeValueAsString(body)));
 	}
 
-	private ResultActions generateFor(long target, String purpose, boolean confirmed) throws Exception {
+	private ResultActions generateFor(String asToken, long target, String purpose, boolean confirmed) throws Exception {
 		return mockMvc.perform(post("/api/materials/" + target + "/summary")
-				.header(HttpHeaders.AUTHORIZATION, bearer(token)).contentType(MediaType.APPLICATION_JSON)
+				.header(HttpHeaders.AUTHORIZATION, bearer(asToken)).contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(Map.of("purpose", purpose, "materialContentConsent", confirmed))));
 	}
 
