@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { MasteryRecord } from '@/types';
-import { describeLevelTrend, describeMasteryChange } from './mastery';
+import {
+  describeLevelTrend,
+  describeMasteryChange,
+  formulaMajor,
+  quizRateText,
+} from './mastery';
 
 const record = (overrides: Partial<MasteryRecord>): MasteryRecord => ({
   recordedAt: '2026-11-05T10:00:00',
@@ -42,6 +47,17 @@ describe('describeMasteryChange', () => {
     ]);
   });
 
+  it('산식 v2 기록은 문제별 평균 득점률로 쓴다', () => {
+    const result = describeMasteryChange(
+      null,
+      record({ quizGradedCount: 3, quizRate: 1 / 3, formulaVersion: '2' }),
+    );
+    expect(result.reasons).toEqual([
+      '퀴즈 3문제(문제별 평균 득점률 33%)',
+      '산식 v2',
+    ]);
+  });
+
   it('산식 버전이 바뀌면 비교하기 어렵다고 알린다', () => {
     const result = describeMasteryChange(
       record({ formulaVersion: '1' }),
@@ -52,6 +68,50 @@ describe('describeMasteryChange', () => {
       '반영한 퀴즈·대화 없음',
       '산식 v1 → v2 (앞 기록과 바로 비교하기 어려워요)',
     ]);
+  });
+
+  it('산식 버전은 지문 없이 앞 번호만 보여 준다', () => {
+    const same = describeMasteryChange(
+      record({ formulaVersion: '2-a1b3c9d2' }),
+      record({ formulaVersion: '2-a1b3c9d2' }),
+    );
+    expect(same.reasons).toEqual(['반영한 퀴즈·대화 없음', '산식 v2']);
+
+    const fromOld = describeMasteryChange(
+      record({ formulaVersion: '1' }),
+      record({ formulaVersion: '2-a1b3c9d2' }),
+    );
+    expect(fromOld.reasons).toEqual([
+      '반영한 퀴즈·대화 없음',
+      '산식 v1 → v2 (앞 기록과 바로 비교하기 어려워요)',
+    ]);
+  });
+
+  it('같은 산식에서 기준값만 바뀌면 그렇게 알린다', () => {
+    const result = describeMasteryChange(
+      record({ formulaVersion: '2-a1b3c9d2' }),
+      record({ formulaVersion: '2-ffff0000' }),
+    );
+    expect(result.reasons).toEqual([
+      '반영한 퀴즈·대화 없음',
+      '산식 v2, 기준값 조정 (앞 기록과 바로 비교하기 어려워요)',
+    ]);
+  });
+});
+
+describe('formulaMajor', () => {
+  it('산식 버전에서 지문 앞의 번호만 꺼낸다', () => {
+    expect(formulaMajor('2-a1b3c9d2')).toBe('2');
+    expect(formulaMajor('1')).toBe('1');
+  });
+});
+
+describe('quizRateText', () => {
+  it('산식 v1 기록은 점수 합 비율, 그 뒤는 문제별 평균 득점률로 쓴다', () => {
+    expect(quizRateText(0.25, '1')).toBe('얻은 점수 25%');
+    expect(quizRateText(0.25, '1-0f3a9c21')).toBe('얻은 점수 25%');
+    expect(quizRateText(1 / 3, '2')).toBe('문제별 평균 득점률 33%');
+    expect(quizRateText(1 / 3, '2-a1b3c9d2')).toBe('문제별 평균 득점률 33%');
   });
 });
 
@@ -79,6 +139,13 @@ describe('describeLevelTrend', () => {
       describeLevelTrend([
         record({ level: 'needs_work', formulaVersion: '1' }),
         record({ level: 'normal', formulaVersion: '2' }),
+      ]),
+    ).toBeNull();
+    // 앞 번호가 같아도 숫자 설정 지문이 다르면 비교하지 않는다
+    expect(
+      describeLevelTrend([
+        record({ level: 'needs_work', formulaVersion: '2-a1b3c9d2' }),
+        record({ level: 'normal', formulaVersion: '2-0f3a9c21' }),
       ]),
     ).toBeNull();
     expect(

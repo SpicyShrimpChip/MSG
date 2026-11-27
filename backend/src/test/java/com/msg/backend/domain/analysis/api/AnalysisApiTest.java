@@ -4,6 +4,7 @@ import static com.msg.backend.support.TestApi.bearer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -148,7 +149,7 @@ class AnalysisApiTest {
 				// 숙련도: 의견이 갈려 대화 근거를 세지 않고 퀴즈도 없으므로 근거 부족이고 점수가 없다
 				.andExpect(jsonPath("$.data.concepts[0].mastery.level").value("insufficient_evidence"))
 				.andExpect(jsonPath("$.data.concepts[0].mastery.score").doesNotExist())
-				.andExpect(jsonPath("$.data.concepts[0].mastery.formulaVersion").value("1"))
+				.andExpect(jsonPath("$.data.concepts[0].mastery.formulaVersion").value(startsWith("2-")))
 				.andExpect(jsonPath("$.data.concepts[0].mastery.quizNeeded").value(3))
 				.andExpect(jsonPath("$.data.concepts[1].comparison.outcome").value("unanimous"))
 				.andExpect(jsonPath("$.data.concepts[1].comparison.status").value("insufficient_evidence"))
