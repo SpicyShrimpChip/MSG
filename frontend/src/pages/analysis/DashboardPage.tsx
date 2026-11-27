@@ -41,6 +41,7 @@ import {
 import AnalysisSummaryPanel from './components/AnalysisSummaryPanel';
 import AssessmentComparisonPanel from './components/AssessmentComparisonPanel';
 import ConceptList from './components/ConceptList';
+import DashboardSkeleton from './components/DashboardSkeleton';
 import LayoutSummary from './components/LayoutSummary';
 import ModelStatusPanel from './components/ModelStatusPanel';
 import StudyProgressPanel from './components/StudyProgressPanel';
@@ -383,8 +384,9 @@ function Dashboard() {
         <AiLegend />
       </div>
 
-      {/* 과목을 바꾸면 그 과목의 분석을 새로 불러온다 */}
-      <AsyncBoundary key={course.id}>
+      {/* 과목을 바꾸면 그 과목의 분석을 새로 불러온다.
+          불러오는 동안 결과 자리를 잡아 두어 아래 사전·사후평가 구역이 먼저 그려졌다가 밀리지 않게 한다 */}
+      <AsyncBoundary key={course.id} fallback={<DashboardSkeleton />}>
         <CourseAnalysis course={course} />
       </AsyncBoundary>
 
@@ -409,7 +411,7 @@ function DashboardPage() {
       title="학습 대시보드"
       description="가져온 대화를 여러 AI 모델이 따로 읽고, 개념마다 판단과 근거를 비교해 보여 드려요"
     >
-      <AsyncBoundary>
+      <AsyncBoundary fallback={<DashboardSkeleton withCourseRow />}>
         <Dashboard />
       </AsyncBoundary>
     </SubPage>
