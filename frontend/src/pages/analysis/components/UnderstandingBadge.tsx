@@ -52,9 +52,9 @@ export function UnderstandingBadge({
   );
 }
 
-// 개념 목록 한 줄의 모델 판단 표식 한 칸: 위에 판단 아이콘 칸, 아래에 모델 이름.
-// 알약 세 개 대신 같은 크기 칸 세 개를 나란히 두어, 같음·갈림이 모양으로 한눈에 보이게 한다.
-// 색만으로 구분하지 않도록 칸마다 아이콘이 다르고(체크·반원·느낌표·물음표), 화면 읽기에는 "GPT 이해 부족"으로 읽힌다
+// 개념 목록 한 줄의 모델 판단 표식 한 칸: 위에서부터 모델 이름, 판단 아이콘 칸, 짧은 판단 글자.
+// 알약 대신 같은 크기 칸을 모델 수만큼 나란히 두어, 같음·갈림이 모양으로 한눈에 보이게 한다.
+// 색만으로 구분하지 않도록 아이콘(체크·반원·느낌표·물음표)과 글자를 함께 두고, DOM 순서대로 "GPT 부분 이해"로 읽힌다
 const MARK_STYLE: Record<UnderstandingStatus, string> = {
   understood: 'bg-strength-soft text-strength',
   partial: 'bg-primary-soft text-primary',
@@ -66,23 +66,19 @@ const MARK_STYLE: Record<UnderstandingStatus, string> = {
 export function ModelVerdictMark({
   provider,
   status,
-  missingLabel,
+  label,
 }: {
   provider: string;
   status: UnderstandingStatus | null;
-  // 판단이 없을 때 글 (연결 안 됨 / 판단 없음)
-  missingLabel?: string;
+  // 칸 아래 짧은 판단 글자 (verdictMarkLabel: 연결 안 됨·판단 없음 포함)
+  label: string;
 }) {
-  const label = status
-    ? `${provider} ${UNDERSTANDING_LABEL[status]}`
-    : `${provider} ${missingLabel ?? '판단 없음'}`;
   const Icon = status ? STATUS_STYLE[status].icon : Minus;
   return (
-    <span
-      role="listitem"
-      title={label}
-      className="flex w-12 flex-col items-center gap-1"
-    >
+    <span className="flex w-16 flex-col items-center gap-1">
+      <span className="text-[11px] leading-none text-ink-muted">
+        {provider}
+      </span>
       <span
         className={cn(
           'flex h-6 w-full items-center justify-center rounded-md',
@@ -93,13 +89,9 @@ export function ModelVerdictMark({
       >
         <Icon size={14} aria-hidden="true" />
       </span>
-      <span
-        className="text-[11px] leading-none text-ink-muted"
-        aria-hidden="true"
-      >
-        {provider}
+      <span className="text-caption leading-none whitespace-nowrap text-ink-soft">
+        {label}
       </span>
-      <span className="sr-only">{label}</span>
     </span>
   );
 }

@@ -9,6 +9,8 @@ interface AuthState {
   accessToken: string | null;
   setAccessToken: (accessToken: string) => void;
   clearSession: () => void;
+  // 이 탭만 로그아웃 상태로 둔다. 다른 탭·다음 화면의 세션 복원 표시는 남긴다
+  markAnonymous: () => void;
 }
 
 // 새로고침 뒤 세션 복원을 시도할지 정하는 표시. 토큰이 아니라 "로그인한 적 있음"만 저장한다
@@ -44,4 +46,5 @@ export const useAuthStore = create<AuthState>()((set) => ({
     setSessionHint(false);
     set({ accessToken: null, status: 'anonymous' });
   },
+  markAnonymous: () => set({ accessToken: null, status: 'anonymous' }),
 }));

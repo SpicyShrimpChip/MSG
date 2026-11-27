@@ -8,6 +8,7 @@ import {
 import * as m from 'motion/react-m';
 import { FADE_UP, SWEEP_TRANSITION } from '@/constants';
 import { StartPaths } from '@/components';
+import { cn } from '@/utils';
 import PrivacyNotice from '../PrivacyNotice';
 import { SceneMotionContext } from './sceneMotionContext';
 import { STORY_STEPS } from './storySteps';
@@ -122,11 +123,12 @@ function PinnedStory({ header }: { header: ReactNode }) {
                       type="button"
                       onClick={() => goTo(index)}
                       aria-current={active ? 'step' : undefined}
-                      className={`flex min-h-10 w-full items-center border-l-2 pl-4 text-left transition-colors ${
+                      className={cn(
+                        'flex min-h-10 w-full items-center border-l-2 pl-4 text-left transition-colors',
                         active
                           ? 'border-primary font-semibold text-heading'
-                          : 'border-line text-ink-muted hover:text-heading'
-                      }`}
+                          : 'border-line text-ink-muted hover:text-heading',
+                      )}
                     >
                       {item.title}
                     </button>

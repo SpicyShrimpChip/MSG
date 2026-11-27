@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import Button from './Button';
 
 interface ConfirmDialogProps {
@@ -21,6 +21,9 @@ function ConfirmDialog({
   onCancel,
 }: ConfirmDialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
+  // 한 화면에 확인 창이 여러 개 있어도 제목·설명이 자기 창을 가리키게 한다
+  const titleId = useId();
+  const descriptionId = useId();
 
   useEffect(() => {
     const dialog = ref.current;
@@ -32,8 +35,8 @@ function ConfirmDialog({
   return (
     <dialog
       ref={ref}
-      aria-labelledby="confirm-dialog-title"
-      aria-describedby={description ? 'confirm-dialog-description' : undefined}
+      aria-labelledby={titleId}
+      aria-describedby={description ? descriptionId : undefined}
       // Esc로 닫히면 부모 상태도 함께 닫는다
       onCancel={(e) => {
         e.preventDefault();
@@ -46,17 +49,11 @@ function ConfirmDialog({
       className="m-auto w-[calc(100%-2rem)] max-w-sm rounded-2xl border border-line-strong bg-surface-raised p-0 text-ink backdrop:bg-overlay/50"
     >
       <div className="flex flex-col gap-4 p-6">
-        <h2
-          id="confirm-dialog-title"
-          className="text-lg font-semibold text-heading"
-        >
+        <h2 id={titleId} className="text-lg font-semibold text-heading">
           {title}
         </h2>
         {description && (
-          <p
-            id="confirm-dialog-description"
-            className="text-body text-ink-soft"
-          >
+          <p id={descriptionId} className="text-body text-ink-soft">
             {description}
           </p>
         )}

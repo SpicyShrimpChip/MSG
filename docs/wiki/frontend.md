@@ -141,3 +141,17 @@
 - 원인: flat config에서 `files` 객체로 같은 규칙을 다시 걸면 옵션이 합쳐지지 않고 통째로 바뀐다(`npx eslint --print-config <파일>`로 확인). 뺄 항목만 생각하고 예외를 쓰면 그 파일에서 나머지 금지도 같이 풀린다. 또 `react-dom/no-dangerously-set-innerhtml`은 권장 설정에서 경고라 `npm run lint`가 실패하지 않아 CI에서 막히지 않았다.
 - 해결: 항목을 `eslint.config.js` 위쪽 상수로 나눠 두고, 예외 객체에는 남길 항목만 다시 넘긴다. 금지는 `error`로 건다.
 - 다음에는: 예외를 더하면 그 파일에 위반 코드를 잠깐 넣어 다른 항목이 아직 잡히는지 `npm run lint`로 본다(설정이 바뀌면 캐시가 있어도 다시 검사한다).
+
+## Tailwind 4의 `outline-none`은 고대비 모드에서 포커스를 지운다: `outline-hidden`을 쓴다 (2026-11-27, fix/frontend-regressions)
+
+- 상황: 입력칸(`fieldClass`·상단바 검색칸·과목 키워드 입력칸)이 포커스 표시를 테두리 색으로 대신하려고 `outline-none`을 쓰고 있었다.
+- 원인: Tailwind 4에서 `outline-none`은 `outline-style: none`이다(3의 투명 outline이 아님). 고대비(강제 색) 모드는 배경·테두리 색을 덮어써서 테두리 색 변화가 사라지고, outline도 없으니 포커스가 전혀 안 보인다.
+- 해결: `outline-hidden`으로 바꿨다. 평소에는 outline이 없고 `@media (forced-colors: active)`에서만 `outline: 2px solid transparent`(강제 색 모드는 이 투명색을 보이는 색으로 바꾼다)가 붙는다. 빌드한 CSS에서 이 규칙을 확인했다.
+- 다음에는: 포커스 테두리를 숨기는 곳은 `outline-hidden`만 쓴다(`frontend/CLAUDE.md` 접근성 줄). `tabIndex=-1`처럼 키보드로 못 들어가는 요소만 예외다.
+
+## 체험 모드에서는 마이페이지가 안 떠 확인 창 여러 개를 화면으로 볼 수 없다 (2026-11-27, fix/frontend-regressions)
+
+- 상황: 마이페이지에 함께 있는 확인 창 3개의 `aria-labelledby`가 각자 제목을 가리키는지 목업 미리보기에서 보려 했다.
+- 원인: 마이페이지는 체험에서 "보여 드리지 않아요" 안내만 띄우고, 목업 모드는 로그인이 없어 실제 화면을 열 수 없다.
+- 해결: 미리보기 페이지에서 `javascript_tool`로 Vite 모듈(`/src/components/common/ConfirmDialog.tsx`, `main.tsx`가 가져오는 `/node_modules/.vite/deps/react.js?v=…`·`react-dom_client.js?v=…` 주소 그대로)을 `import()`해 빈 `div`에 창 3개를 그려 id를 확인하고 바로 지웠다. 버전 꼬리(`?v=`)가 다르면 React가 둘이 되거나 모듈을 못 읽는다.
+- 다음에는: 체험에서 안 열리는 화면의 컴포넌트는 `fetch('/src/main.tsx')`로 deps 주소를 먼저 확인한 뒤 같은 방식으로 따로 그려 본다.

@@ -261,7 +261,7 @@ function Header() {
                 }}
                 tabIndex={searchCollapsed ? -1 : undefined}
                 placeholder="자료, 개념 검색"
-                className="w-0 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-ink-muted"
+                className="w-0 min-w-0 flex-1 bg-transparent text-sm outline-hidden placeholder:text-ink-muted"
               />
               <button
                 type={searchCollapsed ? 'button' : 'submit'}
