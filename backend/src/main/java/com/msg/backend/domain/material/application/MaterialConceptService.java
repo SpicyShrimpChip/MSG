@@ -1,24 +1,19 @@
 package com.msg.backend.domain.material.application;
 
-import com.msg.backend.domain.conversation.application.PersonalInfoDetector;
-import com.msg.backend.domain.course.dao.CourseRepository;
 import com.msg.backend.domain.course.entity.Course;
 import com.msg.backend.domain.material.dao.MaterialConceptRepository;
 import com.msg.backend.domain.material.dao.MaterialRepository;
 import com.msg.backend.domain.material.entity.Material;
 import com.msg.backend.domain.material.entity.MaterialConcept;
-import com.msg.backend.domain.quiz.dao.QuizAiCallRepository;
 import com.msg.backend.domain.material.dto.MaterialConceptResponse;
-import com.msg.backend.domain.quiz.application.QuizAiUsage;
 import com.msg.backend.domain.quiz.application.QuizModelFallback;
 import com.msg.backend.domain.quiz.application.QuizProperties;
 import com.msg.backend.domain.quiz.entity.QuizAiCall;
 import com.msg.backend.domain.user.dao.UserRepository;
 import com.msg.backend.domain.user.entity.User;
+import com.msg.backend.global.common.Texts;
 import com.msg.backend.global.error.BusinessException;
-import com.msg.backend.global.llm.AiCallQuota;
 import com.msg.backend.global.llm.LlmClient;
-import com.msg.backend.global.llm.LlmClients;
 import com.msg.backend.global.llm.LlmJson;
 import com.msg.backend.global.llm.LlmRequest;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -32,7 +27,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -43,6 +37,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.util.StringUtils;
 
 /**
  * 학습자료 본문에서 핵심 개념 뽑기. 사전·사후평가는 이 개념 체계로 문제를 만든다.
@@ -69,7 +64,6 @@ public class MaterialConceptService {
 			""";
 	static final int MIN_QUOTE_LENGTH = 4;
 	static final int MAX_CONCEPTS = 10;
-	static final String CONSENT_MESSAGE = "자료 본문을 외부 AI로 보내려면 확인에 체크해 주세요.";
 	static final String QUIZ_CONSENT_MESSAGE = "AI로 핵심 개념을 뽑으려면 AI 퀴즈 처리 동의가 필요해요. 마이페이지에서 동의할 수 있어요.";
 	static final String NO_MODEL_MESSAGE = "연결된 AI 모델이 없어 지금은 핵심 개념을 뽑을 수 없어요.";
 	static final String NO_VALID_MESSAGE = "AI가 고른 개념을 자료에서 확인하지 못해 저장하지 않았어요. 다시 시도해 주세요.";
@@ -94,39 +88,25 @@ public class MaterialConceptService {
 
 	private final UserRepository userRepository;
 	private final MaterialRepository materialRepository;
-	private final CourseRepository courseRepository;
 	private final MaterialConceptRepository conceptRepository;
-	private final QuizAiCallRepository callRepository;
-	private final MaterialTextExtractor extractor;
 	private final MaterialContentProperties contentProperties;
-	private final PersonalInfoDetector personalInfoDetector;
-	private final LlmClients llmClients;
+	private final MaterialAiGate gate;
 	private final QuizModelFallback modelFallback;
-	private final AiCallQuota aiCallQuota;
-	private final QuizAiUsage usage;
 	private final QuizProperties properties;
 	private final ObjectMapper objectMapper;
 	private final TransactionTemplate transaction;
 	private final Clock clock;
 
 	public MaterialConceptService(UserRepository userRepository, MaterialRepository materialRepository,
-			CourseRepository courseRepository, MaterialConceptRepository conceptRepository,
-			QuizAiCallRepository callRepository, MaterialTextExtractor extractor,
-			MaterialContentProperties contentProperties, PersonalInfoDetector personalInfoDetector,
-			LlmClients llmClients, QuizModelFallback modelFallback, AiCallQuota aiCallQuota, QuizAiUsage usage, QuizProperties properties,
+			MaterialConceptRepository conceptRepository, MaterialContentProperties contentProperties,
+			MaterialAiGate gate, QuizModelFallback modelFallback, QuizProperties properties,
 			ObjectMapper objectMapper, PlatformTransactionManager transactionManager, Clock clock) {
 		this.userRepository = userRepository;
 		this.materialRepository = materialRepository;
-		this.courseRepository = courseRepository;
 		this.conceptRepository = conceptRepository;
-		this.callRepository = callRepository;
-		this.extractor = extractor;
 		this.contentProperties = contentProperties;
-		this.personalInfoDetector = personalInfoDetector;
-		this.llmClients = llmClients;
+		this.gate = gate;
 		this.modelFallback = modelFallback;
-		this.aiCallQuota = aiCallQuota;
-		this.usage = usage;
 		this.properties = properties;
 		this.objectMapper = objectMapper;
 		this.transaction = new TransactionTemplate(transactionManager);
@@ -235,7 +215,7 @@ public class MaterialConceptService {
 			return Optional.empty();
 		}
 		JsonNode node = root.get();
-		String explanation = clip(LlmJson.text(node.get("explanation")), MaterialConcept.EXPLANATION_MAX_LENGTH);
+		String explanation = noteField(LlmJson.text(node.get("explanation")), MaterialConcept.EXPLANATION_MAX_LENGTH);
 		if (explanation == null || explanation.length() < MIN_EXPLANATION_LENGTH) {
 			return Optional.empty();
 		}
@@ -252,18 +232,14 @@ public class MaterialConceptService {
 			}
 		}
 		return Optional.of(new Note(explanation,
-				clip(LlmJson.text(node.get("materialContext")), MaterialConcept.NOTE_FIELD_MAX_LENGTH), quote, location,
-				clip(LlmJson.text(node.get("importance")), MaterialConcept.NOTE_FIELD_MAX_LENGTH),
-				clip(LlmJson.text(node.get("example")), MaterialConcept.NOTE_FIELD_MAX_LENGTH)));
+				noteField(LlmJson.text(node.get("materialContext")), MaterialConcept.NOTE_FIELD_MAX_LENGTH), quote, location,
+				noteField(LlmJson.text(node.get("importance")), MaterialConcept.NOTE_FIELD_MAX_LENGTH),
+				noteField(LlmJson.text(node.get("example")), MaterialConcept.NOTE_FIELD_MAX_LENGTH)));
 	}
 
-	// 길면 자르고 말줄임표를 붙인다. 비었으면 null
-	private static String clip(String text, int max) {
-		if (text == null || text.isBlank()) {
-			return null;
-		}
-		String trimmed = text.strip();
-		return trimmed.length() <= max ? trimmed : trimmed.substring(0, max - 1) + "…";
+	// 앞뒤 공백을 지우고 길면 자르고 말줄임표를 붙인다. 비었으면 null
+	private static String noteField(String text, int max) {
+		return StringUtils.hasText(text) ? Texts.clip(text.strip(), max) : null;
 	}
 
 	private MaterialConceptResponse saveNote(Long userId, Long materialId, String conceptId, Note note,
@@ -283,50 +259,14 @@ public class MaterialConceptService {
 			String action) {
 		User user = userRepository.lockLoginUser(userId);
 		Material material = materialRepository.getOwned(materialId, userId);
-		if (!contentProperties.enabled()) {
-			throw new BusinessException(HttpStatus.FORBIDDEN, MaterialContentProperties.DISABLED_MESSAGE);
-		}
-		if (!user.isAiQuizConsent()) {
-			throw new BusinessException(HttpStatus.FORBIDDEN, QUIZ_CONSENT_MESSAGE);
-		}
-		if (!confirmed) {
-			throw new BusinessException(HttpStatus.BAD_REQUEST, CONSENT_MESSAGE);
-		}
-		List<LlmClient> clients = orderedClients();
-		if (clients.isEmpty()) {
-			throw new BusinessException(HttpStatus.SERVICE_UNAVAILABLE, NO_MODEL_MESSAGE);
-		}
-		LocalDateTime since = LocalDateTime.now(clock).minusHours(24);
-		if (callRepository.countByUserIdAndPurposeAndCreatedAtAfter(userId, purpose, since) >= dailyLimit
-				|| usage.modelCallBudgetExhausted(userId)) {
-			throw new BusinessException(HttpStatus.TOO_MANY_REQUESTS,
-					"오늘 AI 호출 한도를 다 써서 지금은 " + action + " 수 없어요. 내일 다시 시도해 주세요.");
-		}
-		aiCallQuota.ensureRemaining(userId, 1);
-		MaterialTextExtractor.Extracted extracted = extractor.extract(material);
-		if (extracted.status() != MaterialTextExtractor.Status.OK) {
-			throw new BusinessException(HttpStatus.UNPROCESSABLE_ENTITY, unreadableMessage(extracted.status()),
-					Map.of("reason", extracted.status().name()));
-		}
-		if (personalInfoDetector.containsPersonalInfoExceptIp(extracted.text())) {
-			throw new BusinessException(HttpStatus.UNPROCESSABLE_ENTITY,
-					"자료 본문에 이메일·전화번호 같은 개인정보가 있어 외부 AI로 보내지 않았어요.",
-					Map.of("reason", "PERSONAL_INFO"));
-		}
-		Course course = material.getCourseId() == null ? null
-				: courseRepository.findByIdAndUserId(material.getCourseId(), userId).orElse(null);
-		return new Prepared(extracted.text(), course == null ? material.getTitle() : course.getName(),
+		List<LlmClient> clients = gate.checkBeforeSend(user, confirmed, purpose, dailyLimit,
+				new MaterialAiGate.Messages(QUIZ_CONSENT_MESSAGE, NO_MODEL_MESSAGE, MaterialAiGate.limitMessage(action)));
+		// 개념 뽑기는 본문 전체(app.material-content.max-chars까지)를 보내므로 전체를 검사한다
+		String text = gate.read(material, contentProperties.maxChars()).text();
+		gate.requireNoPersonalInfo(text);
+		Course course = gate.courseOrNull(material, userId);
+		return new Prepared(text, course == null ? material.getTitle() : course.getName(),
 				course == null ? List.of() : List.copyOf(course.getKeywords()), clients);
-	}
-
-	static String unreadableMessage(MaterialTextExtractor.Status status) {
-		return switch (status) {
-			case NO_TEXT -> "PDF에서 글을 찾지 못했어요. 스캔한 PDF는 글자 인식(OCR)이 필요해 아직 지원하지 않아요.";
-			case ENCRYPTED -> "암호가 걸린 PDF라 본문을 읽지 못했어요. 암호를 푼 파일을 올려 주세요.";
-			case EMPTY -> "자료에서 읽을 글이 없어요.";
-			case NOT_SUPPORTED -> "이 형식은 본문을 읽지 못해요.";
-			default -> "자료 파일을 읽지 못했어요. 손상되지 않은 파일인지 확인해 주세요.";
-		};
 	}
 
 	record Verified(String key, String name, String description, String location, String quote,
@@ -398,9 +338,5 @@ public class MaterialConceptService {
 					now));
 		}
 		return conceptRepository.saveAll(concepts).stream().map(MaterialConceptResponse::from).toList();
-	}
-
-	private List<LlmClient> orderedClients() {
-		return llmClients.configuredInOrder(properties.generationProviders());
 	}
 }

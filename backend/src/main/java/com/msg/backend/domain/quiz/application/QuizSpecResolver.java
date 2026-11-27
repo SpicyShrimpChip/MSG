@@ -1,5 +1,6 @@
 package com.msg.backend.domain.quiz.application;
 
+import com.msg.backend.domain.material.application.MaterialAiGate;
 import com.msg.backend.domain.material.application.MaterialContentProperties;
 import com.msg.backend.domain.material.application.MaterialTextExtractor;
 import com.msg.backend.domain.material.application.SourceText;
@@ -65,7 +66,6 @@ class QuizSpecResolver {
 	static final String ASSESSMENT_MATERIAL_MESSAGE = "사전·사후평가는 과목에 연결된 학습자료를 골라야 해요.";
 	static final String NO_PRE_ASSESSMENT_MESSAGE = "이 자료로 먼저 사전평가를 만들어 주세요. 사후평가는 사전평가와 같은 개념으로 만들어요.";
 	static final String CONTENT_NEEDS_MATERIAL_MESSAGE = "자료 본문을 쓰려면 학습자료를 골라 주세요.";
-	static final String CONTENT_CONSENT_MESSAGE = "자료 본문을 외부 AI로 보내려면 확인에 체크해 주세요.";
 	static final String BLOOM_MESSAGE = "인지 수준을 다시 골라 주세요.";
 	static final int MAX_CONCEPTS = 10;
 	static final int MAX_AVOID_QUESTIONS = 20;
@@ -322,7 +322,7 @@ class QuizSpecResolver {
 			throw badRequest(CONTENT_NEEDS_MATERIAL_MESSAGE);
 		}
 		if (!Boolean.TRUE.equals(request.materialContentConsent())) {
-			throw badRequest(CONTENT_CONSENT_MESSAGE);
+			throw badRequest(MaterialAiGate.CONSENT_MESSAGE);
 		}
 		MaterialTextExtractor.Extracted extracted = textExtractor.extract(material, contentProperties.sourceMaxChars());
 		if (extracted.status() != MaterialTextExtractor.Status.OK) {
