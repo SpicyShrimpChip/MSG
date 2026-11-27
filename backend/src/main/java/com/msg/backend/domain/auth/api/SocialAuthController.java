@@ -4,6 +4,7 @@ import com.msg.backend.domain.auth.application.AuthService.LoginResult;
 import com.msg.backend.domain.auth.application.FrontendProperties;
 import com.msg.backend.domain.auth.application.KakaoClient;
 import com.msg.backend.domain.auth.application.KakaoProperties;
+import com.msg.backend.domain.auth.application.ReturnTo;
 import com.msg.backend.domain.auth.application.SignupAttemptLimiter;
 import com.msg.backend.domain.auth.application.SocialError;
 import com.msg.backend.domain.auth.application.SocialLoginException;
@@ -81,7 +82,7 @@ public class SocialAuthController {
 			@Parameter(description = "로그인 뒤 돌아갈 화면 경로 (/로 시작하는 사이트 안 경로만, 아니면 /)") @RequestParam(required = false) String returnTo,
 			HttpServletResponse response) {
 		if (!kakaoProperties.enabled()) {
-			redirect(response, loginWithError("unavailable"));
+			redirect(response, loginWithError(SocialError.UNAVAILABLE.code(), ReturnTo.sanitize(returnTo)));
 			return;
 		}
 		String state = stateCookies.issue(response, returnTo);
@@ -99,7 +100,8 @@ public class SocialAuthController {
 	@Operation(summary = "카카오 로그인 콜백", description = "카카오가 브라우저를 돌려보내는 주소(Redirect URI). 결과에 따라 화면으로 302 이동한다: "
 			+ "로그인되면 Refresh 쿠키를 심고 /auth/social/done?returnTo=, 처음 온 사용자는 가입 마무리 쿠키를 심고 /signup/social?returnTo=, "
 			+ "같은 이메일의 비밀번호 계정이 있으면 같은 쿠키를 심고 /auth/social/link?returnTo=(비밀번호 확인 뒤 연결), "
-			+ "실패하면 /login?socialError=코드(state, cancelled, email_required, email_unverified, rejoin_restricted, link_conflict, failed, unavailable).")
+			+ "실패하면 /login?socialError=코드(state, cancelled, email_required, email_unverified, rejoin_restricted, link_conflict, failed, unavailable). "
+			+ "state 오류가 아니고 돌아갈 화면이 첫 화면이 아니면 &returnTo=도 붙인다.")
 	@GetMapping("/kakao/callback")
 	public void kakaoCallback(
 			@RequestParam(required = false) String code,
@@ -114,16 +116,16 @@ public class SocialAuthController {
 			return;
 		}
 		if (!kakaoProperties.enabled()) {
-			redirect(response, loginWithError(SocialError.UNAVAILABLE.code()));
+			redirect(response, loginWithError(SocialError.UNAVAILABLE.code(), returnTo.get()));
 			return;
 		}
 		if (error != null) {
 			SocialError reason = "access_denied".equals(error) ? SocialError.CANCELLED : SocialError.FAILED;
-			redirect(response, loginWithError(reason.code()));
+			redirect(response, loginWithError(reason.code(), returnTo.get()));
 			return;
 		}
 		if (code == null || code.isBlank()) {
-			redirect(response, loginWithError(SocialError.FAILED.code()));
+			redirect(response, loginWithError(SocialError.FAILED.code(), returnTo.get()));
 			return;
 		}
 		try {
@@ -142,14 +144,14 @@ public class SocialAuthController {
 				redirect(response, frontendProperties.baseUrl() + "/auth/social/link?returnTo=" + encodedReturnTo);
 			}
 		} catch (SocialLoginException e) {
-			redirect(response, loginWithError(e.error().code()));
+			redirect(response, loginWithError(e.error().code(), returnTo.get()));
 		} catch (DataAccessException e) {
 			// DB 오류 메시지에는 넣으려던 값이 들어갈 수 있어 종류만 남긴다(GlobalExceptionHandler와 같음)
 			log.error("카카오 로그인 콜백 처리 실패 ({})", e.getClass().getSimpleName());
-			redirect(response, loginWithError(SocialError.FAILED.code()));
+			redirect(response, loginWithError(SocialError.FAILED.code(), returnTo.get()));
 		} catch (RuntimeException e) {
 			log.error("카카오 로그인 콜백 처리 실패", e);
-			redirect(response, loginWithError(SocialError.FAILED.code()));
+			redirect(response, loginWithError(SocialError.FAILED.code(), returnTo.get()));
 		}
 	}
 
@@ -241,6 +243,14 @@ public class SocialAuthController {
 
 	private String loginWithError(String code) {
 		return frontendProperties.baseUrl() + "/login?socialError=" + code;
+	}
+
+	// state가 맞아 돌아갈 화면을 아는 실패는 그 경로도 넘긴다. 로그인 화면이 다시 로그인한 뒤 원래 화면으로 보낸다(첫 화면이면 생략)
+	private String loginWithError(String code, String returnTo) {
+		if (ReturnTo.HOME.equals(returnTo)) {
+			return loginWithError(code);
+		}
+		return loginWithError(code) + "&returnTo=" + URLEncoder.encode(returnTo, StandardCharsets.UTF_8);
 	}
 
 	private static void redirect(HttpServletResponse response, String location) {

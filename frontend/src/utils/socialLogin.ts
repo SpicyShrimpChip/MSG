@@ -30,6 +30,15 @@ export function kakaoStartUrl(returnTo?: string): string {
   return `/api/auth/kakao/start?returnTo=${encodeURIComponent(safeReturnTo(returnTo))}`;
 }
 
+// 카카오 로그인 실패 안내가 뜨는 로그인 화면 주소. 돌아갈 화면이 첫 화면이 아니면 같이 넘긴다 (서버 콜백의 실패 주소와 같은 모양)
+export function socialLoginErrorPath(code: string, returnTo?: string): string {
+  const path = `/login?socialError=${encodeURIComponent(code)}`;
+  const target = safeReturnTo(returnTo);
+  return target === HOME
+    ? path
+    : `${path}&returnTo=${encodeURIComponent(target)}`;
+}
+
 const GENERAL_ERROR =
   '카카오 로그인 중 문제가 생겼어요. 잠시 뒤 다시 시도해 주세요.';
 
