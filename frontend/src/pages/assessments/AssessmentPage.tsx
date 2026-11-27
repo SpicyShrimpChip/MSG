@@ -34,7 +34,12 @@ import {
   QUIZ_MAX_QUESTIONS,
 } from '@/constants';
 import MaterialConceptPanel from '@/pages/materials/components/MaterialConceptPanel';
-import { createRequestKey, isNoResponseError, isReadable } from '@/utils';
+import {
+  aiQuizBlockedReason,
+  createRequestKey,
+  isNoResponseError,
+  isReadable,
+} from '@/utils';
 import type {
   AssessmentKind,
   AssessmentSnapshot,
@@ -159,13 +164,10 @@ function MaterialAssessment({
   const preReady = comparison.pre !== null;
   const blockedReason = mockData
     ? null
-    : !ai.available
-      ? ai.message
-      : me && !me.aiQuizConsent
-        ? 'AI로 평가를 만들려면 AI 퀴즈 처리 동의가 필요해요. 마이페이지에서 동의할 수 있어요.'
-        : material.courseId === null
-          ? '과목에 연결된 자료로만 평가를 만들 수 있어요.'
-          : null;
+    : (aiQuizBlockedReason(ai, me?.aiQuizConsent, '평가를 만들') ??
+      (material.courseId === null
+        ? '과목에 연결된 자료로만 평가를 만들 수 있어요.'
+        : null));
   const contentBlocked = useContent && !contentConsent;
   const tooFew = count < types.length;
 

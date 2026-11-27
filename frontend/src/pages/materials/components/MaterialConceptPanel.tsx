@@ -26,9 +26,8 @@ import {
   useQuizAiStatus,
   useSingleFlightMutation,
 } from '@/hooks';
-import type { ConceptStudy, MaterialConcept, QuizAiStatus } from '@/types';
-import { CONTENT_DISABLED_MESSAGE } from '@/constants';
-import { cn, isReadable } from '@/utils';
+import type { ConceptStudy, MaterialConcept } from '@/types';
+import { aiQuizBlockedReason, cn, materialContentBlockedReason } from '@/utils';
 import ConceptStudyActions from './ConceptStudyActions';
 
 // 자료 원문 인용 (서버가 본문에 있는지 확인한 문장, AI 글 아님 → 회색)
@@ -269,20 +268,6 @@ function ConceptCard({
   );
 }
 
-function blockedReasonOf(
-  ai: QuizAiStatus,
-  readable: boolean,
-  aiQuizConsent: boolean | undefined,
-): string | null {
-  if (!ai.materialContentEnabled) return CONTENT_DISABLED_MESSAGE;
-  if (!readable)
-    return '이 형식은 본문을 읽지 못해요. TXT·MD·PPTX·글이 들어 있는 PDF만 읽어요.';
-  if (!ai.available) return ai.message;
-  if (aiQuizConsent === false)
-    return 'AI로 개념을 뽑거나 설명을 만들려면 AI 퀴즈 처리 동의가 필요해요. 마이페이지에서 동의할 수 있어요.';
-  return null;
-}
-
 // 자료에서 뽑은 핵심 개념 + 개념별 자세한 설명 + 뽑기. 뽑기·설명은 자료 본문 발췌를 외부 AI로 보내므로
 // 운영 설정·AI 퀴즈 처리 동의·이번 요청의 확인이 모두 있어야 한다. 개념은 이름과 근거 문장이 자료 본문에 실제로 있는 것만 서버가 저장한다
 function MaterialConceptPanel({
@@ -328,11 +313,9 @@ function MaterialConceptPanel({
     },
   });
 
-  const blockedReason = blockedReasonOf(
-    ai,
-    isReadable(fileName),
-    me?.aiQuizConsent,
-  );
+  const blockedReason =
+    materialContentBlockedReason(ai, fileName) ??
+    aiQuizBlockedReason(ai, me?.aiQuizConsent, '개념을 뽑거나 설명을 만들');
   const withNotes = concepts.filter((concept) => concept.studyNote).length;
 
   return (
