@@ -12,11 +12,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 /**
- * 반복 로그인 실패를 막는다.
- * - 같은 이메일·같은 IP: 짧은 시간 동안 여러 번 틀리면 잠깐 막는다 (비밀번호 대입)
+ * 반복 로그인 실패를 막는다. 세 기준 중 하나라도 걸리면 막고, 가장 긴 남은 시간을 안내한다.
+ * - 같은 이메일·같은 IP: 짧은 시간에 여러 번 틀리면 막는다 (한 기기에서의 비밀번호 대입)
  * - 같은 IP: 여러 이메일로 시도하는 경우를 더 큰 기준으로 막는다
- * 이메일만으로 막으면 남이 일부러 틀려서 계정 주인을 막을 수 있으므로 IP와 묶는다.
- * TODO: 서버를 여러 대 띄우면 메모리 대신 공용 저장소(Redis 등)가 필요하다. 배포 구성(미결)이 정해지면 바꾼다
+ * - 같은 이메일(IP 무관): 여러 곳에서 한 계정을 노리는 경우를 더 큰 기준으로 막는다.
+ *   남이 일부러 틀려 계정 주인을 막을 수 있으므로 잠금은 짧게 두고, 성공하면 기록을 지운다
+ * 잠긴 동안의 시도는 호출하는 쪽이 checkAllowed에서 먼저 막으므로 세지 않는다(잠금이 늘어나지 않는다).
+ * 운영은 서버 한 대(docs/deploy.md)라 메모리에 둔다. 서버를 여러 대로 늘리면 공용 저장소가 필요하다.
  */
 @Component
 public class LoginAttemptLimiter {
@@ -38,7 +40,8 @@ public class LoginAttemptLimiter {
 
 	public void checkAllowed(String email, String ip) {
 		Instant now = clock.instant();
-		Duration wait = max(remainingLock(accountKey(email, ip), now), remainingLock(ipKey(ip), now));
+		Duration wait = max(max(remainingLock(accountKey(email, ip), now), remainingLock(ipKey(ip), now)),
+				remainingLock(emailKey(email), now));
 		if (!wait.isZero()) {
 			long minutes = Math.max(1, (wait.toSeconds() + 59) / 60);
 			throw new BusinessException(HttpStatus.TOO_MANY_REQUESTS,
@@ -48,8 +51,9 @@ public class LoginAttemptLimiter {
 
 	public void recordFailure(String email, String ip) {
 		Instant now = clock.instant();
-		record(accountKey(email, ip), config.maxFailures(), now);
-		record(ipKey(ip), config.maxFailuresPerIp(), now);
+		record(accountKey(email, ip), config.maxFailures(), config.lockDuration(), now);
+		record(ipKey(ip), config.maxFailuresPerIp(), config.lockDuration(), now);
+		record(emailKey(email), config.maxFailuresPerEmail(), config.emailLockDuration(), now);
 		if (attempts.size() > CLEANUP_THRESHOLD) {
 			attempts.entrySet().removeIf(entry -> isStale(entry.getValue(), now));
 		}
@@ -57,9 +61,10 @@ public class LoginAttemptLimiter {
 
 	public void recordSuccess(String email, String ip) {
 		attempts.remove(accountKey(email, ip));
+		attempts.remove(emailKey(email));
 	}
 
-	private void record(String key, int maxFailures, Instant now) {
+	private void record(String key, int maxFailures, Duration lockDuration, Instant now) {
 		attempts.compute(key, (k, current) -> {
 			List<Instant> failures = new ArrayList<>();
 			if (current != null) {
@@ -67,7 +72,7 @@ public class LoginAttemptLimiter {
 			}
 			failures.add(now);
 			if (failures.size() >= maxFailures) {
-				return new Attempts(List.of(), now.plus(config.lockDuration()));
+				return new Attempts(List.of(), now.plus(lockDuration));
 			}
 			return new Attempts(List.copyOf(failures), current == null ? null : current.lockedUntil());
 		});
@@ -100,5 +105,9 @@ public class LoginAttemptLimiter {
 
 	private static String ipKey(String ip) {
 		return "ip:" + ip;
+	}
+
+	private static String emailKey(String email) {
+		return "email:" + email;
 	}
 }

@@ -165,6 +165,35 @@ class AuthApiTest {
 	}
 
 	@Test
+	void 같은_이메일로_여러_IP에서_틀리면_이메일_기준으로_잠시_막는다() throws Exception {
+		createUser("spread@example.com");
+		for (int i = 0; i < 10; i++) {
+			String email = i % 2 == 0 ? "spread@example.com" : "Spread@Example.com";
+			login(email, "Wrong000!", "10.20.0." + i).andExpect(status().isUnauthorized());
+		}
+
+		login("spread@example.com", PASSWORD, "10.20.0.99")
+				.andExpect(status().isTooManyRequests())
+				.andExpect(jsonPath("$.message").value("로그인 시도가 너무 많아요. 10분 뒤 다시 시도해 주세요."));
+		// 잠긴 동안의 시도는 세지 않으므로 잠금이 늘어나지 않는다
+		login("spread@example.com", PASSWORD, "10.20.0.98").andExpect(status().isTooManyRequests());
+
+		clock.advance(Duration.ofMinutes(10));
+		login("spread@example.com", PASSWORD, "10.20.0.97").andExpect(status().isOk());
+	}
+
+	@Test
+	void 없는_이메일도_여러_IP에서_틀리면_같은_문구로_막는다() throws Exception {
+		for (int i = 0; i < 10; i++) {
+			login("ghost-spread@example.com", "Wrong000!", "10.21.0." + i).andExpect(status().isUnauthorized());
+		}
+
+		login("ghost-spread@example.com", PASSWORD, "10.21.0.99")
+				.andExpect(status().isTooManyRequests())
+				.andExpect(jsonPath("$.message").value("로그인 시도가 너무 많아요. 10분 뒤 다시 시도해 주세요."));
+	}
+
+	@Test
 	void X_Requested_With_헤더가_없는_쿠키_요청은_403() throws Exception {
 		createUser("csrf@example.com");
 
@@ -372,6 +401,17 @@ class AuthApiTest {
 
 	private ResultActions login(String email, String password) throws Exception {
 		return mockMvc.perform(post("/api/auth/login")
+				.header("X-Requested-With", "XMLHttpRequest")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(json(Map.of("email", email, "password", password))));
+	}
+
+	private ResultActions login(String email, String password, String remoteAddr) throws Exception {
+		return mockMvc.perform(post("/api/auth/login")
+				.with(request -> {
+					request.setRemoteAddr(remoteAddr);
+					return request;
+				})
 				.header("X-Requested-With", "XMLHttpRequest")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(json(Map.of("email", email, "password", password))));
