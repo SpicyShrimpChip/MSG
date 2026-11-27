@@ -466,16 +466,16 @@ const RUN: AnalysisRun = {
     },
     items: [
       {
-        component: 'summary',
+        component: 'concepts',
         order: 1,
         size: 'wide',
-        aiReason: '보완 필요 개념이 몇 개인지 먼저',
+        aiReason: '이해 부족·의견이 갈린 개념부터 펼쳐 보게',
       },
       {
-        component: 'concepts',
+        component: 'summary',
         order: 2,
         size: 'wide',
-        aiReason: '이해 부족·의견이 갈린 개념부터 펼쳐 보게',
+        aiReason: '전체 개념 단계와 평가 결과를 이어서 보게',
       },
       {
         component: 'models',

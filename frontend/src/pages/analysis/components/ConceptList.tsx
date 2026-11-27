@@ -13,7 +13,7 @@ import ConceptVerificationBox from './ConceptVerificationBox';
 import MasteryEvidence from './MasteryEvidence';
 import MasteryMeter from './MasteryMeter';
 import Panel from './Panel';
-import { ModelVerdictChip } from './UnderstandingBadge';
+import { ModelVerdictMark } from './UnderstandingBadge';
 
 // 목록의 한 줄로 내려갈 때 쓰는 id (개념 이름에는 띄어쓰기·괄호가 있어 순번으로 만든다)
 const conceptRowId = (index: number) => `concept-row-${index + 1}`;
@@ -63,7 +63,7 @@ function ConceptRow({
         onClick={onToggle}
         aria-expanded={open}
         aria-controls={bodyId}
-        className="grid w-full grid-cols-[2rem_minmax(0,1fr)_1.25rem] items-center gap-x-3 gap-y-2.5 px-4 py-4 text-left lg:grid-cols-[2rem_minmax(0,1.3fr)_minmax(0,0.9fr)_minmax(0,2fr)_1.25rem] lg:px-5"
+        className="grid w-full grid-cols-[2rem_minmax(0,1fr)_1.25rem] items-center gap-x-3 gap-y-2.5 px-4 py-4 text-left lg:grid-cols-[2rem_minmax(0,1.6fr)_minmax(0,1fr)_auto_1.25rem] lg:gap-x-6 lg:px-5"
       >
         <span
           className="flex size-7 items-center justify-center rounded-full bg-primary text-caption font-semibold text-on-primary"
@@ -101,13 +101,17 @@ function ConceptRow({
             <span className="text-caption text-ink-muted">숙련도 계산 전</span>
           )}
         </span>
-        <span className="col-span-2 col-start-2 flex flex-wrap gap-1.5 lg:col-span-1 lg:col-start-4 lg:row-start-1">
+        <span
+          role="list"
+          aria-label="모델별 판단"
+          className="col-span-2 col-start-2 flex gap-1.5 lg:col-span-1 lg:col-start-4 lg:row-start-1"
+        >
           {models.map((model) => {
             const judgment = concept.judgments.find(
               (item) => item.provider === model.provider,
             );
             return (
-              <ModelVerdictChip
+              <ModelVerdictMark
                 key={model.provider}
                 provider={PROVIDER_LABEL[model.provider]}
                 status={judgment?.status ?? null}
