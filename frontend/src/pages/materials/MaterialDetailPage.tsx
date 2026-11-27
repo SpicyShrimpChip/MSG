@@ -8,6 +8,7 @@ import {
   AsyncBoundary,
   Button,
   EmptyState,
+  LIST_PANEL_CLASS,
   SubPage,
   Tabs,
 } from '@/components';
@@ -118,7 +119,7 @@ function QuizTabContent({ material }: { material: MaterialDetail }) {
     );
   }
   return (
-    <ul className="flex flex-col gap-3">
+    <ul className={LIST_PANEL_CLASS}>
       {mine.map((quiz) => (
         <QuizCard key={quiz.id} quiz={quiz} />
       ))}

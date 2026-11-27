@@ -6,10 +6,11 @@ import { MATERIALS_QUERY_KEY, deleteMaterial } from '@/api';
 import {
   AsyncBoundary,
   Button,
-  Card,
   Chip,
   ConfirmDialog,
   EmptyState,
+  LIST_PANEL_CLASS,
+  LIST_ROW_CLASS,
   SubPage,
   ErrorText,
   Spinner,
@@ -83,7 +84,7 @@ function MaterialCard({
 }) {
   const date = formatDate(material.createdAt);
   return (
-    <Card as="li" className="flex items-start justify-between gap-4 p-5">
+    <li className={LIST_ROW_CLASS}>
       <div className="flex min-w-0 flex-col gap-1.5">
         <Link
           to={`/materials/${material.id}`}
@@ -107,7 +108,7 @@ function MaterialCard({
       >
         <Trash2 size={18} aria-hidden="true" />
       </button>
-    </Card>
+    </li>
   );
 }
 
@@ -163,7 +164,7 @@ function MaterialList() {
               {group.materials.length}개
             </span>
           </h2>
-          <ul className="flex flex-col gap-3">
+          <ul className={LIST_PANEL_CLASS}>
             {group.materials.map((material) => (
               <MaterialCard
                 key={material.id}
