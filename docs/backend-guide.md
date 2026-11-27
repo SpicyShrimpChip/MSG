@@ -44,7 +44,7 @@
 
 - 학습 모드(시험 대비·자기개발·업무 활용)마다 지시문이 다르다(`QuizPrompt`). 만들기는 설정된 첫 모델 하나만 부르고(`app.quiz.generation-providers`), `QuizGenerationParser`를 통과한 퀴즈만 저장한다.
 - 비용 상한은 24시간 만들기 요청 수·AI 채점 실행 수(처음·다시 채점, `quiz_grading_run`)·실제 모델 요청 수(`quiz_ai_call` attempts 합) 세 겹이다.
-- 만들기·채점은 전체 시간 예산(`generation-deadline`·`grading-deadline`) 안에서만 기다리고, 저장할 때 기록이 아직 진행 중·마감 전인지 확인해 늦은 결과는 버린다. 모델 호출은 `ModelInvoker`의 QUIZ 스레드 묶음(분석과 분리).
+- 만들기·채점은 전체 시간 예산(`generation-deadline`·`grading-deadline`) 안에서만 기다리고, 저장할 때 기록이 아직 진행 중·마감 전인지 확인해 늦은 결과는 버린다. 채점 실행이 저장할 때 이미 끝나 있으면(다시 채점이 마감 지난 실행을 정리한 뒤) 답을 건드리지 않는다. 모델 호출은 `ModelInvoker`의 QUIZ 스레드 묶음(분석과 분리).
 - 주관식 의미 판단·서술형 채점은 설정된 모델 모두가 따로 판단하고 과반 의견만 쓰며(서술형 피드백도 과반 수준을 가장 많이 낸 모델의 것) 점수는 코드가 더한다(`AnswerGradingService`).
 - 외부로는 과목 이름·개념·시험 범위·직무 분야·학습자 답(사후평가는 사전평가 문제 글도)만 보낸다.
 
@@ -69,3 +69,5 @@
 - 최근 분석을 돌려줄 때(분석 실행·`runs/latest`) 개념의 마지막 기록과 단계·근거가 다르면 한 줄을 남기고 `mastery.history`(최근 30개)를 붙인다. 지난 분석(`runs/{id}`)은 기록하지 않고 붙이기만 한다.
 - 판단한 모델이 없는 분석(`failed`)은 기록하지 않고 `runs/latest`의 결과도 되지 않으며(그 시도는 `lastAttempt`로 알림), 일부 모델이 실패한 분석(`partial`)은 퀴즈·산식이 바뀌었거나 첫 기록일 때만 남긴다.
 - 기록은 `analysis_run`에 CASCADE로 달려 대화 삭제·동의 철회 때 함께 지워진다.
+- 퀴즈 근거는 `ConceptQuizStatsResponse.ratedCount`·`rateSum`(문제별 득점률 합)으로 센다. `score ÷ maxScore`를 숙련도에 쓰면 만점이 큰 서술형이 결과를 좌우한다(`MasteryCalculator.calculate(ConceptQuizStatsResponse, …)`).
+- 결과·기록·응답의 산식 버전은 `MasteryProperties.effectiveFormulaVersion()`(형식과 올리는 규칙은 5-10절)만 쓴다. 앞 번호에 `-`가 있거나 버전이 20자(`formula_version VARCHAR(20)`)를 넘으면 서버가 시작하지 않는다.

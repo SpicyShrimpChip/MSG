@@ -4,6 +4,8 @@ import {
   UNDERSTANDING_LABEL,
   conceptQuizLink,
   describeLevelTrend,
+  formulaMajor,
+  quizRateText,
 } from '@/utils';
 import MasteryMeter from './MasteryMeter';
 import MasteryTrend from './MasteryTrend';
@@ -51,7 +53,7 @@ function MasteryEvidence({ courseId, concept, mastery }: MasteryEvidenceProps) {
                 </span>
                 {mastery.quizRate !== null && (
                   <span className="text-ink-soft">
-                    얻은 점수 {Math.round(mastery.quizRate * 100)}%
+                    {quizRateText(mastery.quizRate, mastery.formulaVersion)}
                   </span>
                 )}
               </li>
@@ -93,7 +95,8 @@ function MasteryEvidence({ courseId, concept, mastery }: MasteryEvidenceProps) {
 
       <p className="text-caption text-ink-muted">
         퀴즈 결과를 대화보다 무겁게 반영해요. 반영 비율과 기준은 초기값이라
-        사용자 테스트 뒤 조정해요. (산식 버전 {mastery.formulaVersion})
+        사용자 테스트 뒤 조정해요. (산식 버전{' '}
+        {formulaMajor(mastery.formulaVersion)})
       </p>
 
       <MasteryTrend history={mastery.history} />

@@ -20,7 +20,8 @@ class LoginAttemptLimiterTest {
 	@BeforeEach
 	void setUp() {
 		clock = new MutableClock();
-		var config = new AuthProperties.LoginAttempt(3, Duration.ofMinutes(15), Duration.ofMinutes(10), 5);
+		var config = new AuthProperties.LoginAttempt(3, Duration.ofMinutes(15), Duration.ofMinutes(10), 5,
+				6, Duration.ofMinutes(5));
 		limiter = new LoginAttemptLimiter(new AuthProperties(Duration.ofDays(14), Duration.ZERO, null, config, null), clock);
 	}
 
@@ -71,9 +72,57 @@ class LoginAttemptLimiterTest {
 				.isInstanceOf(BusinessException.class);
 	}
 
+	@Test
+	void IP가_매번_달라도_같은_이메일로_기준_횟수만큼_틀리면_막는다() {
+		failFromDifferentIps(EMAIL, 6);
+
+		assertThatThrownBy(() -> limiter.checkAllowed(EMAIL, "10.0.9.9"))
+				.isInstanceOf(BusinessException.class)
+				.hasMessage("로그인 시도가 너무 많아요. 5분 뒤 다시 시도해 주세요.");
+	}
+
+	@Test
+	void 이메일_기준_잠금은_이메일_기준_잠금_시간이_지나면_풀린다() {
+		failFromDifferentIps(EMAIL, 6);
+		clock.advance(Duration.ofMinutes(5));
+
+		assertThatCode(() -> limiter.checkAllowed(EMAIL, "10.0.9.9")).doesNotThrowAnyException();
+	}
+
+	@Test
+	void 성공하면_이메일_기준_실패_기록도_지운다() {
+		failFromDifferentIps(EMAIL, 5);
+		limiter.recordSuccess(EMAIL, "10.0.9.9");
+		// 같은 IP 목록을 다시 써도 IP별로는 2회라 이메일+IP 기준(3회)에는 걸리지 않는다
+		failFromDifferentIps(EMAIL, 5);
+
+		assertThatCode(() -> limiter.checkAllowed(EMAIL, "10.0.9.9")).doesNotThrowAnyException();
+	}
+
+	@Test
+	void 다른_이메일은_이메일_기준_잠금의_영향을_받지_않는다() {
+		failFromDifferentIps(EMAIL, 6);
+
+		assertThatCode(() -> limiter.checkAllowed("other@example.com", "10.0.9.9")).doesNotThrowAnyException();
+	}
+
+	@Test
+	void 이메일_기준_설정이_0_이하면_거절한다() {
+		assertThatThrownBy(() -> new AuthProperties.LoginAttempt(3, Duration.ofMinutes(15), Duration.ofMinutes(10), 5,
+				0, Duration.ofMinutes(5))).isInstanceOf(IllegalArgumentException.class);
+		assertThatThrownBy(() -> new AuthProperties.LoginAttempt(3, Duration.ofMinutes(15), Duration.ofMinutes(10), 5,
+				6, Duration.ZERO)).isInstanceOf(IllegalArgumentException.class);
+	}
+
 	private void failTimes(String email, String ip, int times) {
 		for (int i = 0; i < times; i++) {
 			limiter.recordFailure(email, ip);
+		}
+	}
+
+	private void failFromDifferentIps(String email, int times) {
+		for (int i = 0; i < times; i++) {
+			limiter.recordFailure(email, "10.0.1." + i);
 		}
 	}
 }

@@ -20,5 +20,7 @@ public record ConceptQuizStatsResponse(
 		@Schema(description = "내 피드백: already_know / want_to_study / null") String feedback,
 		@Schema(description = "이미 알아요를 남긴 뒤 푼 문제로 확인한 결과: confirmed / not_confirmed / needs_check / not_taken. "
 				+ "피드백이 already_know가 아니면 null") String confirmation,
-		@Schema(description = "이 개념을 다룬 가장 최근 제출 시각. 없으면 null") java.time.LocalDateTime lastSubmittedAt) {
+		@Schema(description = "이 개념을 다룬 가장 최근 제출 시각. 없으면 null") java.time.LocalDateTime lastSubmittedAt,
+		@Schema(description = "숙련도에 넣은 문제 수 (채점이 끝나고 만점이 있는 문제)") int ratedCount,
+		@Schema(description = "그 문제마다 (얻은 점수 ÷ 그 문제 만점)을 더한 값. 숙련도 계산에 쓴다") double rateSum) {
 }
