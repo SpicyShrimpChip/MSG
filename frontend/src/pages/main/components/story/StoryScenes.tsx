@@ -3,6 +3,7 @@ import { Check, FileText, Lock } from 'lucide-react';
 import { AiNote, Chip, LevelBadge } from '@/components';
 import MasteryMeter from '@/pages/analysis/components/MasteryMeter';
 import type { MasteryStage } from '@/types';
+import { cn } from '@/utils';
 import { Dim, MaskSwap, Reveal, SlotItem } from './SceneMotion';
 
 // 스크롤 소개의 오른쪽 장면들 (브라우저 창 틀 안에 들어간다). 모두 화면 소개용 예시라서 끝에 "예시" 표시를 붙인다
@@ -295,21 +296,23 @@ export function OrderScene() {
             to={index}
             slotHeight={ORDER_SLOT}
             delay={0.45}
-            className={`absolute inset-x-0 top-0 flex h-14 items-center gap-3 rounded-2xl border px-4 ${
+            className={cn(
+              'absolute inset-x-0 top-0 flex h-14 items-center gap-3 rounded-2xl border px-4',
               index === 0
                 ? 'border-primary-pill bg-primary-soft'
-                : 'border-line bg-surface-raised'
-            }`}
+                : 'border-line bg-surface-raised',
+            )}
           >
             <Reveal
               as="span"
               effect="pop"
               delay={1.2 + index * 0.08}
-              className={`flex size-7 shrink-0 items-center justify-center rounded-full text-caption font-semibold ${
+              className={cn(
+                'flex size-7 shrink-0 items-center justify-center rounded-full text-caption font-semibold',
                 index === 0
                   ? 'bg-primary text-on-primary'
-                  : 'bg-primary-pill text-heading'
-              }`}
+                  : 'bg-primary-pill text-heading',
+              )}
             >
               {index + 1}
             </Reveal>
@@ -355,7 +358,10 @@ function CheckBar({
           <Reveal
             as="span"
             delay={delay}
-            className={`block h-full rounded-full ${tone === 'pre' ? 'bg-chart-pre' : 'bg-chart-post'}`}
+            className={cn(
+              'block h-full rounded-full',
+              tone === 'pre' ? 'bg-chart-pre' : 'bg-chart-post',
+            )}
           >
             {null}
           </Reveal>

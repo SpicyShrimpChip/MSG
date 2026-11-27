@@ -1,5 +1,5 @@
 import { Check, Circle } from 'lucide-react';
-import { checkPassword } from '@/utils';
+import { checkPassword, cn } from '@/utils';
 
 interface PasswordRulesProps {
   id: string;
@@ -17,9 +17,10 @@ function PasswordRules({ id, password }: PasswordRulesProps) {
       {checkPassword(password).map((rule) => (
         <li
           key={rule.id}
-          className={`flex items-center gap-1 text-caption ${
-            rule.met ? 'text-strength' : 'text-ink-muted'
-          }`}
+          className={cn(
+            'flex items-center gap-1 text-caption',
+            rule.met ? 'text-strength' : 'text-ink-muted',
+          )}
         >
           {rule.met ? (
             <Check size={14} aria-hidden="true" />

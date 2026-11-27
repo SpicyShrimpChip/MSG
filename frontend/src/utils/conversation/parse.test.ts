@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { filterByKeywords } from './filter';
+import { assignToCourses } from './assign';
 import { parseConversationExport } from './parse';
 
 // 실제 내보내기 파일이 아니라 알려진 구조를 흉내 낸 가짜 데이터다.
@@ -499,31 +499,39 @@ describe('parseConversationExport', () => {
   });
 });
 
-describe('filterByKeywords', () => {
+describe('키워드로 대화 고르기 (assignToCourses)', () => {
   const parsed = (() => {
     const result = parseConversationExport('conversations.json', claudeFile());
     if (!result.ok) throw new Error(result.message);
     return result.conversations;
   })();
+  const course = (keywords: string[]) => [
+    { id: 1, name: '운영체제', semester: '2026-2', keywords },
+  ];
 
   it('제목이나 메시지에 키워드가 있는 대화만 고르고 찾은 키워드를 알려 준다', () => {
-    const matches = filterByKeywords(parsed, ['교착 상태', '페이징']);
-    expect(matches).toHaveLength(1);
-    expect(matches[0].matchedKeywords).toEqual(['교착 상태']);
+    const { assigned } = assignToCourses(
+      parsed,
+      course(['교착 상태', '페이징']),
+    );
+    expect(assigned).toHaveLength(1);
+    expect(assigned[0].matches[0].matchedKeywords).toEqual(['교착 상태']);
   });
 
   it('대소문자와 앞뒤 공백을 무시한다', () => {
     const rsa = parseConversationExport('conversations.json', chatGptFile());
     if (!rsa.ok) throw new Error(rsa.message);
-    expect(filterByKeywords(rsa.conversations, [' rsa '])).toHaveLength(1);
+    expect(
+      assignToCourses(rsa.conversations, course([' rsa '])).assigned,
+    ).toHaveLength(1);
   });
 
   it('키워드가 없거나 비어 있으면 아무것도 고르지 않는다', () => {
-    expect(filterByKeywords(parsed, [])).toEqual([]);
-    expect(filterByKeywords(parsed, ['  ', ''])).toEqual([]);
+    expect(assignToCourses(parsed, course([])).assigned).toEqual([]);
+    expect(assignToCourses(parsed, course(['  ', ''])).assigned).toEqual([]);
   });
 
   it('관련 없는 키워드면 고르지 않는다', () => {
-    expect(filterByKeywords(parsed, ['스케줄링'])).toEqual([]);
+    expect(assignToCourses(parsed, course(['스케줄링'])).assigned).toEqual([]);
   });
 });

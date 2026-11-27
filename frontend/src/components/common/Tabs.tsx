@@ -5,6 +5,7 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from 'react';
+import { cn } from '@/utils';
 import Chip from './Chip';
 
 export interface TabItem {
@@ -62,11 +63,12 @@ function Tabs({ label, tabs, initialId }: TabsProps) {
               tabIndex={selected ? 0 : -1}
               onClick={() => setSelectedId(tab.id)}
               onKeyDown={(e) => handleKeyDown(e, index)}
-              className={`-mb-px inline-flex items-center gap-1.5 border-b-3 px-4 py-3 font-medium ${
+              className={cn(
+                '-mb-px inline-flex items-center gap-1.5 border-b-3 px-4 py-3 font-medium',
                 selected
                   ? 'border-primary text-heading'
-                  : 'border-transparent text-ink-muted hover:text-heading'
-              }`}
+                  : 'border-transparent text-ink-muted hover:text-heading',
+              )}
             >
               {tab.label}
               {tab.badge && <Chip className="font-normal">{tab.badge}</Chip>}

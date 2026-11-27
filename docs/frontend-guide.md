@@ -126,5 +126,5 @@ Tailwind 4 `@theme`에 아래 이름으로 등록한다(`src/index.css`).
 
 - `ai` 색을 쓰는 곳: AI 설명, 판단 근거 요약, AI 추천 학습 순서와 "이 순서인 이유", 챗봇 답변, 대시보드 "왜 여기에 있나요?"
 - 다크모드는 같은 중립 회색을 어둡게 옮긴 바탕(`surface` < 카드 `surface-raised` < 연한 칸 `surface-muted`)에 밝은 잉크 파랑(`#a9bfee`)이다. 기본값은 기기 설정을 따르고, 상단바의 화면 모드 버튼 하나(`ThemeToggle`, 누르면 지금 보이는 모드의 반대로 바뀜, `useThemeStore`)로 바꾼다.
-- 페이지 본문 폭은 `max-w-page`(1200px), 자주 쓰는 글자 크기는 `text-body`(15px)·`text-caption`(13px)·`text-display`(40px) 토큰을 쓴다.
+- 페이지 본문 폭은 `max-w-page`(1200px), 자주 쓰는 글자 크기는 `text-body`(15px)·`text-caption`(13px) 토큰을 쓴다.
 - 폰트: Pretendard (대체: Noto Sans KR, 시스템 폰트)

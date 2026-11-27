@@ -19,6 +19,7 @@ import {
 } from '@/constants';
 import { useNotice, useSingleFlightMutation } from '@/hooks';
 import type { NoticeDetail } from '@/types';
+import { cn } from '@/utils';
 
 // 새로 쓰기(notice 없음)와 고치기(notice 있음)가 같은 폼을 쓴다
 function NoticeForm({ notice }: { notice?: NoticeDetail }) {
@@ -86,7 +87,11 @@ function NoticeForm({ notice }: { notice?: NoticeDetail }) {
           maxLength={NOTICE_CONTENT_MAX_LENGTH}
           aria-describedby="notice-content-count"
           placeholder="공지 내용을 입력해 주세요"
-          className={`w-full resize-y px-3 py-3 leading-relaxed placeholder:text-ink-muted ${FIELD_CLASS}`}
+          className={cn(
+            // FIELD_CLASS를 먼저 둔다: 글자 크기(text-body)가 뒤에 오면 cn이 줄 높이(leading-relaxed)를 지운다
+            FIELD_CLASS,
+            'w-full resize-y px-3 py-3 leading-relaxed placeholder:text-ink-muted',
+          )}
         />
         <p
           id="notice-content-count"

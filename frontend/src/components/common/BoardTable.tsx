@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { cn } from '@/utils';
 
 export interface BoardColumn<T> {
   key: string;
@@ -31,7 +32,10 @@ function BoardTable<T>({
               <th
                 key={column.key}
                 scope="col"
-                className={`border-b border-line px-4 py-3 text-left text-caption font-semibold text-ink-soft ${column.widthClass ?? ''}`}
+                className={cn(
+                  'border-b border-line px-4 py-3 text-left text-caption font-semibold text-ink-soft',
+                  column.widthClass,
+                )}
               >
                 {column.label}
               </th>

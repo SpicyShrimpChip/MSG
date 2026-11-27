@@ -1,6 +1,8 @@
 // 개인정보 처리방침·이용약관처럼 조항으로 된 법적 고지 문서의 본문.
 // 한눈에 보기(해요체 요약) → 머리말 → 초안 안내 → 목차 → 조항 순서로 그린다. 제목은 페이지의 SubPage가 맡는다.
 
+import { cn } from '@/utils';
+
 export type LegalBlock =
   | { type: 'p'; text: string }
   | { type: 'ul'; items: string[] }
@@ -56,7 +58,12 @@ function SectionBlock({ block }: { block: LegalBlock }) {
               {row.map((cell, index) => (
                 <td
                   key={block.head[index]}
-                  className={`border-b border-line px-3.5 py-3 align-top leading-relaxed ${index === 0 ? 'font-semibold text-heading' : 'text-ink-soft'}`}
+                  className={cn(
+                    'border-b border-line px-3.5 py-3 align-top leading-relaxed',
+                    index === 0
+                      ? 'font-semibold text-heading'
+                      : 'text-ink-soft',
+                  )}
                 >
                   {cell}
                 </td>

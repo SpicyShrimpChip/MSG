@@ -12,10 +12,9 @@
   --font-sans:
     'Pretendard Variable', Pretendard, 'Noto Sans KR', system-ui, sans-serif;
 
-  /* 글자 크기: 본문 보조(15px), 배지·캡션(13px), 메인 큰 제목(40px) */
+  /* 글자 크기: 본문 보조(15px), 배지·캡션(13px) */
   --text-body: 0.9375rem;
   --text-caption: 0.8125rem;
-  --text-display: 2.5rem;
 
   /* 기본 전환(transition-*) 시간과 곡선. constants/motion.ts의 값과 맞춘다 */
   --default-transition-duration: 180ms;
@@ -34,7 +33,6 @@
   --color-on-primary: #ffffff;
   --color-primary-soft: #e9edf5;
   --color-primary-pill: #dde3ef;
-  --color-primary-pill-hover: #ced7e8;
 
   /* 푸터: 옅은 중립 회색 (글자는 heading) */
   --color-footer: #f2f0eb;
@@ -101,7 +99,6 @@
   --color-on-primary: #10141f;
   --color-primary-soft: #232a3a;
   --color-primary-pill: #2b3448;
-  --color-primary-pill-hover: #343f56;
 
   --color-footer: #121110;
 

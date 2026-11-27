@@ -1,4 +1,5 @@
 import { Check } from 'lucide-react';
+import { cn } from '@/utils';
 
 // 가져오기 단계. 파싱·필터·마스킹은 모두 브라우저에서 하고, 마지막 단계에서 고른 대화만 보낸다
 const IMPORT_STEPS = [
@@ -28,29 +29,34 @@ function ImportSteps({ current }: ImportStepsProps) {
             {index > 0 && (
               <span
                 aria-hidden="true"
-                className={`h-0.5 w-6 rounded-full ${done || active ? 'bg-primary' : 'bg-line'}`}
+                className={cn(
+                  'h-0.5 w-6 rounded-full',
+                  done || active ? 'bg-primary' : 'bg-line',
+                )}
               />
             )}
             <span className="flex items-center gap-2">
               <span
-                className={`flex size-7 shrink-0 items-center justify-center rounded-full text-caption font-semibold ${
+                className={cn(
+                  'flex size-7 shrink-0 items-center justify-center rounded-full text-caption font-semibold',
                   active
                     ? 'bg-primary text-on-primary'
                     : done
                       ? 'bg-primary-soft text-primary'
-                      : 'bg-surface-muted text-ink-muted'
-                }`}
+                      : 'bg-surface-muted text-ink-muted',
+                )}
               >
                 {done ? <Check size={14} aria-hidden="true" /> : index + 1}
               </span>
               <span
-                className={`text-body ${
+                className={cn(
+                  'text-body',
                   active
                     ? 'font-semibold text-heading'
                     : done
                       ? 'text-ink-soft'
-                      : 'text-ink-muted'
-                }`}
+                      : 'text-ink-muted',
+                )}
               >
                 {step}
                 {done && <span className="sr-only">(완료)</span>}
