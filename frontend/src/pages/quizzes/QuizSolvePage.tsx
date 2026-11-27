@@ -234,14 +234,14 @@ function QuizForm({ quizId }: { quizId: number }) {
             )}
             <fieldset className="flex flex-col gap-3">
               <legend className="mb-3 font-semibold text-heading">
-                <span className="mr-2 text-primary">Q{index + 1}.</span>
-                <span className="mr-2 text-caption font-medium text-ink-muted">
-                  [{QUESTION_TYPE_LABELS[question.type]}
+                {/* 문제 형식·수준은 대괄호 없이 문제 위 작은 글자로 */}
+                <span className="mb-1 block text-caption font-medium text-ink-muted">
+                  {QUESTION_TYPE_LABELS[question.type]}
                   {question.type === 'essay' && ` · ${question.maxScore}점`}
                   {question.bloomLevel &&
                     ` · ${BLOOM_LABEL[question.bloomLevel]} 수준`}
-                  ]
                 </span>
+                <span className="mr-1.5 text-ink-muted">{index + 1}.</span>
                 {question.text}
               </legend>
               {question.guide && (
@@ -308,7 +308,7 @@ function QuizForm({ quizId }: { quizId: number }) {
         description={
           answered < total
             ? `${total - answered}문제가 비어 있어요. 빈 문제는 틀린 것으로 채점해요.`
-            : '제출하면 서버가 채점해요. 다시 풀면 새 기록으로 남아요.'
+            : '제출하면 채점해요. 다시 풀면 새 기록으로 남아요.'
         }
         confirmLabel="제출하기"
         onConfirm={() => {
@@ -327,7 +327,7 @@ function QuizSolvePage() {
     <SubPage
       narrow="reading"
       title="퀴즈 풀기"
-      description="문제를 풀고 제출하면 서버가 채점해요"
+      description="문제를 풀고 제출하면 채점해요"
     >
       <AsyncBoundary
         notFoundAction={{ label: '퀴즈 목록으로', to: '/quizzes' }}

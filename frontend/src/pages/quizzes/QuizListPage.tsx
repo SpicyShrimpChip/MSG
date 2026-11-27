@@ -1,5 +1,11 @@
 import { ListChecks } from 'lucide-react';
-import { AsyncBoundary, Button, EmptyState, SubPage } from '@/components';
+import {
+  AsyncBoundary,
+  Button,
+  EmptyState,
+  LIST_PANEL_CLASS,
+  SubPage,
+} from '@/components';
 import { useCourses, useQuizzes } from '@/hooks';
 import { formatSemester } from '@/utils';
 import QuizCard from './components/QuizCard';
@@ -59,7 +65,7 @@ function QuizList() {
               {group.quizzes.length}개
             </span>
           </h2>
-          <ul className="flex flex-col gap-3">
+          <ul className={LIST_PANEL_CLASS}>
             {group.quizzes.map((quiz) => (
               <QuizCard key={quiz.id} quiz={quiz} />
             ))}
