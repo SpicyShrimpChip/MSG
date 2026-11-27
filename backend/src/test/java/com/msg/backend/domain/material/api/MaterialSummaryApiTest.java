@@ -15,6 +15,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.msg.backend.domain.auth.dao.RefreshTokenRepository;
 import com.msg.backend.domain.user.dao.UserRepository;
 import com.msg.backend.global.llm.AiCallQuota;
+import com.msg.backend.global.llm.LlmException;
 import com.msg.backend.global.llm.LlmProvider;
 import com.msg.backend.support.FakeLlmClients;
 import com.msg.backend.support.IntegrationTest;
@@ -182,7 +183,8 @@ class MaterialSummaryApiTest {
 		String fabricated = "{\"overview\":{\"text\":\"개요\",\"basis\":\"material\",\"quote\":\"없는 문장을 지어냈다\"},"
 				+ "\"concepts\":[{\"name\":\"X\",\"definition\":\"y\",\"basis\":\"material\",\"quote\":\"이것도 지어냈다\"}]}";
 		fakeLlm.get(LlmProvider.GPT).answer(fabricated);
-		generate("exam_prep", true, false).andExpect(status().isBadGateway());
+		generate("exam_prep", true, false).andExpect(status().isBadGateway())
+				.andExpect(jsonPath("$.message").value("AI가 쓴 요약을 자료에서 확인하지 못해 저장하지 않았어요. 다시 시도해 주세요."));
 		view("exam_prep").andExpect(jsonPath("$.data.status").value("none"));
 
 		fakeLlm.get(LlmProvider.GPT).answer(SUMMARY);
@@ -193,6 +195,19 @@ class MaterialSummaryApiTest {
 				.andExpect(jsonPath("$.data.content.concepts[0].name").value("공개키 암호"));
 		assertThat(jdbcTemplate.queryForObject("select status from material_summary", String.class))
 				.isEqualTo("SUCCEEDED");
+	}
+
+	@Test
+	void 모델이_응답하지_않으면_502_응답_실패_문구이고_진행_중으로_남지_않는다() throws Exception {
+		fakeLlm.get(LlmProvider.GPT).respond(request -> {
+			throw new LlmException(LlmException.Code.AUTH_FAILED, "401");
+		});
+
+		generate("exam_prep", true, false).andExpect(status().isBadGateway())
+				.andExpect(jsonPath("$.message").value("AI 모델의 응답을 받지 못해 요약을 만들지 못했어요. 잠시 뒤 다시 시도해 주세요."));
+		assertThat(jdbcTemplate.queryForObject("select status from material_summary", String.class))
+				.isEqualTo("FAILED");
+		view("exam_prep").andExpect(jsonPath("$.data.status").value("none"));
 	}
 
 	@Test

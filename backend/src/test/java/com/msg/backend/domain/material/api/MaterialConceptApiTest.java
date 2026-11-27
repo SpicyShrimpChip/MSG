@@ -16,6 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.msg.backend.domain.auth.dao.RefreshTokenRepository;
 import com.msg.backend.domain.quiz.application.QuizFixtures;
 import com.msg.backend.domain.user.dao.UserRepository;
+import com.msg.backend.global.llm.LlmException;
 import com.msg.backend.global.llm.LlmProvider;
 import com.msg.backend.global.llm.LlmRequest;
 import com.msg.backend.global.llm.LlmResponse;
@@ -195,8 +196,39 @@ class MaterialConceptApiTest {
 		fakeLlm.get(LlmProvider.GPT).answer("{\"concepts\":[{\"name\":\"OSPF\",\"quote\":\"OSPF는 없다\"}]}");
 		long material = upload("노트.txt", "VLAN은 브로드캐스트 도메인을 나눈다".getBytes());
 
-		extract(material, true).andExpect(status().isBadGateway());
+		extract(material, true).andExpect(status().isBadGateway())
+				.andExpect(jsonPath("$.message").value("AI가 고른 개념을 자료에서 확인하지 못해 저장하지 않았어요. 다시 시도해 주세요."));
 		assertThat(jdbcTemplate.queryForObject("select count(*) from material_concept", Integer.class)).isZero();
+	}
+
+	@Test
+	void 첫_모델의_답이_형식에_맞지_않으면_다음_모델로_넘어간다() throws Exception {
+		fakeLlm.get(LlmProvider.GPT).answer("{}");
+		fakeLlm.get(LlmProvider.CLAUDE).answer(CONCEPTS);
+		long material = upload("노트.txt", "VLAN은 브로드캐스트 도메인을 나눈다".getBytes());
+
+		extract(material, true).andExpect(status().isOk())
+				.andExpect(jsonPath("$.data[0].conceptId").value("vlan"));
+		assertThat(jdbcTemplate.queryForList("select provider, outcome from quiz_ai_call where purpose = 'CONCEPTS'"
+				+ " order by id")).extracting(row -> row.get("provider") + ":" + row.get("outcome"))
+				.containsExactly("gpt:INVALID_OUTPUT", "claude:SUCCEEDED");
+	}
+
+	@Test
+	void 모델이_모두_응답하지_않으면_502_응답_실패_문구다() throws Exception {
+		long material = upload("노트.txt", "VLAN은 브로드캐스트 도메인을 나눈다".getBytes());
+		extract(material, true).andExpect(status().isOk());
+		fakeLlm.get(LlmProvider.GPT).respond(request -> {
+			throw new LlmException(LlmException.Code.AUTH_FAILED, "401");
+		});
+
+		extract(material, true).andExpect(status().isBadGateway())
+				.andExpect(jsonPath("$.message")
+						.value("AI 모델의 응답을 받지 못해 핵심 개념을 뽑지 못했어요. 잠시 뒤 다시 시도해 주세요."));
+		explain(material, "vlan", true).andExpect(status().isBadGateway())
+				.andExpect(jsonPath("$.message")
+						.value("AI 모델의 응답을 받지 못해 개념 설명을 만들지 못했어요. 잠시 뒤 다시 시도해 주세요."));
+		assertThat(jdbcTemplate.queryForObject("select count(*) from material_concept", Integer.class)).isEqualTo(1);
 	}
 
 	@Test
@@ -289,7 +321,8 @@ class MaterialConceptApiTest {
 		explain(material, "ospf", true).andExpect(status().isNotFound());
 		explain(material, "vlan", false).andExpect(status().isBadRequest());
 		fakeLlm.get(LlmProvider.GPT).answer("{\"explanation\":\"짧음\"}");
-		explain(material, "vlan", true).andExpect(status().isBadGateway());
+		explain(material, "vlan", true).andExpect(status().isBadGateway())
+				.andExpect(jsonPath("$.message").value("AI가 쓴 개념 설명의 형식이 맞지 않아 저장하지 않았어요. 다시 시도해 주세요."));
 		mockMvc.perform(get("/api/materials/" + material + "/concepts").header(HttpHeaders.AUTHORIZATION, bearer(token)))
 				.andExpect(jsonPath("$.data[0].studyNote").value(nullValue()));
 	}

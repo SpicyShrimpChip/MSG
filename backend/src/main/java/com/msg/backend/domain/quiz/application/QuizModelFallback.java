@@ -1,5 +1,6 @@
 package com.msg.backend.domain.quiz.application;
 
+import com.msg.backend.global.error.BusinessException;
 import com.msg.backend.global.llm.LlmClient;
 import com.msg.backend.global.llm.LlmRequest;
 import com.msg.backend.global.llm.ModelInvoker;
@@ -8,6 +9,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 /**
@@ -137,6 +139,16 @@ public class QuizModelFallback {
 			return Optional.of(new Success<>(parsed.get(), client));
 		}
 		return Optional.empty();
+	}
+
+	/**
+	 * run과 같고, 모두 실패하면 502를 던진다. 응답을 하나라도 받았으면(형식이 맞지 않음) invalidMessage, 아니면 failedMessage.
+	 * 자료 개념 뽑기·개념 설명·요약이 쓴다. 마감·stopOnTimeout은 call에 담긴 그대로이고, 저장은 부르는 쪽이 한다.
+	 */
+	public <T> Success<T> runOrBadGateway(List<LlmClient> clients, Call call, Function<String, Optional<T>> parse,
+			Tracker tracker, String invalidMessage, String failedMessage) {
+		return run(clients, call, parse, tracker).orElseThrow(() -> new BusinessException(HttpStatus.BAD_GATEWAY,
+				tracker.anyResponse() ? invalidMessage : failedMessage));
 	}
 
 	private void record(Call call, LlmClient client, ModelInvoker.Outcome outcome, String resultOverride) {

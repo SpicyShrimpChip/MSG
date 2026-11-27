@@ -187,7 +187,7 @@ public class MaterialSummaryService {
 			}
 			input.put("materialExcerpt", prepared.sentText());
 			LlmRequest request = new LlmRequest(SYSTEM, input.toString(), quizProperties.generationMaxOutputTokens());
-			var success = modelFallback.run(prepared.clients(),
+			var success = modelFallback.runOrBadGateway(prepared.clients(),
 					new QuizModelFallback.Call(userId, QuizAiCall.SUMMARY, null, request, prepared.deadline(), false),
 					raw -> {
 						Optional<MaterialSummaryParser.Parsed> parsed = parser.parse(raw, prepared.sentText());
@@ -195,12 +195,9 @@ public class MaterialSummaryService {
 							log.warn("{} 모델이 쓴 요약을 자료에서 확인하지 못했다", tracker.last().provider());
 						}
 						return parsed;
-					}, tracker);
-			if (success.isEmpty()) {
-				throw new BusinessException(HttpStatus.BAD_GATEWAY, tracker.anyResponse() ? INVALID_MESSAGE : FAILED_MESSAGE);
-			}
+					}, tracker, INVALID_MESSAGE, FAILED_MESSAGE);
 			StudySummaryResponse saved = transaction.execute(status -> save(userId, prepared,
-					success.get().value(), success.get().client()));
+					success.value(), success.client()));
 			if (saved == null) {
 				throw new BusinessException(HttpStatus.GATEWAY_TIMEOUT, TIMED_OUT_MESSAGE);
 			}
