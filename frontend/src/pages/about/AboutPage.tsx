@@ -86,7 +86,7 @@ function AboutPage() {
         <div className="flex flex-col gap-3">
           <h2
             id="about-why-title"
-            className="text-xl font-extrabold text-heading"
+            className="text-xl font-semibold text-heading"
           >
             왜 만들었나요
           </h2>
@@ -105,7 +105,7 @@ function AboutPage() {
               className="flex flex-col gap-1.5 rounded-xl bg-surface-raised p-5"
             >
               <p className="text-heading">
-                <span className="text-3xl font-extrabold text-primary">
+                <span className="text-3xl font-semibold text-primary">
                   {stat.count}명
                 </span>
                 <span className="ml-1 text-body text-ink-muted">
@@ -130,7 +130,7 @@ function AboutPage() {
       >
         <h2
           id="about-steps-title"
-          className="text-xl font-extrabold text-heading"
+          className="text-xl font-semibold text-heading"
         >
           이렇게 써요
         </h2>
@@ -148,7 +148,7 @@ function AboutPage() {
                   <span className="text-caption font-medium text-ink-muted">
                     {index + 1}단계 · {step.menu} 메뉴
                   </span>
-                  <h3 className="font-bold text-heading">{step.title}</h3>
+                  <h3 className="font-semibold text-heading">{step.title}</h3>
                 </div>
               </div>
               <p className="text-body leading-relaxed text-ink-soft">
@@ -165,7 +165,7 @@ function AboutPage() {
       >
         <h2
           id="about-principles-title"
-          className="text-xl font-extrabold text-heading"
+          className="text-xl font-semibold text-heading"
         >
           이렇게 지켜요
         </h2>
@@ -175,7 +175,7 @@ function AboutPage() {
               key={item.title}
               className="flex flex-col gap-2 rounded-2xl border border-line p-6"
             >
-              <h3 className="font-bold text-heading">{item.title}</h3>
+              <h3 className="font-semibold text-heading">{item.title}</h3>
               <p className="text-body leading-relaxed text-ink-soft">
                 {item.description}
               </p>
@@ -190,7 +190,7 @@ function AboutPage() {
       >
         <h2
           id="about-limits-title"
-          className="text-xl font-extrabold text-heading"
+          className="text-xl font-semibold text-heading"
         >
           이런 한계가 있어요
         </h2>

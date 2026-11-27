@@ -34,7 +34,7 @@ export function ImportScene() {
           <FileText size={18} aria-hidden="true" />
         </span>
         <span className="min-w-0">
-          <span className="block text-body font-bold text-heading">
+          <span className="block text-body font-semibold text-heading">
             conversations.json
           </span>
           <span className="text-caption text-ink-muted">
@@ -96,12 +96,12 @@ export function MaskScene() {
       <Reveal
         as="p"
         delay={0.08}
-        className="flex items-center gap-2 text-caption font-bold text-ink-muted"
+        className="flex items-center gap-2 text-caption font-semibold text-ink-muted"
       >
         <Lock size={14} aria-hidden="true" />내 브라우저에서 가리는 중
       </Reveal>
       <Reveal delay={0.16} className="flex items-start gap-3">
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-pill text-caption font-extrabold text-heading">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-pill text-caption font-semibold text-heading">
           나
         </span>
         <p className="flex-1 rounded-tl-sm rounded-tr-2xl rounded-b-2xl bg-surface-muted px-4.5 py-4 leading-loose text-heading">
@@ -163,7 +163,7 @@ export function MasteryScene() {
         delay={0.08}
         className="flex flex-wrap items-baseline justify-between gap-2"
       >
-        <p className="text-lg font-bold text-heading">개념별 숙련도</p>
+        <p className="text-lg font-semibold text-heading">개념별 숙련도</p>
         <p className="text-caption text-ink-muted">
           정보보호개론 · 대화 9건 · 퀴즈 22문제
         </p>
@@ -204,7 +204,7 @@ export function EvidenceScene() {
   return (
     <div className="flex flex-col gap-3.5">
       <Reveal delay={0.08} className="flex items-center justify-between gap-2">
-        <p className="text-lg font-bold text-heading">전자서명</p>
+        <p className="text-lg font-semibold text-heading">전자서명</p>
         <LevelBadge level="weakness" />
       </Reveal>
       {/* 세 모델이 같은 기준으로 따로 판단한 결과를 나란히 둔다 (정확도가 아니라 몇 개가 같은지만) */}
@@ -224,7 +224,7 @@ export function EvidenceScene() {
       <Reveal
         as="p"
         delay={0.16}
-        className="text-caption font-bold text-ink-muted"
+        className="text-caption font-semibold text-ink-muted"
       >
         이 기록을 보고 판단했어요
       </Reveal>
@@ -275,11 +275,11 @@ export function OrderScene() {
   return (
     <div className="flex flex-col gap-4">
       <Reveal delay={0.08} className="flex items-center justify-between gap-2">
-        <p className="text-lg font-bold text-heading">추천 학습 순서</p>
+        <p className="text-lg font-semibold text-heading">추천 학습 순서</p>
         <Reveal
           as="span"
           delay={1.3}
-          className="text-caption font-bold text-primary"
+          className="text-caption font-semibold text-primary"
         >
           순서를 다시 짰어요
         </Reveal>
@@ -305,7 +305,7 @@ export function OrderScene() {
               as="span"
               effect="pop"
               delay={1.2 + index * 0.08}
-              className={`flex size-7 shrink-0 items-center justify-center rounded-full text-caption font-extrabold ${
+              className={`flex size-7 shrink-0 items-center justify-center rounded-full text-caption font-semibold ${
                 index === 0
                   ? 'bg-primary text-on-primary'
                   : 'bg-primary-pill text-heading'
@@ -313,7 +313,9 @@ export function OrderScene() {
             >
               {index + 1}
             </Reveal>
-            <span className="flex-1 font-bold text-heading">{item.name}</span>
+            <span className="flex-1 font-semibold text-heading">
+              {item.name}
+            </span>
             <span className="text-caption text-ink-soft">{item.action}</span>
           </SlotItem>
         ))}
@@ -359,7 +361,7 @@ function CheckBar({
           </Reveal>
         </span>
       </span>
-      <span className="w-10 shrink-0 text-right text-caption font-bold text-heading">
+      <span className="w-10 shrink-0 text-right text-caption font-semibold text-heading">
         {value}%
       </span>
     </span>
@@ -370,7 +372,7 @@ export function CheckScene() {
   return (
     <div className="flex flex-col gap-4">
       <Reveal delay={0.08} className="flex items-center justify-between gap-2">
-        <p className="text-lg font-bold text-heading">사전·사후평가 비교</p>
+        <p className="text-lg font-semibold text-heading">사전·사후평가 비교</p>
         <span className="text-caption text-ink-muted">
           같은 개념·같은 난이도
         </span>
@@ -384,7 +386,7 @@ export function CheckScene() {
             className="flex flex-col gap-2 rounded-xl border border-line px-4 py-3"
           >
             <span className="flex flex-wrap items-center justify-between gap-2 text-body">
-              <span className="font-bold text-heading">{concept.name}</span>
+              <span className="font-semibold text-heading">{concept.name}</span>
               <MasteryMeter level={concept.stage} />
             </span>
             <CheckBar
@@ -401,7 +403,7 @@ export function CheckScene() {
               as="span"
               effect="pop"
               delay={1.1 + index * 0.15}
-              className="text-caption font-bold text-primary"
+              className="text-caption font-semibold text-primary"
             >
               {concept.stage === 'normal'
                 ? '보완 필요에서 한 단계 올랐어요'

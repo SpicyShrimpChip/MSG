@@ -70,13 +70,13 @@ function SnapshotLine({
   if (!snapshot) {
     return (
       <p className="text-body text-ink-soft">
-        <span className="font-bold text-heading">{label}</span> 아직 없어요
+        <span className="font-semibold text-heading">{label}</span> 아직 없어요
       </p>
     );
   }
   return (
     <p className="flex flex-wrap items-center gap-2 text-body text-ink">
-      <span className="font-bold text-heading">{label}</span>
+      <span className="font-semibold text-heading">{label}</span>
       {snapshot.submissionId === null ? (
         <span className="text-ink-soft">만들었지만 아직 안 풀었어요</span>
       ) : (
@@ -92,7 +92,7 @@ function SnapshotLine({
             ? `/quizzes/${snapshot.quizId}`
             : `/quizzes/${snapshot.quizId}/result`
         }
-        className="font-bold text-primary underline-offset-4 hover:underline"
+        className="font-semibold text-primary underline-offset-4 hover:underline"
       >
         {snapshot.submissionId === null ? '풀기' : '결과 보기'}
       </Link>
@@ -172,7 +172,7 @@ function MaterialAssessment({
   return (
     <div className="flex flex-col gap-5">
       <Card as="section" className="flex flex-col gap-3 p-5">
-        <h2 className="text-lg font-extrabold text-heading">지금 상태</h2>
+        <h2 className="text-lg font-semibold text-heading">지금 상태</h2>
         <SnapshotLine label="사전평가" snapshot={comparison.pre} />
         <SnapshotLine label="사후평가" snapshot={comparison.post} />
         <p className="text-caption text-ink-muted">
@@ -182,7 +182,7 @@ function MaterialAssessment({
       </Card>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-extrabold text-heading">
+        <h2 className="text-lg font-semibold text-heading">
           평가할 개념 (자료에서 뽑은 개념)
         </h2>
         <AsyncBoundary>
@@ -195,7 +195,7 @@ function MaterialAssessment({
       </section>
 
       <Card as="section" className="flex flex-col gap-4 p-5">
-        <h2 className="text-lg font-extrabold text-heading">평가 만들기</h2>
+        <h2 className="text-lg font-semibold text-heading">평가 만들기</h2>
         <div className="grid gap-4 sm:grid-cols-3">
           <FormRow label="문제 유형 (사전평가)" htmlFor="assess-types">
             <SelectInput
@@ -247,7 +247,7 @@ function MaterialAssessment({
         {/* 본문 보내기가 꺼져 있으면(꺼진 이유는 위 "핵심 개념 뽑기" 칸에 있다) 이 칸을 그리지 않는다. useContent는 false로 시작해 요청에 본문 사용이 실리지 않는다 */}
         {ai.materialContentEnabled && (
           <fieldset className="flex flex-col gap-2 rounded-xl border border-line p-4">
-            <legend className="px-1 text-body font-bold text-heading">
+            <legend className="px-1 text-body font-semibold text-heading">
               자료 본문 쓰기 (선택)
             </legend>
             <label className="flex items-start gap-3 text-body text-heading">
@@ -311,7 +311,7 @@ function MaterialAssessment({
             {NOTE_MESSAGE[created.materialContentNote]}{' '}
             <Link
               to={`/quizzes/${created.id}`}
-              className="font-bold text-primary underline-offset-4 hover:underline"
+              className="font-semibold text-primary underline-offset-4 hover:underline"
             >
               문제 풀기
             </Link>

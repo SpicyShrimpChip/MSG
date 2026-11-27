@@ -25,7 +25,7 @@ function MasteryEvidence({ courseId, concept, mastery }: MasteryEvidenceProps) {
   return (
     <div className="flex flex-col gap-3 border-b border-line pb-5">
       <div className="flex flex-col gap-1">
-        <h3 className="font-extrabold text-heading">숙련도</h3>
+        <h3 className="font-semibold text-heading">숙련도</h3>
         <p className="text-caption text-ink-muted">
           AI가 아니라 정해진 규칙으로 계산했어요.
         </p>
@@ -34,19 +34,19 @@ function MasteryEvidence({ courseId, concept, mastery }: MasteryEvidenceProps) {
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-primary-soft px-4 py-3.5">
         <MasteryMeter level={mastery.level} size="lg" />
         {trend && (
-          <span className="rounded-full bg-surface-raised px-2.5 py-1 text-caption font-bold text-primary">
+          <span className="rounded-full bg-surface-raised px-2.5 py-1 text-caption font-semibold text-primary">
             {trend}
           </span>
         )}
       </div>
 
       <div className="flex flex-col gap-2">
-        <p className="text-caption font-bold text-ink-soft">반영한 근거</p>
+        <p className="text-caption font-semibold text-ink-soft">반영한 근거</p>
         {hasQuiz || hasConversation ? (
           <ul className="flex flex-col gap-1.5">
             {hasQuiz && (
               <li className="flex flex-wrap justify-between gap-x-3 gap-y-1 rounded-lg bg-surface-muted px-3 py-2.5 text-body">
-                <span className="font-bold text-heading">
+                <span className="font-semibold text-heading">
                   퀴즈 채점 {mastery.quizGradedCount}문제
                 </span>
                 {mastery.quizRate !== null && (
@@ -58,7 +58,7 @@ function MasteryEvidence({ courseId, concept, mastery }: MasteryEvidenceProps) {
             )}
             {hasConversation && mastery.conversationStatus && (
               <li className="flex flex-wrap justify-between gap-x-3 gap-y-1 rounded-lg bg-surface-muted px-3 py-2.5 text-body">
-                <span className="font-bold text-heading">
+                <span className="font-semibold text-heading">
                   AI 대화 {mastery.conversationCount}개
                 </span>
                 <span className="text-ink-soft">
@@ -82,7 +82,7 @@ function MasteryEvidence({ courseId, concept, mastery }: MasteryEvidenceProps) {
               {' '}
               <Link
                 to={conceptQuizLink(courseId, concept)}
-                className="font-bold text-primary underline-offset-4 hover:underline"
+                className="font-semibold text-primary underline-offset-4 hover:underline"
               >
                 퀴즈 {mastery.quizNeeded}문제 더 풀면 단계가 나와요
               </Link>

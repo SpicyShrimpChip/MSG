@@ -45,7 +45,7 @@ function BrowserFrame({
   children: ReactNode;
 }) {
   return (
-    <figure className="relative m-0 overflow-hidden rounded-2xl border border-line bg-surface-raised shadow-[0_30px_60px_-20px] shadow-brand/30">
+    <figure className="relative m-0 overflow-hidden rounded-2xl border border-line bg-surface-raised shadow-[0_30px_60px_-20px] shadow-shade/10">
       <div className="flex h-10.5 items-center gap-2 border-b border-line bg-surface-muted px-4">
         {WINDOW_DOTS.map((color) => (
           <span
@@ -132,14 +132,14 @@ function PinnedStory({ header }: { header: ReactNode }) {
               <AnimatePresence mode="wait" initial={false}>
                 <m.div key={step} {...FADE_UP} className="flex flex-col gap-4">
                   <p className="flex items-baseline gap-2">
-                    <span className="text-6xl leading-none font-extrabold tracking-tighter text-primary">
+                    <span className="text-6xl leading-none font-semibold tracking-tighter text-primary">
                       {pad(step + 1)}
                     </span>
-                    <span className="text-lg font-bold text-line-strong">
+                    <span className="text-lg font-semibold text-line-strong">
                       / {pad(TOTAL)}
                     </span>
                   </p>
-                  <h3 className="text-[38px] leading-tight font-extrabold tracking-tight whitespace-pre-line text-heading">
+                  <h3 className="text-[38px] leading-tight font-semibold tracking-tight whitespace-pre-line text-heading">
                     {current.headline}
                   </h3>
                   <p className="text-[17px] leading-relaxed text-ink-soft">
@@ -181,7 +181,7 @@ function PinnedStory({ header }: { header: ReactNode }) {
                       <span
                         className={
                           active
-                            ? 'font-extrabold text-heading'
+                            ? 'font-semibold text-heading'
                             : 'font-medium text-ink-muted group-hover:text-heading'
                         }
                       >
@@ -230,14 +230,14 @@ function StackedStory() {
           <li key={item.title} className="flex flex-col gap-5">
             <div className="flex flex-col gap-2.5">
               <p className="flex items-baseline gap-1.5">
-                <span className="text-4xl leading-none font-extrabold tracking-tighter text-primary">
+                <span className="text-4xl leading-none font-semibold tracking-tighter text-primary">
                   {pad(index + 1)}
                 </span>
-                <span className="text-body font-bold text-ink-muted">
+                <span className="text-body font-semibold text-ink-muted">
                   {item.title}
                 </span>
               </p>
-              <h3 className="text-2xl leading-snug font-extrabold tracking-tight whitespace-pre-line text-heading">
+              <h3 className="text-2xl leading-snug font-semibold tracking-tight whitespace-pre-line text-heading">
                 {item.headline}
               </h3>
               <p className="leading-relaxed text-ink-soft">{item.body}</p>
@@ -262,7 +262,7 @@ function intro(withId: boolean) {
     <div className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-1.5 border-b border-line pb-4">
       <h2
         id={withId ? 'story-title' : undefined}
-        className="text-xl font-extrabold tracking-tight text-heading"
+        className="text-xl font-semibold tracking-tight text-heading"
       >
         대화 기록이 공부 순서가 되기까지
       </h2>

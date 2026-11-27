@@ -78,7 +78,10 @@ function ConceptFeedbackBox({
 
   return (
     <div className="flex flex-col gap-3 border-t border-line pt-4">
-      <p id={`feedback-${concept.concept}`} className="font-bold text-heading">
+      <p
+        id={`feedback-${concept.concept}`}
+        className="font-semibold text-heading"
+      >
         이 판단, 내 생각과 맞나요?
       </p>
       <div
@@ -96,7 +99,7 @@ function ConceptFeedbackBox({
               disabled={busy}
               onClick={() => save.mutate(value)}
               className={cn(
-                'flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl border font-bold disabled:opacity-60',
+                'flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl border font-semibold disabled:opacity-60',
                 active
                   ? 'border-2 border-primary bg-primary-soft text-primary'
                   : 'border-line-strong bg-surface-raised text-heading hover:bg-surface-muted',
@@ -117,7 +120,7 @@ function ConceptFeedbackBox({
               결과를 이 개념 옆에 함께 보여 줘요.
             </p>
             {concept.quiz?.confirmation && (
-              <p className="font-bold text-heading">
+              <p className="font-semibold text-heading">
                 {CONFIRMATION_LABEL[concept.quiz.confirmation]}
               </p>
             )}
@@ -135,7 +138,7 @@ function ConceptFeedbackBox({
             추천 학습 순서 맨 앞에 넣었어요. AI 판단은 그대로예요.{' '}
             <Link
               to="/curriculum"
-              className="font-bold text-primary underline-offset-4 hover:underline"
+              className="font-semibold text-primary underline-offset-4 hover:underline"
             >
               맞춤 커리큘럼에서 복습 퀴즈·자료 보기
             </Link>
@@ -153,7 +156,7 @@ function ConceptFeedbackBox({
           type="button"
           disabled={busy}
           onClick={() => cancel.mutate(concept.feedback!.id)}
-          className="self-start text-caption font-bold text-ink-soft underline-offset-4 hover:text-heading hover:underline"
+          className="self-start text-caption font-semibold text-ink-soft underline-offset-4 hover:text-heading hover:underline"
         >
           선택 취소
         </button>

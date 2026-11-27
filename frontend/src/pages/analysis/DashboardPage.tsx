@@ -366,7 +366,7 @@ function Dashboard() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <label className="flex flex-col gap-1.5 text-caption font-bold text-ink-soft">
+        <label className="flex flex-col gap-1.5 text-caption font-semibold text-ink-soft">
           과목
           <SelectInput
             value={course.id}

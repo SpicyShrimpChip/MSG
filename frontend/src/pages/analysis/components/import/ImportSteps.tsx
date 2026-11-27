@@ -33,7 +33,7 @@ function ImportSteps({ current }: ImportStepsProps) {
             )}
             <span className="flex items-center gap-2">
               <span
-                className={`flex size-7 shrink-0 items-center justify-center rounded-full text-caption font-bold ${
+                className={`flex size-7 shrink-0 items-center justify-center rounded-full text-caption font-semibold ${
                   active
                     ? 'bg-primary text-on-primary'
                     : done
@@ -46,7 +46,7 @@ function ImportSteps({ current }: ImportStepsProps) {
               <span
                 className={`text-body ${
                   active
-                    ? 'font-bold text-heading'
+                    ? 'font-semibold text-heading'
                     : done
                       ? 'text-ink-soft'
                       : 'text-ink-muted'

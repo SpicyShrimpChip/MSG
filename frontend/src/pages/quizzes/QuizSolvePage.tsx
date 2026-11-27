@@ -183,7 +183,7 @@ function QuizForm({ quizId }: { quizId: number }) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <h2 className="text-2xl font-extrabold text-heading">{quiz.title}</h2>
+        <h2 className="text-2xl font-semibold text-heading">{quiz.title}</h2>
         <p className="flex flex-wrap items-center gap-2 text-caption text-ink-muted">
           {kindLabel && <Chip tone="primary">{kindLabel}</Chip>}
           {quiz.mockExam && <ElapsedTime />}
@@ -220,18 +220,20 @@ function QuizForm({ quizId }: { quizId: number }) {
           <Card as="li" key={question.id} className="flex flex-col gap-4 p-5">
             {question.scenario && (
               <Notice icon={Briefcase} iconClassName="text-primary">
-                <p className="font-bold text-heading">업무 상황</p>
+                <p className="font-semibold text-heading">업무 상황</p>
                 <p className="whitespace-pre-line">{question.scenario}</p>
                 {question.role && (
                   <p className="mt-1">
-                    <span className="font-bold text-heading">내 역할: </span>
+                    <span className="font-semibold text-heading">
+                      내 역할:{' '}
+                    </span>
                     {question.role}
                   </p>
                 )}
               </Notice>
             )}
             <fieldset className="flex flex-col gap-3">
-              <legend className="mb-3 font-bold text-heading">
+              <legend className="mb-3 font-semibold text-heading">
                 <span className="mr-2 text-primary">Q{index + 1}.</span>
                 <span className="mr-2 text-caption font-medium text-ink-muted">
                   [{QUESTION_TYPE_LABELS[question.type]}
@@ -249,7 +251,7 @@ function QuizForm({ quizId }: { quizId: number }) {
               )}
               {question.criteria.length > 0 && (
                 <div className="flex flex-col gap-1 text-caption text-ink-soft">
-                  <p className="font-bold text-heading">이렇게 평가해요</p>
+                  <p className="font-semibold text-heading">이렇게 평가해요</p>
                   <ul className="list-inside list-disc">
                     {question.criteria.map((criterion) => (
                       <li key={criterion}>{criterion}</li>

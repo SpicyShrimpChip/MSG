@@ -9,7 +9,7 @@ function Footer() {
     <footer className="bg-footer print:hidden">
       <div className="mx-auto flex max-w-page flex-wrap justify-between gap-4 px-6 py-8 text-sm text-heading">
         <div className="flex flex-col gap-1.5">
-          <span className="font-bold">MSG · My Study Guide</span>
+          <span className="font-semibold">MSG · My Study Guide</span>
           <span>© 2026 Team SSC</span>
         </div>
         <nav
@@ -22,7 +22,7 @@ function Footer() {
           <Link to="/terms" className="hover:underline">
             이용약관
           </Link>
-          <Link to="/privacy" className="font-bold hover:underline">
+          <Link to="/privacy" className="font-semibold hover:underline">
             개인정보 처리방침
           </Link>
           <a

@@ -76,7 +76,9 @@ function MaskPreview({ id, masked, spots }: MaskPreviewProps) {
       {spots.length > 0 && (
         <div className="flex flex-col gap-2 rounded-xl bg-surface-muted p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="font-bold text-heading">가린 곳 {spots.length}개</p>
+            <p className="font-semibold text-heading">
+              가린 곳 {spots.length}개
+            </p>
             <button
               type="button"
               aria-pressed={showOriginal}
@@ -183,7 +185,7 @@ function MaskStep({
       className="flex flex-col gap-6 p-6 md:p-8"
     >
       <div className="flex flex-col gap-2">
-        <h2 id="import-mask" className="text-xl font-extrabold text-heading">
+        <h2 id="import-mask" className="text-xl font-semibold text-heading">
           가린 내용 확인
         </h2>
         <p className="text-body text-ink-soft">
@@ -234,7 +236,7 @@ function MaskStep({
         aria-live="polite"
         className="flex flex-col gap-2 rounded-xl bg-primary-soft p-4"
       >
-        <p className="font-bold text-heading">
+        <p className="font-semibold text-heading">
           {masking.items
             ? `대화 ${conversationCount}개에서 ${totalCount}곳을 가렸어요.`
             : `대화 ${conversationCount}개를 가리고 있어요.`}

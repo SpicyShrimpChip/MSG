@@ -97,7 +97,7 @@ function FlowStepper({ flow }: { flow: CurriculumFlow }) {
                   : 'border-line bg-surface-raised',
               )}
             >
-              <span className="flex items-center gap-2 text-caption font-bold text-ink-soft">
+              <span className="flex items-center gap-2 text-caption font-semibold text-ink-soft">
                 <span
                   className={cn(
                     'flex size-6 items-center justify-center rounded-full text-caption',
@@ -113,7 +113,7 @@ function FlowStepper({ flow }: { flow: CurriculumFlow }) {
                 </span>
                 STEP {stage.order}
               </span>
-              <span className="font-bold text-heading">{stage.title}</span>
+              <span className="font-semibold text-heading">{stage.title}</span>
               <span
                 className={cn(
                   'text-caption',
@@ -159,7 +159,7 @@ function StepSection({
     >
       <div id={anchor(stepKey)} className="flex flex-wrap items-center gap-2">
         <span className="text-primary">{STEP_ICON[stepKey]}</span>
-        <h2 id={titleId} className="text-lg font-extrabold text-heading">
+        <h2 id={titleId} className="text-lg font-semibold text-heading">
           STEP {stage.order}. {stage.title}
         </h2>
         <Chip tone={stage.status === 'upcoming' ? 'neutral' : 'primary'}>
@@ -172,7 +172,7 @@ function StepSection({
         {prev ? (
           <a
             href={`#${anchor(prev.key)}`}
-            className="inline-flex items-center gap-1 font-bold text-primary underline-offset-4 hover:underline"
+            className="inline-flex items-center gap-1 font-semibold text-primary underline-offset-4 hover:underline"
           >
             <ArrowLeft size={14} aria-hidden="true" />
             이전: {prev.title}
@@ -183,7 +183,7 @@ function StepSection({
         {next && (
           <a
             href={`#${anchor(next.key)}`}
-            className="inline-flex items-center gap-1 font-bold text-primary underline-offset-4 hover:underline"
+            className="inline-flex items-center gap-1 font-semibold text-primary underline-offset-4 hover:underline"
           >
             다음: {next.title}
             <ArrowRight size={14} aria-hidden="true" />
@@ -343,7 +343,7 @@ function ConceptStudyStep({
                 )}
               >
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-bold text-heading">{concept.name}</p>
+                  <p className="font-semibold text-heading">{concept.name}</p>
                   {concept.priority && <Chip tone="primary">먼저 공부</Chip>}
                 </div>
                 <div className="flex flex-wrap gap-1.5">
@@ -366,7 +366,7 @@ function ConceptStudyStep({
                 {concept.priorityReasons &&
                   concept.priorityReasons.length > 0 && (
                     <details className="text-caption text-ink-soft">
-                      <summary className="cursor-pointer font-bold text-heading">
+                      <summary className="cursor-pointer font-semibold text-heading">
                         {concept.priority || review
                           ? '왜 먼저 공부하나요?'
                           : '이 개념의 근거'}
@@ -437,7 +437,7 @@ function StudiedConceptRow({
     <li className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <div className="flex flex-wrap items-center gap-2">
-          <p className="font-bold text-heading">{concept.name}</p>
+          <p className="font-semibold text-heading">{concept.name}</p>
           {concept.priority && <Chip tone="primary">먼저 확인</Chip>}
           <StudyStatusBadge status={study.status} />
         </div>
@@ -523,7 +523,7 @@ function KeywordConceptRow({
     <li className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <div className="flex flex-wrap items-center gap-2">
-          <p className="font-bold text-heading">{concept.name}</p>
+          <p className="font-semibold text-heading">{concept.name}</p>
           {concept.priority && <Chip tone="primary">먼저 확인</Chip>}
           {concept.practiceStatus === 'weak' ? (
             <LevelBadge level="weakness" />
@@ -613,7 +613,7 @@ function PostTestStep({ flow }: { flow: CurriculumFlow }) {
     <StepSection flow={flow} stepKey="post_test">
       {review.length > 0 && (
         <div className="flex flex-col gap-2 rounded-xl bg-weakness-soft p-4">
-          <p className="text-body font-bold text-heading">
+          <p className="text-body font-semibold text-heading">
             사후 평가 전에 복습하면 좋은 개념
           </p>
           <div className="flex flex-wrap gap-2">
@@ -640,7 +640,7 @@ function PostTestStep({ flow }: { flow: CurriculumFlow }) {
               사전 {preTest.rate ?? '-'}% → 사후 {postTest.rate ?? '-'}%
             </p>
             {overallDelta !== null && (
-              <p className="text-2xl font-extrabold text-primary">
+              <p className="text-2xl font-semibold text-primary">
                 {overallDelta >= 0 ? '+' : ''}
                 {overallDelta}%p
               </p>
@@ -650,7 +650,9 @@ function PostTestStep({ flow }: { flow: CurriculumFlow }) {
             <ul className="flex flex-col gap-1 text-body">
               {compared.map((concept) => (
                 <li key={concept.conceptId} className="flex flex-wrap gap-2">
-                  <span className="font-bold text-heading">{concept.name}</span>
+                  <span className="font-semibold text-heading">
+                    {concept.name}
+                  </span>
                   <span className="text-ink-soft">
                     {concept.preRate ?? '-'}% → {concept.postRate}%
                     {concept.delta !== null &&
@@ -716,7 +718,7 @@ function StepCard({
   return (
     <Card as="li" className="flex flex-col gap-3 p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="font-extrabold text-heading">
+        <p className="font-semibold text-heading">
           <span className="mr-2 text-primary">{step.order}.</span>
           {step.concept}
         </p>
@@ -764,7 +766,7 @@ function PriorityDetails({ data }: { data: Curriculum }) {
   if (data.steps.length === 0) return null;
   return (
     <details className="group rounded-2xl border border-line bg-surface-raised p-5">
-      <summary className="cursor-pointer font-bold text-heading">
+      <summary className="cursor-pointer font-semibold text-heading">
         개념별 복습 우선순위와 근거 보기
         <span className="ml-2 text-caption font-medium text-ink-muted">
           모든 퀴즈·대화 분석·내 피드백 기준
@@ -844,7 +846,7 @@ function CourseCurriculum({ courseId }: { courseId: number }) {
           <ul className="flex flex-col gap-1">
             {data.aiSuggestions.map((item) => (
               <li key={`${item.kind}-${item.concept}`}>
-                <span className="font-bold">
+                <span className="font-semibold">
                   [{SUGGESTION_LABEL[item.kind]}] {item.concept}
                 </span>
                 {item.aiReason && ` — ${item.aiReason}`}

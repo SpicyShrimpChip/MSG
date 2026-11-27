@@ -135,7 +135,7 @@ function SendStep({ items, onBack, onRestart }: SendStepProps) {
             aria-hidden="true"
           />
           <div className="flex flex-col gap-1">
-            <h2 id="import-done" className="text-xl font-bold text-heading">
+            <h2 id="import-done" className="text-xl font-semibold text-heading">
               대화 {importedCount}개를 보냈어요
             </h2>
             <p className="text-body text-ink-soft">
@@ -164,7 +164,7 @@ function SendStep({ items, onBack, onRestart }: SendStepProps) {
       className="flex flex-col gap-6 p-6 md:p-8"
     >
       <div className="flex flex-col gap-2">
-        <h2 id="import-send" className="text-xl font-extrabold text-heading">
+        <h2 id="import-send" className="text-xl font-semibold text-heading">
           보내기
         </h2>
         <p className="text-body text-ink-soft">
@@ -213,7 +213,7 @@ function SendStep({ items, onBack, onRestart }: SendStepProps) {
           role="alert"
           className="flex flex-col gap-2 rounded-xl border border-line-strong bg-surface-muted p-4"
         >
-          <p className="flex items-center gap-2 font-bold text-heading">
+          <p className="flex items-center gap-2 font-semibold text-heading">
             <TriangleAlert size={18} aria-hidden="true" />
             대화 {rejected.length}개 때문에 보내지 못했어요
           </p>

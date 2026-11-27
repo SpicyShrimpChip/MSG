@@ -15,13 +15,15 @@ const SAMPLE_CONCEPTS: { name: string; level: MasteryStage }[] = [
 function SampleCard() {
   return (
     <figure className="m-0 min-w-0 flex-[1_1_420px]">
-      <div className="flex flex-col gap-5 rounded-2xl bg-surface-raised p-6 shadow-2xl shadow-brand/40">
+      <div className="flex flex-col gap-5 rounded-2xl bg-surface-raised p-6 shadow-2xl shadow-shade/12">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <div>
             <p className="text-caption font-medium text-ink-muted">
               정보보호개론
             </p>
-            <p className="mt-1 text-lg font-bold text-heading">개념별 숙련도</p>
+            <p className="mt-1 text-lg font-semibold text-heading">
+              개념별 숙련도
+            </p>
           </div>
           <p className="text-caption text-ink-muted">대화 9건 · 퀴즈 22문제</p>
         </div>
@@ -37,7 +39,7 @@ function SampleCard() {
           ))}
         </ul>
         <p className="rounded-xl bg-surface-muted px-4 py-3 text-body leading-relaxed text-ink-soft">
-          <span className="font-bold text-heading">판단 근거</span> · 10/20
+          <span className="font-semibold text-heading">판단 근거</span> · 10/20
           대화에서 암호화에 쓰는 키를 다시 물어봄, 10/22 퀴즈 3문제 중 1문제
           정답
         </p>
@@ -59,7 +61,7 @@ function Hero() {
           <p className="mb-5 inline-flex rounded-full bg-on-brand/12 px-3 py-1.5 text-caption font-medium text-on-brand-hover">
             학습 자료 + ChatGPT·Claude 대화 기록 분석
           </p>
-          <h1 className="text-4xl leading-tight font-extrabold tracking-tight md:text-5xl">
+          <h1 className="text-4xl leading-tight font-semibold tracking-tight md:text-5xl">
             AI와 공부한 기록에서
             <br />
             아는 것과 모르는 것을
@@ -73,17 +75,17 @@ function Hero() {
           <div className="mt-9 flex flex-wrap gap-2.5">
             <Link
               to="/materials/upload"
-              className="inline-flex h-13 items-center rounded-xl bg-on-brand px-6 font-extrabold text-brand hover:bg-on-brand-hover"
+              className="inline-flex h-13 items-center rounded-xl bg-on-brand px-6 font-semibold text-brand hover:bg-on-brand-hover"
             >
               자료 올리고 시작하기
             </Link>
             <Link
               to="/analysis/import"
-              className="inline-flex h-13 items-center rounded-xl border border-on-brand/50 px-6 font-bold text-on-brand hover:bg-on-brand/10"
+              className="inline-flex h-13 items-center rounded-xl border border-on-brand/50 px-6 font-semibold text-on-brand hover:bg-on-brand/10"
             >
               AI 대화 가져오기
             </Link>
-            <DemoStartButton className="inline-flex h-13 items-center rounded-xl px-4 font-bold text-on-brand-hover underline underline-offset-4 hover:text-on-brand" />
+            <DemoStartButton className="inline-flex h-13 items-center rounded-xl px-4 font-semibold text-on-brand-hover underline underline-offset-4 hover:text-on-brand" />
           </div>
           <p className="mt-5 flex items-center gap-1.5 text-body text-on-brand-hover">
             <Lock size={15} aria-hidden="true" />

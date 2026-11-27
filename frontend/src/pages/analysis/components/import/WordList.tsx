@@ -33,7 +33,7 @@ function WordList({
 
   return (
     <form onSubmit={add} className="flex flex-col gap-2">
-      <label htmlFor={id} className="text-body font-bold text-heading">
+      <label htmlFor={id} className="text-body font-semibold text-heading">
         {label}
       </label>
       <p id={`${id}-hint`} className="text-caption text-ink-muted">

@@ -13,7 +13,7 @@ function AiNote({ title, children }: AiNoteProps) {
     <div className="flex flex-col gap-2 rounded-xl border border-ai-border bg-ai-soft p-4">
       <div className="flex items-center gap-2">
         <AiBadge />
-        <p className="text-body font-bold text-ai">{title}</p>
+        <p className="text-body font-semibold text-ai">{title}</p>
       </div>
       <div className="text-body leading-relaxed text-ink">{children}</div>
     </div>

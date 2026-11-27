@@ -78,7 +78,7 @@ function MasteryMeter({
       </span>
       <span
         className={cn(
-          'inline-flex items-center gap-1 font-bold',
+          'inline-flex items-center gap-1 font-semibold',
           large ? 'text-lg' : 'text-caption',
           style.text,
         )}

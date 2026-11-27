@@ -49,7 +49,7 @@ function StartPaths({ headingAs: Heading = 'h3' }: StartPathsProps) {
       className="flex flex-col gap-8 rounded-3xl bg-section p-5 md:p-12"
     >
       <div className="flex flex-col gap-2">
-        <Heading className="text-2xl font-extrabold tracking-tight text-heading md:text-3xl">
+        <Heading className="text-2xl font-semibold tracking-tight text-heading md:text-3xl">
           내 공부 기록으로 시작해 볼까요?
         </Heading>
         <p className="text-ink-soft">
@@ -65,7 +65,7 @@ function StartPaths({ headingAs: Heading = 'h3' }: StartPathsProps) {
             <Link
               to={signedIn ? path.to : '/signup'}
               state={signedIn ? undefined : { from: path.to }}
-              className="group flex h-full items-center gap-4 rounded-2xl border border-line bg-surface-raised p-4.5 shadow-sm hover:border-primary-pill hover:shadow-lg hover:shadow-brand/10 md:p-6"
+              className="group flex h-full items-center gap-4 rounded-2xl border border-line bg-surface-raised p-4.5 shadow-sm hover:border-primary-pill hover:shadow-lg hover:shadow-shade/6 md:p-6"
             >
               <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
                 {path.icon}
@@ -74,7 +74,7 @@ function StartPaths({ headingAs: Heading = 'h3' }: StartPathsProps) {
                 <span className="text-caption font-medium text-ink-muted">
                   {path.who}
                 </span>
-                <span className="text-lg font-extrabold text-heading">
+                <span className="text-lg font-semibold text-heading">
                   {path.title}
                 </span>
                 <span className="text-body text-ink-soft">
@@ -96,12 +96,12 @@ function StartPaths({ headingAs: Heading = 'h3' }: StartPathsProps) {
           이미 계정이 있나요?{' '}
           <Link
             to="/login"
-            className="font-bold text-primary underline-offset-4 hover:underline"
+            className="font-semibold text-primary underline-offset-4 hover:underline"
           >
             로그인
           </Link>
           {/* 로그인하지 않았고 체험을 켤 수 있을 때만 보인다 */}
-          <DemoStartButton className="ml-4 font-bold text-primary underline-offset-4 hover:underline" />
+          <DemoStartButton className="ml-4 font-semibold text-primary underline-offset-4 hover:underline" />
         </p>
       )}
     </m.div>

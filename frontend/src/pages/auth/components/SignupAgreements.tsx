@@ -39,17 +39,17 @@ function SignupAgreements({
         aria-labelledby="signup-notice-title"
         className="flex flex-col gap-3 rounded-2xl border border-line p-6"
       >
-        <h2 id="signup-notice-title" className="font-bold text-heading">
+        <h2 id="signup-notice-title" className="font-semibold text-heading">
           개인정보 수집·이용 안내
         </h2>
         <NoticeList items={requiredNotice} />
         <p className="text-caption text-ink-muted">
           자세한 내용은{' '}
-          <Link to="/privacy" className="font-bold text-primary underline">
+          <Link to="/privacy" className="font-semibold text-primary underline">
             개인정보 처리방침
           </Link>
           에서, 서비스 이용 조건은{' '}
-          <Link to="/terms" className="font-bold text-primary underline">
+          <Link to="/terms" className="font-semibold text-primary underline">
             이용약관
           </Link>
           에서 볼 수 있어요.
@@ -73,7 +73,7 @@ function SignupAgreements({
         aria-labelledby="signup-ai-title"
         className="flex flex-col gap-3 rounded-2xl border border-line p-6"
       >
-        <h2 id="signup-ai-title" className="font-bold text-heading">
+        <h2 id="signup-ai-title" className="font-semibold text-heading">
           AI 대화 분석 동의{' '}
           <span className="font-medium text-ink-muted">(선택)</span>
         </h2>
@@ -98,7 +98,7 @@ function SignupAgreements({
         aria-labelledby="signup-ai-quiz-title"
         className="flex flex-col gap-3 rounded-2xl border border-line p-6"
       >
-        <h2 id="signup-ai-quiz-title" className="font-bold text-heading">
+        <h2 id="signup-ai-quiz-title" className="font-semibold text-heading">
           AI 퀴즈 처리 동의{' '}
           <span className="font-medium text-ink-muted">(선택)</span>
         </h2>

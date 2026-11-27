@@ -52,7 +52,7 @@ function QuizList() {
         >
           <h2
             id={`quiz-group-${group.key}`}
-            className="text-lg font-extrabold text-heading"
+            className="text-lg font-semibold text-heading"
           >
             {group.title}{' '}
             <span className="text-body font-medium text-ink-muted">

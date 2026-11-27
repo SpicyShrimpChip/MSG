@@ -29,7 +29,7 @@ function LayoutSummary({
       aria-label="AI 배치 요약"
       className="flex flex-wrap items-center gap-x-4 gap-y-2.5 rounded-xl border border-ai-border bg-surface-raised px-4.5 py-3.5"
     >
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-ai-chip px-2.5 py-1 text-caption font-extrabold text-ai">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-ai-chip px-2.5 py-1 text-caption font-semibold text-ai">
         <Sparkles size={13} aria-hidden="true" />
         AI 배치
       </span>
@@ -57,7 +57,7 @@ function LayoutSummary({
       <button
         type="button"
         onClick={onToggleDefault}
-        className="text-caption font-bold text-ink-soft underline-offset-4 hover:text-heading hover:underline print:hidden"
+        className="text-caption font-semibold text-ink-soft underline-offset-4 hover:text-heading hover:underline print:hidden"
       >
         {usingDefault ? 'AI 배치로 보기' : '기본 배치로 보기'}
       </button>

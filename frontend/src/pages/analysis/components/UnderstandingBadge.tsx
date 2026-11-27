@@ -30,7 +30,7 @@ const STATUS_STYLE: Record<
 };
 
 const BADGE_CLASS =
-  'inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-caption font-bold';
+  'inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-caption font-semibold';
 
 // 판단 하나. 색만으로 구분하지 않도록 아이콘과 글자를 함께 쓴다
 export function UnderstandingBadge({

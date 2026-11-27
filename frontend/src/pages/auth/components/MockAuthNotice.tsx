@@ -21,7 +21,7 @@ function MockAuthNotice({ from }: MockAuthNoticeProps) {
       <DemoStartButton
         // 관리자 화면은 체험에 포함하지 않으므로 기본 화면(학습 대시보드)으로 보낸다
         to={from && !from.startsWith('/admin') ? from : undefined}
-        className="w-fit rounded-lg bg-primary px-3.5 py-2 font-bold text-on-primary hover:bg-primary-hover"
+        className="w-fit rounded-lg bg-primary px-3.5 py-2 font-semibold text-on-primary hover:bg-primary-hover"
       />
     </Notice>
   );

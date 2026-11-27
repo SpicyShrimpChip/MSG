@@ -10,7 +10,7 @@ function NoticeContent({ noticeId }: { noticeId: number }) {
   return (
     <article className="border-t-2 border-heading">
       <header className="flex flex-col gap-2 border-b border-line px-2 py-5">
-        <h2 className="text-xl font-extrabold break-words text-heading">
+        <h2 className="text-xl font-semibold break-words text-heading">
           {notice.title}
         </h2>
         <p className="flex flex-wrap gap-x-3 text-caption text-ink-muted">

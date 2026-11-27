@@ -97,12 +97,12 @@ function StepItem({ step, number }: { step: HelpStep; number: number }) {
     <li className="flex gap-4 border-b border-line py-5 last:border-b-0">
       <span
         aria-hidden="true"
-        className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary font-extrabold text-on-primary"
+        className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary font-semibold text-on-primary"
       >
         {number}
       </span>
       <div className="flex min-w-0 flex-col gap-2.5">
-        <p className="font-bold text-heading">
+        <p className="font-semibold text-heading">
           <span className="sr-only">{number}단계. </span>
           {step.title}
         </p>
@@ -128,7 +128,7 @@ function StepItem({ step, number }: { step: HelpStep; number: number }) {
                     className={cn(
                       'rounded-lg px-2.5 py-1 font-medium',
                       last
-                        ? 'bg-primary font-bold text-on-primary'
+                        ? 'bg-primary font-semibold text-on-primary'
                         : 'bg-surface-muted text-heading',
                     )}
                   >
@@ -179,7 +179,7 @@ function ExportHelpPage() {
               <span
                 key={id}
                 aria-current="page"
-                className="rounded-lg bg-primary px-4 py-1.5 text-body font-bold text-on-primary"
+                className="rounded-lg bg-primary px-4 py-1.5 text-body font-semibold text-on-primary"
               >
                 {name}
               </span>
@@ -206,7 +206,7 @@ function ExportHelpPage() {
 
       <div className="flex flex-col gap-10">
         <section aria-labelledby="help-before" className="flex flex-col gap-3">
-          <h2 id="help-before" className="text-lg font-extrabold text-heading">
+          <h2 id="help-before" className="text-lg font-semibold text-heading">
             시작하기 전에
           </h2>
           <ul className="grid gap-3 sm:grid-cols-3">
@@ -215,12 +215,10 @@ function ExportHelpPage() {
                 key={fact.label}
                 className="flex flex-col gap-1.5 rounded-xl border border-line bg-surface-muted p-4"
               >
-                <span className="text-caption font-bold text-ink-soft">
+                <span className="text-caption font-semibold text-ink-soft">
                   {fact.label}
                 </span>
-                <span className="font-extrabold text-heading">
-                  {fact.value}
-                </span>
+                <span className="font-semibold text-heading">{fact.value}</span>
                 <span className="text-caption text-ink-soft">{fact.note}</span>
               </li>
             ))}
@@ -228,7 +226,7 @@ function ExportHelpPage() {
         </section>
 
         <section aria-labelledby="help-steps" className="flex flex-col gap-3">
-          <h2 id="help-steps" className="text-lg font-extrabold text-heading">
+          <h2 id="help-steps" className="text-lg font-semibold text-heading">
             받는 순서
           </h2>
           <Card className="px-5 md:px-6">
@@ -244,7 +242,7 @@ function ExportHelpPage() {
         </section>
 
         <section aria-labelledby="help-caution" className="flex flex-col gap-3">
-          <h2 id="help-caution" className="text-lg font-extrabold text-heading">
+          <h2 id="help-caution" className="text-lg font-semibold text-heading">
             주의할 점
           </h2>
           <ul className="flex list-disc flex-col gap-2 rounded-xl border border-line-strong py-4 pr-4 pl-9 text-body leading-relaxed text-ink-soft">
@@ -262,14 +260,14 @@ function ExportHelpPage() {
         </Notice>
 
         <footer className="flex flex-col gap-1.5 border-t border-line pt-5 text-caption text-ink-soft">
-          <p className="font-bold">마지막 확인 · {help.checkedAt}</p>
+          <p className="font-semibold">마지막 확인 · {help.checkedAt}</p>
           <p className="leading-relaxed">
             화면이 다르게 보이면{' '}
             <a
               href={help.officialUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-bold text-primary hover:underline"
+              className="font-semibold text-primary hover:underline"
             >
               {help.name} 공식 도움말(영어, 새 탭)
             </a>

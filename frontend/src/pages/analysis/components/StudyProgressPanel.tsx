@@ -63,7 +63,7 @@ function StudyProgressPanel({ courseId }: { courseId: number }) {
                 className="flex flex-col gap-0.5 rounded-lg bg-surface-muted p-3"
               >
                 <dt className="text-caption text-ink-soft">{item.label}</dt>
-                <dd className="text-lg font-extrabold text-heading">
+                <dd className="text-lg font-semibold text-heading">
                   {item.value}개
                 </dd>
               </div>

@@ -66,14 +66,14 @@ function ConceptRow({
         className="grid w-full grid-cols-[2rem_minmax(0,1fr)_1.25rem] items-center gap-x-3 gap-y-2.5 px-4 py-4 text-left lg:grid-cols-[2rem_minmax(0,1.3fr)_minmax(0,0.9fr)_minmax(0,2fr)_1.25rem] lg:px-5"
       >
         <span
-          className="flex size-7 items-center justify-center rounded-full bg-primary text-caption font-extrabold text-on-primary"
+          className="flex size-7 items-center justify-center rounded-full bg-primary text-caption font-semibold text-on-primary"
           aria-hidden="true"
         >
           {index + 1}
         </span>
         <span className="flex min-w-0 flex-col gap-0.5">
           <span className="flex flex-wrap items-center gap-2">
-            <span className="text-lg font-bold text-heading">
+            <span className="text-lg font-semibold text-heading">
               <span className="sr-only">공부 순서 {index + 1}번째. </span>
               {concept.concept}
             </span>

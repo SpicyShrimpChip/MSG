@@ -81,7 +81,7 @@ function LearningDesign({ quiz, result }: { quiz: Quiz; result: QuizResult }) {
       aria-label="출제 설계와 자료 근거"
       className="flex flex-col gap-3 p-5"
     >
-      <h2 className="flex items-center gap-2 text-body font-bold text-heading">
+      <h2 className="flex items-center gap-2 text-body font-semibold text-heading">
         <BookText size={18} className="text-primary" aria-hidden="true" />
         출제 설계와 자료 근거
       </h2>
@@ -98,7 +98,7 @@ function LearningDesign({ quiz, result }: { quiz: Quiz; result: QuizResult }) {
       {design.materialContentUsed ? (
         <div className="flex flex-col gap-1 text-caption text-ink-soft">
           <p>
-            <span className="font-bold text-heading">자료 기반 생성</span> ·
+            <span className="font-semibold text-heading">자료 기반 생성</span> ·
             AI에 보낸 자료 위치: {design.materialScope ?? '위치 표시 없음'}
           </p>
           {grounding && <p>{grounding}</p>}
@@ -141,7 +141,7 @@ function Assessment({ quiz, result }: { quiz: Quiz; result: QuizResult }) {
       aria-labelledby="quiz-assessment"
       className="flex flex-col gap-4 p-6"
     >
-      <h2 id="quiz-assessment" className="text-lg font-extrabold text-heading">
+      <h2 id="quiz-assessment" className="text-lg font-semibold text-heading">
         {STATUS_TITLE[quiz.mode ?? 'none'][assessment.status]}
       </h2>
       <ul className="flex list-inside list-disc flex-col gap-1 text-body text-ink">
@@ -156,7 +156,7 @@ function Assessment({ quiz, result }: { quiz: Quiz; result: QuizResult }) {
 
       {weak.length > 0 && (
         <div className="flex flex-col gap-2">
-          <p className="font-bold text-heading">
+          <p className="font-semibold text-heading">
             {quiz.mode === 'exam_prep' ? '틀린 개념 복습하기' : '보완할 개념'}
           </p>
           <div className="flex flex-wrap gap-2">
@@ -182,7 +182,7 @@ function Assessment({ quiz, result }: { quiz: Quiz; result: QuizResult }) {
           <ul className="flex flex-col gap-1.5">
             {suggestions.map((item) => (
               <li key={`${item.kind}-${item.concept}`}>
-                <span className="font-bold">
+                <span className="font-semibold">
                   [{SUGGESTION_LABEL[item.kind]}] {item.concept}
                 </span>
                 {item.aiReason && ` — ${item.aiReason}`}
@@ -207,14 +207,14 @@ function Breakdown({ result }: { result: QuizResult }) {
       aria-labelledby="quiz-breakdown"
       className="flex flex-col gap-5 p-6"
     >
-      <h2 id="quiz-breakdown" className="text-lg font-extrabold text-heading">
+      <h2 id="quiz-breakdown" className="text-lg font-semibold text-heading">
         유형별·개념별 결과
       </h2>
       {byType.length > 0 && (
         <ul className="grid gap-3 sm:grid-cols-3">
           {byType.map((type) => (
             <li key={type.type} className="flex flex-col gap-1.5">
-              <p className="text-body font-bold text-heading">
+              <p className="text-body font-semibold text-heading">
                 {QUESTION_TYPE_LABELS[type.type]}{' '}
                 <span className="font-medium text-ink-muted">
                   {type.questionCount}문제
@@ -235,14 +235,16 @@ function Breakdown({ result }: { result: QuizResult }) {
           {byConcept.map((concept, index) => (
             <li key={concept.conceptId} className="flex flex-col gap-1.5">
               <p className="flex flex-wrap items-center justify-between gap-2 text-body">
-                <span className="font-bold text-heading">{concept.name}</span>
+                <span className="font-semibold text-heading">
+                  {concept.name}
+                </span>
                 <span className="text-caption text-ink-soft">
                   {concept.questionCount}문제 · {concept.score}/
                   {concept.maxScore}점
                   {concept.pendingCount + concept.reviewCount > 0 &&
                     ` · 대기·확인 ${concept.pendingCount + concept.reviewCount}`}
                   {concept.weak && (
-                    <span className="ml-2 font-bold text-weakness">
+                    <span className="ml-2 font-semibold text-weakness">
                       ! 보완 필요
                     </span>
                   )}
@@ -273,7 +275,7 @@ function CheckTopicResult({ quiz }: { quiz: Quiz }) {
       className="flex flex-col gap-3 p-5"
     >
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-lg font-extrabold text-heading">
+        <h2 className="text-lg font-semibold text-heading">
           ‘{topic.name}’ 학습 상태
         </h2>
         {study && <StudyStatusBadge status={study.status} />}
@@ -340,7 +342,7 @@ function QuizResultContent({ quizId }: { quizId: number }) {
   return (
     <div className="flex flex-col gap-6">
       <Card as="section" aria-label="점수" className="flex flex-col gap-3 p-6">
-        <h2 className="text-lg font-extrabold text-heading">
+        <h2 className="text-lg font-semibold text-heading">
           {quiz.title}
           {modeLabel && (
             <span className="ml-2 text-body font-medium text-ink-muted">
@@ -350,7 +352,7 @@ function QuizResultContent({ quizId }: { quizId: number }) {
         </h2>
         <p className="text-body text-ink">
           채점이 끝난 문제 점수{' '}
-          <strong className="text-2xl font-extrabold text-primary">
+          <strong className="text-2xl font-semibold text-primary">
             {result.score}/{result.maxScore}점
           </strong>{' '}
           ({percent}%) · {result.totalCount}문제 중 {result.correctCount}문제
@@ -404,7 +406,7 @@ function QuizResultContent({ quizId }: { quizId: number }) {
       <Breakdown result={result} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-extrabold text-heading">문제별 결과</h2>
+        <h2 className="text-lg font-semibold text-heading">문제별 결과</h2>
         <AiLegend />
       </div>
 

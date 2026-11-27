@@ -165,7 +165,7 @@ function Gnb() {
                 aria-current={active ? 'page' : undefined}
                 className={cn(
                   'relative flex h-10 items-center rounded-full px-3 text-base',
-                  active ? 'font-bold' : 'font-medium',
+                  active ? 'font-semibold' : 'font-medium',
                   highlighted || active ? 'text-primary' : 'text-heading',
                 )}
               >

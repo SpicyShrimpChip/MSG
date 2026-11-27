@@ -43,7 +43,7 @@ export default function RouteErrorPage() {
   return (
     <main className="mx-auto flex min-h-dvh max-w-page flex-col items-center justify-center gap-4 px-6 text-center">
       <CircleAlert size={32} aria-hidden="true" className="text-danger" />
-      <h1 className="text-2xl font-bold text-heading">
+      <h1 className="text-2xl font-semibold text-heading">
         {chunkError ? '새 버전이 나왔어요' : '화면을 보여 드리지 못했어요'}
       </h1>
       <p className="max-w-120 leading-relaxed text-ink-soft">

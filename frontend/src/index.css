@@ -24,123 +24,127 @@
   /* 페이지 본문 최대 폭 (1200px) → max-w-page */
   --container-page: 75rem;
 
-  /* 메인 첫 화면 띠처럼 넓은 짙은 파랑 면과 그 위 글자 */
-  --color-brand: #133b9e;
+  /* 메인 첫 화면 띠처럼 넓은 짙은 잉크 남색 면과 그 위 글자 */
+  --color-brand: #1d3461;
   --color-on-brand: #ffffff;
-  --color-on-brand-hover: #c3d3fb;
+  --color-on-brand-hover: #c9d4ea;
 
   /* 페이지 제목, 섹션 제목·표 상단선·보조 링크 */
-  --color-heading: #0f1b33;
-  --color-heading-soft: #1e3a8a;
+  --color-heading: #1c1b19;
+  --color-heading-soft: #3a3733;
 
-  /* 버튼·링크·선택 표시·점수 막대 (흰 글자 6.7:1, 흰 바탕 위 글자 6.7:1) */
-  --color-primary: #1d4ed8;
-  --color-primary-hover: #1e40af;
+  /* 잉크 파랑: 버튼·링크·선택 표시·점수 막대·핵심 숫자 (흰 글자 10.1:1, 바탕 위 글자 9.4:1) */
+  --color-primary: #23407a;
+  --color-primary-hover: #1a3163;
   --color-on-primary: #ffffff;
-  --color-primary-soft: #eaf1ff;
-  --color-primary-pill: #dbe6ff;
-  --color-primary-pill-hover: #c7d7fe;
+  --color-primary-soft: #e9edf5;
+  --color-primary-pill: #dde3ef;
+  --color-primary-pill-hover: #ced7e8;
 
-  /* 푸터: 연한 파랑 (글자는 heading) */
-  --color-footer: #eaf1ff;
+  /* 푸터: 옅은 중립 회색 (글자는 heading) */
+  --color-footer: #f2f0eb;
 
   /* 메인 첫 화면 띠 배경과 그 위에 올라온 카드 바탕 */
-  --color-hero: #f4f7fd;
+  --color-hero: #f2f0eb;
   --color-surface-raised: #ffffff;
   /* 큰 안내 상자(3단계 카드, 서비스 소개 상자) 바탕. 작은 강조(아이콘 상자, 선택 상태)는 primary-soft */
-  --color-section: #f4f7fd;
+  --color-section: #f2f0eb;
 
   /* AI가 만든 콘텐츠에만 쓴다 (버튼·점수에는 쓰지 않는다) */
-  --color-ai: #6d28d9;
-  --color-ai-soft: #f8f5ff;
-  --color-ai-border: #ddd2fb;
-  --color-ai-chip: #f3effe;
-  --color-ai-chip-hover: #e9e0fd;
+  --color-ai: #6a45c2;
+  --color-ai-soft: #f7f4fc;
+  --color-ai-border: #ddd3f3;
+  --color-ai-chip: #f1ecfa;
+  --color-ai-chip-hover: #e6ddf6;
 
   /* 찾은 키워드·검색어 형광펜 (가져온 대화 보기). 가린 표시(primary-soft)와 구분되는 노랑 */
   --color-highlight: #fde68a;
   --color-on-highlight: #3f2d00;
 
-  --color-strength: #15803d;
-  --color-strength-soft: #e7f6ec;
-  --color-weakness: #c0392b;
-  --color-weakness-soft: #fdecea;
+  --color-strength: #1f7a46;
+  --color-strength-soft: #e8f3ec;
+  --color-weakness: #b8432f;
+  --color-weakness-soft: #fbece8;
   /* 보완 필요 개념의 점수 막대 (글자보다 밝은 붉은 기, 바탕 대비 3:1 이상) */
-  --color-weakness-bar: #e0574a;
+  --color-weakness-bar: #d9604c;
   /* 사전·사후평가 비교 그래프 (코드가 계산한 점수). 사전=주황, 사후=파랑. dataviz 검사(CVD·대비) 통과 */
   --color-chart-pre: #eb6834;
-  --color-chart-post: #1d4ed8;
+  --color-chart-post: #23407a;
 
   /* 오류 메시지에만 쓴다 */
   --color-danger: #b91c1c;
 
+  /* 그림자 색: 중립 먹색. 파란 그림자를 쓰지 않는다 (투명도는 쓰는 곳에서 정한다) */
+  --color-shade: #1c1b19;
+
   /* 확인 창 뒤를 어둡게 덮는 막 (투명도는 쓰는 곳에서 정한다). 글자색(heading)을 쓰면 어두운 모드에서 밝게 덮인다 */
-  --color-overlay: #0f1b33;
+  --color-overlay: #1c1b19;
 
   /* 장면 창 틀(맥 창)의 닫기·최소화·확대 버튼 점. 꾸밈용이라 글자에 쓰지 않는다 */
   --color-window-close: #ff5f57;
   --color-window-minimize: #febc2e;
   --color-window-zoom: #28c840;
 
-  /* 바탕·본문 글자·보조 글자·구분선. 사이트 바탕은 흰색, 표 머리·연한 칸은 surface-muted(옅은 파랑 회색) */
-  --color-surface: #ffffff;
-  --color-surface-muted: #f4f7fd;
-  --color-ink: #0f1b33;
-  --color-ink-soft: #45526b;
-  --color-ink-muted: #5f6b80;
-  --color-line: #e3e9f3;
-  --color-line-strong: #c9d3e3;
+  /* 바탕·본문 글자·보조 글자·구분선. 사이트 바탕은 아주 옅게 따뜻한 회색, 카드는 흰색(surface-raised), 표 머리·연한 칸은 surface-muted */
+  --color-surface: #f8f7f4;
+  --color-surface-muted: #f2f0eb;
+  --color-ink: #1c1b19;
+  --color-ink-soft: #57534c;
+  --color-ink-muted: #6f6a62;
+  --color-line: #e8e5df;
+  --color-line-strong: #d3cec5;
   /* 입력칸·검색칸 테두리 (바탕 대비 3:1 이상, WCAG 1.4.11) */
-  --color-input-border: #7c8598;
+  --color-input-border: #8a857c;
 }
 
-/* 다크모드 값: 시안 v3를 어둡게 옮긴 남색 기가 도는 어두운 바탕 + 밝은 화면에서 파란색이던 자리는 밝은 파랑.
+/* 다크모드 값: 같은 중립 회색을 어둡게 옮긴 바탕 + 밝은 화면에서 잉크 파랑이던 자리는 밝은 잉크 파랑.
    위에 올라온 면일수록 밝게(바탕 < 카드 < 연한 칸). 글자·바탕 쌍은 모두 대비 4.5:1 이상 */
 :root.dark {
   color-scheme: dark;
 
-  /* 메인 첫 화면 띠: 바탕보다 파란 기를 더해 띠로 보이게 한다 (위 글자는 흰색 그대로) */
-  --color-brand: #15295a;
+  /* 메인 첫 화면 띠: 짙은 잉크 남색 (위 글자는 흰색 그대로) */
+  --color-brand: #16213a;
   --color-on-brand: #ffffff;
-  --color-on-brand-hover: #b9cbf5;
+  --color-on-brand-hover: #b6c3de;
 
-  --color-heading: #f1f4f9;
-  /* 섹션 제목이 링크(primary)처럼 보이지 않도록 파란 기만 살짝 남긴 밝은 회색 */
-  --color-heading-soft: #c7d4f0;
+  --color-heading: #efebe4;
+  /* 섹션 제목: 링크(primary)처럼 보이지 않는 밝은 회색 */
+  --color-heading-soft: #d9d4cb;
 
-  /* 어두운 바탕에서는 버튼을 밝은 파랑으로, 버튼 글자를 어둡게 바꾼다 */
-  --color-primary: #7aa5f5;
-  --color-primary-hover: #a3c2f8;
-  --color-on-primary: #0b1020;
-  --color-primary-soft: #1c2a47;
-  --color-primary-pill: #24365a;
-  --color-primary-pill-hover: #2c4069;
+  /* 어두운 바탕에서는 버튼을 밝은 잉크 파랑으로, 버튼 글자를 어둡게 바꾼다 */
+  --color-primary: #a9bfee;
+  --color-primary-hover: #c4d3f4;
+  --color-on-primary: #10141f;
+  --color-primary-soft: #232a3a;
+  --color-primary-pill: #2b3448;
+  --color-primary-pill-hover: #343f56;
 
-  --color-footer: #121a2a;
+  --color-footer: #121110;
 
-  --color-hero: #1a2232;
-  --color-surface-raised: #161d2b;
-  --color-section: #1a2232;
+  --color-hero: #201e1b;
+  --color-surface-raised: #1c1b19;
+  --color-section: #201e1b;
 
-  --color-ai: #c4b0ff;
-  --color-ai-soft: #1f1934;
-  --color-ai-border: #3d2f63;
-  --color-ai-chip: #2b2147;
-  --color-ai-chip-hover: #352a57;
+  --color-ai: #c3b2f5;
+  --color-ai-soft: #221d2e;
+  --color-ai-border: #3a3150;
+  --color-ai-chip: #2a2438;
+  --color-ai-chip-hover: #332c44;
 
   --color-highlight: #6b5310;
   --color-on-highlight: #fff3c4;
 
-  --color-strength: #86efac;
-  --color-strength-soft: #12301f;
-  --color-weakness: #fca99f;
-  --color-weakness-soft: #3a1a17;
-  --color-weakness-bar: #f08378;
+  --color-strength: #7fd6a2;
+  --color-strength-soft: #16271d;
+  --color-weakness: #f2a497;
+  --color-weakness-soft: #33201c;
+  --color-weakness-bar: #e07a69;
   --color-chart-pre: #d95926;
-  --color-chart-post: #3987e5;
+  --color-chart-post: #6f93df;
 
   --color-danger: #fca5a5;
 
+  --color-shade: #000000;
   --color-overlay: #000000;
 
   /* 맥 창 버튼 색은 어두운 모드에서도 같다 */
@@ -148,15 +152,15 @@
   --color-window-minimize: #febc2e;
   --color-window-zoom: #28c840;
 
-  --color-surface: #0f141e;
+  --color-surface: #161513;
   /* 카드(surface-raised) 안의 연한 칸·막대 바탕도 보이도록 raised보다 한 단계 밝게 */
-  --color-surface-muted: #1c2434;
-  --color-ink: #e6eaf2;
-  --color-ink-soft: #b3bccd;
-  --color-ink-muted: #8e99ad;
-  --color-line: #263045;
-  --color-line-strong: #354159;
-  --color-input-border: #6b7891;
+  --color-surface-muted: #262421;
+  --color-ink: #efebe4;
+  --color-ink-soft: #aaa398;
+  --color-ink-muted: #948e84;
+  --color-line: #2e2c28;
+  --color-line-strong: #3d3a35;
+  --color-input-border: #7a756c;
 }
 
 /* 가린 곳 목록에서 "보기"로 고른 가린 표시 하나 (ConversationView). 파란 가린 표시·보라 말풍선 위에서도 보이게 가장 진한 글자색을 바탕으로 쓴다 */
@@ -168,6 +172,12 @@
 @layer base {
   :root {
     color-scheme: light;
+  }
+
+  /* 강조 글자도 가장 굵은 단계(600)를 넘지 않는다 */
+  b,
+  strong {
+    font-weight: 600;
   }
 
   body {

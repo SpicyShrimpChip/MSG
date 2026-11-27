@@ -17,7 +17,7 @@ function Panel({ title, description, layoutReason, children }: PanelProps) {
     <Card as="section" className="flex h-full min-w-0 flex-col gap-4 p-6">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-1">
-          <h2 className="text-lg font-bold text-heading">{title}</h2>
+          <h2 className="text-lg font-semibold text-heading">{title}</h2>
           {description && (
             <p className="text-caption text-ink-muted">{description}</p>
           )}

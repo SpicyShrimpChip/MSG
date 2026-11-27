@@ -281,21 +281,21 @@ function QuizCreateForm({ me }: { me: User | null }) {
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       {check && (
         <Notice icon={Target} iconClassName="text-primary">
-          <span className="font-bold text-heading">
+          <span className="font-semibold text-heading">
             ‘{check.name}’ 확인 퀴즈예요.
           </span>{' '}
           이 개념 문제만 나오고, 채점 결과로 이 개념의 학습 상태(이해 확인·복습
           필요)가 정해져요.{' '}
           <Link
             to={conceptStudyLink(check.materialId, check.conceptId)}
-            className="font-bold text-primary underline-offset-4 hover:underline"
+            className="font-semibold text-primary underline-offset-4 hover:underline"
           >
             개념으로 돌아가기
           </Link>
         </Notice>
       )}
       <fieldset className="flex flex-col gap-3">
-        <legend className="mb-1 font-bold text-heading">학습 모드</legend>
+        <legend className="mb-1 font-semibold text-heading">학습 모드</legend>
         <div className="grid gap-2 md:grid-cols-3">
           {QUIZ_MODES.map((item) => {
             const checked = mode === item.value;
@@ -309,7 +309,7 @@ function QuizCreateForm({ me }: { me: User | null }) {
                     : 'border-line hover:bg-surface-muted',
                 )}
               >
-                <span className="flex items-center gap-2 font-bold text-heading">
+                <span className="flex items-center gap-2 font-semibold text-heading">
                   <input
                     type="radio"
                     name="quiz-mode"
@@ -355,7 +355,7 @@ function QuizCreateForm({ me }: { me: User | null }) {
 
         {check ? (
           <div className="flex flex-col gap-1">
-            <p className="text-body font-bold text-heading">다룰 개념</p>
+            <p className="text-body font-semibold text-heading">다룰 개념</p>
             <p className="text-body text-ink">
               {check.name}{' '}
               <span className="text-caption text-ink-muted">
@@ -365,7 +365,7 @@ function QuizCreateForm({ me }: { me: User | null }) {
           </div>
         ) : (
           <fieldset className="flex flex-col gap-2">
-            <legend className="mb-1 text-body font-bold text-heading">
+            <legend className="mb-1 text-body font-semibold text-heading">
               다룰 개념{' '}
               <span className="font-medium text-ink-muted">
                 (고르지 않으면 과목 키워드 전체)
@@ -464,7 +464,7 @@ function QuizCreateForm({ me }: { me: User | null }) {
         )}
 
         <fieldset className="flex flex-col gap-2">
-          <legend className="mb-1 text-body font-bold text-heading">
+          <legend className="mb-1 text-body font-semibold text-heading">
             평가할 인지 수준{' '}
             <span className="font-medium text-ink-muted">
               (개정 블룸 분류, 난이도와 별개)
@@ -520,7 +520,7 @@ function QuizCreateForm({ me }: { me: User | null }) {
         </fieldset>
 
         <fieldset className="flex flex-col gap-3 rounded-xl border border-line p-4">
-          <legend className="px-1 text-body font-bold text-heading">
+          <legend className="px-1 text-body font-semibold text-heading">
             <BookText
               size={16}
               className="mr-1 inline text-primary"
@@ -571,7 +571,9 @@ function QuizCreateForm({ me }: { me: User | null }) {
                     className="mt-1 size-4 accent-primary"
                   />
                   <span>
-                    <span className="font-bold">자료 본문을 근거로 만들기</span>
+                    <span className="font-semibold">
+                      자료 본문을 근거로 만들기
+                    </span>
                     <span className="block text-caption text-ink-soft">
                       서버가 고른 개념이 나오는 쪽·슬라이드·문단만(최대
                       12,000자) 보내고, 문제마다 근거 문장을 원문과 대조해 결과
@@ -611,7 +613,7 @@ function QuizCreateForm({ me }: { me: User | null }) {
               className="mt-1 size-4 accent-primary"
             />
             <span>
-              <span className="font-bold">모의시험으로 만들기</span>
+              <span className="font-semibold">모의시험으로 만들기</span>
               <span className="block text-caption text-ink-soft">
                 범위 전체를 실제 시험처럼 고르게 다뤄요(
                 {MOCK_EXAM_MAX_QUESTIONS}

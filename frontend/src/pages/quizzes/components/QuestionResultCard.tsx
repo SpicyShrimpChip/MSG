@@ -100,7 +100,7 @@ function QuestionResultCard({
   return (
     <Card as="li" className="flex flex-col gap-3 p-5">
       <div className="flex items-start justify-between gap-3">
-        <p className="font-bold text-heading">
+        <p className="font-semibold text-heading">
           <span className="mr-2 text-primary">Q{index + 1}.</span>
           <span className="mr-2 text-caption font-medium text-ink-muted">
             [{QUESTION_TYPE_LABELS[item.type]}]
@@ -123,7 +123,7 @@ function QuestionResultCard({
 
       {question.scenario && (
         <p className="rounded-xl bg-surface-muted px-4 py-3 text-caption leading-relaxed text-ink-soft">
-          <span className="font-bold text-heading">업무 상황 </span>
+          <span className="font-semibold text-heading">업무 상황 </span>
           {question.scenario}
           {question.role && ` (내 역할: ${question.role})`}
         </p>
@@ -175,7 +175,7 @@ function QuestionResultCard({
         <div>
           <h3
             id={`rubric-${item.questionId}`}
-            className="mb-2 text-body font-bold text-heading"
+            className="mb-2 text-body font-semibold text-heading"
           >
             평가 기준별 결과
           </h3>
@@ -196,7 +196,9 @@ function QuestionResultCard({
                   <dt className="text-ink-muted">{levelHeader}</dt>
                   <dd className="text-ink">{levelText(row)}</dd>
                   <dt className="text-ink-muted">점수</dt>
-                  <dd className="font-bold text-primary">{earnedText(row)}</dd>
+                  <dd className="font-semibold text-primary">
+                    {earnedText(row)}
+                  </dd>
                   <dt className="text-ink-muted">모델 의견</dt>
                   <dd className="text-ink-soft">{opinionText(row)}</dd>
                 </dl>
@@ -220,7 +222,7 @@ function QuestionResultCard({
                 <tr key={row.criterion}>
                   <td className="px-3 py-2 text-heading">{row.criterion}</td>
                   <td className="px-3 py-2 text-ink">{levelText(row)}</td>
-                  <td className="px-3 py-2 font-bold text-primary">
+                  <td className="px-3 py-2 font-semibold text-primary">
                     {earnedText(row)}
                   </td>
                   <td className="px-3 py-2 text-ink-soft">
@@ -238,7 +240,7 @@ function QuestionResultCard({
                     .filter((row) => row.aiReason)
                     .map((row) => (
                       <li key={row.criterion}>
-                        <span className="font-bold">{row.criterion}: </span>
+                        <span className="font-semibold">{row.criterion}: </span>
                         {row.aiReason}
                       </li>
                     ))}
@@ -263,7 +265,7 @@ function QuestionResultCard({
               .filter(([, text]) => text)
               .map(([label, text]) => (
                 <div key={label} className="contents">
-                  <dt className="font-bold">{label}</dt>
+                  <dt className="font-semibold">{label}</dt>
                   <dd>{text}</dd>
                 </div>
               ))}
@@ -293,7 +295,7 @@ function QuestionResultCard({
 
       {item.bloomLevel && (
         <p className="text-caption text-ink-soft">
-          <span className="font-bold text-heading">평가 수준 </span>
+          <span className="font-semibold text-heading">평가 수준 </span>
           {BLOOM_LABEL[item.bloomLevel]}{' '}
           <span className="text-ink-muted">
             (AI가 지정한 수준, 서버는 형식만 확인)
@@ -307,7 +309,7 @@ function QuestionResultCard({
       {item.source && (
         <div className="flex flex-col gap-2 rounded-xl border border-line p-3">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-caption font-bold text-heading">자료 근거</p>
+            <p className="text-caption font-semibold text-heading">자료 근거</p>
             <VerificationBadge
               status={item.source.check}
               label={SOURCE_CHECK_LABEL[item.source.check]}

@@ -80,7 +80,7 @@ function Tile({
   return (
     <div className="flex min-w-0 flex-col gap-2.5 rounded-xl bg-surface-muted p-4">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-caption font-bold text-ink-soft">{label}</h3>
+        <h3 className="text-caption font-semibold text-ink-soft">{label}</h3>
         {more}
       </div>
       {children}
@@ -88,7 +88,7 @@ function Tile({
   );
 }
 
-const MORE_LINK = 'text-caption font-bold text-primary hover:underline';
+const MORE_LINK = 'text-caption font-semibold text-primary hover:underline';
 
 // 사전→사후평가 (과목 단위, 아래 자세한 비교 영역과 같은 조회라 다시 부르지 않는다)
 function AssessmentTile({ courseId }: { courseId: number }) {
@@ -128,7 +128,7 @@ function AssessmentTile({ courseId }: { courseId: number }) {
   const improved = data.concepts.filter((c) => c.status === 'improved').length;
   return (
     <Tile label="사전 → 사후평가" more={more}>
-      <p className="text-2xl font-extrabold text-heading">
+      <p className="text-2xl font-semibold text-heading">
         {pre === null ? '채점 전' : `${pre}%`}
         <span className="mx-1.5 text-ink-muted" aria-hidden="true">
           →
@@ -173,7 +173,7 @@ function ProgressTile({ courseId }: { courseId: number }) {
           </a>
         }
       >
-        <p className="text-2xl font-extrabold text-heading">
+        <p className="text-2xl font-semibold text-heading">
           {keyword.checked}
           <span className="text-lg text-ink-muted"> / {keyword.total}개</span>
         </p>
@@ -212,7 +212,7 @@ function ProgressTile({ courseId }: { courseId: number }) {
         </a>
       }
     >
-      <p className="text-2xl font-extrabold text-heading">
+      <p className="text-2xl font-semibold text-heading">
         {progress.studiedConcepts}
         <span className="text-lg text-ink-muted">
           {' '}
@@ -267,14 +267,14 @@ function SummaryStrip({ run, layoutReason }: SummaryStripProps) {
                 >
                   <span
                     className={cn(
-                      'inline-flex items-center gap-1 font-bold',
+                      'inline-flex items-center gap-1 font-semibold',
                       stage.text,
                     )}
                   >
                     <Icon size={14} aria-hidden="true" />
                     {MASTERY_LABEL[stage.level]}
                   </span>
-                  <span className="font-extrabold text-heading">
+                  <span className="font-semibold text-heading">
                     {overview.mastery[stage.level]}
                   </span>
                 </li>
@@ -300,7 +300,7 @@ function SummaryStrip({ run, layoutReason }: SummaryStripProps) {
                     />
                     {item.label}
                   </span>
-                  <span className="font-extrabold text-heading">
+                  <span className="font-semibold text-heading">
                     {overview.comparison[item.key]}개
                   </span>
                 </li>

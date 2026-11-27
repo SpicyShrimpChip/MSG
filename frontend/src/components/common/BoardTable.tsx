@@ -31,7 +31,7 @@ function BoardTable<T>({
               <th
                 key={column.key}
                 scope="col"
-                className={`border-b border-line px-4 py-3 text-left text-caption font-bold text-ink-soft ${column.widthClass ?? ''}`}
+                className={`border-b border-line px-4 py-3 text-left text-caption font-semibold text-ink-soft ${column.widthClass ?? ''}`}
               >
                 {column.label}
               </th>

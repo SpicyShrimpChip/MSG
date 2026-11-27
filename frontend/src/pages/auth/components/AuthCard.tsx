@@ -27,7 +27,7 @@ function AuthCard({
         )}
       >
         <div className="flex flex-col gap-2 text-center">
-          <h1 className="text-2xl font-extrabold tracking-tight text-heading">
+          <h1 className="text-2xl font-semibold tracking-tight text-heading">
             {title}
           </h1>
           {description && <p className="text-ink-soft">{description}</p>}

@@ -15,10 +15,10 @@ export const MARKDOWN_COMPONENTS: Components = {
   ),
   // 다른 사이트 이미지를 불러오지 않는다 (불러오면 그 사이트에 내 접속이 알려진다)
   img: ({ alt }) => <span>[이미지{alt ? `: ${alt}` : ''}]</span>,
-  h1: ({ children }) => <p className="mt-3 font-bold">{children}</p>,
-  h2: ({ children }) => <p className="mt-3 font-bold">{children}</p>,
-  h3: ({ children }) => <p className="mt-2 font-bold">{children}</p>,
-  h4: ({ children }) => <p className="mt-2 font-bold">{children}</p>,
+  h1: ({ children }) => <p className="mt-3 font-semibold">{children}</p>,
+  h2: ({ children }) => <p className="mt-3 font-semibold">{children}</p>,
+  h3: ({ children }) => <p className="mt-2 font-semibold">{children}</p>,
+  h4: ({ children }) => <p className="mt-2 font-semibold">{children}</p>,
   p: ({ children }) => <p className="my-1.5">{children}</p>,
   ul: ({ children }) => <ul className="my-1.5 list-disc pl-5">{children}</ul>,
   ol: ({ children }) => (
@@ -45,7 +45,7 @@ export const MARKDOWN_COMPONENTS: Components = {
     </div>
   ),
   th: ({ children }) => (
-    <th className="border-b border-line-strong px-2 py-1 text-left font-bold">
+    <th className="border-b border-line-strong px-2 py-1 text-left font-semibold">
       {children}
     </th>
   ),
