@@ -2,6 +2,7 @@ import { useEffect, type MouseEvent, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import * as m from 'motion/react-m';
 import { MENU, MOTION_TRANSITION } from '@/constants';
+import { focusMainContent } from './mainContent';
 import { currentMenuPath } from './menuActive';
 
 export const MOBILE_MENU_ID = 'mobile-menu';
@@ -28,9 +29,18 @@ function MobileMenu({ onClose, account }: MobileMenuProps) {
     return () => query.removeEventListener('change', handleChange);
   }, [onClose]);
 
+  // 메뉴 안 링크로 이동하면 메뉴가 닫히는 애니메이션 뒤 사라지며 포커스를 잃는다.
+  // 그때는 이미 이동이 끝나 RouteAnnouncer가 옮겨 주지 못하므로, 닫으면서 본문으로 미리 옮긴다
+  const closeAndFocusMain = () => {
+    onClose();
+    focusMainContent();
+  };
+
   // 계정 줄의 링크·로그아웃을 누르면 메뉴를 닫는다 (화면 모드 버튼은 그대로 둔다)
   const handleAccountClick = (e: MouseEvent<HTMLDivElement>) => {
-    if ((e.target as Element).closest('a, [data-menu-close]')) onClose();
+    if ((e.target as Element).closest('a, [data-menu-close]')) {
+      closeAndFocusMain();
+    }
   };
 
   return (
@@ -65,7 +75,7 @@ function MobileMenu({ onClose, account }: MobileMenuProps) {
                   <li key={child.path}>
                     <Link
                       to={child.path}
-                      onClick={onClose}
+                      onClick={closeAndFocusMain}
                       aria-current={active ? 'page' : undefined}
                       className={`block py-2 text-sm ${
                         active

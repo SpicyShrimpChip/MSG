@@ -124,7 +124,7 @@ function LegalDocument({
             key={section.id}
             id={section.id}
             aria-labelledby={`${section.id}-title`}
-            className="flex scroll-mt-24 flex-col gap-3"
+            className="flex flex-col gap-3"
           >
             <h2
               id={`${section.id}-title`}

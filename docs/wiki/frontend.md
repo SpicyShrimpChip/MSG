@@ -155,3 +155,10 @@
 - 원인: 마이페이지는 체험에서 "보여 드리지 않아요" 안내만 띄우고, 목업 모드는 로그인이 없어 실제 화면을 열 수 없다.
 - 해결: 미리보기 페이지에서 `javascript_tool`로 Vite 모듈(`/src/components/common/ConfirmDialog.tsx`, `main.tsx`가 가져오는 `/node_modules/.vite/deps/react.js?v=…`·`react-dom_client.js?v=…` 주소 그대로)을 `import()`해 빈 `div`에 창 3개를 그려 id를 확인하고 바로 지웠다. 버전 꼬리(`?v=`)가 다르면 React가 둘이 되거나 모듈을 못 읽는다.
 - 다음에는: 체험에서 안 열리는 화면의 컴포넌트는 `fetch('/src/main.tsx')`로 deps 주소를 먼저 확인한 뒤 같은 방식으로 따로 그려 본다.
+
+## 닫히며 사라지는 햄버거 메뉴의 링크로 옮기면 포커스가 본문으로 가지 않는다 (2026-11-27, fix/a11y-navigation)
+
+- 상황: 화면을 옮긴 뒤 "포커스를 잃었을 때만" 본문(`main`)으로 옮기는 `RouteAnnouncer`를 넣었는데, 휴대폰 폭 햄버거 메뉴로 옮기면 포커스가 body로 떨어졌다.
+- 원인: `AnimatePresence`가 닫히는 애니메이션 동안 메뉴를 DOM에 남겨 둔다. 주소가 바뀐 직후에는 포커스가 아직 메뉴 링크에 있어 "잃지 않음"으로 보고, 애니메이션이 끝나 메뉴가 사라질 때 잃는다. 백그라운드 탭에서는 애니메이션이 멈춰 메뉴가 계속 남아 있어 미리보기로는 잘 안 보였다.
+- 해결: `MobileMenu`의 링크를 누를 때 닫기와 함께 `focusMainContent()`를 불러 미리 본문으로 옮겼다.
+- 다음에는: 퇴장 애니메이션이 있는 패널 안에서 이동하거나 패널을 닫는 동작은 포커스를 직접 옮긴다. 미리보기에서 확인할 때는 `document.activeElement.isConnected`와 패널이 실제로 사라졌는지도 본다.
