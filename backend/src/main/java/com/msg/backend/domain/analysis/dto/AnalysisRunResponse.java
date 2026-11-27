@@ -84,12 +84,13 @@ public record AnalysisRunResponse(
 					description = "근거 부족 / 보완 필요 / 보통 / 강점. 근거 부족은 이해 부족이 아니다") String level,
 			@Schema(description = "점수 (0~1). 근거 부족이면 null. 화면에 숫자로 보여 주지 않는다") Double score,
 			@Schema(description = "모은 근거 무게 합") double evidenceWeight,
-			@Schema(description = "세어 넣은 퀴즈 문제 수 (채점이 끝난 문제만)") int quizGradedCount,
-			@Schema(description = "퀴즈 득점률 (0~1). 퀴즈 근거가 없으면 null") Double quizRate,
+			@Schema(description = "세어 넣은 퀴즈 문제 수 (채점이 끝나고 만점이 있는 문제만)") int quizGradedCount,
+			@Schema(description = "문제별 평균 득점률 (0~1, 문제마다 점수 ÷ 만점의 평균). 퀴즈 근거가 없으면 null") Double quizRate,
 			@Schema(description = "세어 넣은 대화 수 (사용자가 쓴 근거 메시지가 있는 대화)") int conversationCount,
 			@Schema(allowableValues = {"understood", "partial", "not_understood"},
 					description = "대화에 적용한 상태. 대화 근거를 세지 않았으면 null") String conversationStatus,
-			@Schema(description = "산식 버전") String formulaVersion,
+			@Schema(description = "산식 버전: 앞 번호 + \"-\" + 숫자 설정 지문 8자리 (예: 2-a1b3c9d2). 숫자 설정만 바꿔도 달라진다. "
+					+ "산식 1 기록은 지문 없이 \"1\"") String formulaVersion,
 			@Schema(description = "근거 부족일 때 단계가 나오려면 더 풀어야 하는 퀴즈 문제 수 (모두 채점된다고 보고 셈). 근거가 충분하면 null")
 			Integer quizNeeded,
 			@Schema(description = "이 개념의 숙련도 기록 (오래된 것부터, 최근 30개까지). 단계나 근거가 바뀌었을 때만 한 줄씩 남는다")
@@ -106,7 +107,8 @@ public record AnalysisRunResponse(
 			LocalDateTime recordedAt,
 			@Schema(allowableValues = {"insufficient_evidence", "needs_work", "normal", "strong"}) String level,
 			int quizGradedCount,
-			@Schema(description = "퀴즈 득점률 (0~1). 퀴즈 근거가 없으면 null") Double quizRate,
+			@Schema(description = "문제별 평균 득점률 (0~1, 문제마다 점수 ÷ 만점의 평균). 퀴즈 근거가 없으면 null. "
+					+ "산식 1 기록은 점수 합 비율(얻은 점수 ÷ 만점 합)") Double quizRate,
 			int conversationCount,
 			@Schema(allowableValues = {"understood", "partial", "not_understood"}) String conversationStatus,
 			String formulaVersion) {

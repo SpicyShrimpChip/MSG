@@ -439,7 +439,7 @@ QuizCreateInput = {
 | GET    | `/api/curriculum/courses/{courseId}`    | -         | `Curriculum` (`frontend/src/types/curriculum.ts`)                                        |
 
 - **AI 퀴즈 처리 동의를 따로 받는다.** `User.aiQuizConsent`, 가입 `agreedAiQuiz`(선택, 없으면 false), 마이페이지 `PATCH /api/users/me/consents { aiQuiz }`. 대화 분석 동의(`aiAnalysis`)를 퀴즈로 넓히지 않는다. 기존 회원은 false. 동의가 없으면 만들기 403, 주관식·서술형은 `pending`(이유 문구는 `gradingMessage`).
-- 더한 필드: `QuizCreateInput.mockExam`(exam_prep만, 20문제까지), `Quiz.mockExam`, `QuizSummary.mockExam`·`lastReviewCount`, 개념별 결과 `correctCount`(채점이 끝나고 만점인 문제 수, 대기·확인 필요는 틀린 것으로 세지 않음)·`lastSubmittedAt`.
+- 더한 필드: `QuizCreateInput.mockExam`(exam_prep만, 20문제까지), `Quiz.mockExam`, `QuizSummary.mockExam`·`lastReviewCount`, 개념별 결과 `correctCount`(채점이 끝나고 만점인 문제 수, 대기·확인 필요는 틀린 것으로 세지 않음)·`lastSubmittedAt`·`ratedCount`·`rateSum`(숙련도에 넣는 문제 수와 문제별 득점률 합, 5-10절).
 - 오류 추가: 만들기 504(전체 시간 100초 초과, 저장 안 함), 429(24시간 실제 모델 요청 수 상한), 다시 채점 409(같은 제출을 채점 중)·429(24시간 AI 채점 실행 한도, 답은 그대로)·403(퀴즈 동의 없음)·503(모델 없음).
 - timeout: 만들기·제출·다시 채점 모두 115초(`AI_REQUEST_TIMEOUT_MS`, 서버 예산 100초보다 길고 Vercel 프록시 한도 120초보다 짧게). 프록시가 낸 504(서버 응답 형식 없음)는 시간 초과와 같게 다룬다. 만들기를 보낸 키는 탭 sessionStorage에 두고 새로 고치면 상태 API로 결과를 찾는다.
 
@@ -656,14 +656,14 @@ layout = {
 
 ## 5-10. 숙련도 점수 산식 설계안과 참고 문헌 (11/4 제안, 11/5 초기값으로 확정)
 
-**상태:** 11/5에 변지환이 아래 설계안을 **초기값으로 확정**했다(루트 `CLAUDE.md` 미결 항목에도 반영). 숫자(가중치·기준·경계)는 근거 없는 초기 가정이라 **전부 설정값**(`app.mastery.*`)으로 두고 사용자 테스트 뒤 조정한다. **11/5에 변지환이 계산을 코드로 넣었다**: `analysis/application/MasteryCalculator`(+`MasteryProperties`, 단위 테스트 11개가 아래 계산 예시와 같은 값을 확인), 분석 응답 `concepts[].mastery`(`level`·`score`·`evidenceWeight`·`quizGradedCount`·`quizRate`·`conversationCount`·`conversationStatus`·`formulaVersion`·`quizNeeded`(근거 부족일 때 단계가 나오려면 더 풀 퀴즈 문제 수, 충분하면 null), 프론트 타입 `ConceptMastery`). 화면은 대시보드 개념 표와 개념 근거에 단계·근거만 보여 준다(숫자 점수 없음). 주미 확인이 남은 것은 아래 "주미에게 묻는 것"뿐이다. **변화 추이(11/5):** `mastery.history`(`recordedAt`·`level`·`quizGradedCount`·`quizRate`·`conversationCount`·`conversationStatus`·`formulaVersion`, 오래된 것부터 최근 30개). 분석 실행·`runs/latest` 때 마지막 기록과 단계·근거가 다르면 `concept_mastery`(V13)에 한 줄 남기고, `runs/{id}`는 기록하지 않는다. 대화 신호를 메시지 단위로 셀지는 남아 있다.
+**상태:** 11/5에 변지환이 아래 설계안을 **초기값으로 확정**했다(루트 `CLAUDE.md` 미결 항목에도 반영). 숫자(가중치·기준·경계)는 근거 없는 초기 가정이라 **전부 설정값**(`app.mastery.*`)으로 두고 사용자 테스트 뒤 조정한다. **11/5에 변지환이 계산을 코드로 넣었다**: `analysis/application/MasteryCalculator`(+`MasteryProperties`, 단위 테스트가 아래 계산 예시와 같은 값을 확인), 분석 응답 `concepts[].mastery`(`level`·`score`·`evidenceWeight`·`quizGradedCount`·`quizRate`·`conversationCount`·`conversationStatus`·`formulaVersion`·`quizNeeded`(근거 부족일 때 단계가 나오려면 더 풀 퀴즈 문제 수, 충분하면 null), 프론트 타입 `ConceptMastery`). 퀴즈 근거는 채점이 끝난 문제마다 s = 그 문제 점수 ÷ 그 문제 만점으로 센다(만점이 0인 답은 뺀다). 그래서 `quizRate`는 문제별 평균 득점률이고 퀴즈 결과의 점수 합 비율(`score ÷ maxScore`)과 다를 수 있다. 개념별 퀴즈 결과(`ConceptQuizStats`)의 `ratedCount`·`rateSum`이 이 계산에 쓰는 문제 수와 득점률 합이다. 지금 산식 앞 번호는 `2`. 화면은 대시보드 개념 표와 개념 근거에 단계·근거만 보여 준다(숫자 점수 없음). 주미 확인이 남은 것은 아래 "주미에게 묻는 것"뿐이다. **변화 추이(11/5):** `mastery.history`(`recordedAt`·`level`·`quizGradedCount`·`quizRate`·`conversationCount`·`conversationStatus`·`formulaVersion`, 오래된 것부터 최근 30개). 분석 실행·`runs/latest` 때 마지막 기록과 단계·근거가 다르면 `concept_mastery`(V13)에 한 줄 남기고, `runs/{id}`는 기록하지 않는다. 대화 신호를 메시지 단위로 셀지는 남아 있다.
 
 ### 원칙 (이미 정한 것)
 
 - 점수는 **명시적 규칙의 코드**가 계산한다. LLM은 근거를 설명만 한다(루트 `CLAUDE.md`, `backend-design.md` "숙련도" `evidence` → 점수 계산 클래스 → `concept_mastery`).
 - 근거가 부족한 것을 이해 부족으로 바꾸지 않는다. 대화만으로 단정하지 않는다.
 - "정확도"·"진단" 같은 표현을 쓰지 않는다. 가중치는 **근거 없는 초기 가정**이고 사용자 테스트 뒤에 조정한다.
-- 산식이 바뀌면 `concept_mastery.formula_version`을 올려 이전 결과와 구분한다.
+- 산식이 바뀌면 `concept_mastery.formula_version`으로 이전 결과와 구분한다. 버전은 `앞 번호-지문`(예: `2-a1b3c9d2`)이다. 앞 번호(`app.mastery.formula-version`)는 식 모양을 바꿀 때만 올리고, 숫자 설정만 바꾸면 뒤의 지문(숫자 설정 전부의 SHA-256 앞 8자리)이 저절로 바뀐다. 버전이 다른 기록끼리는 단계 변화("한 단계 올랐어요")를 보여 주지 않는다.
 
 ### 계산 (개념 하나마다)
 

@@ -1,6 +1,7 @@
 package com.msg.backend.domain.quiz.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 import com.msg.backend.domain.quiz.entity.GradingStatus;
 import com.msg.backend.domain.quiz.entity.QuizConcept;
@@ -55,6 +56,45 @@ class QuizAssessorTest {
 		assertThat(pending.byConcept().get(0).pendingCount()).isEqualTo(1);
 		assertThat(single.status()).isEqualTo(QuizAssessor.Status.NEEDS_CHECK);
 		assertThat(single.reasons()).anyMatch(reason -> reason.contains("하나만"));
+	}
+
+	@Test
+	void 만점이_다른_문제가_섞여도_문제마다_득점률을_한_번씩_더한다() {
+		// 객관식 2문제 0/1 + 서술형 1문제 10/10 → 점수 합 10/12지만 문제별 득점률 합은 0+0+1
+		var stat = QuizAssessor.byConcept(List.of(mc("nat", false), mc("nat", false),
+				new QuizAssessor.Graded(essay10("nat"), GradingStatus.GRADED, 10, 10, null)), 0.6).get(0);
+
+		assertThat(stat.score()).isEqualTo(10);
+		assertThat(stat.maxScore()).isEqualTo(12);
+		assertThat(stat.ratedCount()).isEqualTo(3);
+		assertThat(stat.rateSum()).isCloseTo(1.0, within(1e-9));
+	}
+
+	@Test
+	void 채점_대기와_확인_필요_답은_문제별_득점률에_넣지_않는다() {
+		var stat = QuizAssessor.byConcept(List.of(mc("nat", true),
+				new QuizAssessor.Graded(essay10("nat"), GradingStatus.PENDING, 0, 10, GradingNotes.NOT_CONFIGURED),
+				new QuizAssessor.Graded(essay10("nat"), GradingStatus.NEEDS_REVIEW, 4, 10, null)), 0.6).get(0);
+
+		assertThat(stat.ratedCount()).isEqualTo(1);
+		assertThat(stat.rateSum()).isCloseTo(1.0, within(1e-9));
+	}
+
+	@Test
+	void 만점이_0인_답은_문제별_득점률에_넣지_않고_만점보다_큰_점수는_1로_자른다() {
+		var stat = QuizAssessor.byConcept(List.of(
+				new QuizAssessor.Graded(essay10("nat"), GradingStatus.GRADED, 0, 0, null),
+				new QuizAssessor.Graded(essay10("nat"), GradingStatus.GRADED, 12, 10, null)), 0.6).get(0);
+
+		assertThat(stat.gradedCount()).isEqualTo(2);
+		assertThat(stat.ratedCount()).isEqualTo(1);
+		assertThat(stat.rateSum()).isCloseTo(1.0, within(1e-9));
+	}
+
+	// 만점 10점 서술형 (기준 두 개 × 5점)
+	private static QuizQuestion essay10(String concept) {
+		return QuizQuestion.essay(1L, 3, "서술", List.of(QuizRubricItem.of("기준", 5), QuizRubricItem.of("기준2", 5)),
+				"모범", null, null, List.of(QuizConcept.of(concept, concept.toUpperCase())));
 	}
 
 	private static QuizAssessor.Graded mc(String concept, boolean correct) {

@@ -17,6 +17,19 @@ export function shortDate(iso: string): string {
   return `${date.getMonth() + 1}/${date.getDate()}`;
 }
 
+// 산식 버전("2-a1b3c9d2")에서 지문 앞의 번호. 지문은 숫자 설정이 바뀌면 달라진다(서버 MasteryProperties)
+export function formulaMajor(version: string): string {
+  return version.split('-')[0];
+}
+
+// 숙련도 근거의 퀴즈 비율 문구. 산식 1 기록은 점수 합 비율(얻은 점수 ÷ 만점 합)이고, 그 뒤는 문제마다 점수 ÷ 만점의 평균이다
+export function quizRateText(rate: number, formulaVersion: string): string {
+  const pct = Math.round(rate * 100);
+  return formulaMajor(formulaVersion) === '1'
+    ? `얻은 점수 ${pct}%`
+    : `문제별 평균 득점률 ${pct}%`;
+}
+
 export interface MasteryChange {
   date: string;
   stage: MasteryStage;
@@ -42,7 +55,7 @@ export function describeMasteryChange(
     const rate =
       current.quizRate === null
         ? null
-        : `얻은 점수 ${Math.round(current.quizRate * 100)}%`;
+        : quizRateText(current.quizRate, current.formulaVersion);
     if (previous && added > 0) {
       const detail = [`지금까지 ${current.quizGradedCount}문제`, rate]
         .filter(Boolean)
@@ -60,12 +73,17 @@ export function describeMasteryChange(
     );
   }
   if (reasons.length === 0) reasons.push('반영한 퀴즈·대화 없음');
+  // 화면에는 앞 번호만 쓰고 지문은 보이지 않는다. 비교는 지문까지 포함한 전체 문자열로 한다
+  const currentMajor = formulaMajor(current.formulaVersion);
   if (previous && previous.formulaVersion !== current.formulaVersion) {
+    const previousMajor = formulaMajor(previous.formulaVersion);
     reasons.push(
-      `산식 v${previous.formulaVersion} → v${current.formulaVersion} (앞 기록과 바로 비교하기 어려워요)`,
+      previousMajor === currentMajor
+        ? `산식 v${currentMajor}, 기준값 조정 (앞 기록과 바로 비교하기 어려워요)`
+        : `산식 v${previousMajor} → v${currentMajor} (앞 기록과 바로 비교하기 어려워요)`,
     );
   } else {
-    reasons.push(`산식 v${current.formulaVersion}`);
+    reasons.push(`산식 v${currentMajor}`);
   }
 
   return {
