@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
-import { FileWarning, Lock, ShieldCheck, Sparkles } from 'lucide-react';
+import { FileWarning, ShieldCheck, Sparkles } from 'lucide-react';
 import {
   MATERIALS_QUERY_KEY,
   generateStudySummary,
@@ -9,10 +9,8 @@ import {
 import {
   AiBadge,
   AiWaitingStatus,
-  Button,
   Card,
   Chip,
-  ErrorText,
   Notice,
   SourceQuote,
   VerificationBadge,
@@ -32,6 +30,7 @@ import {
   formatDate,
   materialContentBlockedReason,
 } from '@/utils';
+import MaterialAiSendCard from './MaterialAiSendCard';
 
 // 항목 하나: AI가 쓴 글 + 원문 근거 상태. 글은 모두 AI가 썼으므로 AI 표시를 붙이고(서버가 확인한 것은 인용뿐),
 // 자료에 없는 AI 보충 설명은 보라색 상자로 따로 보여 준다
@@ -286,59 +285,40 @@ function StudySummaryPanel({
         </Notice>
       )}
 
-      <Card as="section" className="flex flex-col gap-3 p-5">
-        <h3 className="text-body font-semibold text-heading">
-          {ready ? '요약 다시 만들기' : '요약 만들기'}
-        </h3>
-        <Notice icon={Lock} size="caption" iconClassName="text-primary">
-          자료가 짧으면 전체를, 길면 핵심 개념이 나오는 부분만 골라 최대
-          12,000자를 외부 생성형 AI로 보내요. 이메일·전화번호 같은 개인정보가
-          보이면 보내지 않아요. 같은 파일·같은 목적의 요약은 저장해 두고 다시
-          써요.
-        </Notice>
-        {blockedReason ? (
-          <p className="text-body text-ink-soft">{blockedReason}</p>
-        ) : (
-          <label className="flex items-start gap-3 text-body text-heading">
-            <input
-              type="checkbox"
-              checked={confirmed}
-              onChange={(e) => setConfirmed(e.target.checked)}
-              className="mt-1 size-4 accent-primary"
-            />
-            <span>
-              이 자료의 본문을 외부 생성형 AI로 보내는 것을 확인했어요. 본인이
-              이용 권한이 있는 자료예요.
-            </span>
-          </label>
-        )}
-        <ErrorText error={mutation.error} />
-        {/* 목적 버튼은 요청을 reset해 isPending을 끄므로, 목적마다 새로 그려 끝난 것으로 읽지 않게 한다 */}
-        <AiWaitingStatus
-          key={purpose}
-          waiting={mutation.isPending}
-          failed={mutation.isError}
-          doneText="요약을 다 만들었어요."
-        >
-          AI가 요약을 쓰고 서버가 원문 근거를 확인하는 중이에요. 최대 1분 40초
-          걸릴 수 있어요.
-        </AiWaitingStatus>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            disabled={
-              blockedReason !== null || !confirmed || mutation.isPending
-            }
-            onClick={() => mutation.mutate(ready && !summary.stale)}
-          >
-            {ready && !summary.stale ? '새로 만들기' : '요약 만들기'}
-          </Button>
-          {mockData && (
-            <span className="text-caption text-ink-muted">
-              목업에서는 AI를 부르지 않아요. 예시 요약은 미리 써 둔 예시예요.
-            </span>
-          )}
-        </div>
-      </Card>
+      <MaterialAiSendCard
+        title={ready ? '요약 다시 만들기' : '요약 만들기'}
+        notice={
+          <>
+            자료가 짧으면 전체를, 길면 핵심 개념이 나오는 부분만 골라 최대
+            12,000자를 외부 생성형 AI로 보내요. 이메일·전화번호 같은 개인정보가
+            보이면 보내지 않아요. 같은 파일·같은 목적의 요약은 저장해 두고 다시
+            써요.
+          </>
+        }
+        blockedReason={blockedReason}
+        confirmed={confirmed}
+        onConfirmedChange={setConfirmed}
+        confirmLabel={
+          <>
+            이 자료의 본문을 외부 생성형 AI로 보내는 것을 확인했어요. 본인이
+            이용 권한이 있는 자료예요.
+          </>
+        }
+        error={mutation.error}
+        pending={mutation.isPending}
+        failed={mutation.isError}
+        pendingText="AI가 요약을 쓰고 서버가 원문 근거를 확인하는 중이에요. 최대 1분 40초 걸릴 수 있어요."
+        doneText="요약을 다 만들었어요."
+        // 목적 버튼은 요청을 reset해 isPending을 끄므로, 목적마다 대기 알림을 새로 그려 끝난 것으로 읽지 않게 한다
+        waitingKey={purpose}
+        submitLabel={ready && !summary.stale ? '새로 만들기' : '요약 만들기'}
+        onSubmit={() => mutation.mutate(ready && !summary.stale)}
+        mockNote={
+          mockData
+            ? '목업에서는 AI를 부르지 않아요. 예시 요약은 미리 써 둔 예시예요.'
+            : null
+        }
+      />
     </div>
   );
 }
