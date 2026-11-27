@@ -13,6 +13,7 @@ import {
   LIST_ROW_CLASS,
   SubPage,
   ErrorText,
+  ActionNotice,
   Spinner,
 } from '@/components';
 import { useCourses, useMaterials, useSingleFlightMutation } from '@/hooks';
@@ -117,6 +118,10 @@ function MaterialList() {
   const { data: materials } = useMaterials();
   const { data: courses } = useCourses();
   const [deleting, setDeleting] = useState<MaterialSummary | null>(null);
+  // 삭제 결과 알림. 누른 삭제 버튼이 목록과 함께 사라지므로 포커스를 이 알림으로 옮긴다
+  const [notice, setNotice] = useState<{ id: number; text: string } | null>(
+    null,
+  );
 
   const removal = useSingleFlightMutation({
     mutationFn: deleteMaterial,
@@ -125,13 +130,17 @@ function MaterialList() {
   });
 
   if (materials.length === 0) {
+    // 마지막 자료를 지워 빈 화면이 돼도 삭제 알림을 남긴다
     return (
-      <EmptyState
-        icon={<FileText size={24} aria-hidden="true" />}
-        title="아직 올린 자료가 없어요"
-        description="필기, 정리 노트, 연습문제 풀이를 올리면 요약과 퀴즈로 바로 공부를 시작할 수 있어요."
-        action={{ label: '첫 자료 올리기', to: '/materials/upload' }}
-      />
+      <div className="flex flex-col gap-4">
+        <ActionNotice notice={notice} />
+        <EmptyState
+          icon={<FileText size={24} aria-hidden="true" />}
+          title="아직 올린 자료가 없어요"
+          description="필기, 정리 노트, 연습문제 풀이를 올리면 요약과 퀴즈로 바로 공부를 시작할 수 있어요."
+          action={{ label: '첫 자료 올리기', to: '/materials/upload' }}
+        />
+      </div>
     );
   }
 
@@ -148,6 +157,7 @@ function MaterialList() {
       </div>
 
       <ErrorText error={removal.error} />
+      <ActionNotice notice={notice} />
 
       {groups.map((group) => (
         <section
@@ -185,7 +195,17 @@ function MaterialList() {
         description="이 자료로 만든 요약·퀴즈와, 퀴즈 결과로 계산한 판단 근거도 함께 지워져요. 되돌릴 수 없어요."
         confirmLabel="삭제하기"
         onConfirm={() => {
-          if (deleting) removal.mutate(deleting.id);
+          if (deleting) {
+            const { title } = deleting;
+            // 훅의 onSuccess(목록 다시 받기)가 끝난 뒤 불린다
+            removal.mutate(deleting.id, {
+              onSuccess: () =>
+                setNotice((prev) => ({
+                  id: (prev?.id ?? 0) + 1,
+                  text: `'${title}' 자료를 삭제했어요.`,
+                })),
+            });
+          }
           setDeleting(null);
         }}
         onCancel={() => setDeleting(null)}

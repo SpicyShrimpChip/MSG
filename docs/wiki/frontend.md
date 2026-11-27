@@ -155,3 +155,10 @@
 - 원인: 마이페이지는 체험에서 "보여 드리지 않아요" 안내만 띄우고, 목업 모드는 로그인이 없어 실제 화면을 열 수 없다.
 - 해결: 미리보기 페이지에서 `javascript_tool`로 Vite 모듈(`/src/components/common/ConfirmDialog.tsx`, `main.tsx`가 가져오는 `/node_modules/.vite/deps/react.js?v=…`·`react-dom_client.js?v=…` 주소 그대로)을 `import()`해 빈 `div`에 창 3개를 그려 id를 확인하고 바로 지웠다. 버전 꼬리(`?v=`)가 다르면 React가 둘이 되거나 모듈을 못 읽는다.
 - 다음에는: 체험에서 안 열리는 화면의 컴포넌트는 `fetch('/src/main.tsx')`로 deps 주소를 먼저 확인한 뒤 같은 방식으로 따로 그려 본다.
+
+## 컴포넌트와 도우미 파일 이름이 대소문자만 다르면 macOS에서 import가 엉뚱한 파일로 풀린다 (2026-11-27, fix/a11y-live-status)
+
+- 상황: 컴포넌트 `AiWaitingStatus.tsx` 옆에 로직 파일을 `aiWaitingStatus.ts`로 두자 `tsc -b`가 TS1261("only in casing")과 "default 내보내기가 없다"로 실패했다.
+- 원인: macOS 기본 파일 시스템은 대소문자를 구분하지 않아 `'./AiWaitingStatus'`가 확장자 순서대로 `.ts`(도우미)로 풀렸다.
+- 해결: 도우미를 `aiWaitingMessage.ts`처럼 다른 낱말로 지었다.
+- 다음에는: 컴포넌트 전용 로직 파일(`react-refresh/only-export-components` 때문에 나누는 것)은 컴포넌트 이름의 첫 글자만 소문자로 바꾸지 말고 다른 이름을 붙인다.

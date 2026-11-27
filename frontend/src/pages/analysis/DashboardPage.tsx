@@ -295,14 +295,14 @@ function CourseAnalysis({ course }: { course: Course }) {
           </p>
         )}
         {mutation.isPending && (
-          <AiWaiting state="weaving" live={false}>
+          <AiWaiting state="weaving">
             모델마다 대화를 따로 읽고 있어요. 길면 1분 40초쯤 걸려요. 이 화면을
             떠나지 말아 주세요.
           </AiWaiting>
         )}
         {/* 새로고침하거나 다른 화면에서 돌아와도 서버가 분석 중이면 이어서 보여 준다 */}
         {!mutation.isPending && serverRunning && (
-          <AiWaiting state="weaving" live={false}>
+          <AiWaiting state="weaving">
             모델마다 대화를 따로 읽고 있어요. 길면 1분 40초쯤 걸리고, 끝나면 이
             화면에 결과가 나타나요.
           </AiWaiting>
