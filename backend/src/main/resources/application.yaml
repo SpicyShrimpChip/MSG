@@ -140,9 +140,10 @@ app:
     deadline: 100s
 
   # 개념별 숙련도 점수 (domain/analysis, 11/5 설계안 초기값). 전부 근거 없는 초기 가정이라 사용자 테스트 뒤 조정한다.
-  # 점수 = (Σ무게·값 + 1) ÷ (Σ무게 + 2). 산식을 바꾸면 formula-version을 올린다 (docs/frontend-requests.md 5-10절)
+  # 점수 = (Σ무게·값 + 1) ÷ (Σ무게 + 2). 퀴즈는 문제마다 값 = 점수 ÷ 그 문제 만점 (docs/frontend-requests.md 5-10절)
   mastery:
-    formula-version: "1"
+    # 식 모양을 바꿀 때만 올린다. 숫자를 바꾸면 버전 뒤 지문이 저절로 바뀐다 (응답·기록은 "2-지문8자리", '-'는 쓰지 않는다)
+    formula-version: "2"
     # 퀴즈 문제 하나, 대화 한 건의 근거 무게 (퀴즈가 직접 확인한 결과라 대화보다 크게)
     quiz-weight: 1.0
     conversation-weight: 0.5
@@ -232,6 +233,11 @@ app:
       lock-duration: 15m
       # 한 IP에서 여러 이메일로 시도하는 경우
       max-failures-per-ip: 50
+      # 같은 이메일(IP와 상관없이)로 window 동안 max-failures-per-email번 틀리면 email-lock-duration 동안 막는다.
+      # 한 기기에서 틀리는 사용자는 위 기준(5번)에 먼저 걸린다. 남이 일부러 틀려 주인을 막는 시간을 줄이려고 잠금은 짧게 둔다.
+      # 근거 없는 초기값이라 사용자 테스트 뒤 조정한다
+      max-failures-per-email: 10
+      email-lock-duration: 10m
     # 한 IP의 가입 시도 수 (이메일 가입·카카오 가입 마무리 합계). 계정을 대량으로 만드는 것을 느리게 한다.
     # 강의실처럼 여러 사람이 같은 IP로 가입할 수 있어 넉넉히 둔다. 0이면 제한하지 않는다
     signup-attempt:

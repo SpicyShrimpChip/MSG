@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
  * 여러 번 받거나, 가입 응답으로 이미 가입한 이메일을 대량으로 확인하는 것을 느리게 한다. 이메일 가입과 카카오 가입 마무리를 함께 센다.
  * 학교·회사처럼 여러 사람이 같은 IP로 가입할 수 있어 기준을 넉넉히 둔다. 성공·실패와 상관없이 컨트롤러에 닿은 시도를 센다.
  * 프록시 뒤의 실제 IP는 server.forward-headers-strategy(운영)로 읽는다.
- * TODO: 서버를 여러 대 띄우면 메모리 대신 공용 저장소가 필요하다 (LoginAttemptLimiter와 같음)
+ * 운영은 서버 한 대라 메모리에 둔다. 서버를 여러 대로 늘리면 공용 저장소가 필요하다 (LoginAttemptLimiter와 같음)
  */
 @Component
 public class SignupAttemptLimiter {

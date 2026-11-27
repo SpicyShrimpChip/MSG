@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 
 /**
  * 채점 결과를 유형별·개념별로 모으고 학습 상태를 코드 규칙으로 판단한다. AI는 관여하지 않는다.
- * 숙련도 점수(대화 분석 + 퀴즈 가중치)는 미결이라 만들지 않고, 득점률과 판단 근거만 낸다.
+ * 숙련도 점수는 여기서 만들지 않고(analysis의 MasteryCalculator), 득점률과 판단 근거만 낸다.
  * <ul>
  * <li>needs_check(추가 확인 필요): 채점이 끝난 문제가 minGradedQuestions보다 적거나, 채점 대기·확인 필요 답이 있거나,
  * AI 모델 하나만 채점한 서술형이 있으면. 이때는 준비됐다고 단정하지 않는다.</li>
@@ -42,8 +42,10 @@ public final class QuizAssessor {
 	}
 
 	// correctCount: 채점이 끝나고 만점을 받은 문제 수. 대기·확인 필요 답은 틀린 것으로 세지 않는다
+	// ratedCount·rateSum: 채점이 끝나고 만점이 있는 문제 수와, 그 문제마다 (점수 ÷ 그 문제 만점, 0~1)을 더한 값.
+	// 숙련도는 이 두 값으로 문제마다 센다 (점수 합 비율을 쓰면 만점이 큰 서술형 하나가 결과를 좌우한다)
 	public record ConceptStat(String conceptKey, String name, int questionCount, int gradedCount, int correctCount,
-			int score, int maxScore, int pendingCount, int reviewCount, boolean weak) {
+			int score, int maxScore, int pendingCount, int reviewCount, boolean weak, int ratedCount, double rateSum) {
 
 		public Double rate() {
 			return maxScore == 0 ? null : (double) score / maxScore;
@@ -148,10 +150,11 @@ public final class QuizAssessor {
 	public static List<ConceptStat> byConcept(List<Graded> answers, double conceptMinRate) {
 		Map<String, String> names = new LinkedHashMap<>();
 		Map<String, int[]> stats = new LinkedHashMap<>();
+		Map<String, Double> rateSums = new LinkedHashMap<>();
 		for (Graded answer : answers) {
 			for (QuizConcept concept : answer.question().getConcepts()) {
 				names.putIfAbsent(concept.getConceptKey(), concept.getConceptName());
-				int[] stat = stats.computeIfAbsent(concept.getConceptKey(), key -> new int[7]);
+				int[] stat = stats.computeIfAbsent(concept.getConceptKey(), key -> new int[8]);
 				stat[0]++;
 				switch (answer.status()) {
 					case GRADED -> {
@@ -159,6 +162,12 @@ public final class QuizAssessor {
 						stat[2] += answer.score();
 						stat[3] += answer.maxScore();
 						stat[6] += answer.score() == answer.maxScore() ? 1 : 0;
+						// 만점이 0인 답(데이터 이상)은 득점률을 정할 수 없어 문제별 득점률에서 뺀다
+						if (answer.maxScore() > 0) {
+							stat[7]++;
+							double rate = Math.max(0, Math.min(1, (double) answer.score() / answer.maxScore()));
+							rateSums.merge(concept.getConceptKey(), rate, Double::sum);
+						}
 					}
 					case PENDING -> stat[4]++;
 					case NEEDS_REVIEW -> stat[5]++;
@@ -167,7 +176,7 @@ public final class QuizAssessor {
 		}
 		List<ConceptStat> result = new ArrayList<>();
 		stats.forEach((key, s) -> result.add(new ConceptStat(key, names.get(key), s[0], s[1], s[6], s[2], s[3], s[4], s[5],
-				s[3] > 0 && (double) s[2] / s[3] < conceptMinRate)));
+				s[3] > 0 && (double) s[2] / s[3] < conceptMinRate, s[7], rateSums.getOrDefault(key, 0.0))));
 		return result;
 	}
 

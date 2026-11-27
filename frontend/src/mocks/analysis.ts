@@ -86,10 +86,10 @@ const record = (
   quizRate,
   conversationCount,
   conversationStatus,
-  formulaVersion: '1',
+  formulaVersion: '2',
 });
 
-// 숙련도 예시. 값은 서버 MasteryCalculator 규칙(퀴즈 1문제 1.0, 대화 1건 0.5, 점수 = (Σw·s + 1) ÷ (Σw + 2),
+// 숙련도 예시. 값은 서버 MasteryCalculator 규칙(퀴즈 1문제 1.0이고 값은 문제마다 점수 ÷ 그 문제 만점, 대화 1건 0.5, 점수 = (Σw·s + 1) ÷ (Σw + 2),
 // 근거 무게 3.0 미만이면 근거 부족, 0.4 미만 보완 필요, 0.7 이상 강점)으로 직접 계산한 값이다.
 // 퀴즈 근거는 커리큘럼 목업의 사전 테스트(SAMPLE_PRE)와 확인 퀴즈(mocks/study.ts SAMPLE_CHECKS)를 더한 것
 const PRE_TEST = '2026-11-01T10:30:00';
@@ -207,7 +207,7 @@ const RUN: AnalysisRun = {
         quizRate: 0.33,
         conversationCount: 2,
         conversationStatus: 'not_understood',
-        formulaVersion: '1',
+        formulaVersion: '2',
         quizNeeded: null,
         history: [
           record(PRE_TEST, 'normal', 3, 0.33),
@@ -274,7 +274,7 @@ const RUN: AnalysisRun = {
         quizRate: 0.6,
         conversationCount: 0,
         conversationStatus: null,
-        formulaVersion: '1',
+        formulaVersion: '2',
         quizNeeded: null,
         history: [
           record(PRE_TEST, 'normal', 3, 0.33),
@@ -333,7 +333,7 @@ const RUN: AnalysisRun = {
         quizRate: null,
         conversationCount: 3,
         conversationStatus: 'understood',
-        formulaVersion: '1',
+        formulaVersion: '2',
         quizNeeded: 2,
         history: [
           record(ANALYZED, 'insufficient_evidence', 0, null, 3, 'understood'),
@@ -386,7 +386,7 @@ const RUN: AnalysisRun = {
         quizRate: 0.67,
         conversationCount: 0,
         conversationStatus: null,
-        formulaVersion: '1',
+        formulaVersion: '2',
         quizNeeded: null,
         history: [record(PRE_TEST, 'normal', 3, 0.67)],
       },
@@ -447,7 +447,7 @@ const RUN: AnalysisRun = {
         quizRate: 1,
         conversationCount: 1,
         conversationStatus: 'partial',
-        formulaVersion: '1',
+        formulaVersion: '2',
         quizNeeded: null,
         history: [
           record(PRE_TEST, 'strong', 3, 1),

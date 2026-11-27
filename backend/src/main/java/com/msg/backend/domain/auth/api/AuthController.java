@@ -63,7 +63,7 @@ public class AuthController {
 			HttpServletRequest httpRequest,
 			HttpServletResponse httpResponse) {
 		requireXmlHttpRequest(requestedWith);
-		// TODO(미결): 배포 구성이 정해지면 프록시 뒤의 실제 IP를 쓰도록 server.forward-headers-strategy를 설정한다
+		// 운영은 프록시(Caddy)가 넘긴 접속 IP를 server.forward-headers-strategy(application-prod.yaml)로 읽는다. 프록시가 믿는 범위는 deploy/Caddyfile
 		LoginResult result = authService.login(request, httpRequest.getRemoteAddr());
 		refreshTokenCookies.write(httpResponse, result.refreshToken());
 		return ApiResponse.success(new LoginResponse(result.accessToken(), result.user()));

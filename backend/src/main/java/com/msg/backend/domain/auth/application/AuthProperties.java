@@ -26,7 +26,20 @@ public record AuthProperties(Duration refreshTokenTtl, Duration refreshReuseGrac
 	public record RefreshCookie(String name, String path, boolean secure, String sameSite) {
 	}
 
-	public record LoginAttempt(int maxFailures, Duration window, Duration lockDuration, int maxFailuresPerIp) {
+	/**
+	 * 반복 로그인 실패 기준 (LoginAttemptLimiter). maxFailuresPerEmail·emailLockDuration은 IP와 상관없이 한 이메일에 대한
+	 * 실패 한도와 그 잠금 시간이다. 0 이하면 첫 실패에 바로 잠기므로 앱이 뜨지 않게 막는다.
+	 */
+	public record LoginAttempt(int maxFailures, Duration window, Duration lockDuration, int maxFailuresPerIp,
+			int maxFailuresPerEmail, Duration emailLockDuration) {
+
+		public LoginAttempt {
+			if (maxFailuresPerEmail <= 0 || emailLockDuration == null || emailLockDuration.isZero()
+					|| emailLockDuration.isNegative()) {
+				throw new IllegalArgumentException(
+						"app.auth.login-attempt.max-failures-per-email과 email-lock-duration은 0보다 커야 해요");
+			}
+		}
 	}
 
 	/**

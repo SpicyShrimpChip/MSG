@@ -25,7 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 과목의 개념별 퀴즈 결과를 모은다 (코드 집계). 퀴즈마다 가장 최근 제출만 쓴다.
  * "이미 알아요"를 남긴 개념은 그 뒤에 푼 문제로 확인했는지(confirmation)를 코드 규칙으로 정한다.
- * 피드백을 남겼다고 결과가 바뀌지 않는다. 숙련도 점수는 미결이라 만들지 않는다.
+ * 피드백을 남겼다고 결과가 바뀌지 않는다. 숙련도 점수는 여기서 만들지 않고, 숙련도 계산에 쓰는 문제별 득점률 합(rateSum)만 낸다.
  */
 @Service
 @RequiredArgsConstructor
@@ -76,7 +76,8 @@ public class QuizStatsService {
 									.anyMatch(c -> c.getConceptKey().equals(key)))
 							.map(Answered::submittedAt)
 							.max(LocalDateTime::compareTo)
-							.orElse(null)));
+							.orElse(null),
+					stat == null ? 0 : stat.ratedCount(), stat == null ? 0.0 : stat.rateSum()));
 		});
 		return result;
 	}
