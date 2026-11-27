@@ -48,7 +48,10 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * 학습 모드(시험 대비·자기개발·업무 활용)에 맞춰 AI로 퀴즈를 만든다.
  *
- * <p>순서: (1) 요청 검사(QuizSpecResolver) → (2) 동의·한도·중복을 확인하고 만들기 기록(RUNNING)을 커밋 → (3) DB 트랜잭션 밖에서 모델 호출
+ * <p>순서: (0) 자료 본문을 쓸 수 있는 요청이면 잠금 없이 요청을 검사해 무엇을 읽을지 정하고, 트랜잭션 밖에서 본문을 미리 읽는다
+ * (큰 PDF를 읽는 동안 같은 사용자의 다른 요청을 막지 않게. 같은 요청 키가 이미 있으면 읽지 않는다)
+ * → (1) 사용자 행을 잠그고 요청 검사(QuizSpecResolver, 미리 읽은 본문은 자료·개념이 같을 때만 쓴다) → (2) 동의·한도·중복을 확인하고
+ * 만들기 기록(RUNNING)을 커밋 → (3) DB 트랜잭션 밖에서 모델 호출
  * → (4) 검증을 통과한 퀴즈만 저장하고 기록을 SUCCEEDED로, 아니면 FAILED로 남기고 오류를 돌려준다.
  *
  * <p>외부로 보내는 것: 과목 이름, 개념(과목 키워드), 사용자가 적은 시험 범위, 직무 분야 이름, 코드가 요약한 개념별 참고 상태.
@@ -134,7 +137,8 @@ public class QuizGenerationService {
 
 	public Created create(Long userId, QuizCreateRequest request) {
 		List<LlmClient> clients = orderedClients();
-		Started started = transaction.execute(status -> start(userId, request, clients));
+		QuizSpecResolver.PrefetchedContent prefetched = prefetchContent(userId, request);
+		Started started = transaction.execute(status -> start(userId, request, clients, prefetched));
 		if (started.existing() != null) {
 			return new Created(started.existing(), true);
 		}
@@ -224,7 +228,23 @@ public class QuizGenerationService {
 		return llmClients.configuredInOrder(properties.generationProviders());
 	}
 
-	private Started start(Long userId, QuizCreateRequest request, List<LlmClient> clients) {
+	// (0) 자료 본문 미리 읽기. 요청 검사 오류는 잠금 안에서와 같다(같은 순서로 검사). 읽을 것이 없으면 null
+	private QuizSpecResolver.PrefetchedContent prefetchContent(Long userId, QuizCreateRequest request) {
+		if (!specResolver.mayUseContent(request)) {
+			return null;
+		}
+		Optional<QuizSpecResolver.ContentPlan> plan = transaction.execute(status -> {
+			// 같은 요청 키가 있으면 잠금 안에서 그 결과를 돌려주므로(검사·읽기 없이) 여기서도 읽지 않는다
+			if (generationRepository.findByUserIdAndRequestKey(userId, request.requestKey().strip()).isPresent()) {
+				return Optional.<QuizSpecResolver.ContentPlan>empty();
+			}
+			return specResolver.contentPlan(userId, request);
+		});
+		return plan.map(specResolver::readContent).orElse(null);
+	}
+
+	private Started start(Long userId, QuizCreateRequest request, List<LlmClient> clients,
+			QuizSpecResolver.PrefetchedContent prefetched) {
 		// 사용자 행을 잠가 같은 사용자의 만들기 요청을 차례로 처리한다 (중복 키·동시 실행·한도 검사가 겹치지 않게)
 		User user = userRepository.lockLoginUser(userId);
 		LocalDateTime now = LocalDateTime.now(clock);
@@ -234,7 +254,7 @@ public class QuizGenerationService {
 		if (existing.isPresent()) {
 			return reuse(userId, existing.get());
 		}
-		QuizSpec spec = specResolver.resolve(userId, request);
+		QuizSpec spec = specResolver.resolve(userId, request, prefetched);
 		if (!user.isAiQuizConsent()) {
 			throw new BusinessException(HttpStatus.FORBIDDEN, CONSENT_REQUIRED_MESSAGE);
 		}
