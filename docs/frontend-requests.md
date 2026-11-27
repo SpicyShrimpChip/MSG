@@ -188,11 +188,17 @@ MaterialSummary = {
   fileName: string,                       // 올린 파일 이름 (경로 부분을 뗀 값)
   createdAt: string,                      // ISO, 예: "2026-11-01T12:28:20.081677"
   status: "uploaded" | "processing" | "ready" | "failed",
-  quizCount: number                       // 퀴즈 기능 전이라 지금은 0
+  quizCount: number                       // 이 자료에 연결된 내 퀴즈 수
 }
 MaterialDetail = MaterialSummary & {
   aiSummary: string | null,               // AI 분석 전이면 null
-  concepts: { conceptId: string, name: string, aiDescription: string | null }[] // 분석 전이면 []
+  concepts: {                             // 분석 전이면 []
+    conceptId: string, name: string, aiDescription: string | null,
+    evidenceLocation: string | null,      // 쪽·슬라이드 (모르면 null)
+    evidenceQuote: string,                // 자료 원문 근거 문장
+    courseKeyword: boolean,               // 과목 키워드와 같은 개념인지
+    studyNote: ConceptStudyNote | null    // 형식은 5-9-1 `study-notes` 절 참고
+  }[]
 }
 ```
 
@@ -216,7 +222,7 @@ MaterialDetail = MaterialSummary & {
 | GET    | `/api/users/me`          | -                                                                               | `User`                                               | 구현됨 |
 | PATCH  | `/api/users/me/consents` | `{ aiAnalysis?: boolean, aiQuiz?: boolean }` (보낸 것만 바꿈, 둘 다 없으면 400) | `User`                                               | 구현됨 |
 | PATCH  | `/api/users/me/profile`  | `LearningProfileInput`                                                          | `User` (학습 목적·관심 직무, 11/3)                   | 구현됨 |
-| DELETE | `/api/users/me`          | `{ password }`                                                                  | 없음 (탈퇴: 내 모든 데이터 삭제, 11/3)               | 구현됨 |
+| DELETE | `/api/users/me`          | `{ password?, confirmText? }`                                                   | 없음 (탈퇴: 내 모든 데이터 삭제, 11/3)               | 구현됨 |
 
 ```ts
 // 화면에 "이름"과 "비밀번호 확인" 칸이 있어 name, passwordConfirm을 추가했다 (2026-10-25)
