@@ -150,7 +150,7 @@ function ConceptCard({
   const panelId = `concept-${materialId}-${concept.conceptId}`;
 
   return (
-    <li ref={ref} className="scroll-mt-28">
+    <li ref={ref}>
       <Card
         className={cn(
           'flex flex-col gap-3 p-5',

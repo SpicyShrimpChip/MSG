@@ -4,7 +4,9 @@ import { Info } from 'lucide-react';
 import { AsyncBoundary, Card, Notice, SubPage } from '@/components';
 import { useCourses, useMe, useSavedMaskWords } from '@/hooks';
 import {
-  conversationKey,
+  chosenConversations,
+  pairWithMasked,
+  type ConversationChoices,
   type ConversationToSend,
   type MaskOptions,
   type MergedImport,
@@ -13,9 +15,7 @@ import CourseQuickForm from './components/import/CourseQuickForm';
 import FileStep from './components/import/FileStep';
 import ImportSteps from './components/import/ImportSteps';
 import MaskStep from './components/import/MaskStep';
-import SelectStep, {
-  type ConversationChoices,
-} from './components/import/SelectStep';
+import SelectStep from './components/import/SelectStep';
 import SendStep from './components/import/SendStep';
 import { useMaskedConversations } from './components/import/useMaskedConversations';
 
@@ -64,15 +64,13 @@ function ConversationImportPage() {
   );
 
   // 보낼 대화 (고른 것만, 과목 포함)
-  const selected = useMemo(() => {
-    if (!imported || !choices) return [];
-    return imported.conversations.flatMap((conversation) => {
-      const choice = choices[conversationKey(conversation)];
-      return choice?.selected
-        ? [{ courseId: choice.courseId, conversation }]
-        : [];
-    });
-  }, [imported, choices]);
+  const selected = useMemo(
+    () =>
+      imported && choices
+        ? chosenConversations(imported.conversations, choices)
+        : [],
+    [imported, choices],
+  );
 
   const selectedConversations = useMemo(
     () => selected.map(({ conversation }) => conversation),
@@ -87,11 +85,7 @@ function ConversationImportPage() {
   const toSend = useMemo<ConversationToSend[] | null>(() => {
     if (step !== 3) return [];
     if (!masking.current || !masking.items) return null;
-    const items = masking.items;
-    return selected.map(({ courseId }, index) => ({
-      courseId,
-      conversation: items[index].conversation,
-    }));
+    return pairWithMasked(selected, masking.items);
   }, [step, selected, masking]);
 
   // 다음 버튼이 화면 아래에 있어서, 단계를 바꾸면 단계 표시가 보이도록 맨 위로 올린다

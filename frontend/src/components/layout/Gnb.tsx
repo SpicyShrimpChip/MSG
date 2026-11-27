@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   animate,
   useMotionValue,
@@ -35,9 +35,12 @@ function Gnb() {
   const current = currentMenuPath(MENU, pathname);
   const activeIndex = MENU.findIndex((group) => isActiveGroup(group, current));
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  // Esc로 닫은 하위 메뉴. 마우스를 다시 올리거나 포커스가 밖에서 다시 들어오면 연다
+  const [closedIndex, setClosedIndex] = useState<number | null>(null);
   const [slots, setSlots] = useState<Slot[]>([]);
   const listRef = useRef<HTMLUListElement>(null);
   const itemRefs = useRef<(HTMLLIElement | null)[]>([]);
+  const groupLinkRefs = useRef<(HTMLAnchorElement | null)[]>([]);
   const reduceMotion = useReducedMotion();
 
   // 알약 양 끝(메뉴 목록 왼쪽 기준 px)과 도착했을 때의 폭
@@ -69,6 +72,27 @@ function Gnb() {
     observer.observe(list);
     return () => observer.disconnect();
   }, []);
+
+  // 마우스를 올리거나 키보드로 연 하위 메뉴를 Esc로 닫는다(WCAG 1.4.13). 마우스로만 연 경우는 포커스가 메뉴 밖에 있으므로
+  // 문서 전체에서 키를 받는다. 포커스가 하위 메뉴 안에 있었으면 그 묶음의 대메뉴 링크로 옮긴다
+  useEffect(() => {
+    if (hoverIndex === null || hoverIndex === closedIndex) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setClosedIndex(hoverIndex);
+      const groupLink = groupLinkRefs.current[hoverIndex];
+      const focused = document.activeElement;
+      if (
+        groupLink &&
+        focused !== groupLink &&
+        itemRefs.current[hoverIndex]?.contains(focused)
+      ) {
+        groupLink.focus();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [hoverIndex, closedIndex]);
 
   const target = hoverIndex ?? (activeIndex >= 0 ? activeIndex : null);
   const slot = target === null ? undefined : slots[target];
@@ -147,6 +171,7 @@ function Gnb() {
         {MENU.map((group, index) => {
           const active = index === activeIndex;
           const highlighted = index === target;
+          const closed = index === closedIndex;
           return (
             // 마우스를 올리거나 키보드로 포커스가 들어오면 하위 메뉴를 연다
             // (마우스 클릭 포커스로는 열지 않아 이동 후 메뉴가 남지 않는다)
@@ -157,10 +182,22 @@ function Gnb() {
                 itemRefs.current[index] = node;
               }}
               className="group relative flex items-center after:absolute after:inset-x-0 after:top-full after:h-2 after:content-['']"
-              onMouseEnter={() => setHoverIndex(index)}
-              onFocus={() => setHoverIndex(index)}
+              onMouseEnter={() => {
+                setHoverIndex(index);
+                setClosedIndex(null);
+              }}
+              onFocus={(event) => {
+                setHoverIndex(index);
+                // 밖에서 들어온 포커스만 다시 연다(Esc 뒤 대메뉴로 옮긴 포커스가 다시 열지 않게)
+                if (!event.currentTarget.contains(event.relatedTarget)) {
+                  setClosedIndex(null);
+                }
+              }}
             >
               <Link
+                ref={(node) => {
+                  groupLinkRefs.current[index] = node;
+                }}
                 to={group.path}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
@@ -174,7 +211,14 @@ function Gnb() {
               {/* 상단바 알약과 같은 유리 그림자·선(styles/glass.css). 흐림(backdrop-filter)은 걸지 않는다:
                   상단바 알약의 흐림 위에 겹쳐 걸면 크롬이 파란 네모를 그렸다(11/7). 대신 거의 불투명한 바탕을 깐다.
                   살짝 아래에서 올라오며 나타난다 */}
-              <ul className="glass invisible absolute top-full left-0 z-10 mt-2 min-w-44 translate-y-1 rounded-2xl bg-surface-raised/95 p-1.5 opacity-0 backdrop-filter-none transition-[opacity,translate,visibility] group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-has-[:focus-visible]:visible group-has-[:focus-visible]:translate-y-0 group-has-[:focus-visible]:opacity-100 motion-reduce:transition-none">
+              <ul
+                className={cn(
+                  'glass invisible absolute top-full left-0 z-10 mt-2 min-w-44 translate-y-1 rounded-2xl bg-surface-raised/95 p-1.5 opacity-0 backdrop-filter-none transition-[opacity,translate,visibility] motion-reduce:transition-none',
+                  // Esc로 닫았으면 마우스·포커스가 있어도 열지 않는다
+                  !closed &&
+                    'group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-has-[:focus-visible]:visible group-has-[:focus-visible]:translate-y-0 group-has-[:focus-visible]:opacity-100',
+                )}
+              >
                 {group.children.map((child) => (
                   <li key={child.path}>
                     <Link

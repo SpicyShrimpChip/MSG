@@ -30,6 +30,8 @@
 
 React Router로 화면을 나누기 때문에 `/analysis`처럼 바로 들어오거나 새로고침한 주소도 `index.html`을 돌려줘야 한다(없으면 Vercel이 404를 낸다). 실제 파일(`/assets/...`)이 있으면 그 파일이 먼저 나가고, 없을 때만 `index.html`로 넘긴다.
 
+`/assets/...`는 Vite가 파일 이름에 내용 해시를 붙인 결과물이라 1년 동안 다시 받지 않게(`Cache-Control: public, max-age=31536000, immutable`) 하고, `index.html`에는 이 규칙을 걸지 않아 배포하면 바로 새 파일 이름을 읽는다. `public/`의 파일(`favicon.svg` 등)은 이름이 바뀌지 않으므로 `assets` 밖에 둔다.
+
 **백엔드를 배포한 뒤**: `/api` 요청을 백엔드로 넘기는 규칙을 **맨 앞에** 추가하고, Vercel 환경변수 `VITE_USE_MOCK`을 `false`로 바꾼다. 회원가입 자동 가입 방지를 켜려면 Vercel에 `VITE_TURNSTILE_SITE_KEY`(공개 사이트 키), 백엔드에 `TURNSTILE_SECRET_KEY`(비밀 키)를 **같이** 넣는다. 한쪽만 넣으면 가입이 막히거나(백엔드만) 확인 없이 가입된다(프론트만). 키는 Cloudflare 대시보드 Turnstile에서 운영 도메인으로 만든다. 같은 출처로 요청하므로 로그인 쿠키·CORS 설정이 단순해진다(`frontend/CLAUDE.md` "백엔드 연동").
 
 ```json

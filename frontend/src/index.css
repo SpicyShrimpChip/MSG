@@ -152,6 +152,12 @@
     color-scheme: light;
   }
 
+  /* 키보드 포커스·앵커(#) 이동 때 화면 위에 붙은 체험 띠·상단바 밑으로 숨지 않게, 그 높이만큼 위를 비우고 멈춘다.
+     높이는 Layout의 useStickyOffset이 재서 넣는다. 요소마다 scroll-mt-*를 따로 주면 이 값과 더해져 간격이 두 배가 된다 */
+  html {
+    scroll-padding-top: var(--sticky-offset, 0px);
+  }
+
   /* 강조 글자도 가장 굵은 단계(600)를 넘지 않는다 */
   b,
   strong {
