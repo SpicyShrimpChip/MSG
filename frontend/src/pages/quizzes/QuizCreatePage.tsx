@@ -493,7 +493,15 @@ function QuizCreateForm({ me }: { me: User | null }) {
                   )}
                 >
                   {level.label}
-                  <span className="ml-1 text-ink-muted">
+                  {/* 선택된 칩의 primary-soft 바탕에서 ink-muted는 다크 대비가 4.5:1에 못 미친다 */}
+                  <span
+                    className={cn(
+                      'ml-1',
+                      on && !disabledCreate
+                        ? 'text-ink-soft'
+                        : 'text-ink-muted',
+                    )}
+                  >
                     {level.description}
                   </span>
                 </button>

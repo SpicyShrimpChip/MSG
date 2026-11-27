@@ -57,7 +57,8 @@ function FileDropZone({
           )}
         </span>
         <span className="font-semibold text-heading">{title}</span>
-        <span className="text-body text-ink-muted">{description}</span>
+        {/* 호버·끌어 놓기 때 바탕이 primary-soft가 되어 ink-muted로는 다크 대비가 모자라다 */}
+        <span className="text-body text-ink-soft">{description}</span>
       </label>
       <input
         {...aria}

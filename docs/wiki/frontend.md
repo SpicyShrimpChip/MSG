@@ -183,3 +183,10 @@
 - 원인: macOS 기본 파일 시스템은 대소문자를 구분하지 않아 `'./AiWaitingStatus'`가 확장자 순서대로 `.ts`(도우미)로 풀렸다.
 - 해결: 도우미를 `aiWaitingMessage.ts`처럼 다른 낱말로 지었다.
 - 다음에는: 컴포넌트 전용 로직 파일(`react-refresh/only-export-components` 때문에 나누는 것)은 컴포넌트 이름의 첫 글자만 소문자로 바꾸지 말고 다른 이름을 붙인다.
+
+## 포커스 직후 읽은 계산 스타일이 옛 값이라 포커스 표시가 안 붙은 줄 안다 (2026-11-27, fix/a11y-focus-contrast)
+
+- 상황: 입력칸 포커스에 `focus-within:ring-1`을 더하고 미리보기에서 Tab 직후 `getComputedStyle`로 테두리·`box-shadow`를 읽었더니 회색 테두리·빈 그림자가 나와 클래스가 안 먹는 줄 알았다.
+- 원인: `index.css`가 `input`·`select` 등에 `border-color`·`box-shadow` 전환을 걸어 두어, 포커스 바로 뒤에는 전환 시작 값이 읽힌다. 그 순간 찍은 스크린샷도 옛 모양이다.
+- 해결: 수백 ms 기다린 뒤 다시 읽어 파랑 테두리와 1px ring이 붙은 것을 확인했다.
+- 다음에는: 포커스·호버 모양을 스크립트나 스크린샷으로 확인할 때는 전환 시간보다 길게 기다린 뒤 읽는다.
