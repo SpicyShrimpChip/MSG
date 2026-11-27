@@ -8,7 +8,7 @@ import {
 } from '@/api';
 import {
   AiBadge,
-  AiWaiting,
+  AiWaitingStatus,
   Button,
   Card,
   Chip,
@@ -268,11 +268,18 @@ function StudySummaryPanel({
           '실무에서의 의미, 문제 해결 과정, 적용 방향을 앞세워 정리해요.'}
       </p>
 
+      {/* 목적을 바꾸면 새로 그려 다른 목적의 ready를 완료로 읽지 않게 한다 */}
+      <AiWaitingStatus
+        key={purpose}
+        waiting={summary.status === 'running'}
+        failed={summary.status !== 'ready'}
+        doneText="요약을 다 만들었어요."
+      >
+        이 자료의 요약을 만들고 있어요.
+      </AiWaitingStatus>
       {ready ? (
         <SummaryView summary={summary} />
-      ) : summary.status === 'running' ? (
-        <AiWaiting>이 자료의 요약을 만들고 있어요.</AiWaiting>
-      ) : (
+      ) : summary.status === 'running' ? null : (
         <Notice icon={Sparkles} iconClassName="text-primary">
           아직 이 목적으로 만든 요약이 없어요. 아래에서 만들면 항목마다 자료
           원문 근거를 확인해 보여 드려요.
@@ -306,12 +313,16 @@ function StudySummaryPanel({
           </label>
         )}
         <ErrorText error={mutation.error} />
-        {mutation.isPending && (
-          <AiWaiting>
-            AI가 요약을 쓰고 서버가 원문 근거를 확인하는 중이에요. 최대 1분 40초
-            걸릴 수 있어요.
-          </AiWaiting>
-        )}
+        {/* 목적 버튼은 요청을 reset해 isPending을 끄므로, 목적마다 새로 그려 끝난 것으로 읽지 않게 한다 */}
+        <AiWaitingStatus
+          key={purpose}
+          waiting={mutation.isPending}
+          failed={mutation.isError}
+          doneText="요약을 다 만들었어요."
+        >
+          AI가 요약을 쓰고 서버가 원문 근거를 확인하는 중이에요. 최대 1분 40초
+          걸릴 수 있어요.
+        </AiWaitingStatus>
         <div className="flex flex-wrap items-center gap-2">
           <Button
             disabled={

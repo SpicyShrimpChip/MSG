@@ -12,7 +12,7 @@ import {
 import { useMockData } from '@/store';
 import {
   AiNote,
-  AiWaiting,
+  AiWaitingStatus,
   Button,
   Card,
   Chip,
@@ -231,11 +231,13 @@ function ConceptCard({
                 </label>
               )}
               <ErrorText error={mutation.error} />
-              {mutation.isPending && (
-                <AiWaiting>
-                  AI가 설명을 쓰는 중이에요. 1분 정도 걸릴 수 있어요.
-                </AiWaiting>
-              )}
+              <AiWaitingStatus
+                waiting={mutation.isPending}
+                failed={mutation.isError}
+                doneText="AI 설명을 다 썼어요."
+              >
+                AI가 설명을 쓰는 중이에요. 1분 정도 걸릴 수 있어요.
+              </AiWaitingStatus>
               <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant="secondary"
@@ -392,11 +394,13 @@ function MaterialConceptPanel({
           </label>
         )}
         <ErrorText error={mutation.error} />
-        {mutation.isPending && (
-          <AiWaiting>
-            AI가 개념을 찾는 중이에요. 최대 1분 40초 걸릴 수 있어요.
-          </AiWaiting>
-        )}
+        <AiWaitingStatus
+          waiting={mutation.isPending}
+          failed={mutation.isError}
+          doneText="핵심 개념을 다 찾았어요."
+        >
+          AI가 개념을 찾는 중이에요. 최대 1분 40초 걸릴 수 있어요.
+        </AiWaitingStatus>
         <div className="flex flex-wrap items-center gap-2">
           <Button
             disabled={
