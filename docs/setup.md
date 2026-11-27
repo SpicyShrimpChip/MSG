@@ -181,6 +181,14 @@ mv backend/.env ~/lms-env.bak     # 스크립트는 .env가 이미 있으면 덮
 | Windows에서 `.sh`가 안 돌아요 | PowerShell이 아니라 **Git Bash**에서 실행해요 |
 | PowerShell에서 `./gradlew`가 안 돌아요 | PowerShell에서는 `.\gradlew.bat bootRun`처럼 써요. Git Bash에서는 `./gradlew` 그대로 돼요 |
 
+## Claude Code를 쓴다면
+
+각 장치가 무엇을 하는지는 루트 `README.md`의 "AI와 함께 개발하는 방식"에 있어요. 여기는 부르는 법만 적어요.
+
+- **레포로 같이 오는 것(할 일 없음):** 규칙(`CLAUDE.md`), 권한·훅(`.claude/settings.json`), 에이전트 `api-contract-checker`·`privacy-reviewer`("계약 확인해 줘", "개인정보 점검해 줘"라고 하면 불러요), 스킬 `/wiki-lesson`, `/pre-merge-check`(머지 전에 직접 쳐요)
+- **context7(`.mcp.json`):** 이 폴더를 처음 열 때 켤지 물으면 허용해요. 최신 라이브러리 문서를 찾아 줘요.
+- **각자 고르는 것:** superpowers(Claude Code 플러그인), graphify(코드 그래프). graphify를 설치하면 `frontend/.husky`에 커밋 훅이 생기는데, 내 컴퓨터 경로가 들어 있어 커밋하지 않아요.
+
 ## 그다음 읽을 것
 
 - 프로젝트 규칙과 미결 사항: `CLAUDE.md`, `backend/CLAUDE.md`, `frontend/CLAUDE.md`

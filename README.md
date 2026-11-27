@@ -230,10 +230,27 @@ flowchart LR
 | 백엔드 | API·DB 설계, 인증·보안, LLM 연동, 숙련도 계산, 백엔드 CI |
 
 - **협업 방식:** 기능별 브랜치 → PR → CI 통과 후 `main`에 합칩니다. API처럼 상대 작업에 영향을 주는 변경은 [`docs/frontend-requests.md`](docs/frontend-requests.md)에 정리해 함께 봅니다.
-- **개발에도 AI를 씁니다:** Claude Code로 설계, 구현, 테스트를 진행하고, 사람이 PR 단위로 확인한 뒤 합칩니다.
-- **개발 교훈 위키:** 에러를 해결하거나 시행착오를 겪으면 [`docs/wiki/`](docs/wiki/README.md)에 한 건씩 남기고, 비슷한 작업을 시작하기 전에 먼저 읽습니다.
-
 - **멘토링 피드백과 반영:** 10/28·11/5 두 차례 멘토링을 받았습니다. 11/5에는 기능을 더 늘리기보다 남은 시간을 설명에 쓰라는 조언을 받아 커뮤니티 메뉴를 2단계로 미루고, 메뉴를 모으기 → 진단 → 공부 → 확인 순서로 바꾸고, 토큰 비용을 줄이려 Claude 프롬프트 캐싱을 넣고, 개인정보 처리방침을 다시 썼습니다. 피드백별 반영 내용은 프로젝트 문서(Notion)에 정리했습니다.
+
+## AI와 함께 개발하는 방식
+
+Claude Code로 설계, 구현, 테스트를 진행합니다. AI가 쓴 코드를 그대로 믿지 않도록 아래 장치를 두었고, 마지막 확인과 머지는 사람이 PR 단위로 합니다.
+
+| 장치 | 하는 일 |
+| --- | --- |
+| 규칙 문서 ([`CLAUDE.md`](CLAUDE.md)) | 원본 대화 파일은 서버로 보내지 않기, 점수는 코드로 계산하기, 근거 없는 표현 쓰지 않기 같은 원칙을 AI가 작업마다 읽습니다 |
+| 자동 차단·경고 ([`.claude/hooks/`](.claude/hooks/)) | 이미 반영된 DB 마이그레이션을 AI가 고치려 하면 막고, 화면 문구에 "정확도 향상" 같은 단정 표현이 들어가면 경고합니다 |
+| 검토 담당 AI ([`.claude/agents/`](.claude/agents/)) | 개인정보 점검과 프론트·백엔드 API 형식 대조를 구현과 따로 맡깁니다. 둘 다 읽기만 하고 고치지 않습니다 |
+| 자동 검사 | 머지 전에 CI의 테스트, ESLint, ArchUnit(백엔드 구조 규칙), WebAssembly 빌드 확인을 통과해야 합니다 |
+| 개발 교훈 위키 ([`docs/wiki/`](docs/wiki/README.md)) | 에러와 시행착오를 한 건씩 남기고, AI가 작업을 시작할 때 목차를 먼저 읽습니다 |
+
+| 사용한 AI 개발 도구 | 쓴 곳 |
+| --- | --- |
+| [Claude Code](https://claude.com/claude-code) | 구현 파트너. 위 장치를 모두 Claude Code 설정([`.claude/`](.claude/))으로 둡니다 |
+| [context7](https://github.com/upstash/context7) | React 19, Tailwind CSS 4처럼 최신 버전의 공식 문서를 확인하며 작성 |
+| [superpowers](https://github.com/obra/superpowers) | 기능마다 브레인스토밍 → 계획 → 검증 순서로 진행 |
+| [graphify](https://github.com/Graphify-Labs/graphify) | 코드 관계 그래프로 수정할 때 영향 범위 확인 |
+| frontend-design, ui-design-review, unslop | 화면 검토와 디자인 개편 |
 
 ## 다음 계획
 
