@@ -15,7 +15,7 @@ import {
   PasswordInput,
   TextInput,
 } from '@/components';
-import { socialErrorMessage } from '@/utils';
+import { safeReturnTo, socialErrorMessage } from '@/utils';
 import AuthCard from './components/AuthCard';
 import KakaoLoginButton from './components/KakaoLoginButton';
 import MockAuthNotice from './components/MockAuthNotice';
@@ -36,6 +36,10 @@ function LoginPage() {
   // 카카오 로그인이 실패해 돌아온 경우 (?socialError=코드). 취소는 문구 없이 돌아온다
   const [searchParams] = useSearchParams();
   const socialError = socialErrorMessage(searchParams.get('socialError'));
+  // 돌아갈 화면: 로그인 가드가 넘긴 값, 없으면 카카오 로그인이 실패해 돌아오며 주소에 실려 온 값(?returnTo=, 사이트 안 경로만)
+  const returnToParam = searchParams.get('returnTo');
+  const from =
+    state.from ?? (returnToParam ? safeReturnTo(returnToParam) : undefined);
 
   const mutation = useSingleFlightMutation({
     mutationFn: login,
@@ -43,7 +47,7 @@ function LoginPage() {
       // 이전 사용자의 화면 데이터가 남지 않도록 비우고, 받은 내 정보를 넣어 둔다
       queryClient.clear();
       queryClient.setQueryData(ME_QUERY_KEY, user);
-      navigate(state.from ?? '/', { replace: true });
+      navigate(from ?? '/', { replace: true });
     },
   });
 
@@ -61,7 +65,7 @@ function LoginPage() {
   return (
     <AuthCard title="로그인" description="계정으로 계속해요">
       <form onSubmit={handleSubmit} className="flex w-full flex-col gap-5">
-        <MockAuthNotice from={state.from} />
+        <MockAuthNotice from={from} />
         {socialError && (
           <p role="alert" className="text-body text-danger">
             {socialError}
@@ -107,13 +111,13 @@ function LoginPage() {
         >
           로그인
         </Button>
-        <KakaoLoginButton returnTo={state.from} divider="before" />
+        <KakaoLoginButton returnTo={from} divider="before" />
         <p className="text-body text-ink-soft">
           아직 계정이 없나요?{' '}
           <Link
             to="/signup"
             // 가입하고 로그인하면 원래 가려던 화면으로 이어지게 넘겨준다
-            state={{ from: state.from }}
+            state={{ from }}
             className="font-medium text-primary underline-offset-4 hover:underline"
           >
             회원가입

@@ -33,4 +33,11 @@ class SocialAuthUnavailableTest {
 				.andExpect(status().isFound())
 				.andExpect(header().string("Location", TestKakao.FRONTEND + "/login?socialError=unavailable"));
 	}
+
+	@Test
+	void 키가_없어도_돌아갈_화면은_넘긴다() throws Exception {
+		mockMvc.perform(get("/api/auth/kakao/start").param("returnTo", "/analysis"))
+				.andExpect(header().string("Location",
+						TestKakao.FRONTEND + "/login?socialError=unavailable&returnTo=%2Fanalysis"));
+	}
 }

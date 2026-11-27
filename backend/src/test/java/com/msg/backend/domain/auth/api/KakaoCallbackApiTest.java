@@ -200,6 +200,26 @@ class KakaoCallbackApiTest {
 	}
 
 	@Test
+	void 실패해도_돌아갈_화면을_로그인_화면에_넘긴다() throws Exception {
+		Started started = KakaoLoginFlow.start(mockMvc, "/quizzes/3?tab=a");
+
+		MockHttpServletResponse response = mockMvc.perform(get("/api/auth/kakao/callback")
+						.param("error", "access_denied").param("state", started.state()).cookie(started.stateCookie()))
+				.andReturn().getResponse();
+
+		assertThat(response.getHeader(HttpHeaders.LOCATION))
+				.isEqualTo(FRONTEND + "/login?socialError=cancelled&returnTo=%2Fquizzes%2F3%3Ftab%3Da");
+	}
+
+	@Test
+	void 가입을_거절해도_돌아갈_화면을_넘긴다() throws Exception {
+		kakao.user(4242L, null, false, false, "닉");
+
+		assertThat(KakaoLoginFlow.login(mockMvc, "/analysis").getHeader(HttpHeaders.LOCATION))
+				.isEqualTo(FRONTEND + "/login?socialError=email_required&returnTo=%2Fanalysis");
+	}
+
+	@Test
 	void 카카오가_다른_오류를_주면_failed() throws Exception {
 		Started started = KakaoLoginFlow.start(mockMvc, null);
 

@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { refreshAccessToken } from '@/api';
-import { safeReturnTo } from '@/utils';
+import { safeReturnTo, socialLoginErrorPath } from '@/utils';
 
 // 카카오 로그인이 끝나 이미 가입한 사용자가 돌아오는 화면 (/auth/social/done?returnTo=).
 // 서버가 콜백에서 Refresh 쿠키를 심어 두었으니, 그 쿠키로 Access Token을 받아 로그인을 이어 간 뒤 원래 화면으로 간다
@@ -24,7 +24,7 @@ function SocialDonePage() {
         navigate(returnTo, { replace: true });
       })
       .catch(() => {
-        navigate('/login?socialError=failed', { replace: true });
+        navigate(socialLoginErrorPath('failed', returnTo), { replace: true });
       });
   }, [navigate, queryClient, returnTo]);
 

@@ -5,6 +5,7 @@ import {
   kakaoStartUrl,
   safeReturnTo,
   socialErrorMessage,
+  socialLoginErrorPath,
 } from './socialLogin';
 
 describe('safeReturnTo', () => {
@@ -49,6 +50,24 @@ describe('kakaoStartUrl', () => {
       '/api/auth/kakao/start?returnTo=%2F',
     );
     expect(kakaoStartUrl()).toBe('/api/auth/kakao/start?returnTo=%2F');
+  });
+});
+
+describe('socialLoginErrorPath', () => {
+  it('돌아갈 화면을 같이 넘긴다 (서버 콜백 실패 주소와 같은 모양)', () => {
+    expect(socialLoginErrorPath('failed', '/quizzes/3?tab=a')).toBe(
+      '/login?socialError=failed&returnTo=%2Fquizzes%2F3%3Ftab%3Da',
+    );
+  });
+
+  it('첫 화면이거나 위험한 경로면 returnTo를 붙이지 않는다', () => {
+    expect(socialLoginErrorPath('failed')).toBe('/login?socialError=failed');
+    expect(socialLoginErrorPath('failed', '/')).toBe(
+      '/login?socialError=failed',
+    );
+    expect(socialLoginErrorPath('failed', '//evil.com')).toBe(
+      '/login?socialError=failed',
+    );
   });
 });
 
