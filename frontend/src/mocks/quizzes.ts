@@ -12,6 +12,7 @@ import type {
 } from '@/types';
 import { ApiError } from '@/api/request';
 import { mockDelay } from './delay';
+import { persisted } from './storage';
 import { mockMaterialsSnapshot } from './materials';
 
 // 목업 전용. 실제 서비스에서는 서버가 AI로 퀴즈를 만들고, 채점도 서버 코드가 한다 (프론트는 채점하지 않음).
@@ -202,49 +203,24 @@ const QUIZZES: MockQuiz[] = [
 // 제출 결과는 새로고침해도 남도록 브라우저에 저장한다 (퀴즈 id → 가장 최근 결과)
 const STORAGE_KEY = 'msg-mock-quiz-results-v2';
 
-function loadResults(): Record<number, QuizResult> {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? (JSON.parse(saved) as Record<number, QuizResult>) : {};
-  } catch {
-    return {};
-  }
-}
-
-let resultCache: Record<number, QuizResult> | null = null;
-const getResults = () => (resultCache ??= loadResults());
+const resultStore = persisted<Record<number, QuizResult>>(STORAGE_KEY, {
+  initial: () => ({}),
+});
+const getResults = () => resultStore.get();
 const setResult = (quizId: number, result: QuizResult) => {
-  resultCache = { ...getResults(), [quizId]: result };
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(resultCache));
-  } catch {
-    // 저장소를 쓸 수 없으면 이번 화면에서만 유지한다
-  }
+  resultStore.set({ ...getResults(), [quizId]: result });
 };
 
 // 체험 중 만든 퀴즈도 새로고침해도 남도록 브라우저에 저장한다 (최근 것이 앞).
 // 체험을 시작·끝낼 때 결과와 같이 지워진다(store/useDemoStore.ts의 `msg-mock-*`)
 const CREATED_KEY = 'msg-mock-created-quizzes';
-// 저장소를 쓸 수 없을 때만 쓰는 이번 화면 목록
-let createdFallback: MockQuiz[] = [];
-
-function loadCreated(): MockQuiz[] {
-  try {
-    const saved = localStorage.getItem(CREATED_KEY);
-    return saved ? (JSON.parse(saved) as MockQuiz[]) : [];
-  } catch {
-    return createdFallback;
-  }
-}
-
-function saveCreated(list: MockQuiz[]) {
-  createdFallback = list;
-  try {
-    localStorage.setItem(CREATED_KEY, JSON.stringify(list));
-  } catch {
-    // 저장소를 쓸 수 없으면 이번 화면에서만 유지한다
-  }
-}
+// 매번 읽는다(cache: false). 저장소를 쓸 수 없을 때만 마지막으로 저장한 이번 화면 목록을 쓴다
+const createdStore = persisted<MockQuiz[]>(CREATED_KEY, {
+  initial: () => [],
+  cache: false,
+});
+const loadCreated = () => createdStore.get();
+const saveCreated = (list: MockQuiz[]) => createdStore.set(list);
 
 // 만든 퀴즈 + 예시 퀴즈. 저장소를 매번 읽어서 체험을 새로 시작해 지운 뒤에도 옛 목록이 남지 않는다
 const allQuizzes = (): MockQuiz[] => [...loadCreated(), ...QUIZZES];

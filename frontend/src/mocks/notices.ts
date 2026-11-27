@@ -6,6 +6,7 @@ import {
   NOTICE_TITLE_MAX_LENGTH,
 } from '@/constants';
 import { mockDelay } from './delay';
+import { persisted } from './storage';
 
 // 목업 전용 저장소. 새로고침해도 관리자 화면에서 쓴 공지가 남도록 브라우저에 저장한다 (실제 데이터는 서버 DB에 저장)
 const STORAGE_KEY = 'msg-mock-notices';
@@ -38,30 +39,10 @@ const SAMPLE: NoticeDetail[] = [
   },
 ];
 
-function load(): NoticeDetail[] {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? (JSON.parse(saved) as NoticeDetail[]) : SAMPLE;
-  } catch {
-    return SAMPLE;
-  }
-}
-
-function save(notices: NoticeDetail[]) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(notices));
-  } catch {
-    // 저장소를 쓸 수 없으면(사생활 보호 모드 등) 이번 화면에서만 유지한다
-  }
-}
-
 // 처음 쓸 때 읽는다 (VITE_USE_MOCK=false면 앱 시작 때 저장소를 건드리지 않음)
-let cache: NoticeDetail[] | null = null;
-const getAll = () => (cache ??= load());
-const setAll = (next: NoticeDetail[]) => {
-  cache = next;
-  save(next);
-};
+const store = persisted<NoticeDetail[]>(STORAGE_KEY, { initial: () => SAMPLE });
+const getAll = () => store.get();
+const setAll = (next: NoticeDetail[]) => store.set(next);
 
 const NOT_FOUND = new ApiError('공지사항을 찾을 수 없어요.', 404);
 
