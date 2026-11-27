@@ -2,6 +2,7 @@ import type { CheckAttempt, ConceptStudy, MaterialDetail } from '@/types';
 import { ApiError } from '@/api/request';
 import { judgeCheck, resolveStudyStatus } from '@/utils/conceptStudy';
 import { mockDelay } from './delay';
+import { persisted } from './storage';
 import { mockMaterialsSnapshot } from './materials';
 
 // 체험 모드의 개념 학습 기록. 서버로 보내지 않고 이 브라우저(localStorage)에만 둔다 (실제 기록은 서버 DB)
@@ -55,29 +56,14 @@ const SAMPLE_CHECKS: Record<string, CheckAttempt[]> = {
   [recordKey(2, 'hash')]: [sampleAttempt(2, '2026-11-02T10:00:00', 2, 2, 2)],
 };
 
-function load(): Record<string, MockRecord> {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved
-      ? {
-          ...SAMPLE_RECORDS,
-          ...(JSON.parse(saved) as Record<string, MockRecord>),
-        }
-      : { ...SAMPLE_RECORDS };
-  } catch {
-    return { ...SAMPLE_RECORDS };
-  }
-}
-
-let cache: Record<string, MockRecord> | null = null;
-const getAll = () => (cache ??= load());
+// 저장된 기록에 없는 예시 기록은 처음 값으로 채운다
+const store = persisted<Record<string, MockRecord>>(STORAGE_KEY, {
+  initial: () => ({ ...SAMPLE_RECORDS }),
+  revive: (saved) => ({ ...SAMPLE_RECORDS, ...saved }),
+});
+const getAll = () => store.get();
 function setRecord(key: string, record: MockRecord) {
-  cache = { ...getAll(), [key]: record };
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(cache));
-  } catch {
-    // 저장소를 쓸 수 없으면 이번 화면에서만 유지한다
-  }
+  store.set({ ...getAll(), [key]: record });
 }
 
 function reason(study: Omit<ConceptStudy, 'reason'>): string {

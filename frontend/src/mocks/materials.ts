@@ -8,6 +8,7 @@ import type {
 } from '@/types';
 import { ApiError } from '@/api/request';
 import { mockDelay } from './delay';
+import { persisted } from './storage';
 
 // 목업 전용 저장소. 새로고침해도 올린 자료가 남도록 브라우저에 저장한다 (실제 데이터는 서버에 저장)
 const STORAGE_KEY = 'msg-mock-materials';
@@ -176,32 +177,13 @@ function withStudyNotes(materials: MaterialDetail[]): MaterialDetail[] {
   });
 }
 
-function load(): MaterialDetail[] {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved
-      ? withStudyNotes(JSON.parse(saved) as MaterialDetail[])
-      : SAMPLE;
-  } catch {
-    return SAMPLE;
-  }
-}
-
-function save(materials: MaterialDetail[]) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(materials));
-  } catch {
-    // 저장소를 쓸 수 없으면(사생활 보호 모드 등) 이번 화면에서만 유지한다
-  }
-}
-
 // 처음 쓸 때 읽는다 (VITE_USE_MOCK=false면 앱 시작 때 저장소를 건드리지 않음)
-let cache: MaterialDetail[] | null = null;
-const getAll = () => (cache ??= load());
-const setAll = (next: MaterialDetail[]) => {
-  cache = next;
-  save(next);
-};
+const store = persisted<MaterialDetail[]>(STORAGE_KEY, {
+  initial: () => SAMPLE,
+  revive: withStudyNotes,
+});
+const getAll = () => store.get();
+const setAll = (next: MaterialDetail[]) => store.set(next);
 
 // 목록에는 요약·개념 본문을 싣지 않는다
 const toSummary = (material: MaterialDetail): MaterialSummary => ({
