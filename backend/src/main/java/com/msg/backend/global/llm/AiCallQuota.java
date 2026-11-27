@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 /**
  * 하루 AI 호출 상한. 서비스 전체 상한과 사용자 한 명의 몫(app.ai-daily-limit)을 함께 본다.
  * {@link ModelInvoker}가 모델을 부르기 직전(다시 부를 때도)마다 사용자 몫 → 서비스 전체 순서로 한 번씩 받아 간다.
+ * 서비스 전체 상한에 막히면 받아 간 사용자 몫을 돌려준다.
  */
 public interface AiCallQuota {
 
@@ -34,6 +35,10 @@ public interface AiCallQuota {
 	/** 이 사용자의 몫에서 호출 한 번을 받아 간다. 오늘 몫을 다 썼으면 false (부르지 않는다) */
 	default boolean tryAcquireForUser(Long userId) {
 		return true;
+	}
+
+	/** tryAcquireForUser로 받아 갔지만 서비스 전체 상한에 막혀 부르지 않은 한 번을 돌려준다 */
+	default void releaseForUser(Long userId) {
 	}
 
 	/** 이 사용자에게 오늘 calls번 이상 남았는지 (받아 가지는 않는다) */

@@ -21,6 +21,8 @@ import com.msg.backend.support.IntegrationTest;
 import com.msg.backend.support.TestApi;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -121,6 +123,24 @@ class WithdrawalApiTest {
 				.andExpect(status().isUnauthorized());
 		mockMvc.perform(get("/api/courses").header(HttpHeaders.AUTHORIZATION, "Bearer " + otherToken))
 				.andExpect(jsonPath("$.data[0].id").value(otherCourse));
+	}
+
+	@Test
+	void 원본을_지운_자료가_있어도_탈퇴된다() throws Exception {
+		long myId = id("me@example.com");
+		Timestamp now = Timestamp.valueOf(LocalDateTime.now());
+		jdbcTemplate.update("insert into material (user_id, title, original_file_name, file_format, content_type,"
+				+ " file_size, storage_key, status, created_at, updated_at) values (?, '노트', '노트.pdf', 'PDF',"
+				+ " 'application/pdf', 10, null, 'UPLOADED', ?, ?)", myId, now, now);
+		int tasksBefore = jdbcTemplate.queryForObject("select count(*) from file_deletion_task", Integer.class);
+
+		withdraw(token, PASSWORD).andExpect(status().isOk());
+
+		assertThat(userRepository.findById(myId)).isEmpty();
+		assertThat(jdbcTemplate.queryForObject("select count(*) from material where user_id = ?", Integer.class,
+				myId)).isZero();
+		assertThat(jdbcTemplate.queryForObject("select count(*) from file_deletion_task", Integer.class))
+				.isEqualTo(tasksBefore);
 	}
 
 	@Test

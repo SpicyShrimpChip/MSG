@@ -466,6 +466,20 @@ class QuizSafetyApiTest {
 		assertThat(fakeLlm.get(LlmProvider.GPT).requests().get(0).user()).doesNotContain("materialExcerpt", "NAT 정리");
 	}
 
+	@Test
+	void 서술형_피드백은_과반_의견을_낸_모델의_것을_보여_준다() throws Exception {
+		long quizId = generate();
+		fakeLlm.get(LlmProvider.GPT).respond(grader(List.of("not_met", "not_met"), "소수 의견"));
+		fakeLlm.get(LlmProvider.CLAUDE).respond(grader(List.of("met", "met"), "다수 의견"));
+		fakeLlm.get(LlmProvider.GEMINI).respond(grader(List.of("met", "met"), "다수 의견"));
+		List<Long> ids = questionIds(quizId);
+
+		submit(quizId, List.of(Map.of("questionId", ids.get(2), "text", "PAT는 포트로 나눈다")))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.results[2].gradingStatus").value("graded"))
+				.andExpect(jsonPath("$.data.results[2].aiFeedback.strengths").value("다수 의견"));
+	}
+
 	// ---------- AI 하나만 ----------
 
 	@Test
@@ -520,6 +534,11 @@ class QuizSafetyApiTest {
 
 	// 채점 지시문이면 기준마다 levels, 아니면 퀴즈 글
 	private Function<LlmRequest, LlmResponse> grader(List<String> levels) {
+		return grader(levels, null);
+	}
+
+	// strengths가 있으면 서술형 답의 잘한 점 피드백으로 넣는다
+	private Function<LlmRequest, LlmResponse> grader(List<String> levels, String strengths) {
 		return request -> {
 			if (!request.system().contains("채점 보조자")) {
 				return new LlmResponse(QuizFixtures.threeTypes(false), 10, 10);
@@ -536,6 +555,9 @@ class QuizSafetyApiTest {
 						ArrayNode rubric = node.putArray("rubric");
 						for (int i = 0; i < item.get("rubric").size(); i++) {
 							rubric.addObject().put("index", i).put("level", levels.get(i));
+						}
+						if (strengths != null) {
+							node.put("strengths", strengths);
 						}
 					}
 				}

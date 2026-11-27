@@ -6,6 +6,7 @@ import java.util.Collection;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -23,12 +24,16 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 트랜잭션이 롤백되면 작업 행도 사라지고 파일은 그대로다 (DB가 가리키는 파일이 먼저 사라지는 일이 없다).</li>
  * <li>커밋되면 바로 파일을 지우고 작업 행을 지운다.</li>
  * <li>파일을 지우지 못하면 작업 행이 남고, retryPending이 app.storage.cleanup-retry-interval마다 다시 지운다
- * (지우지 못한 파일이 기록 없이 남지 않는다).</li>
+ * (지우지 못한 파일이 기록 없이 남지 않는다). 마지막 시도가 오래된 것부터(계속 실패하는 작업이 뒤 작업을 막지 않게)
+ * 한 번에 RETRY_BATCH_SIZE건씩 가져온다.</li>
  * </ol>
  */
 @Slf4j
 @Service
 public class FileCleanupService {
+
+	// 다시 지울 때 한 번에 가져오는 작업 수
+	static final int RETRY_BATCH_SIZE = 100;
 
 	private final FileStorage fileStorage;
 	private final FileDeletionTaskRepository taskRepository;
@@ -81,11 +86,12 @@ public class FileCleanupService {
 		}
 	}
 
-	/** 남아 있는 작업을 오래된 것부터 다시 시도한다. 이번에 지운 파일 수를 돌려준다. */
+	/** 남아 있는 작업을 마지막 시도가 오래된 것부터 다시 시도한다. 이번에 지운 파일 수를 돌려준다. */
 	@Scheduled(fixedDelayString = "${app.storage.cleanup-retry-interval}",
 			initialDelayString = "${app.storage.cleanup-retry-interval}")
 	public int retryPending() {
-		List<Long> taskIds = newTransaction.execute(status -> taskRepository.findTop100ByOrderByIdAsc().stream()
+		List<Long> taskIds = newTransaction.execute(status -> taskRepository
+				.findRetryBatch(PageRequest.of(0, RETRY_BATCH_SIZE)).stream()
 				.map(FileDeletionTask::getId)
 				.toList());
 		return process(taskIds);

@@ -98,7 +98,7 @@
 
 ### `file_deletion_task`
 
-지워야 할 저장소 파일(`storage_key`), 시도 횟수, 마지막 시도 시각. 자료 행을 지우는 트랜잭션에서 함께 만들고, 커밋 뒤 파일을 지우면 행도 지운다. 실패하면 남아서 `app.storage.cleanup-retry-interval`(10분)마다 다시 지운다.
+지워야 할 저장소 파일(`storage_key`), 시도 횟수, 마지막 시도 시각. 자료 행을 지우는 트랜잭션에서 함께 만들고, 커밋 뒤 파일을 지우면 행도 지운다. 실패하면 남아서 `app.storage.cleanup-retry-interval`(10분)마다 다시 지운다. 한 번에 100건, 마지막 시도가 오래된 것부터다.
 
 ## 3. ERD
 

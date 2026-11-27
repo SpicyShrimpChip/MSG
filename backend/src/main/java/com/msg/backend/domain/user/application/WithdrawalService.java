@@ -15,6 +15,7 @@ import com.msg.backend.global.error.BusinessException;
 import com.msg.backend.global.llm.UserAiCallDailyRepository;
 import com.msg.backend.global.storage.FileCleanupService;
 import java.util.List;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -77,6 +78,7 @@ public class WithdrawalService {
 		}
 		fileCleanupService.deleteAfterCommit(materialRepository.findAllByUserId(userId).stream()
 				.map(Material::getStorageKey)
+				.filter(Objects::nonNull)
 				.toList());
 		// 같은 이메일의 재가입 제한 기록 (이메일 원문이 아니라 키 해시, app.rejoin)
 		rejoinRestriction.recordWithdrawal(user.getEmail());

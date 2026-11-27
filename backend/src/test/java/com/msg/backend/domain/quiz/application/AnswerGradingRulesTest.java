@@ -3,6 +3,7 @@ package com.msg.backend.domain.quiz.application;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.msg.backend.domain.quiz.entity.RubricLevel;
+import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -24,5 +25,18 @@ class AnswerGradingRulesTest {
 		assertThat(AnswerGradingService.majority(List.of("MET", "PARTIAL"))).isNull();
 		assertThat(AnswerGradingService.majority(List.of("MET", "MET"))).isEqualTo("MET");
 		assertThat(AnswerGradingService.majority(List.of("PARTIAL"))).isEqualTo("PARTIAL");
+	}
+
+	@Test
+	void 피드백은_과반_수준과_가장_많이_맞은_모델에서_가져오고_같으면_앞_모델() {
+		var met = RubricLevel.MET;
+		var not = RubricLevel.NOT_MET;
+		var partial = RubricLevel.PARTIAL;
+		assertThat(AnswerGradingService.feedbackModelIndex(
+				List.of(List.of(not, not), List.of(met, met), List.of(met, met)), List.of(met, met))).isEqualTo(1);
+		assertThat(AnswerGradingService.feedbackModelIndex(
+				List.of(List.of(met, partial), List.of(met, not)), Arrays.asList(met, null))).isZero();
+		assertThat(AnswerGradingService.feedbackModelIndex(
+				List.of(List.of(met), List.of(partial), List.of(not)), Arrays.asList((RubricLevel) null))).isZero();
 	}
 }

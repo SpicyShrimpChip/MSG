@@ -100,6 +100,48 @@ class ModelInvokerDeadlineTest {
 		}
 	}
 
+	@Test
+	void 서비스_전체_상한에_막히면_받아_간_사용자_몫을_돌려준다() {
+		AtomicInteger calls = new AtomicInteger();
+		AtomicInteger released = new AtomicInteger();
+		FakeLlmClient client = new FakeLlmClient(LlmProvider.GPT).respond(request -> {
+			calls.incrementAndGet();
+			return new LlmResponse("{}", 1, 1);
+		});
+		AiCallQuota quota = new AiCallQuota() {
+			@Override
+			public boolean tryAcquire() {
+				return false;
+			}
+
+			@Override
+			public boolean hasRemaining() {
+				return false;
+			}
+
+			@Override
+			public boolean tryAcquireForUser(Long userId) {
+				return true;
+			}
+
+			@Override
+			public void releaseForUser(Long userId) {
+				released.incrementAndGet();
+			}
+		};
+		ModelInvoker limited = new ModelInvoker(properties, Clock.systemUTC(), quota);
+		try {
+			ModelInvoker.Outcome outcome = limited.invoke(7L, client, new LlmRequest("s", "u", 10), null);
+
+			assertThat(outcome.errorCode()).isEqualTo(LlmException.Code.DAILY_LIMIT);
+			assertThat(outcome.attempts()).isZero();
+			assertThat(calls).hasValue(0);
+			assertThat(released).hasValue(1);
+		} finally {
+			limited.shutdown();
+		}
+	}
+
 	// n번까지만 받아 가게 해 주는 상한
 	private static AiCallQuota quotaAllowing(int n) {
 		AtomicInteger left = new AtomicInteger(n);
