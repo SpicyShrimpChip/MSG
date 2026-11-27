@@ -26,6 +26,9 @@ import com.msg.backend.support.TestFiles;
 import com.msg.backend.support.TestPdfs;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
+import java.sql.Timestamp;
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -67,6 +70,8 @@ class MaterialConceptApiTest {
 	private FakeLlmClients fakeLlm;
 	@Autowired
 	private JdbcTemplate jdbcTemplate;
+	@Autowired
+	private Clock clock;
 
 	private String token;
 	private long courseId;
@@ -132,7 +137,8 @@ class MaterialConceptApiTest {
 
 		extract(material, false).andExpect(status().isBadRequest());
 		extract(personal, true).andExpect(status().isUnprocessableEntity())
-				.andExpect(jsonPath("$.data.reason").value("PERSONAL_INFO"));
+				.andExpect(jsonPath("$.data.reason").value("PERSONAL_INFO"))
+				.andExpect(jsonPath("$.message").value("자료 본문에 이메일·전화번호 같은 개인정보가 있어 외부 AI로 보내지 않았어요."));
 		mockMvc.perform(patch("/api/users/me/consents").header(HttpHeaders.AUTHORIZATION, bearer(token))
 				.contentType(MediaType.APPLICATION_JSON).content("{\"aiQuiz\":false}")).andExpect(status().isOk());
 		extract(material, true).andExpect(status().isForbidden());
@@ -141,6 +147,47 @@ class MaterialConceptApiTest {
 						.contentType(MediaType.APPLICATION_JSON).content("{\"materialContentConsent\":true}"))
 				.andExpect(status().isNotFound());
 		assertThat(fakeLlm.get(LlmProvider.GPT).requests()).isEmpty();
+	}
+
+	@Test
+	void 확인_순서는_동의_확인체크_모델_순이다() throws Exception {
+		long material = upload("노트.txt", "VLAN은 브로드캐스트 도메인을 나눈다".getBytes());
+		extract(material, true).andExpect(status().isOk());
+
+		setAiQuizConsent(false);
+		extract(material, false).andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.message").value(containsString("AI 퀴즈 처리 동의")));
+		explain(material, "vlan", false).andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.message")
+						.value("AI로 핵심 개념을 뽑으려면 AI 퀴즈 처리 동의가 필요해요. 마이페이지에서 동의할 수 있어요."));
+		setAiQuizConsent(true);
+		explain(material, "vlan", false).andExpect(status().isBadRequest());
+		assertThat(fakeLlm.get(LlmProvider.GPT).requests()).hasSize(1);
+		fakeLlm.resetAll();
+		extract(material, false).andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("자료 본문을 외부 AI로 보내려면 확인에 체크해 주세요."));
+		extract(material, true).andExpect(status().isServiceUnavailable())
+				.andExpect(jsonPath("$.message").value("연결된 AI 모델이 없어 지금은 핵심 개념을 뽑을 수 없어요."));
+		explain(material, "vlan", true).andExpect(status().isServiceUnavailable())
+				.andExpect(jsonPath("$.message").value("연결된 AI 모델이 없어 지금은 핵심 개념을 뽑을 수 없어요."));
+	}
+
+	@Test
+	void 모델_호출_한도에_닿으면_뽑기와_설명이_기능별_문구로_429() throws Exception {
+		long material = upload("노트.txt", "VLAN은 브로드캐스트 도메인을 나눈다".getBytes());
+		extract(material, true).andExpect(status().isOk());
+		Long userId = jdbcTemplate.queryForObject("select id from users where email = 'me@example.com'", Long.class);
+		jdbcTemplate.update("insert into quiz_ai_call (user_id, purpose, provider, attempts, outcome, latency_ms,"
+				+ " created_at) values (?, 'GRADING', 'gpt', 200, 'FAILED', 0, ?)", userId,
+				Timestamp.valueOf(LocalDateTime.now(clock)));
+
+		extract(material, true).andExpect(status().isTooManyRequests())
+				.andExpect(jsonPath("$.message")
+						.value("오늘 AI 호출 한도를 다 써서 지금은 핵심 개념을 뽑을 수 없어요. 내일 다시 시도해 주세요."));
+		explain(material, "vlan", true).andExpect(status().isTooManyRequests())
+				.andExpect(jsonPath("$.message")
+						.value("오늘 AI 호출 한도를 다 써서 지금은 개념 설명을 만들 수 없어요. 내일 다시 시도해 주세요."));
+		assertThat(fakeLlm.get(LlmProvider.GPT).requests()).hasSize(1);
 	}
 
 	@Test
@@ -205,6 +252,15 @@ class MaterialConceptApiTest {
 				.andExpect(jsonPath("$.data.studyNote.example").value(nullValue()));
 		mockMvc.perform(get("/api/materials/" + material).header(HttpHeaders.AUTHORIZATION, bearer(token)))
 				.andExpect(jsonPath("$.data.concepts[0].studyNote.importance").value("망 분리의 기본"));
+
+		// 칸 다듬기: 공백뿐이면 null, 앞뒤 공백은 지우고, 500자를 넘으면 499자 + 말줄임표
+		fakeLlm.get(LlmProvider.GPT).answer(objectMapper.writeValueAsString(Map.of(
+				"explanation", "VLAN은 스위치 하나를 여러 개의 논리적인 망으로 나누는 기술이다.",
+				"materialContext", "   ", "example", "  층별로 나눈다  ", "importance", "가".repeat(600))));
+		explain(material, "vlan", true).andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.studyNote.materialContext").value(nullValue()))
+				.andExpect(jsonPath("$.data.studyNote.example").value("층별로 나눈다"))
+				.andExpect(jsonPath("$.data.studyNote.importance").value("가".repeat(499) + "…"));
 	}
 
 	@Test
@@ -247,6 +303,11 @@ class MaterialConceptApiTest {
 				.header(HttpHeaders.AUTHORIZATION, bearer(asToken)).contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(
 						Map.of("conceptId", conceptId, "materialContentConsent", confirmed))));
+	}
+
+	private void setAiQuizConsent(boolean agreed) throws Exception {
+		mockMvc.perform(patch("/api/users/me/consents").header(HttpHeaders.AUTHORIZATION, bearer(token))
+				.contentType(MediaType.APPLICATION_JSON).content("{\"aiQuiz\":" + agreed + "}")).andExpect(status().isOk());
 	}
 
 	private String lastPrompt() {

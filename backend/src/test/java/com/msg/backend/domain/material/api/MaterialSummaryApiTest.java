@@ -22,8 +22,10 @@ import com.msg.backend.support.TestApi;
 import com.msg.backend.support.TestPdfs;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
+import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
@@ -202,10 +204,12 @@ class MaterialSummaryApiTest {
 
 		long personal = upload("연락.txt", "공개키 암호 문의는 me@example.com 으로".getBytes());
 		generateFor(token, personal, "exam_prep", true).andExpect(status().isUnprocessableEntity())
-				.andExpect(jsonPath("$.data.reason").value("PERSONAL_INFO"));
+				.andExpect(jsonPath("$.data.reason").value("PERSONAL_INFO"))
+				.andExpect(jsonPath("$.message").value("자료 본문에 이메일·전화번호 같은 개인정보가 있어 외부 AI로 보내지 않았어요."));
 		long scanned = upload("스캔.pdf", TestPdfs.withPages((String) null));
 		generateFor(token, scanned, "exam_prep", true).andExpect(status().isUnprocessableEntity())
-				.andExpect(jsonPath("$.data.reason").value("NO_TEXT"));
+				.andExpect(jsonPath("$.data.reason").value("NO_TEXT"))
+				.andExpect(jsonPath("$.message").value(containsString("OCR")));
 
 		String other = signupAndLogin("other@example.com");
 		mockMvc.perform(get("/api/materials/" + material + "/summary").header(HttpHeaders.AUTHORIZATION, bearer(other)))
@@ -215,6 +219,30 @@ class MaterialSummaryApiTest {
 				.contentType(MediaType.APPLICATION_JSON).content("{\"aiQuiz\":false}")).andExpect(status().isOk());
 		generate("exam_prep", true, false).andExpect(status().isForbidden());
 		assertThat(fakeLlm.get(LlmProvider.GPT).requests()).isEmpty();
+	}
+
+	@Test
+	void 확인_체크는_모델_확인보다_먼저다() throws Exception {
+		generate("exam_prep", false, false).andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("자료 본문을 외부 AI로 보내려면 확인에 체크해 주세요."));
+		generate("exam_prep", true, false).andExpect(status().isServiceUnavailable())
+				.andExpect(jsonPath("$.message").value("연결된 AI 모델이 없어 지금은 요약을 만들 수 없어요."));
+	}
+
+	@Test
+	void 모델_호출_한도에_닿으면_429이고_요약_문구다() throws Exception {
+		fakeLlm.get(LlmProvider.GPT).answer(SUMMARY);
+		generate("exam_prep", true, false).andExpect(status().isOk());
+		Long userId = jdbcTemplate.queryForObject("select id from users where email = 'me@example.com'", Long.class);
+		jdbcTemplate.update("insert into quiz_ai_call (user_id, purpose, provider, attempts, outcome, latency_ms,"
+				+ " created_at) values (?, 'GRADING', 'gpt', 200, 'FAILED', 0, ?)", userId,
+				Timestamp.valueOf(LocalDateTime.now(clock)));
+
+		generate("work", true, false).andExpect(status().isTooManyRequests())
+				.andExpect(jsonPath("$.message").value("오늘 AI 호출 한도를 다 써서 지금은 요약을 만들 수 없어요. 내일 다시 시도해 주세요."));
+		// 재사용은 보내기 전 확인보다 먼저다
+		generate("exam_prep", true, false).andExpect(status().isOk()).andExpect(jsonPath("$.data.reused").value(true));
+		assertThat(fakeLlm.get(LlmProvider.GPT).requests()).hasSize(1);
 	}
 
 	@Test

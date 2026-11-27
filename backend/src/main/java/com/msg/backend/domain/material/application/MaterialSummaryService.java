@@ -1,7 +1,5 @@
 package com.msg.backend.domain.material.application;
 
-import com.msg.backend.domain.conversation.application.PersonalInfoDetector;
-import com.msg.backend.domain.course.dao.CourseRepository;
 import com.msg.backend.domain.course.entity.Course;
 import com.msg.backend.domain.material.dao.MaterialConceptRepository;
 import com.msg.backend.domain.material.dao.MaterialRepository;
@@ -10,10 +8,8 @@ import com.msg.backend.domain.material.dto.StudySummaryResponse;
 import com.msg.backend.domain.material.entity.Material;
 import com.msg.backend.domain.material.entity.MaterialConcept;
 import com.msg.backend.domain.material.entity.MaterialSummary;
-import com.msg.backend.domain.quiz.application.QuizAiUsage;
 import com.msg.backend.domain.quiz.application.QuizModelFallback;
 import com.msg.backend.domain.quiz.application.QuizProperties;
-import com.msg.backend.domain.quiz.dao.QuizAiCallRepository;
 import com.msg.backend.domain.quiz.entity.QuizAiCall;
 import com.msg.backend.domain.quiz.entity.QuizMode;
 import com.msg.backend.domain.user.dao.UserRepository;
@@ -21,9 +17,7 @@ import com.msg.backend.domain.user.entity.JobField;
 import com.msg.backend.domain.user.entity.User;
 import com.msg.backend.global.common.VerificationStatus;
 import com.msg.backend.global.error.BusinessException;
-import com.msg.backend.global.llm.AiCallQuota;
 import com.msg.backend.global.llm.LlmClient;
-import com.msg.backend.global.llm.LlmClients;
 import com.msg.backend.global.llm.LlmRequest;
 import com.msg.backend.global.storage.FileStorage;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -105,11 +99,10 @@ public class MaterialSummaryService {
 			"selfCheck":[{"question":"","hint":""}]}
 			""";
 	static final String PURPOSE_MESSAGE = "학습 목적을 다시 골라 주세요.";
-	static final String CONSENT_MESSAGE = "자료 본문을 외부 AI로 보내려면 확인에 체크해 주세요.";
 	static final String QUIZ_CONSENT_MESSAGE = "AI로 요약을 만들려면 AI 퀴즈 처리 동의가 필요해요. 마이페이지에서 동의할 수 있어요.";
 	static final String NO_MODEL_MESSAGE = "연결된 AI 모델이 없어 지금은 요약을 만들 수 없어요.";
 	static final String RUNNING_MESSAGE = "이 자료의 요약을 만들고 있어요. 끝난 뒤 다시 시도해 주세요.";
-	static final String LIMIT_MESSAGE = "오늘 AI 호출 한도를 다 써서 지금은 요약을 만들 수 없어요. 내일 다시 시도해 주세요.";
+	static final String LIMIT_MESSAGE = MaterialAiGate.limitMessage("요약을 만들");
 	static final String INVALID_MESSAGE = "AI가 쓴 요약을 자료에서 확인하지 못해 저장하지 않았어요. 다시 시도해 주세요.";
 	static final String FAILED_MESSAGE = "AI 모델의 응답을 받지 못해 요약을 만들지 못했어요. 잠시 뒤 다시 시도해 주세요.";
 	static final String TIMED_OUT_MESSAGE = "AI가 정해진 시간 안에 요약을 만들지 못했어요. 잠시 뒤 다시 시도해 주세요.";
@@ -119,17 +112,11 @@ public class MaterialSummaryService {
 	private final MaterialRepository materialRepository;
 	private final MaterialConceptRepository conceptRepository;
 	private final MaterialSummaryRepository summaryRepository;
-	private final CourseRepository courseRepository;
-	private final QuizAiCallRepository callRepository;
-	private final MaterialTextExtractor extractor;
 	private final MaterialContentProperties contentProperties;
+	private final MaterialAiGate gate;
 	private final MaterialSummaryParser parser;
-	private final PersonalInfoDetector personalInfoDetector;
 	private final FileStorage fileStorage;
-	private final LlmClients llmClients;
 	private final QuizModelFallback modelFallback;
-	private final AiCallQuota aiCallQuota;
-	private final QuizAiUsage usage;
 	private final QuizProperties quizProperties;
 	private final ObjectMapper objectMapper;
 	private final TransactionTemplate transaction;
@@ -137,26 +124,18 @@ public class MaterialSummaryService {
 
 	public MaterialSummaryService(UserRepository userRepository, MaterialRepository materialRepository,
 			MaterialConceptRepository conceptRepository, MaterialSummaryRepository summaryRepository,
-			CourseRepository courseRepository, QuizAiCallRepository callRepository, MaterialTextExtractor extractor,
-			MaterialContentProperties contentProperties, MaterialSummaryParser parser,
-			PersonalInfoDetector personalInfoDetector, FileStorage fileStorage, LlmClients llmClients,
-			QuizModelFallback modelFallback, AiCallQuota aiCallQuota, QuizAiUsage usage, QuizProperties quizProperties,
+			MaterialContentProperties contentProperties, MaterialAiGate gate, MaterialSummaryParser parser,
+			FileStorage fileStorage, QuizModelFallback modelFallback, QuizProperties quizProperties,
 			ObjectMapper objectMapper, PlatformTransactionManager transactionManager, Clock clock) {
 		this.userRepository = userRepository;
 		this.materialRepository = materialRepository;
 		this.conceptRepository = conceptRepository;
 		this.summaryRepository = summaryRepository;
-		this.courseRepository = courseRepository;
-		this.callRepository = callRepository;
-		this.extractor = extractor;
 		this.contentProperties = contentProperties;
+		this.gate = gate;
 		this.parser = parser;
-		this.personalInfoDetector = personalInfoDetector;
 		this.fileStorage = fileStorage;
-		this.llmClients = llmClients;
 		this.modelFallback = modelFallback;
-		this.aiCallQuota = aiCallQuota;
-		this.usage = usage;
 		this.quizProperties = quizProperties;
 		this.objectMapper = objectMapper;
 		this.transaction = new TransactionTemplate(transactionManager);
@@ -248,32 +227,12 @@ public class MaterialSummaryService {
 						toResponse(summary, true, null, false));
 			}
 		}
-		if (!contentProperties.enabled()) {
-			throw new BusinessException(HttpStatus.FORBIDDEN, MaterialContentProperties.DISABLED_MESSAGE);
-		}
-		if (!user.isAiQuizConsent()) {
-			throw new BusinessException(HttpStatus.FORBIDDEN, QUIZ_CONSENT_MESSAGE);
-		}
-		if (!confirmed) {
-			throw new BusinessException(HttpStatus.BAD_REQUEST, CONSENT_MESSAGE);
-		}
-		List<LlmClient> clients = llmClients.configuredInOrder(quizProperties.generationProviders());
-		if (clients.isEmpty()) {
-			throw new BusinessException(HttpStatus.SERVICE_UNAVAILABLE, NO_MODEL_MESSAGE);
-		}
-		if (callRepository.countByUserIdAndPurposeAndCreatedAtAfter(userId, QuizAiCall.SUMMARY, now.minusHours(24))
-				>= contentProperties.summaryDailyLimit() || usage.modelCallBudgetExhausted(userId)) {
-			throw new BusinessException(HttpStatus.TOO_MANY_REQUESTS, LIMIT_MESSAGE);
-		}
-		aiCallQuota.ensureRemaining(userId, 1);
-		MaterialTextExtractor.Extracted extracted = extractor.extract(material, contentProperties.sourceMaxChars());
-		if (extracted.status() != MaterialTextExtractor.Status.OK) {
-			throw new BusinessException(HttpStatus.UNPROCESSABLE_ENTITY,
-					MaterialConceptService.unreadableMessage(extracted.status()),
-					Map.of("reason", extracted.status().name()));
-		}
-		Course course = material.getCourseId() == null ? null
-				: courseRepository.findByIdAndUserId(material.getCourseId(), userId).orElse(null);
+		// 재사용 판단 뒤에 확인한다: 저장한 요약은 동의·한도와 관계없이 다시 보여 준다
+		List<LlmClient> clients = gate.checkBeforeSend(user, confirmed, QuizAiCall.SUMMARY,
+				contentProperties.summaryDailyLimit(),
+				new MaterialAiGate.Messages(QUIZ_CONSENT_MESSAGE, NO_MODEL_MESSAGE, LIMIT_MESSAGE));
+		MaterialTextExtractor.Extracted extracted = gate.read(material, contentProperties.sourceMaxChars());
+		Course course = gate.courseOrNull(material, userId);
 		// 길면 핵심 개념·과목 키워드가 나오는 부분을 고른다 (짧으면 전체)
 		Set<String> focus = new LinkedHashSet<>();
 		conceptRepository.findAllByMaterialIdAndUserIdOrderBySortOrderAsc(materialId, userId).stream()
@@ -288,12 +247,10 @@ public class MaterialSummaryService {
 				contentProperties.maxChars());
 		if (selection.text().isBlank()) {
 			throw new BusinessException(HttpStatus.UNPROCESSABLE_ENTITY,
-					MaterialConceptService.unreadableMessage(MaterialTextExtractor.Status.EMPTY), Map.of("reason", "EMPTY"));
+					MaterialAiGate.unreadableMessage(MaterialTextExtractor.Status.EMPTY), Map.of("reason", "EMPTY"));
 		}
-		if (personalInfoDetector.containsPersonalInfoExceptIp(selection.text())) {
-			throw new BusinessException(HttpStatus.UNPROCESSABLE_ENTITY,
-					"자료 본문에 이메일·전화번호 같은 개인정보가 있어 외부 AI로 보내지 않았어요.", Map.of("reason", "PERSONAL_INFO"));
-		}
+		// 요약은 고른 부분만 보내므로 그 부분을 검사한다
+		gate.requireNoPersonalInfo(selection.text());
 		// 어느 파일로 만들었는지 기록으로만 남긴다 (조회·재사용 때 비교하지 않는다)
 		String hash = hash(material);
 		Instant deadline = clock.instant().plus(quizProperties.generationDeadline());

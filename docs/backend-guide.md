@@ -52,7 +52,7 @@
 
 - 평가는 퀴즈 행(`assessment_kind`, `pre_assessment_id`)이고 사후평가는 최신 사전평가의 개념·개념 출처·유형별 수·난이도·모드를 그대로 쓴다(`QuizGenerationService`).
 - 비교(`AssessmentService.compare`)는 최신 사전평가와 그 사후평가의 최근 제출에서 채점이 끝난 답만 세고, 변화량·개념 상태·비교 가능 조건을 코드로 계산한다.
-- 본문 읽기는 `MaterialTextExtractor`(TXT·MD·PPTX·PDFBox, 외부 서비스 없음, 스캔 PDF는 NO_TEXT). 핵심 개념은 `MaterialConceptService`가 AI 후보 중 이름·근거 문장이 본문에 실제로 있는 것만 `material_concept`에 저장한다(지어낸 개념은 버림). 자세한 계약은 `docs/frontend-requests.md` 5-9절.
+- 본문 읽기는 `MaterialTextExtractor`(TXT·MD·PPTX·PDFBox, 외부 서비스 없음, 스캔 PDF는 NO_TEXT). 핵심 개념은 `MaterialConceptService`가 AI 후보 중 이름·근거 문장이 본문에 실제로 있는 것만 `material_concept`에 저장한다(지어낸 개념은 버림). 자료 본문을 AI로 보내기 전 확인(전송 설정·동의·확인 체크·모델·한도·본문 읽기·개인정보)은 개념 뽑기·설명·요약 모두 `MaterialAiGate` 하나로 한다(요약은 재사용 판단 뒤에 부른다). 자세한 계약은 `docs/frontend-requests.md` 5-9절.
 
 ## 7. 근거 기반 학습
 
