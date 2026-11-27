@@ -24,7 +24,6 @@ import {
   TextInput,
 } from '@/components';
 import {
-  CONTENT_DISABLED_MESSAGE,
   DIFFICULTIES,
   JOB_FIELDS,
   JOB_FIELD_OTHER_MAX,
@@ -51,11 +50,11 @@ import {
   MODE_DEFAULT_BLOOM,
   cn,
   effectiveBloomLevels,
-  isReadable,
   conceptStudyLink,
   createRequestKey,
   formatSemester,
   isNoResponseError,
+  materialContentBlockedReason,
 } from '@/utils';
 
 const EXAM_SCOPE_MAX = 200;
@@ -192,13 +191,9 @@ function QuizCreateForm({ me }: { me: User | null }) {
   );
   const material = materials.find((item) => item.id === materialId) ?? null;
   const bloomLevels = effectiveBloomLevels(bloom, types.includes('essay'));
-  const contentBlockedReason = !material
-    ? null
-    : !ai.materialContentEnabled
-      ? CONTENT_DISABLED_MESSAGE
-      : !isReadable(material.fileName)
-        ? '이 형식은 본문을 읽지 못해요. TXT·MD·PPTX·글이 들어 있는 PDF만 읽어요.'
-        : null;
+  const contentBlockedReason = material
+    ? materialContentBlockedReason(ai, material.fileName)
+    : null;
   const sendContent =
     material !== null && useContent && contentBlockedReason === null;
 

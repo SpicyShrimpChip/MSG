@@ -17,7 +17,7 @@ import {
   SourceQuote,
   VerificationBadge,
 } from '@/components';
-import { CONTENT_DISABLED_MESSAGE, QUIZ_MODES } from '@/constants';
+import { QUIZ_MODES } from '@/constants';
 import { useMe, useQuizAiStatus, useSingleFlightMutation } from '@/hooks';
 import { useMockData } from '@/store';
 import type {
@@ -25,7 +25,13 @@ import type {
   StudySummaryItem,
   StudySummaryPurpose,
 } from '@/types';
-import { SOURCE_CHECK_LABEL, cn, formatDate, isReadable } from '@/utils';
+import {
+  SOURCE_CHECK_LABEL,
+  aiQuizBlockedReason,
+  cn,
+  formatDate,
+  materialContentBlockedReason,
+} from '@/utils';
 
 // 항목 하나: AI가 쓴 글 + 원문 근거 상태. 글은 모두 AI가 썼으므로 AI 표시를 붙이고(서버가 확인한 것은 인용뿐),
 // 자료에 없는 AI 보충 설명은 보라색 상자로 따로 보여 준다
@@ -218,15 +224,9 @@ function StudySummaryPanel({
     },
   });
 
-  let blockedReason: string | null = null;
-  if (!ai.materialContentEnabled) blockedReason = CONTENT_DISABLED_MESSAGE;
-  else if (!isReadable(fileName))
-    blockedReason =
-      '이 형식은 본문을 읽지 못해요. TXT·MD·PPTX·글이 들어 있는 PDF만 읽어요.';
-  else if (!ai.available) blockedReason = ai.message;
-  else if (me?.aiQuizConsent === false)
-    blockedReason =
-      'AI로 요약을 만들려면 AI 퀴즈 처리 동의가 필요해요. 마이페이지에서 동의할 수 있어요.';
+  const blockedReason =
+    materialContentBlockedReason(ai, fileName) ??
+    aiQuizBlockedReason(ai, me?.aiQuizConsent, '요약을 만들');
 
   const ready = summary.status === 'ready';
 
