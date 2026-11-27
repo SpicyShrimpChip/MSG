@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
-import { BookOpen, ChevronDown, Lock, Quote } from 'lucide-react';
+import { BookOpen, ChevronDown, Quote } from 'lucide-react';
 import {
   CURRICULUM_QUERY_KEY,
   conceptStudiesQuery,
@@ -30,6 +30,7 @@ import {
 import type { ConceptStudy, MaterialConcept } from '@/types';
 import { aiQuizBlockedReason, cn, materialContentBlockedReason } from '@/utils';
 import ConceptStudyActions from './ConceptStudyActions';
+import MaterialAiSendCard from './MaterialAiSendCard';
 
 // 자료 원문 인용 (서버가 본문에 있는지 확인한 문장, AI 글 아님 → 회색)
 function SourceQuote({
@@ -348,56 +349,38 @@ function MaterialConceptPanel({
         </>
       )}
 
-      <Card as="section" className="flex flex-col gap-3 p-5">
-        <h3 className="text-body font-semibold text-heading">
-          {concepts.length === 0 ? '핵심 개념 뽑기' : '핵심 개념 다시 뽑기'}
-        </h3>
-        <Notice icon={Lock} size="caption" iconClassName="text-primary">
-          자료 본문 앞부분(최대 12,000자, PDF는 100쪽까지)을 외부 생성형 AI로
-          보내 개념 후보를 받아요. 이메일·전화번호 같은 개인정보가 보이면 보내지
-          않아요. 다시 뽑으면 지금 개념과 자세한 설명은 새 결과로 바뀌어요.
-        </Notice>
-        {blockedReason ? (
-          <p className="text-body text-ink-soft">{blockedReason}</p>
-        ) : (
-          <label className="flex items-start gap-3 text-body text-heading">
-            <input
-              type="checkbox"
-              checked={confirmed}
-              onChange={(e) => setConfirmed(e.target.checked)}
-              className="mt-1 size-4 accent-primary"
-            />
-            <span>
-              이 자료의 본문 발췌를 외부 생성형 AI로 보내는 것을 확인했어요.
-              본인이 이용 권한이 있는 자료예요.
-            </span>
-          </label>
-        )}
-        <ErrorText error={mutation.error} />
-        <AiWaitingStatus
-          waiting={mutation.isPending}
-          failed={mutation.isError}
-          doneText="핵심 개념을 다 찾았어요."
-        >
-          AI가 개념을 찾는 중이에요. 최대 1분 40초 걸릴 수 있어요.
-        </AiWaitingStatus>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            disabled={
-              blockedReason !== null || !confirmed || mutation.isPending
-            }
-            onClick={() => mutation.mutate()}
-          >
-            핵심 개념 뽑기
-          </Button>
-          {mockData && (
-            <span className="text-caption text-ink-muted">
-              목업에서는 AI를 부르지 않아요. 예시 개념의 설명은 미리 써 둔
-              예시예요.
-            </span>
-          )}
-        </div>
-      </Card>
+      <MaterialAiSendCard
+        title={concepts.length === 0 ? '핵심 개념 뽑기' : '핵심 개념 다시 뽑기'}
+        notice={
+          <>
+            자료 본문 앞부분(최대 12,000자, PDF는 100쪽까지)을 외부 생성형 AI로
+            보내 개념 후보를 받아요. 이메일·전화번호 같은 개인정보가 보이면
+            보내지 않아요. 다시 뽑으면 지금 개념과 자세한 설명은 새 결과로
+            바뀌어요.
+          </>
+        }
+        blockedReason={blockedReason}
+        confirmed={confirmed}
+        onConfirmedChange={setConfirmed}
+        confirmLabel={
+          <>
+            이 자료의 본문 발췌를 외부 생성형 AI로 보내는 것을 확인했어요.
+            본인이 이용 권한이 있는 자료예요.
+          </>
+        }
+        error={mutation.error}
+        pending={mutation.isPending}
+        failed={mutation.isError}
+        pendingText="AI가 개념을 찾는 중이에요. 최대 1분 40초 걸릴 수 있어요."
+        doneText="핵심 개념을 다 찾았어요."
+        submitLabel="핵심 개념 뽑기"
+        onSubmit={() => mutation.mutate()}
+        mockNote={
+          mockData
+            ? '목업에서는 AI를 부르지 않아요. 예시 개념의 설명은 미리 써 둔 예시예요.'
+            : null
+        }
+      />
     </div>
   );
 }
